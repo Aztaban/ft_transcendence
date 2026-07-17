@@ -61,7 +61,7 @@ For now, it contains a proposed direction and questions to decide as a team.
 - Dashboards by role
 - Evaluation slot UI
 - Admin/head tutor management UI
-- Notifications UI
+- Notifications UI                    
 - Form validation before API calls
 - Responsive layout
 - Chrome compatibility
