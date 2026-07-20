@@ -1,89 +1,75 @@
-# Team Roles
+# Team Roles and Responsibilities
 
-Status: draft  
-Owner: TBD  
-Last updated: TBD
+**Status:** Approved
+**Last updated:** 20.7.2026
 
-## Purpose
+## Core roles
 
-This document defines team roles required by the subject and how the team plans to organize work.
+| Team member | Primary role | Secondary role | Responsibilities |
+| mjusta | Product Owner | | |
+| rkravche | IT Architect | | |
+| dkolarov | Scrum master | | |
+| lhusraov | Developer | | |
+| lformankov | Developer | | |
 
-Names should be filled after the team agrees.
+## Product Owner
 
-## Required roles
+Responsible for:
 
-### Product Owner
+- Product vision
+- Product priorities
+- MVP scope
+- Product requirements
+- User workflows
+- Module product justification
+- Acceptance criteria
+- Product decisions
+- Stakeholder feedback
 
-Assigned to: TBD
+Not responsible for:
 
-Responsibilities:
+- Detailed architecture
+- Database design
+- API implementation
+- Sprint facilitation
+- Assigning technical solutions
 
-- Own product vision
-- Prioritize features
-- Keep MVP realistic
-- Collect feedback from tutors/counsellors/students
-- Validate that completed work matches project goals
-- Keep module plan aligned with project scope
+## IT Architect
 
-### Project Manager / Scrum Master
+Responsible for:
 
-Assigned to: TBD
+- System architecture
+- Technology decisions
+- Data model
+- API design
+- Authentication and authorization design
+- Real-time design
+- Security design
+- Infrastructure direction
+- Technical feasibility
+- Architecture decision records
 
-Responsibilities:
+## Scrum Master
 
-- Organize meetings
-- Track blockers
-- Keep GitHub Issues / project board clean
-- Help split work into small tasks
-- Watch deadlines
-- Make sure all members contribute
+Responsible for:
 
-### Technical Lead / Architect
+- Meetings and ceremonies
+- Delivery process
+- Milestones
+- Issue organization
+- Blocker tracking
+- Risk-register maintenance
+- Meeting notes
+- Decision-log maintenance
+- Progress visibility
 
-Assigned to: TBD
+## Developers
 
-Responsibilities:
+Responsible for:
 
-- Own architecture decisions
-- Lead stack decisions
-- Keep code structure consistent
-- Review critical pull requests
-- Define API/database patterns
-- Watch security and deployment quality
-
-### Developers
-
-Assigned to: all team members
-
-Responsibilities:
-
-- Implement assigned features
-- Write tests
-- Review code
-- Document important decisions
-- Understand the full project enough to explain it during evaluation
-
-## Possible technical ownership areas
-
-These are not final roles yet. One person may own multiple areas.
-
-| Area | Owner | Notes |
-|---|---|---|
-| Frontend / React | TBD | Pages, components, UI state, accessibility basics. |
-| Backend / Python API | TBD | REST API, business logic, validation. |
-| Database / ORM | TBD | Models, migrations, relations, constraints. |
-| Auth / 42 OAuth | TBD | Login, sessions, permissions, token safety. |
-| Real-time / notifications | TBD | WebSockets/SSE, online status, alerts. |
-| Evaluation system | TBD | Slot creation, claiming, race-condition handling. |
-| DevOps / Docker / HTTPS | TBD | Compose, reverse proxy, environment setup. |
-| Monitoring / Grafana | TBD | Prometheus metrics, dashboards, alerts. |
-| Docs / Evaluation prep | TBD | README, diagrams, demo script, module proof. |
-
-## Team rules draft
-
-- All meaningful work should be done through branches and pull requests.
-- Important pull requests should be reviewed by at least one teammate.
-- No secrets in Git.
-- `.env.example` must be kept up to date.
-- Everyone should be able to run the project locally.
-- Everyone must understand the mandatory part, not only their own feature.
+- Implementation
+- Testing
+- Code review
+- Technical documentation
+- Raising risks and blockers
+- Following approved product and architecture decisions
