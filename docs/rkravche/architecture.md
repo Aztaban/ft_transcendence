@@ -47,6 +47,13 @@ Makefile         make up = the single deployment command
 
 ---
 
+## 4. Architecture diagram
+
+<img src="../images/architecture.png" alt="drawing" width="700"/>
+
+
+---
+
 ## 4. Authentication
 
 1. **Email + password (mandatory baseline).** Django's auth with Argon2 hasher (salted, memory-hard).

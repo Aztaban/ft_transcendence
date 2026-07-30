@@ -32,7 +32,7 @@ Imagine somebody has an access to the database whether it's a developer or admin
 
 The GDPR minor module requires confirmation emails for data operations, but the MVP explicitly excludes email notifications. That still forces an SMTP relay (or dev mailcatcher) into the compose stack.
 
-![](images/GDPR.png)
+![](../images/GDPR.png)
 
 ## Q4. Tailwind CSS or basic CSS
 
