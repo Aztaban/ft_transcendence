@@ -49,7 +49,7 @@ Responsible for:
 
 - Receiving and validating REST API requests
 - Applying business rules and authorization checks
-- Communicating with PostgreSQL
+- Communicating with MySQL
 - Returning consistent HTTP responses / JSON payloads
 - Managing session authentication
 - File handling and real-time events
