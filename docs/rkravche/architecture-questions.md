@@ -12,7 +12,8 @@ Open decisions that must be agreed by the team before (or early in) implementati
 
 - **Context:** Instead of Head Tutors hand-maintaining who can evaluate what, the Intra `projects_users` data tells us which projects a user validated. Proposed model (architecture §13): **opt-in per tutor** — sync runs only for tutors who linked 42 OAuth *and* granted an `eligibility_sync` consent; everyone else stays manual; Head Tutor override always wins; sync never deletes.
 - **To discuss:**
-  1. Do we want the automation at all, or is manual-only acceptable for the product scope?
+  1. Do we want the automation at all, or is manual-only acceptable for the product scope? 
+   = the hitchhiker will login in and it will mark all the projects he consider able to evaluate and then the head tutor will confirm it
   2. Is per-tutor opt-in the right consent model (vs. automatic for all linked tutors)?
   3. Who creates and owns the 42 API application (keys live in `.env`, never in git)?
   4. Rate-limit budget: default app limits are ~2 req/s and 1200 req/h — enough for our campus size?
