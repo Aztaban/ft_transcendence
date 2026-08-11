@@ -81,11 +81,13 @@ Python Backend
 Stores all permanent application state:
 
 - Users, roles, and profiles
-- Projects and eligibility rules
-- Evaluation requests and scheduled evaluations
+- Projects and eligibility requests
+- Evaluation requests
 - Notifications and audit logs
 - Student Council messages
 - Uploaded file metadata
+
+Final evaluation results are recorded manually by the team directly in the database after an evaluation takes place — the platform has no access to the 42 Intra API for grades, so this is not an automated step and there is no API endpoint for it.
 
 The database is accessed exclusively through the backend API never directly by the frontend.
 
@@ -94,7 +96,8 @@ The database is accessed exclusively through the backend API never directly by t
 Provides real time updates for:
 
 - Live notification pushes
-- Evaluation status changes (claims, releases, completions)
+- Evaluation request status changes (slot picked, confirmed, declined, cancelled)
+- Eligibility request status changes
 - Role updates
 
 **Important rule:** HTTP responses are always the source of truth. WebSocket events only inform the frontend that something changed after receiving an event, the frontend must re fetch the updated data via REST.
@@ -103,16 +106,9 @@ Provides real time updates for:
 
 These must be agreed upon by the team before (or early in) implementation. Agreed answers should be recorded as short ADRs in `docs/adr/`.
 
-### Q1. Automate tutor eligibility from the 42 Intra API?
+### Q1. Automate tutor eligibility from the 42 Intra API? — RESOLVED: not implemented
 
-Instead of Head Tutors hand maintaining who can evaluate what, the Intra `projects_users` data tells us which projects a user validated.?
-
-**Proposed model:** opt in per tutor sync only runs for tutors who linked 42 OAuth and granted an `eligibility_sync` consent. Everyone else stays manual. Head Tutor override always wins. Sync never deletes.
-
-To discuss:
-
-- Do we want this automation at all, or is manual only acceptable for the product scope?
-- Rate limit budget: default app limits are ~2 req/s and 1200 req/h — enough for our campus size?
+**Decision:** the team confirmed 42-Intra auto-sync for eligibility is not being implemented. Eligibility is fully manual: a Hitchhiker submits one eligibility request listing every project they want to evaluate, and a Head Tutor accepts or declines the whole request. See §10.3 and §10.4 for the confirmed endpoints. This question is closed and kept here only for record-keeping.
 
 ## Not yet important questions
 
@@ -141,13 +137,12 @@ Tailwind offers quick layout building and native dark-mode support (required by 
 |---|---|
 | Authentication & Session | YES |
 | Users, Roles & Profile | YES |
-| Projects & Tutor Eligibility | YES |
-| Evaluation Requests | YES |
-| Evaluations & Claiming | YES |
+| Projects & Tutor Eligibility Requests | YES |
+| Evaluation Requests (create → pick slot → confirm → cancel) | YES |
 | Notifications | YES |
 | Student Council Inbox | YES |
 | Tutor Resources & Files | YES |
-| Search | YES |
+| People Search | YES |
 | Administration | YES |
 | Announcements | ? |
 | Polls | ? |
@@ -158,8 +153,8 @@ Tailwind offers quick layout building and native dark-mode support (required by 
 - **JSON communication:** all payloads use `Content-Type: application/json`.
 - **Authentication model:** session-cookie based. After successful login (password or 42 OAuth), a session cookie is set (`HttpOnly`; `SameSite=Lax`). The browser sends it automatically on future requests.
 - **Pagination:** large collections use `?page=1&page_size=20` to avoid returning thousands of records at once.
-- **Authorization:** authentication verifies who the user is; authorization verifies what they're allowed to do (e.g. a student can create their own evaluation request; a tutor can claim eligible slots; an admin manages users).
-- **Server-side business rules are authoritative:** preventing duplicate slot claims, checking permissions, validating eligibility, and protecting private data are always enforced backend-side. The frontend is never trusted for security decisions.
+- **Authorization:** authentication verifies who the user is; authorization verifies what they're allowed to do (e.g. a student can create their own evaluation request; a Hitchhiker can pick a slot for an eligible request; an admin manages users).
+- **Server-side business rules are authoritative:** preventing duplicate slot picks, checking permissions, validating eligibility, and protecting private data are always enforced backend-side. The frontend is never trusted for security decisions.
 
 ### Error Format
 
@@ -168,8 +163,8 @@ All errors return a standard HTTP status code plus a structured payload:
 ```json
 {
   "error": {
-    "code": "slot_taken",
-    "message": "Requested slot is already taken."
+    "code": "request_already_picked",
+    "message": "This evaluation request already has a slot picked."
   }
 }
 ```
@@ -187,7 +182,7 @@ The `code` field lets the frontend handle specific cases programmatically.
 | 401 | Unauthorized | User is not authenticated. |
 | 403 | Forbidden | User is authenticated but lacks required permission. |
 | 404 | Not Found | Requested resource does not exist. |
-| 409 | Conflict | Action conflicts with system state (e.g. slot already claimed). |
+| 409 | Conflict | Action conflicts with system state (e.g. request already picked by another Hitchhiker). |
 | 500 | Internal Error | Unexpected backend error. |
 
 ### Role Legend
@@ -198,9 +193,9 @@ The `code` field lets the frontend handle specific cases programmatically.
 | Authenticated | Logged-in user with standard session. |
 | Own | Logged-in user accessing their own resources. |
 | Student | Standard student user role. |
-| Tutor | Registered tutor. |
-| Eligible Tutor | Tutor explicitly permitted to evaluate a given project. |
-| Head Tutor | Tutor management permissions. |
+| Tutor (Hitchhiker) | Registered tutor, shown as "Hitchhiker" in the UI. |
+| Eligible Tutor | Hitchhiker with an approved eligibility request covering the given project. |
+| Head Tutor | Reviews and decides eligibility requests. |
 | SC Member | Student Council representative. |
 | Administrator | Full administrative rights. |
 
@@ -210,9 +205,9 @@ The `code` field lets the frontend handle specific cases programmatically.
 |---|---|---|
 | Authentication | 6 | YES |
 | Users | 7 | YES |
-| Projects | 5 | YES |
-| Evaluation Requests | 5 | YES |
-| Evaluations | 4 | YES |
+| Projects | 2 | YES |
+| Tutor Eligibility Requests | 4 | YES |
+| Evaluation Requests | 7 | YES |
 | Notifications | 3 | YES |
 | Student Council | 6 | YES |
 | Files | 3 | YES |
@@ -223,7 +218,7 @@ The `code` field lets the frontend handle specific cases programmatically.
 
 ## 7. Workflows & Lifecycle Diagrams
 
-### Evaluation Lifecycle
+### Evaluation Request Lifecycle
 
 ```
 Student
@@ -232,54 +227,86 @@ Student
 Create Request
    │
    ▼
-OPEN
+PENDING (on the Requests page)
    │
    ▼
-Tutor Claims Slot
+Eligible Hitchhiker picks a slot
    │
    ▼
-SCHEDULED
+AWAITING_CONFIRMATION
+   │
+   ├── Student confirms ──▶ CONFIRMED (on the Pending Evaluations page)
+   │
+   └── Student declines ──▶ back to PENDING (open again)
    │
    ▼
-Evaluation takes place
+Either party can cancel from any state
    │
    ▼
-Tutor Marks Done
-   │
-   ▼
-COMPLETED
+CANCELLED
+
+(after the evaluation happens, the result is recorded manually
+ by the team directly in the database — not through this API)
 ```
 
 | Status | Meaning |
 |---|---|
-| OPEN | Student created a request and tutors can claim available slots. |
-| SCHEDULED | A tutor claimed the request; the evaluation is planned. |
-| COMPLETED | The tutor finished the evaluation and submitted feedback. |
-| CANCELLED | The request was cancelled before completion. |
+| PENDING | Request is open; no Hitchhiker has picked a slot yet (or a picked slot was declined). |
+| AWAITING_CONFIRMATION | A Hitchhiker picked a slot; waiting on the student to confirm or decline. |
+| CONFIRMED | Student confirmed the slot; evaluation is scheduled and shown on the Pending Evaluations page. |
+| CANCELLED | Cancelled by the student or the Hitchhiker, from any prior state. |
 
-### Claim-Slot Concurrent Race Condition Flow
+### Slot-Pick Concurrent Race Condition Flow
 
 ```
 Student creates evaluation request
               │
               ▼
-Request becomes OPEN
+Request becomes PENDING
               │
               ▼
-Eligible tutors see available slot
+Eligible Hitchhikers see the open request
               │
               ▼
-Tutor sends claim request
+Hitchhiker sends pick-slot request
               │
               ▼
 Backend checks DB availability
               │
         ┌─────┴─────┐
         │           │
-   Available    Already Taken
+   Still PENDING   Already Picked
         │           │
         ▼           ▼
-   SCHEDULED    409 Conflict Error
+AWAITING_CONFIRMATION   409 Conflict Error
+```
+
+### Eligibility Request Flow
+
+```
+Hitchhiker (first activation)
+   │
+   ▼
+Selects every project they want to evaluate
+   │
+   ▼
+Submits one Eligibility Request
+   │
+   ▼
+Head Tutor sees requester name + full project list in a review table
+   │
+   ▼
+Head Tutor accepts or declines the WHOLE request (no per-project decision)
+   │
+        ┌─────┴─────┐
+        │           │
+   Accepted     Declined
+        │           │
+        ▼           ▼
+Eligible for all      Not eligible for any
+listed projects,      of the listed projects
+no further approval
+needed to pick slots
 ```
 
 ### Anonymous Student Council Flow
@@ -311,23 +338,30 @@ Message Marked As Read
 | id | Unique ID of request. |
 | student | Foreign Key to Student user. |
 | project | Foreign Key to Project. |
-| status | State: open, scheduled, completed, cancelled. |
+| status | State: pending, awaiting_confirmation, confirmed, cancelled. |
 | note | Optional message from the student. |
-| slots | List of requested evaluation time windows. |
+| picked_by | Foreign Key to the Hitchhiker who picked a slot; null until picked. |
+| starts_at | Chosen evaluation start time; null until a Hitchhiker picks a slot. |
+| ends_at | Chosen evaluation end time; null until a Hitchhiker picks a slot. |
+| cancelled_by | Foreign Key to whoever cancelled the request (student or Hitchhiker); null unless cancelled. |
 | created_at | Creation timestamp. |
 | updated_at | Modification timestamp. |
 
-### Evaluation
+The final result of a confirmed evaluation is not stored through this API — it is entered manually into the database by the team after the evaluation takes place, since there is no 42 API access to grades.
+
+### Tutor Eligibility Request
 
 | Field | Description |
 |---|---|
-| id | Unique evaluation ID. |
-| student | Foreign Key to Student. |
-| tutor | Foreign Key to evaluating Tutor. |
-| request | Foreign Key to original request. |
-| status | State: scheduled, completed, cancelled. |
-| feedback | Tutor notes and score. |
-| completed_at | Timestamp of completion. |
+| id | Unique ID of request. |
+| hitchhiker | Foreign Key to the requesting user. |
+| projects | List of Foreign Keys to the selected projects (all requested in one submission). |
+| status | State: pending, approved, declined — one status for the whole request. |
+| reviewed_by | Foreign Key to the Head Tutor who made the decision; null while pending. |
+| reviewed_at | Timestamp of the decision; null while pending. |
+| created_at | Creation timestamp. |
+
+On approval, the Hitchhiker becomes eligible for every project listed in the request; there is no per-project outcome.
 
 ### Notification
 
@@ -335,7 +369,7 @@ Message Marked As Read
 |---|---|
 | id | Unique Notification ID. |
 | user | Foreign Key to recipient user. |
-| type | Category (e.g. evaluation.claimed, role.changed). |
+| type | Category (e.g. evaluation.slot_picked, eligibility.decided, role.changed). |
 | message | Content text. |
 | read_at | Timestamp when read by user. |
 | created_at | Creation timestamp. |
@@ -346,13 +380,16 @@ Notifications are created internally by backend actions only — clients cannot 
 
 | Event Name | Trigger Condition |
 |---|---|
-| evaluation.claimed | A tutor successfully claims an evaluation slot. |
-| evaluation.completed | A tutor marks an evaluation completed. |
-| evaluation.released | A tutor releases a scheduled evaluation back to open. |
+| evaluation.slot_picked | A Hitchhiker picks a slot for an open request; student must confirm/decline. |
+| evaluation.confirmed | The student confirms a picked slot. |
+| evaluation.declined | The student declines a picked slot; request returns to PENDING. |
+| evaluation.cancelled | The student or the Hitchhiker cancels the request. |
+| eligibility.requested | A Hitchhiker submits a new eligibility request; sent to Head Tutors. |
+| eligibility.decided | A Head Tutor accepts or declines an eligibility request; sent to the requester. |
 | notification.created | System issues a new notification to a user. |
 | role.changed | Admin or system alters a user's permissions/role. |
 
-**Reminder:** WebSockets only signal that something changed. On receipt, the frontend must call the matching REST endpoint (e.g. `GET /api/v1/evaluations/{id}/`) to get the authoritative data.
+**Reminder:** WebSockets only signal that something changed. On receipt, the frontend must call the matching REST endpoint (e.g. `GET /api/v1/evaluation-requests/{id}/`) to get the authoritative data.
 
 ## 10. Detailed Module Endpoints
 
@@ -377,43 +414,41 @@ Manages profiles, permissions, and role assignment.
 |---|---|---|---|
 | GET | `/api/v1/users/me/` | Own | Retrieves full user profile including sensitive preferences. |
 | PATCH | `/api/v1/users/me/` | Own | Updates avatar, display name, language, notification options. |
-| GET | `/api/v1/users/{id}/` | Authenticated | Public profile information. |
+| GET | `/api/v1/users/{id}/` | Authenticated | Public profile information (display name, avatar, role, bio — never 42 login). |
 | GET | `/api/v1/users/` | Administrator | Paginated list of registered users. |
 | POST | `/api/v1/users/{id}/roles/` | Administrator / Head Tutor | Assigns role to target user (Head Tutor limited to Tutor role). |
 | DELETE | `/api/v1/users/{id}/roles/{role_id}/` | Administrator | Revokes target role; fires role.changed event. |
 | POST | `/api/v1/users/{id}/suspend/` | Administrator | Suspends account activity. |
 
-### 10.3 Projects & Tutor Eligibility (YES)
+### 10.3 Projects & Tutor Eligibility Requests (YES)
+
+Eligibility is no longer granted directly. A Hitchhiker requests it for one or more projects in a single submission, and a Head Tutor accepts or declines the whole request.
 
 | Method | Path | Auth Required | Notes |
 |---|---|---|---|
 | GET | `/api/v1/projects/` | Authenticated | Returns project list available for evaluations. |
-| GET | `/api/v1/projects/{slug}/eligible-tutors/` | Head Tutor, Admin | Lists tutors qualified to evaluate given project. |
-| POST | `/api/v1/projects/{slug}/eligibility/` | Head Tutor, Admin | Grants tutor permission to evaluate project. |
-| DELETE | `/api/v1/projects/{slug}/eligibility/{tutor_id}/` | Head Tutor, Admin | Revokes evaluation permission without cancelling existing slots. |
-| GET | `/api/v1/tutors/{id}/eligibility/` | Authenticated | Returns public listing of projects tutor is allowed to evaluate. |
+| GET | `/api/v1/tutors/{id}/eligibility/` | Authenticated | Returns public listing of projects this Hitchhiker is approved for. |
+| POST | `/api/v1/tutor-eligibility-requests/` | Hitchhiker | Submits one request covering every selected project. |
+| GET | `/api/v1/tutor-eligibility-requests/` | Head Tutor | Lists pending requests as a review table (requester + full project list). |
+| GET | `/api/v1/tutor-eligibility-requests/{id}/` | Head Tutor, requester | Detail view of one request. |
+| POST | `/api/v1/tutor-eligibility-requests/{id}/review/` | Head Tutor | Accepts or declines the entire request in one action. |
+| DELETE | `/api/v1/projects/{slug}/eligibility/{tutor_id}/` | Head Tutor, Admin | Revokes a previously approved eligibility directly (outside the request/review flow), e.g. for corrections. |
 
-### 10.4 Evaluation Requests — Student Side (YES)
+### 10.4 Evaluation Requests (YES) [WS]
 
-| Method | Path | Auth Required | Notes |
-|---|---|---|---|
-| POST | `/api/v1/evaluation-requests/` | Student (own) | Creates request with selected time slots. |
-| GET | `/api/v1/evaluation-requests/` | Own / Eligible Tutor | Students see own requests; tutors see open requests for eligible projects. |
-| GET | `/api/v1/evaluation-requests/{id}/` | Own, Eligible Tutor, Admin | Detailed view of request. |
-| PATCH | `/api/v1/evaluation-requests/{id}/` | Own | Edit request details while still in open state. |
-| DELETE | `/api/v1/evaluation-requests/{id}/` | Own, Administrator | Soft-deletes / cancels request. |
-
-### 10.5 Claiming & Evaluations — Tutor Side (YES) [WS]
+Covers the full lifecycle: student creates a request, an eligible Hitchhiker picks a slot, the student confirms or declines, and either side can cancel at any point. There is no separate "Evaluation" resource — everything happens on the request itself. Completion/results are recorded manually in the database by the team, not through this API.
 
 | Method | Path | Auth Required | Notes |
 |---|---|---|---|
-| POST | `/api/v1/request-slots/{slot_id}/claim/` | Eligible Tutor | Claims slot. Protected by DB constraint against double claims. |
-| GET | `/api/v1/evaluations/` | Participant, Admin | Filtered evaluations list. |
-| GET | `/api/v1/evaluations/{id}/` | Participant, Admin | Detailed evaluation view. |
-| POST | `/api/v1/evaluations/{id}/release/` | Tutor, Head Tutor | Releases evaluation back to open (requires reason). |
-| POST | `/api/v1/evaluations/{id}/complete/` | Tutor, Head Tutor | Submits feedback and marks evaluation completed. |
+| POST | `/api/v1/evaluation-requests/` | Student (own) | Creates a request for a project. Starts as `pending`; no slot/time is set yet. |
+| GET | `/api/v1/evaluation-requests/` | Own / Eligible Tutor | Students see their own requests; Hitchhikers see open (`pending`) requests for projects they're eligible for, plus their own picked/confirmed ones. |
+| GET | `/api/v1/evaluation-requests/{id}/` | Own, Eligible Tutor, Admin | Detailed view of the request. |
+| POST | `/api/v1/evaluation-requests/{id}/pick-slot/` | Eligible Tutor | Hitchhiker proposes a time (`starts_at`/`ends_at`). Moves request to `awaiting_confirmation`. Protected by a DB constraint so only one Hitchhiker can pick a given request. |
+| POST | `/api/v1/evaluation-requests/{id}/confirm/` | Own (student) | Confirms the picked slot. Moves request to `confirmed`. |
+| POST | `/api/v1/evaluation-requests/{id}/decline/` | Own (student) | Declines the picked slot. Clears `picked_by`/times and returns request to `pending`. |
+| POST | `/api/v1/evaluation-requests/{id}/cancel/` | Own (student), picked Hitchhiker, Administrator | Cancels the request from any state. Requires no reason. |
 
-### 10.6 Notifications (YES) [WS]
+### 10.5 Notifications (YES) [WS]
 
 Created automatically by backend actions — clients cannot create notifications directly.
 
@@ -423,7 +458,7 @@ Created automatically by backend actions — clients cannot create notifications
 | POST | `/api/v1/notifications/{id}/read/` | Own | Marks single notification read. |
 | POST | `/api/v1/notifications/read-all/` | Own | Marks all user notifications read. |
 
-### 10.7 Student Council Inbox (YES)
+### 10.6 Student Council Inbox (YES)
 
 Anonymous communication channel between students and the Student Council.
 
@@ -436,7 +471,7 @@ Anonymous communication channel between students and the Student Council.
 | PATCH | `/api/v1/sc-messages/{id}/discussion-note/` | SC Member | Internal SC notes (never visible to sender). |
 | GET | `/api/v1/sc-messages/{id}/sender/` | Admin only | Emergency unmasking endpoint for abuse investigation (access must be logged). |
 
-### 10.8 Tutor Resources & Files (YES)
+### 10.7 Tutor Resources & Files (YES)
 
 Files are never exposed via direct public paths; the backend checks permissions on every request, validating file type, size, permissions, and visibility.
 
@@ -446,13 +481,13 @@ Files are never exposed via direct public paths; the backend checks permissions 
 | GET | `/api/v1/files/{id}/` | Context Dependent | Streams file through auth check (no direct static serving). |
 | DELETE | `/api/v1/files/{id}/` | Owner, Administrator | Deletes file record and storage asset. |
 
-### 10.9 Search (YES)
+### 10.8 People Search (YES)
 
-Search results are always filtered according to the requester's visibility permissions; private information is stripped and hidden resources cannot be discovered.
+Search is people-only: it discovers Hitchhikers and Student Council members, not projects, resources, or requests. Results never expose 42 login — only display name, avatar, role, and bio.
 
 | Method | Path | Auth Required | Notes |
 |---|---|---|---|
-| GET | `/api/v1/search/?q=...&type=tutor,project,resource,request` | Authenticated | Multi-category search respecting user permissions. |
+| GET | `/api/v1/search/people/?q=...` | Authenticated | Searches Hitchhikers and Student Council members by display name. 42 login may be matched against internally but is never returned. |
 
 ## 11. Payload Examples
 
@@ -467,13 +502,7 @@ POST /api/v1/evaluation-requests/
 ```json
 {
   "project_id": 4,
-  "note": "Need help with parsing.",
-  "slots": [
-    {
-      "starts_at": "2026-08-01T15:00:00",
-      "ends_at": "2026-08-01T16:00:00"
-    }
-  ]
+  "note": "Need help with parsing."
 }
 ```
 
@@ -482,7 +511,83 @@ POST /api/v1/evaluation-requests/
 ```json
 {
   "id": 17,
-  "status": "open"
+  "status": "pending"
+}
+```
+
+### Hitchhiker Picks a Slot
+
+**Request**
+
+```
+POST /api/v1/evaluation-requests/17/pick-slot/
+```
+
+```json
+{
+  "starts_at": "2026-08-01T15:00:00",
+  "ends_at": "2026-08-01T16:00:00"
+}
+```
+
+**Response — 200 OK**
+
+```json
+{
+  "id": 17,
+  "status": "awaiting_confirmation",
+  "picked_by": 42,
+  "starts_at": "2026-08-01T15:00:00",
+  "ends_at": "2026-08-01T16:00:00"
+}
+```
+
+### Submit Eligibility Request
+
+**Request**
+
+```
+POST /api/v1/tutor-eligibility-requests/
+```
+
+```json
+{
+  "project_ids": [4, 7, 12]
+}
+```
+
+**Response — 201 Created**
+
+```json
+{
+  "id": 9,
+  "status": "pending",
+  "projects": [4, 7, 12]
+}
+```
+
+### Head Tutor Reviews Eligibility Request
+
+**Request**
+
+```
+POST /api/v1/tutor-eligibility-requests/9/review/
+```
+
+```json
+{
+  "decision": "approved"
+}
+```
+
+**Response — 200 OK**
+
+```json
+{
+  "id": 9,
+  "status": "approved",
+  "reviewed_by": 3,
+  "reviewed_at": "2026-08-09T10:00:00"
 }
 ```
 

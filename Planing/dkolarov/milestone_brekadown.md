@@ -20,22 +20,21 @@ The chosen architecture focuses on building a complete evaluation management pla
 
 | Category | Module | Points |
 |---|---|---:|
-| Web | Frontend Framework | 1 |
-| Web | Backend Framework | 1 |
-| Web | ORM | 1 |
+| Web | Frontend & Backend Frameworks | 2 |
 | Web | WebSockets / Real-Time Features | 2 |
-| User Management | User Management System | 2 |
-| User Management | Advanced Permissions | 2 |
 | User Management | OAuth 2.0 Authentication | 1 |
-| Web | Notification System | 1 |
+| User Management | Advanced Permissions | 2 |
+| Web | Complete Notification System | 1 |
 | Web | File Upload & Management | 1 |
 | Web | Advanced Search | 1 |
 | Accessibility | Internationalization | 1 |
-| Accessibility | WCAG Accessibility | 2 |
+| DevOps | Prometheus + Grafana Monitoring | 2 |
+| Data & Analytics | GDPR-related Controls | 1 |
+| Web | ORM | 1 |
 
-**Expected total:** ~16–17 points
+**Expected total:** 15 points
 
-This provides a safety margin above the required 14 points.
+This provides a 1-point safety margin above the required 14 points.
 
 ---
 
@@ -139,6 +138,27 @@ Prepare the repository structure and define development conventions used by the 
 - New developers can understand the project layout.
 
 ---
+
+# Issue: Setup Nginx & HTTPS
+
+## Checklist
+
+- [ ] Configure Nginx reverse proxy
+- [ ] Configure HTTPS
+- [ ] Configure TLS certificates
+- [ ] Configure WebSocket proxying
+- [ ] Redirect HTTP to HTTPS
+- [ ] Document local HTTPS setup
+
+# Issues: Setup Background Task Processing
+
+## Checklist
+
+- [ ] Configure Celery
+- [ ] Configure Redis broker
+- [ ] Create worker service
+- [ ] Create scheduled task service
+- [ ] Verify background task execution
 
 # Issue: Setup Docker Development Environment
 
@@ -278,7 +298,7 @@ After this milestone:
 
 ---
 
-# Issue: Create User Database Model
+# Issue: Implement user profile data
 
 ## Description
 
@@ -293,6 +313,9 @@ Create the database structure required for storing platform users.
 - [ ] Add account status field
 - [ ] Create database migration
 - [ ] Add user model tests
+- [ ] Display assigned roles
+- [ ] Display tutor project eligibility where permitted
+- [ ] Enforce profile visibility rules
 
 ## Acceptance Criteria
 
@@ -396,28 +419,6 @@ Create user profile functionality.
 
 ---
 
-# Issue: Implement Avatar Upload System
-
-## Description
-
-Allow users to upload and manage profile images.
-
-## Checklist
-
-- [ ] Create avatar storage system
-- [ ] Create upload endpoint
-- [ ] Validate uploaded files
-- [ ] Add default avatar
-- [ ] Display avatar in UI
-
-## Acceptance Criteria
-
-- Users can upload avatars.
-- Invalid files are rejected.
-- Default avatar works.
-
----
-
 # Issue: Create Role System
 
 ## Description
@@ -498,7 +499,6 @@ Milestone is completed when:
 - [ ] Users can login/logout
 - [ ] 42 OAuth works
 - [ ] Profiles exist
-- [ ] Avatars work
 - [ ] Roles exist
 - [ ] Permission system foundation exists
 
@@ -512,22 +512,27 @@ Implement the main functionality of the platform.
 
 The system should support the complete evaluation workflow:
 
-Student requests evaluation
+Student creates an evaluation request
 ↓
-Tutor becomes eligible
+Request appears on the Requests page
 ↓
-Tutor claims evaluation
+Eligible Hitchhiker picks a slot for the request
 ↓
-Evaluation happens
+Student is notified and confirms or declines the slot
 ↓
-Result is stored
+Confirmed evaluation appears on the Pending Evaluations page
+↓
+Either the student or the Hitchhiker can cancel at any time before it happens
+↓
+After the evaluation takes place, the result is recorded manually by the team directly in the database (no 42 API access to grades, so this is not an automated step)
 
 
 After this milestone:
 
 - Students can request evaluations.
-- Tutors can manage available evaluations.
-- Evaluations can be completed and stored.
+- Hitchhikers can pick slots for open requests.
+- Students can confirm or decline a picked slot.
+- Either side can cancel an evaluation at any point.
 - Administrators can manage evaluation processes.
 
 ---
@@ -563,36 +568,46 @@ Projects represent subjects that students can request evaluation for.
 
 ---
 
-# Issue: Implement Tutor Eligibility System
+# Issue: Implement Hitchhiker Project Eligibility Request
 
 ## Description
 
-Create a system that determines which tutors are allowed to perform evaluations.
+When a user switches to the Hitchhiker role for the first time, they fill in a single form listing all projects and select every project they want to be eligible to evaluate.
 
-Only approved tutors should be able to claim evaluations.
+The submission is sent as one eligibility request to the Head Tutor for approval. The Head Tutor reviews requests in a table showing the requester's name and their full list of selected projects, and makes one accept or decline decision for the whole request — there is no per-project review.
+
+Once approved, the Hitchhiker is eligible for every project in that request and can pick any open evaluation slot for those projects without needing any further authorization from anyone.
 
 ## Checklist
 
-- [ ] Create tutor eligibility model
-- [ ] Create eligibility status system
-- [ ] Create tutor request flow
-- [ ] Create approval workflow
-- [ ] Add Head Tutor approval action
-- [ ] Add rejection workflow
-- [ ] Add eligibility API endpoints
+- [ ] Detect first-time Hitchhiker activation
+- [ ] Display all active projects in a selectable list/box
+- [ ] Allow selecting multiple projects
+- [ ] Allow submitting the eligibility request
+- [ ] Store selected projects with the request
+- [ ] Notify Head Tutors of the new request
+- [ ] Show a table of pending requests with requester name and selected projects
+- [ ] Allow Head Tutor to accept the whole request
+- [ ] Allow Head Tutor to decline the whole request
+- [ ] Store the request's approval/decline result
+- [ ] Notify Hitchhiker of the decision
+- [ ] Allow approved Hitchhiker to pick any slot for the approved projects without further approval
+- [ ] Prevent picking slots for projects that were not part of an approved request
+- [ ] Add permission/lifecycle tests
 
-Statuses:
+Request status:
 
-REQUESTED
-CONFIRMED
-REJECTED
+PENDING
+APPROVED
+DECLINED
 
 
 ## Acceptance Criteria
 
-- Tutors can request eligibility.
-- Head Tutors can approve or reject requests.
-- Only confirmed tutors can claim evaluations.
+- A Hitchhiker submits one request covering all the projects they selected.
+- The Head Tutor makes a single accept/decline decision per request, reviewing all requests in one table.
+- On approval, the Hitchhiker is immediately eligible for every project in that request, with no further per-evaluation authorization needed.
+- On decline, none of the projects in that request grant eligibility.
 
 ---
 
@@ -600,7 +615,7 @@ REJECTED
 
 ## Description
 
-Allow students to request evaluations for projects.
+Allow students to create evaluation requests for projects. Requests start on the Requests page and stay there until a Hitchhiker picks a slot for them.
 
 ## Checklist
 
@@ -609,46 +624,93 @@ Allow students to request evaluations for projects.
 - [ ] Create request API
 - [ ] Create student request form
 - [ ] Add project selection
+- [ ] Display open requests on the Requests page
 - [ ] Add request history
-- [ ] Add request status tracking
 
-Possible statuses:
+Statuses:
 
 PENDING
-AVAILABLE
-CLAIMED
-IN_PROGRESS
-COMPLETED
+AWAITING_CONFIRMATION
+CONFIRMED
 CANCELLED
 
+
+A request starts as PENDING. When a Hitchhiker picks a slot it moves to AWAITING_CONFIRMATION. If the student confirms, it becomes CONFIRMED (and moves to the Pending Evaluations page); if the student declines, it returns to PENDING and is open for any eligible Hitchhiker to pick again. A request can move to CANCELLED from any state, by either the student or the Hitchhiker.
 
 ## Acceptance Criteria
 
 - Students can create evaluation requests.
-- Requests are stored correctly.
-- Students can see request status.
+- Open requests appear on the Requests page.
+- Requests are stored correctly and reflect the current state.
 
 ---
 
-# Issue: Create Evaluation Slot System
+# Issue: Implement Slot Picking by Hitchhiker
 
 ## Description
 
-Create a system where available evaluation times can be managed.
+Allow an eligible Hitchhiker to pick an available time slot for an open (PENDING) evaluation request.
 
 ## Checklist
 
-- [ ] Create evaluation slot model
-- [ ] Create available slot API
-- [ ] Add slot validation
-- [ ] Connect slots with evaluation requests
-- [ ] Display available slots
+- [ ] Create slot-picking endpoint
+- [ ] Validate the Hitchhiker's eligibility for the request's project
+- [ ] Prevent two Hitchhikers picking the same request at once
+- [ ] Add transaction protection
+- [ ] Move request to AWAITING_CONFIRMATION
+- [ ] Notify the student that a slot was picked and needs confirmation
 
 ## Acceptance Criteria
 
-- Available slots can be created.
-- Students can select available times.
-- Conflicting reservations are prevented.
+- Only eligible Hitchhikers can pick a slot for a request.
+- A request cannot be picked by two Hitchhikers at once.
+- The student is notified as soon as a slot is picked.
+
+---
+
+# Issue: Implement Student Confirmation of Picked Slot
+
+## Description
+
+Let the student confirm or decline the slot a Hitchhiker picked for their request.
+
+## Checklist
+
+- [ ] Create confirm endpoint
+- [ ] Create decline endpoint
+- [ ] On confirm, move request to CONFIRMED and show it on the Pending Evaluations page
+- [ ] On decline, return request to PENDING so it can be picked again
+- [ ] Notify the Hitchhiker of the student's decision
+
+## Acceptance Criteria
+
+- Students can confirm or decline a picked slot.
+- Confirmed evaluations appear on the Pending Evaluations page.
+- Declined evaluations return to the open Requests page.
+
+---
+
+# Issue: Implement Evaluation Cancellation
+
+## Description
+
+Allow either the student or the Hitchhiker to cancel an evaluation at any point before it happens, regardless of its current status.
+
+## Checklist
+
+- [ ] Allow students to cancel their own request at any stage
+- [ ] Allow Hitchhikers to cancel a slot they picked, at any stage
+- [ ] Update request status to CANCELLED
+- [ ] Notify the other party when a cancellation happens
+- [ ] Prevent cancelling a request that belongs to someone else
+- [ ] Add permission tests
+
+## Acceptance Criteria
+
+- Students can cancel their own evaluation requests at any time.
+- Hitchhikers can cancel evaluations they picked at any time.
+- The other party is notified when a cancellation happens.
+- Unauthorized users cannot cancel someone else's evaluation.
 
 ---
 
@@ -661,124 +723,15 @@ Create the student interface for managing evaluations.
 ## Checklist
 
 - [ ] Create dashboard layout
-- [ ] Display requested evaluations
-- [ ] Display evaluation status
-- [ ] Add upcoming evaluations
+- [ ] Display the student's open Requests
+- [ ] Display the student's Pending Evaluations (confirmed)
+- [ ] Highlight requests awaiting the student's confirmation
 - [ ] Add evaluation history
 
 ## Acceptance Criteria
 
 - Students can view their evaluation activity.
-- Current and previous evaluations are displayed.
-
----
-
-# Issue: Create Tutor Dashboard
-
-## Description
-
-Create the tutor interface for managing evaluations.
-
-## Checklist
-
-- [ ] Create tutor dashboard
-- [ ] Display available evaluations
-- [ ] Filter available evaluations
-- [ ] Display claimed evaluations
-- [ ] Display evaluation history
-
-## Acceptance Criteria
-
-- Tutors can see available evaluations.
-- Tutors can manage their assigned evaluations.
-
----
-
-# Issue: Implement Evaluation Claim System
-
-## Description
-
-Allow eligible tutors to claim available evaluations.
-
-## Checklist
-
-- [ ] Create claim endpoint
-- [ ] Validate tutor eligibility
-- [ ] Prevent multiple tutors claiming one evaluation
-- [ ] Add transaction protection
-- [ ] Update evaluation status automatically
-
-## Acceptance Criteria
-
-- Only eligible tutors can claim evaluations.
-- One evaluation cannot be claimed twice.
-- Claim status updates correctly.
-
----
-
-# Issue: Implement Evaluation Completion Flow
-
-## Description
-
-Allow tutors to complete evaluations and save results.
-
-## Checklist
-
-- [ ] Create evaluation result model
-- [ ] Create completion endpoint
-- [ ] Add evaluation notes
-- [ ] Store final result
-- [ ] Update evaluation status
-- [ ] Add history record
-
-## Acceptance Criteria
-
-- Tutors can complete evaluations.
-- Results are stored.
-- Students can view completed evaluations.
-
----
-
-# Issue: Create Evaluation History System
-
-## Description
-
-Store and display completed evaluation history.
-
-## Checklist
-
-- [ ] Create history API
-- [ ] Add student history view
-- [ ] Add tutor history view
-- [ ] Add filtering options
-- [ ] Add pagination
-
-## Acceptance Criteria
-
-- Users can view previous evaluations.
-- History data is accurate.
-
----
-
-# Issue: Create Administration Tools
-
-## Description
-
-Provide management tools for administrators.
-
-## Checklist
-
-- [ ] Create admin evaluation view
-- [ ] View all evaluations
-- [ ] Search evaluations
-- [ ] Resolve conflicts
-- [ ] Manage evaluation statuses
-- [ ] View system history
-
-## Acceptance Criteria
-
-- Administrators can manage evaluation processes.
-- Conflicts can be resolved.
+- Requests awaiting confirmation are clearly highlighted.
 
 ---
 
@@ -788,11 +741,10 @@ Milestone is completed when:
 
 - [ ] Projects exist
 - [ ] Students can request evaluations
-- [ ] Tutors can become eligible
-- [ ] Tutors can claim evaluations
-- [ ] Evaluations can be completed
-- [ ] Results are stored
-- [ ] Administration tools exist
+- [ ] Hitchhikers can request project eligibility and Head Tutors can approve/decline the whole request
+- [ ] Eligible Hitchhikers can pick slots for open requests
+- [ ] Students can confirm or decline a picked slot
+- [ ] Either side can cancel an evaluation at any time
 
 ---
 
@@ -801,6 +753,14 @@ Milestone is completed when:
 ## Goal
 
 Add live communication between users and provide instant updates without requiring page refreshes.
+
+## Real-Time Architecture Rule
+
+WebSocket events are notifications only.
+
+HTTP/REST responses remain the source of truth.
+After receiving a WebSocket event, the frontend fetches the current state
+from the API when necessary.
 
 After this milestone:
 
@@ -876,16 +836,18 @@ Send live updates related to evaluation workflows.
 ## Checklist
 
 - [ ] Create evaluation event system
-- [ ] Send evaluation claimed event
-- [ ] Send evaluation completed event
+- [ ] Send evaluation slot-picked event
+- [ ] Send evaluation confirmed event
+- [ ] Send evaluation declined event
 - [ ] Send evaluation cancelled event
 - [ ] Notify affected users
 - [ ] Connect events with frontend updates
 
 Events:
 
-evaluation.claimed
-evaluation.completed
+evaluation.slot_picked
+evaluation.confirmed
+evaluation.declined
 evaluation.cancelled
 
 
@@ -964,7 +926,6 @@ After this milestone:
 
 - Users receive important platform notifications.
 - Students can contact Student Council.
-- Optional communication features can be added.
 
 ---
 
@@ -973,7 +934,6 @@ After this milestone:
 | Module | Points |
 |-|-:|
 | Notification System | 1 |
-| User Interaction (Optional) | 2 |
 
 ---
 
@@ -996,12 +956,20 @@ Create a general notification system for important platform events.
 - [ ] Add read/unread status
 - [ ] Add notification history
 - [ ] Add notification preferences
+- [ ] Send "new eligibility request" notification to Head Tutors, listing requester and selected projects
+- [ ] Send "eligibility approved/declined" notification to the requesting Hitchhiker
+- [ ] Send "slot picked, please confirm" notification to the student
+- [ ] Send "confirmed/declined" notification to the Hitchhiker
+- [ ] Send "evaluation cancelled" notification to the other party
 
 Example notification types:
 
-evaluation_available
-evaluation_claimed
-evaluation_completed
+slot_picked
+evaluation_confirmed
+evaluation_declined
+evaluation_cancelled
+eligibility_requested
+eligibility_decided
 system_message
 
 
@@ -1066,29 +1034,6 @@ ARCHIVED
 
 ---
 
-# Issue: Create Optional Private Messaging System
-
-## Description
-
-Optional extension for direct communication between users.
-
-## Checklist
-
-- [ ] Create private message model
-- [ ] Create chat API
-- [ ] Create chat interface
-- [ ] Store chat history
-- [ ] Add online status
-- [ ] Add read receipts
-- [ ] Add user blocking
-
-## Acceptance Criteria
-
-- Users can communicate privately.
-- Messages are stored securely.
-
----
-
 # Milestone 5 Completion Criteria
 
 Milestone is completed when:
@@ -1096,7 +1041,6 @@ Milestone is completed when:
 - [ ] Notification system works
 - [ ] Real-time notifications work
 - [ ] Student Council inbox exists
-- [ ] Optional chat is implemented if time allows
 
 ---
 
@@ -1104,7 +1048,7 @@ Milestone is completed when:
 
 ## Goal
 
-Allow users to quickly find people who can help them inside the platform.
+Allow authenticated users to discover Hitchhikers and Student Council members through a people-focused search.
 
 The search system focuses on discovering:
 
@@ -1160,9 +1104,10 @@ GET /api/search/people?q=diana
 
 - [ ] Create people search endpoint
 - [ ] Filter users by role
-- [ ] Search by 42 login
-- [ ] Search by display name
+- [ ] Search by display name (42 login may be used internally as a match field, but is not exposed in results)
 - [ ] Add role information to results
+- [ ] Add avatar/photo to results
+- [ ] Add short bio to results
 - [ ] Add pagination support
 - [ ] Add search tests
 
@@ -1174,16 +1119,22 @@ GET /api/search/people?q=diana
 {
   "users": [
     {
-      "login": "diana",
-      "role": "hitchhiker"
+      "display_name": "Diana Nováková",
+      "avatar_url": "/media/avatars/diana.jpg",
+      "role": "hitchhiker",
+      "bio": "Frontend enthusiast and peer tutor..."
     },
     {
-      "login": "martin",
-      "role": "student_council"
+      "display_name": "Martin Novák",
+      "avatar_url": "/media/avatars/martin.jpg",
+      "role": "student_council",
+      "bio": "Working on student community..."
     }
   ]
 }
 ```
+
+Note: 42 login is not included in the public search response. Public/authenticated profile results should only expose display name, avatar, role, and bio.
 
 ---
 
@@ -1209,7 +1160,10 @@ Create the frontend search experience for finding Hitchhikers and Student Counci
 - [ ] Create search component
 - [ ] Add search input
 - [ ] Display user results
+- [ ] Display avatar/photo per result
+- [ ] Display display name per result
 - [ ] Display role badges
+- [ ] Display short bio per result
 - [ ] Add empty state
 - [ ] Add loading state
 - [ ] Add error handling
@@ -1235,11 +1189,11 @@ Allow users to view basic information about discovered Hitchhikers and Student C
 ## Checklist
 
 - [ ] Create public profile view
-- [ ] Display 42 login
+- [ ] Display display name
 - [ ] Display role
-- [ ] Display avatar
-- [ ] Display availability information (optional)
-- [ ] Restrict private information
+- [ ] Display avatar/photo
+- [ ] Display short bio
+- [ ] Restrict private information (42 login and other non-public fields are not exposed)
 
 ---
 
@@ -1603,10 +1557,12 @@ Prepare project documentation.
 - [ ] Document setup process
 - [ ] Document environment variables
 - [ ] Document development workflow
+- [ ] Document the manual evaluation-result recording process for the team
 
 ## Acceptance Criteria
 
 - New developers can understand and run the project.
+- The team's manual process for recording evaluation results is written down.
 
 ---
 
@@ -1620,7 +1576,7 @@ Create a complete evaluator workflow.
 
 - [ ] Verify implemented modules
 - [ ] Prepare student workflow demo
-- [ ] Prepare tutor workflow demo
+- [ ] Prepare Hitchhiker workflow demo
 - [ ] Prepare Student Council demo
 - [ ] Test evaluator permissions
 - [ ] Fix final bugs
@@ -1632,8 +1588,8 @@ The evaluator can:
 
 - Create/login as a user
 - Request an evaluation
-- Claim an evaluation as a tutor
-- Complete evaluation
+- Pick a slot as a Hitchhiker and have the student confirm it
+- Cancel an evaluation as either party
 - Receive notifications
 - Search Hitchhikers and Student Council members
 - Test permissions
