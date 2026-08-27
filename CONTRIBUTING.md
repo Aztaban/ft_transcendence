@@ -46,53 +46,68 @@ ft_transcendence/
 
 ## 2. Git Workflow
 
-**Trunk-based development.** `main` is always deployable. No long-lived `develop` branch — with a 5-person team and a 2.5-month timeline, a second long-lived branch just adds merge overhead without buying safety.
+**Two-tier branching, matching GitHub sub-issues.** Since checklists are now real linked sub-issues, branches mirror that hierarchy: one branch per **parent issue** ("big issue"), and one branch per **sub-issue** underneath it. This gives two levels of review instead of one.
 
-- All work happens on short-lived feature branches off `main`.
-- Branches should live **days, not weeks** — if a branch is getting stale, either merge behind a checklist item that's still unchecked, or split the work into a smaller PR.
-- `main` is protected: no direct pushes, all changes go through a PR.
-- Merge via **squash and merge** — keeps `main`'s history to one commit per feature/fix, easy to scan and easy to revert.
-- Delete the branch after merge (GitHub can do this automatically — enable "Automatically delete head branches" in repo settings).
+```
+main
+ └─ issue-14/repo-structure-workflow          <- big issue branch (parent #14)
+     ├─ issue-14/101-define-repo-structure    <- sub-issue branch
+     ├─ issue-14/102-create-backend-dir       <- sub-issue branch
+     └─ issue-14/103-define-git-workflow      <- sub-issue branch
+```
+
+**Two levels of review:**
+
+| Level | Branch | PR target | Reviewed by |
+|---|---|---|---|
+| 1 — peer review | sub-issue branch | the parent big-issue branch | your dev **buddy** (see pairs below) |
+| 2 — architecture review | big issue branch | `main` | Roman (IT Architect) |
+
+**Buddy pairs for level-1 review:**
+- Martin ↔ Lenka (backend)
+- Diana ↔ Lada (frontend)
+- Roman's own big-issue PRs into `main` are reviewed by someone else on the team (rotate, or default to Martin) — he can't be both author and architecture-reviewer of his own work.
+
+**Why two levels:** small sub-issue PRs get fast peer feedback without waiting on Roman for every commit. Roman then reviews the *integrated* big-issue branch once, checking the feature as a whole against architecture decisions — not 5-10 tiny diffs one at a time.
+
+**Rules:**
+- `main` is always deployable. No direct pushes — everything comes through a big-issue branch PR.
+- A big-issue branch stays open until every one of its sub-issue branches has merged into it.
+- Once a big-issue branch's PR into `main` is approved by Roman (or by the designated reviewer, if Roman is the author), squash-merge into `main` and close the parent issue.
+- Delete branches after merge (both levels).
 
 ---
 
 ## 3. Branch Naming
 
 ```
-<type>/<milestone>-<short-description>
+issue-<parent-number>/<short-description>            <- big issue branch
+issue-<parent-number>/<sub-issue-number>-<short-description>   <- sub-issue branch
 ```
 
-**Types:**
-| Type | Use for |
-|---|---|
-| `feature` | New functionality |
-| `fix` | Bug fixes |
-| `chore` | Tooling, config, dependency bumps |
-| `docs` | Documentation only |
-| `refactor` | Code change with no behavior change |
-| `test` | Adding or fixing tests |
+**Examples (using #14 "Create Repository Structure & Development Workflow"):**
+- Big issue branch: `issue-14/repo-structure-workflow`
+- Sub-issue branches off it: `issue-14/101-define-repo-structure`, `issue-14/102-create-backend-dir`, `issue-14/103-create-frontend-dir`
 
-**Examples:**
-- `feature/m2-oauth-login`
-- `feature/m3-slot-picking`
-- `fix/m4-websocket-reconnect`
-- `chore/m1-docker-setup`
-- `docs/m10-api-docs`
-
-Milestone tag (`m1`–`m10`) keeps branches traceable back to the GitHub milestone/issue they belong to, and makes it obvious at a glance what phase a branch belongs to.
+The parent issue number ties every sub-branch back to its big-issue branch and GitHub issue at a glance, without needing a separate `type/` prefix — the GitHub issue itself already carries the type (label) and milestone.
 
 ---
 
 ## 4. Pull Request Workflow
 
-1. **Open the PR against `main`**, as a draft if the work isn't ready for review yet.
-2. **Link the related issue** in the description: `Closes #12` (this auto-closes the issue when the PR merges, keeping the Issues tab accurate without manual bookkeeping).
-3. **Keep PRs scoped to one issue** where possible — easier to review, easier to revert if something breaks.
-4. **CI must pass** before merge (see `.github/workflows/`) — linting, tests, build.
-5. **At least 1 approval required** from a teammate who isn't the author. With a 5-person team, cross-review is realistic without becoming a bottleneck.
-6. **Squash and merge**, then delete the branch.
+**Sub-issue PR (level 1):**
+1. Branch off the big-issue branch: `issue-14/101-define-repo-structure`.
+2. Open the PR **against the big-issue branch**, not `main`. Link the sub-issue: `Closes #101`.
+3. Your buddy reviews and approves.
+4. Squash-merge into the big-issue branch, delete the sub-issue branch.
 
-**PR description template** (put this in `.github/pull_request_template.md` once the repo structure exists):
+**Big-issue PR (level 2):**
+1. Once all its sub-issues are merged into the big-issue branch, open a PR from the big-issue branch **into `main`**. Link the parent: `Closes #14`.
+2. Roman reviews against architecture decisions (or the designated reviewer, if Roman authored it).
+3. CI must pass.
+4. Squash-merge into `main`, delete the big-issue branch. This closes the parent issue and, via GitHub's sub-issue tracking, reflects that all its sub-issues are done too.
+
+**PR description template** (put this in `.github/pull_request_template.md`):
 ```markdown
 ## What
 Brief description of the change.
