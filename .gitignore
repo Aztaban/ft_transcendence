@@ -1,7 +1,33 @@
-﻿################################################################################
+################################################################################
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
 /.vs
 /docs/ARCHITECTRUE.pptx
 /docs/~$ARCHITECTRUE.pptx
+
+# --- Environment ---
+.env
+!.env.example
+
+# --- Python / Django ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+staticfiles/
+media/
+
+# --- Node / Vite ---
+node_modules/
+dist/
+.vite/
+
+# --- Editors / OS ---
+.idea/
+.DS_Store
+
+# --- Docker ---
+mysql_data/
