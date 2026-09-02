@@ -24,9 +24,7 @@ export default function App() {
       <h1>ft_transcendence</h1>
       <p>Docker dev environment bootstrap — proves frontend ↔ backend ↔ db/redis wiring.</p>
       {error && <p style={{ color: "red" }}>Backend unreachable: {error}</p>}
-      {health && (
-        <pre>{JSON.stringify(health, null, 2)}</pre>
-      )}
+      {health && <pre>{JSON.stringify(health, null, 2)}</pre>}
     </main>
   );
 }
