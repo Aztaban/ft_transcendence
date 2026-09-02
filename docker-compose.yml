@@ -63,6 +63,44 @@ services:
     networks:
       - transcendence_net
 
+  celery_worker:
+    build: ./backend
+    restart: unless-stopped
+    command: celery -A config worker -l info
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: db
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - transcendence_net
+
+  celery_beat:
+    build: ./backend
+    restart: unless-stopped
+    command: celery -A config beat -l info
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: db
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - transcendence_net
+
   nginx:
     build: ./nginx
     restart: unless-stopped

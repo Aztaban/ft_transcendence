@@ -47,4 +47,15 @@ DATABASES = {
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_IMPORTS = ["config.tasks"]
+CELERY_BEAT_SCHEDULE = {
+    "heartbeat-every-10s": {
+        "task": "config.tasks.heartbeat",
+        "schedule": 10.0,
+    },
+}
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
