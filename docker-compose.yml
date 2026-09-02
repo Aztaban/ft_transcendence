@@ -63,9 +63,24 @@ services:
     networks:
       - transcendence_net
 
+  nginx:
+    build: ./nginx
+    restart: unless-stopped
+    volumes:
+      - nginx_certs:/etc/nginx/certs
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - transcendence_net
+
 volumes:
   mysql_data:
   frontend_node_modules:
+  nginx_certs:
 
 networks:
   transcendence_net:
