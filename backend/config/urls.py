@@ -21,8 +21,13 @@ def health(request):
     except Exception as exc:  # noqa: BLE001 - surfaced directly in the health response
         redis_status = f"error: {exc}"
 
+    heartbeat = redis.from_url(REDIS_URL).get("celery_heartbeat")
+    celery_status = "ok" if heartbeat else "no heartbeat yet"
+
     status = "ok" if db_status == "ok" and redis_status == "ok" else "error"
-    return JsonResponse({"status": status, "db": db_status, "redis": redis_status})
+    return JsonResponse(
+        {"status": status, "db": db_status, "redis": redis_status, "celery": celery_status}
+    )
 
 
 urlpatterns = [
