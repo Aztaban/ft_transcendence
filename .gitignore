@@ -31,3 +31,6 @@ dist/
 
 # --- Docker ---
 mysql_data/
+
+# --- Celery ---
+celerybeat-schedule
