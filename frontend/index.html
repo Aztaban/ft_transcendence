@@ -5,8 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ft_transcendence</title>
   </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+  <body style="font-family: sans-serif; padding: 2rem">
+    <h1>ft_transcendence</h1>
+    <p>Bootstrap placeholder — proves frontend reaches the backend. Replaced by #19.</p>
+    <pre id="health">loading…</pre>
+    <script type="module">
+      const base = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+      const el = document.getElementById("health");
+      fetch(`${base}/health/`)
+        .then((res) => res.json())
+        .then((data) => {
+          el.textContent = JSON.stringify(data, null, 2);
+        })
+        .catch((err) => {
+          el.textContent = `Backend unreachable: ${err}`;
+        });
+    </script>
   </body>
 </html>

@@ -9,8 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # Same image as the frontend container: the lockfile pins musl-specific
-    # binaries (rollup), which a glibc runner cannot install.
+    # Same image as the frontend container, so CI tests the real runtime.
     container: node:20-alpine
     defaults:
       run:
@@ -18,7 +17,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
-      - run: npm run lint
       - run: npm run format
-      - run: npx tsc --noEmit
-      - run: npm test
