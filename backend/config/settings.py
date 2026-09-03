@@ -15,7 +15,16 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "rest_framework",
+    "drf_spectacular",
 ]
+
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+SPECTACULAR_SETTINGS = {
+    "TITLE": "ft_transcendence API",
+    "VERSION": "0.1.0",
+}
 
 MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",

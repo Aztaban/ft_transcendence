@@ -4,3 +4,4 @@ mysqlclient==2.2.6
 redis==5.2.1
 python-dotenv==1.0.1
 celery==5.4.0
+drf-spectacular==0.28.0

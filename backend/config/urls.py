@@ -1,8 +1,8 @@
+import redis
 from django.db import connection
 from django.http import JsonResponse
 from django.urls import path
-
-import redis
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from config.settings import REDIS_URL
 
@@ -32,4 +32,6 @@ def health(request):
 
 urlpatterns = [
     path("health/", health, name="health"),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]
