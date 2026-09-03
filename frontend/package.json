@@ -1,0 +1,16 @@
+{
+  "name": "ft_transcendence-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "format": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "vite": "^5.4.11"
+  }
+}
