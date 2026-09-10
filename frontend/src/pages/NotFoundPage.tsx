@@ -1,9 +1,9 @@
 function NotFoundPage() {
   return (
-    <main>
-      <h1>404</h1>
+    <>
+      <h2>404</h2>
       <p>Page not found.</p>
-    </main>
+    </>
   );
 }
 
