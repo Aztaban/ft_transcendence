@@ -1,9 +1,13 @@
+import { Route, Routes } from "react-router";
+import HomePage from "./pages/HomePage";
+import NotFoundPage from "./pages/NotFoundPage";
+
 function App() {
   return (
-    <main>
-      <h1>ft_transcendence</h1>
-      <p>Frontend application initialized with React and TypeScript.</p>
-    </main>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 }
 
