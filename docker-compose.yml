@@ -51,6 +51,10 @@ services:
   frontend:
     build: ./frontend
     restart: unless-stopped
+    # node_modules lives in a named volume so the bind mount above doesn't hide
+    # it, but that volume outlives package.json changes. Installing on start
+    # keeps it in sync instead of failing with a stale dependency tree.
+    command: sh -c "npm install && npm run dev -- --host"
     env_file:
       - .env
     volumes:
