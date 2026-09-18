@@ -4,3 +4,5 @@ __pycache__/
 venv/
 .env
 .git/
+celerybeat-schedule
+db.sqlite3
