@@ -1,0 +1,14 @@
+# Backend
+/backend/ @Aztaban
+
+# Frontend
+# Roman reviews frontend during M1 and M2.
+/frontend/ @webxxcom
+
+# Infrastructure
+/nginx/ @webxxcom
+/docker-compose.yml @webxxcom
+/docker-compose.prod.yml @webxxcom
+
+# GitHub / CI configuration
+/.github/ @webxxcom
