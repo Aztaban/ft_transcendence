@@ -4,10 +4,22 @@ import NotFoundPage from "./pages/NotFoundPage";
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+    <div>
+      <header>
+        <h1>ft_transcendence</h1>
+      </header>
+
+      <main>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </main>
+
+      <footer>
+        <p>ft_transcendence</p>
+      </footer>
+    </div>
   );
 }
 
