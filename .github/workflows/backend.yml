@@ -2,12 +2,10 @@ name: backend
 
 on:
   push:
-    paths: ["backend/**"]
   pull_request:
-    paths: ["backend/**"]
 
 jobs:
-  test:
+  backend:
     runs-on: ubuntu-latest
     services:
       mysql:
