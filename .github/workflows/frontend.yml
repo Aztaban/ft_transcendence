@@ -2,12 +2,10 @@ name: frontend
 
 on:
   push:
-    paths: ["frontend/**"]
   pull_request:
-    paths: ["frontend/**"]
 
 jobs:
-  test:
+  frontend:
     runs-on: ubuntu-latest
     # Same image as the frontend container, so CI tests the real runtime.
     container: node:20-alpine
@@ -18,3 +16,4 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm ci
       - run: npm run format
+      - run: npx tsc --noEmit
