@@ -33,6 +33,7 @@ jobs:
       MYSQL_PORT: 3306
       REDIS_URL: redis://127.0.0.1:6379/0
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      DJANGO_SECRET_KEY: test-secret-key-for-ci
     defaults:
       run:
         working-directory: backend

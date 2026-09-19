@@ -70,7 +70,7 @@ services:
   celery_worker:
     build: ./backend
     restart: unless-stopped
-    command: celery -A app worker -l info
+    command: celery -A config worker -l info
     env_file:
       - .env
     environment:
@@ -89,7 +89,7 @@ services:
   celery_beat:
     build: ./backend
     restart: unless-stopped
-    command: celery -A app beat -l info
+    command: celery -A config beat -l info
     env_file:
       - .env
     environment:
