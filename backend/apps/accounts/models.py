@@ -23,6 +23,13 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         max_length=64,
     )
 
+    intra_login = models.CharField(
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+
     language = models.CharField(
         max_length=2,
         choices=Language.choices,
