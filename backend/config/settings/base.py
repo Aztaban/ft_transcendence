@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "accounts",
 ]
 
 MIDDLEWARE = [
@@ -66,6 +67,8 @@ DATABASES = {
         "PORT": os.getenv("MYSQL_PORT", "3306"),
     }
 }
+
+AUTH_USER_MODEL = "accounts.User"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
