@@ -4,11 +4,19 @@ from django.contrib.auth.base_user import BaseUserManager
 class UserManager(BaseUserManager):
     use_in_migrations = True
 
-    def create_user(self, email, password=None, **extra_fields):
+    @classmethod
+    def normalize_email(cls, email):
+        """Use one canonical email spelling for this case-insensitive project."""
         if not email:
+            return email
+        return super().normalize_email(email.strip()).casefold()
+
+    def create_user(self, email, password=None, **extra_fields):
+        if not email or not email.strip():
             raise ValueError("An email address is required")
 
         email = self.normalize_email(email)
+        email = self.model._meta.get_field("email").clean(email, None)
 
         user = self.model(
             email=email,
