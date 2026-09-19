@@ -1,0 +1,36 @@
+:root {
+  /* Colors */
+  --color-background: #ffffff;
+  --color-surface: #ffffff;
+  --color-text-primary: #000000;
+  --color-text-secondary: #656262;
+  --color-accent: #35c5f0;
+  --color-border: #d9d9d9;
+
+  /* Shadows */
+  --shadow-sidebar: 2px 0 6px rgba(0, 0, 0, 0.16);
+  --shadow-topbar: 0 1px 3px rgba(101, 98, 98, 0.35);
+  --shadow-card: 0 0 5px rgba(0, 0, 0, 0.25);
+
+  /* Radius */
+  --radius-sm: 5px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Layout */
+  --sidebar-width: 240px;
+  --topbar-height: 72px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Typography */
+  --font-family-base: Inter, Arial, sans-serif;
+}

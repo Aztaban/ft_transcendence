@@ -1,0 +1,584 @@
+/* =========================================================
+   EXPERIMENTAL 42 / INTRA-INSPIRED THEME
+   Remove the import from main.tsx to return to the Figma theme.
+   ========================================================= */
+
+:root {
+  --42-black: #1f1f1f;
+  --42-black-soft: #292929;
+  --42-turquoise: #00babc;
+  --42-turquoise-dark: #00989a;
+  --42-background: #f2f3f3;
+  --42-surface: #ffffff;
+  --42-border: #d9dddd;
+  --42-muted: #7b8080;
+}
+
+/* Main application */
+
+body {
+  background: var(--42-background);
+}
+
+.app-shell {
+  background: var(--42-background);
+}
+
+.app-shell__content {
+  background: var(--42-background);
+}
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.sidebar {
+  background: var(--42-black);
+  box-shadow: 3px 0 12px rgba(0, 0, 0, 0.22);
+}
+
+/* 42 logo + EVALS */
+
+.sidebar__brand-name {
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+
+.sidebar__brand-logo {
+  filter: invert(1);
+}
+
+/* Role selector */
+
+.sidebar__role-selector {
+  color: #ffffff;
+  background: var(--42-black-soft);
+  border: 1px solid #454545;
+  box-shadow: none;
+}
+
+.sidebar__role-selector:hover {
+  border-color: var(--42-turquoise);
+}
+
+.sidebar__role-chevron {
+  filter: invert(1);
+}
+
+.sidebar__role-menu {
+  overflow: hidden;
+  padding: 5px;
+
+  border: 1px solid #414141;
+  border-radius: 6px;
+
+  background: var(--42-black-soft);
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.sidebar__role-option {
+  color: #ffffff;
+}
+
+.sidebar__role-option:hover {
+  background: #383838;
+}
+
+.sidebar__role-option--selected {
+  color: #ffffff;
+  background: var(--42-turquoise);
+}
+
+/* Navigation */
+
+.sidebar__nav-link {
+  margin-left: -8px;
+  padding: 6px 8px;
+
+  border-radius: 4px;
+
+  color: #e9e9e9;
+
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.sidebar__nav-link:hover {
+  opacity: 1;
+  color: #ffffff;
+  background: #303030;
+  transform: translateX(2px);
+}
+
+.sidebar__nav-link--active {
+  color: #ffffff;
+  background: var(--42-turquoise);
+  font-weight: 500;
+}
+
+/* Figma navigation icons are dark by default */
+
+.sidebar__nav-icon img {
+  filter: invert(1);
+}
+
+.sidebar__nav-link--active .sidebar__nav-icon img {
+  filter: invert(1);
+}
+
+/* Bottom divider */
+
+.sidebar__divider {
+  opacity: 0.35;
+  filter: invert(1);
+}
+
+/* Logout */
+
+.sidebar__logout {
+  color: #ffffff;
+
+  border: 1px solid #5a5a5a;
+
+  background: var(--42-black-soft);
+
+  box-shadow: none;
+
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.sidebar__logout:hover {
+  border-color: var(--42-turquoise);
+  background: #343434;
+}
+
+.sidebar__logout img {
+  filter: invert(1);
+}
+
+/* External tool area */
+
+.sidebar__external {
+  padding: 7px 8px;
+
+  border-radius: 7px;
+
+  background: #ffffff;
+}
+
+.sidebar__external a:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+/* =========================================================
+   TOP BAR
+   ========================================================= */
+
+.topbar {
+  background: #ffffff;
+
+  border-bottom: 1px solid var(--42-border);
+
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+/* Search becomes a proper Intra-like field */
+
+.topbar__search {
+  width: min(500px, 46vw);
+  height: 44px;
+
+  padding: 0 15px;
+
+  border: 1px solid #d8dddd;
+  border-radius: 4px;
+
+  background: #f5f6f6;
+
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.topbar__search:focus-within {
+  border-color: var(--42-turquoise);
+
+  background: #ffffff;
+
+  box-shadow: 0 0 0 2px rgba(0, 186, 188, 0.12);
+}
+
+.topbar__search-icon {
+  width: 25px;
+  height: 25px;
+
+  opacity: 0.75;
+}
+
+.topbar__search input {
+  width: 100%;
+
+  font-size: 18px;
+}
+
+.topbar__search input::placeholder {
+  color: #757b7b;
+}
+
+/* Notification */
+
+.topbar__notification {
+  border-radius: 4px;
+}
+
+.topbar__notification:hover {
+  background: #f0f2f2;
+}
+
+.topbar__notification-dot {
+  background: var(--42-turquoise);
+}
+
+/* User */
+
+.topbar__avatar {
+  width: 50px;
+  height: 50px;
+
+  border: 3px solid var(--42-turquoise);
+
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.16);
+}
+
+.topbar__username {
+  font-weight: 600;
+}
+
+.topbar__user-menu {
+  border-radius: 4px;
+}
+
+.topbar__user-menu:hover {
+  background: #f0f2f2;
+}
+
+/* =========================================================
+   SHARED UI COMPONENTS
+   ========================================================= */
+
+.ui-card {
+  border: 1px solid var(--42-border);
+  border-radius: 3px;
+
+  background: var(--42-surface);
+
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.08);
+}
+
+.ui-button--primary {
+  border-color: var(--42-turquoise);
+  background: var(--42-turquoise);
+  color: #ffffff;
+}
+
+.ui-button--primary:hover {
+  background: var(--42-turquoise-dark);
+}
+
+.ui-button--secondary {
+  border-color: #bfc5c5;
+  background: #ffffff;
+}
+
+.ui-input {
+  border-radius: 3px;
+  border-color: #cbd0d0;
+}
+
+.ui-input:focus {
+  border-color: var(--42-turquoise);
+  outline: 2px solid rgba(0, 186, 188, 0.14);
+}
+
+.ui-checkbox input:checked + .ui-checkbox__control {
+  border-color: var(--42-turquoise);
+  background: var(--42-turquoise);
+}
+
+.ui-badge--accent {
+  background: rgba(0, 186, 188, 0.14);
+  color: #007d7f;
+}
+
+/* Selection */
+
+::selection {
+  color: #ffffff;
+  background: var(--42-turquoise);
+}
+
+/* =========================================================
+   42 THEME REFINEMENT
+   ========================================================= */
+
+/* Wider sidebar */
+
+.sidebar {
+  width: 270px;
+}
+
+.app-shell__main {
+  margin-left: 270px;
+}
+
+.sidebar__middle {
+  left: 32px;
+  width: 210px;
+}
+
+.sidebar__divider {
+  width: 210px;
+  margin-left: 30px;
+}
+
+/* Give navigation a little more breathing room */
+
+.sidebar__nav-link {
+  width: 205px;
+  padding: 7px 10px;
+}
+
+.sidebar__role-selector {
+  width: 155px;
+  min-width: 155px;
+}
+
+/* =========================================================
+   BOTTOM EXTERNAL LINKS
+   Remove white container and make logos white
+   ========================================================= */
+
+.sidebar__external {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+
+  margin-top: 34px;
+  margin-left: 0;
+
+  padding: 0;
+
+  background: transparent;
+  border: 0;
+}
+
+.sidebar__external a {
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+
+  background: transparent;
+}
+
+.sidebar__external a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.sidebar__external-intra,
+.sidebar__external-notion,
+.sidebar__external-slack {
+  width: 34px;
+  height: 34px;
+
+  object-fit: contain;
+
+  filter: brightness(0) invert(1);
+}
+
+/* slightly larger Intra symbol */
+
+.sidebar__external-intra {
+  width: 38px;
+  height: 38px;
+}
+
+/* =========================================================
+   SEARCH BAR
+   Larger, cleaner, less stretched
+   ========================================================= */
+
+.topbar {
+  padding-left: 34px;
+  padding-right: 32px;
+}
+
+.topbar__search {
+  width: clamp(360px, 38vw, 600px);
+  height: 50px;
+
+  gap: 14px;
+
+  padding: 0 18px;
+
+  border: 1px solid #d6dddd;
+  border-radius: 12px;
+
+  background: #f3f5f5;
+
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.03),
+    0 1px 4px rgba(0, 0, 0, 0.04);
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.topbar__search:hover {
+  background: #eef1f1;
+}
+
+.topbar__search:focus-within {
+  border-color: var(--42-turquoise);
+
+  background: #ffffff;
+
+  box-shadow:
+    0 0 0 3px rgba(0, 186, 188, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.topbar__search-icon {
+  width: 26px;
+  height: 26px;
+
+  flex: 0 0 26px;
+
+  opacity: 0.75;
+}
+
+.topbar__search input {
+  width: 100%;
+  height: 100%;
+
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.topbar__search input::placeholder {
+  color: #747b7b;
+}
+
+/* =========================================================
+   Wider sidebar responsive corrections
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 210px;
+  }
+
+  .app-shell__main {
+    margin-left: 210px;
+  }
+
+  .sidebar__middle {
+    left: 24px;
+    width: 170px;
+  }
+
+  .topbar__search {
+    width: clamp(260px, 38vw, 420px);
+  }
+}
+
+@media (max-width: 680px) {
+  .sidebar {
+    width: 72px;
+  }
+
+  .app-shell__main {
+    margin-left: 72px;
+  }
+
+  .topbar__search {
+    width: min(220px, 45vw);
+    height: 44px;
+  }
+}
+
+/* Keep Notion and Slack in their original colors */
+
+.sidebar__external-intra {
+  filter: brightness(0) invert(1);
+}
+
+.sidebar__external-notion,
+.sidebar__external-slack {
+  filter: none;
+}
+
+/* Unified border radius */
+
+.sidebar__role-selector,
+.sidebar__role-menu,
+.sidebar__role-option,
+.sidebar__nav-link,
+.sidebar__logout,
+.sidebar__external a,
+.topbar__search,
+.topbar__notification,
+.topbar__user-menu,
+.ui-card,
+.ui-button,
+.ui-input {
+  border-radius: 5px;
+}
+
+/* Search bar fills the top bar up to the notification area */
+
+.topbar {
+  gap: 28px;
+}
+
+.topbar__search {
+  flex: 1;
+  width: auto;
+  max-width: none;
+  margin-right: 10px;
+}
+
+.topbar__user {
+  flex-shrink: 0;
+}
+
+/* Match role switcher and Logout width to navigation items */
+
+.sidebar__role-selector {
+  width: 205px;
+  min-width: 205px;
+}
+
+.sidebar__role-menu {
+  width: 205px;
+}
+
+.sidebar__logout {
+  width: 205px;
+  margin-left: 32px;
+}
