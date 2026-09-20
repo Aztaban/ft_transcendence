@@ -5,6 +5,7 @@ target-version = ["py312"]
 [tool.isort]
 profile = "black"
 line_length = 100
+skip_glob = ["**/migrations/*.py"]
 
 [tool.ruff]
 line-length = 100
