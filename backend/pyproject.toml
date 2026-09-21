@@ -5,6 +5,7 @@ target-version = ["py312"]
 [tool.isort]
 profile = "black"
 line_length = 100
+skip_glob = ["**/migrations/*.py"]
 
 [tool.ruff]
 line-length = 100
@@ -15,3 +16,8 @@ select = ["E", "F", "I", "B"]
 
 [tool.pytest.ini_options]
 python_files = ["test_*.py", "*_test.py"]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+addopts = "--ds=config.settings.test"
+
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/*.py" = ["I001", "E501"]
