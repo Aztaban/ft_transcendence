@@ -1,24 +1,27 @@
 :root {
   /* Colors */
-  --color-background: #ffffff;
+  --color-background: #f2f3f3;
   --color-surface: #ffffff;
   --color-text-primary: #000000;
-  --color-text-secondary: #656262;
-  --color-accent: #35c5f0;
-  --color-border: #d9d9d9;
+  --color-text-secondary: #7b8080;
+  --color-accent: #00babc;
+  --color-accent-dark: #00989a;
+  --color-border: #d9dddd;
+  --color-sidebar: #1f1f1f;
+  --color-sidebar-surface: #292929;
 
   /* Shadows */
-  --shadow-sidebar: 2px 0 6px rgba(0, 0, 0, 0.16);
-  --shadow-topbar: 0 1px 3px rgba(101, 98, 98, 0.35);
-  --shadow-card: 0 0 5px rgba(0, 0, 0, 0.25);
+  --shadow-sidebar: 3px 0 12px rgba(0, 0, 0, 0.22);
+  --shadow-topbar: 0 2px 8px rgba(0, 0, 0, 0.07);
+  --shadow-card: 0 2px 7px rgba(0, 0, 0, 0.08);
 
   /* Radius */
   --radius-sm: 5px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-md: 5px;
+  --radius-lg: 5px;
 
   /* Layout */
-  --sidebar-width: 240px;
+  --sidebar-width: 270px;
   --topbar-height: 72px;
 
   /* Spacing */

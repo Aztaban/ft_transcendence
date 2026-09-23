@@ -24,29 +24,32 @@
 }
 
 .ui-button--primary {
-  color: #ffffff;
+  border-color: var(--color-accent);
   background: var(--color-accent);
+  color: #ffffff;
 }
 
 .ui-button--primary:hover:not(:disabled) {
+  background: var(--color-accent-dark);
   filter: brightness(0.96);
 }
 
 .ui-button--secondary {
-  color: var(--color-text-primary);
+  border-color: #bfc5c5;
   background: var(--color-surface);
-  border-color: var(--color-text-primary);
+  color: var(--color-text-primary);
 }
 
 .ui-button--ghost {
-  color: var(--color-text-primary);
   background: transparent;
+  color: var(--color-text-primary);
 }
 
 .ui-card {
   padding: var(--space-6);
-  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  background: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
 
@@ -65,10 +68,15 @@
   width: 100%;
   min-height: 44px;
   padding: 0 var(--space-4);
-  color: var(--color-text-primary);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1px solid #cbd0d0;
   border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.ui-input:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid rgba(0, 186, 188, 0.14);
 }
 
 .ui-input--error {
@@ -125,8 +133,8 @@
 
 .ui-badge {
   display: inline-flex;
-  align-items: center;
   min-height: 28px;
+  align-items: center;
   padding: var(--space-1) var(--space-3);
   border-radius: 999px;
   font-size: 0.85rem;
@@ -138,8 +146,8 @@
 }
 
 .ui-badge--accent {
-  background: color-mix(in srgb, var(--color-accent) 20%, white);
-  color: #087c9e;
+  background: rgba(0, 186, 188, 0.14);
+  color: #007d7f;
 }
 
 .ui-badge--success {
