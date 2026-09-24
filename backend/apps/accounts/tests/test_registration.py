@@ -122,3 +122,92 @@ def test_register_rejects_passwords_that_fail_configured_validators(password):
 
     assert_validation_error(response, "password")
     assert get_user_model().objects.count() == 0
+
+
+def test_register_rejects_existing_email_case_insensitively():
+    user_model = get_user_model()
+    existing_user = user_model.objects.create_user(
+        email="Existing@Example.COM",
+        display_name="existing-user",
+        password="ExistingPassword123!",
+    )
+    client = APIClient()
+
+    response = client.post(
+        reverse("api:register"),
+        registration_payload(
+            email="existing@example.com",
+            display_name="new-user",
+        ),
+        format="json",
+        HTTP_HOST="localhost",
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {
+        "error": {
+            "code": "email_already_exists",
+            "message": "An account with this email already exists.",
+        }
+    }
+    assert user_model.objects.count() == 1
+    assert user_model.objects.get() == existing_user
+
+
+def test_register_allows_duplicate_display_name():
+    user_model = get_user_model()
+    user_model.objects.create_user(
+        email="first@example.com",
+        display_name="shared-name",
+        password="ExistingPassword123!",
+    )
+    client = APIClient()
+
+    response = client.post(
+        reverse("api:register"),
+        registration_payload(
+            email="second@example.com",
+            display_name="shared-name",
+        ),
+        format="json",
+        HTTP_HOST="localhost",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert user_model.objects.filter(display_name="shared-name").count() == 2
+
+
+def test_register_handles_database_uniqueness_race(monkeypatch):
+    user_model = get_user_model()
+    user_model.objects.create_user(
+        email="race@example.com",
+        display_name="existing-user",
+        password="ExistingPassword123!",
+    )
+
+    class NoMatch:
+        @staticmethod
+        def exists():
+            return False
+
+    monkeypatch.setattr(user_model.objects, "filter", lambda **kwargs: NoMatch())
+    client = APIClient()
+
+    response = client.post(
+        reverse("api:register"),
+        registration_payload(
+            email="RACE@example.com",
+            display_name="racing-user",
+        ),
+        format="json",
+        HTTP_HOST="localhost",
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {
+        "error": {
+            "code": "email_already_exists",
+            "message": "An account with this email already exists.",
+        }
+    }
+    assert user_model.objects.count() == 1
