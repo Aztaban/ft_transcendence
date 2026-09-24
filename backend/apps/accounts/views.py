@@ -13,7 +13,18 @@ from .serializers import RegistrationSerializer
 def register(request):
     """Create a user account without authenticating the new user."""
     serializer = RegistrationSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
+    if not serializer.is_valid():
+        return Response(
+            {
+                "error": {
+                    "code": "validation_error",
+                    "message": "Please correct the registration fields.",
+                    "fields": serializer.errors,
+                }
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     user = serializer.save()
 
     return Response(
