@@ -2,6 +2,7 @@
 
 import pytest
 from django.contrib.auth import SESSION_KEY, get_user_model
+from django.contrib.auth.hashers import identify_hasher
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -54,6 +55,30 @@ def test_register_creates_active_user_without_logging_in():
     assert user.intra_login is None
     assert "password" not in response.json()
     assert SESSION_KEY not in client.session
+
+
+def test_register_hashes_password_with_argon2():
+    password = "SecureRegistrationPassword123!"
+    client = APIClient()
+
+    response = client.post(
+        reverse("api:register"),
+        registration_payload(
+            email="argon2@example.com",
+            display_name="argon2-user",
+            password=password,
+        ),
+        format="json",
+        HTTP_HOST="localhost",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+    user = get_user_model().objects.get(email="argon2@example.com")
+    assert user.password != password
+    assert user.check_password(password) is True
+    assert user.check_password("WrongPassword123!") is False
+    assert identify_hasher(user.password).algorithm == "argon2"
 
 
 def test_register_endpoint_rejects_get():
