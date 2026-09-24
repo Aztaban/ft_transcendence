@@ -3,6 +3,7 @@ import BaseLayout from "./components/layout/BaseLayout";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
 
 function AuthenticatedApp() {
@@ -10,6 +11,7 @@ function AuthenticatedApp() {
     <BaseLayout>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BaseLayout>
