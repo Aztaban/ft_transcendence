@@ -1,0 +1,121 @@
+.profile-page {
+  width: min(100%, 1040px);
+  margin: 0 auto;
+}
+
+.profile-page__header {
+  margin-bottom: 28px;
+}
+
+.profile-page__eyebrow {
+  margin: 0 0 6px;
+  color: var(--color-accent-dark);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.profile-page__header h1 {
+  margin: 0;
+  font-size: 2.3rem;
+}
+
+.profile-card {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.profile-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  padding: 44px;
+  border-bottom: 1px solid var(--color-border);
+  background: #ffffff;
+}
+
+.profile-card__avatar {
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border: 5px solid var(--color-accent);
+  border-radius: 50%;
+}
+
+.profile-card__identity-copy {
+  min-width: 0;
+}
+
+.profile-card__label,
+.profile-detail__label {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+
+.profile-card__identity h2 {
+  margin: 5px 0 14px;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.profile-card__roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-card__details {
+  padding: 8px 44px;
+}
+
+.profile-detail {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  align-items: center;
+  min-height: 68px;
+  border-bottom: 1px solid #eceeee;
+}
+
+.profile-detail:last-child {
+  border-bottom: 0;
+}
+
+.profile-detail__value {
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.profile-detail__value--muted {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 680px) {
+  .profile-card__identity {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 22px;
+    padding: 28px;
+  }
+
+  .profile-card__avatar {
+    width: 112px;
+    height: 112px;
+  }
+
+  .profile-card__details {
+    padding: 8px 28px;
+  }
+
+  .profile-detail {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 16px 0;
+  }
+}
