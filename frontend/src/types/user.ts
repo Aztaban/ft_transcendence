@@ -9,6 +9,7 @@ export interface UserProfile {
   id: number;
   email: string;
   display_name: string;
+  avatar_url?: string | null;
   language: Language;
   roles: Array<UserRole | string>;
 }
