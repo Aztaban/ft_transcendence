@@ -1,8 +1,8 @@
 import type { Language, UserProfile } from "../types/user";
 
 export interface UpdateUserProfilePayload {
-  display_name: string;
-  language: Language;
+  display_name?: string;
+  language?: Language;
 }
 
 export async function getCurrentUser(): Promise<UserProfile> {
