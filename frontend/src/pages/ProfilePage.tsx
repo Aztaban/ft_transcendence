@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
-import { getCurrentUser } from "../api/users";
+import { getCurrentUser, updateCurrentUser } from "../api/users";
 import avatar from "../assets/figma/avatar.png";
-import { Badge } from "../components/ui";
+import { Badge, Button, Input } from "../components/ui";
 import type { Language, UserProfile, UserRole } from "../types/user";
 import "../styles/profile.css";
 
@@ -34,7 +34,14 @@ function formatRole(role: UserRole | string) {
 function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [language, setLanguage] = useState<Language>("en");
+  const [formError, setFormError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -43,11 +50,13 @@ function ProfilePage() {
       .then((data) => {
         if (active) {
           setProfile(data);
+          setDisplayName(data.display_name);
+          setLanguage(data.language);
         }
       })
       .catch(() => {
         if (active) {
-          setError(true);
+          setLoadError(true);
         }
       })
       .finally(() => {
@@ -61,11 +70,78 @@ function ProfilePage() {
     };
   }, []);
 
+  function startEditing() {
+    if (!profile) return;
+
+    setDisplayName(profile.display_name);
+    setLanguage(profile.language);
+    setFormError("");
+    setSaveMessage("");
+    setIsEditing(true);
+  }
+
+  function cancelEditing() {
+    if (profile) {
+      setDisplayName(profile.display_name);
+      setLanguage(profile.language);
+    }
+
+    setFormError("");
+    setIsEditing(false);
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedDisplayName = displayName.trim();
+
+    if (!trimmedDisplayName) {
+      setFormError("Display name is required.");
+      return;
+    }
+
+    if (trimmedDisplayName.length > 64) {
+      setFormError("Display name must be 64 characters or fewer.");
+      return;
+    }
+
+    setFormError("");
+    setSaveMessage("");
+    setIsSaving(true);
+
+    try {
+      await updateCurrentUser({
+        display_name: trimmedDisplayName,
+        language,
+      });
+
+      const updatedProfile = await getCurrentUser();
+
+      setProfile(updatedProfile);
+      setDisplayName(updatedProfile.display_name);
+      setLanguage(updatedProfile.language);
+      setIsEditing(false);
+      setSaveMessage("Profile updated.");
+    } catch {
+      setFormError("Unable to save profile changes.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <main className="profile-page">
       <header className="profile-page__header">
-        <p className="profile-page__eyebrow">42 EVALS ACCOUNT</p>
-        <h1>Profile</h1>
+        <div>
+          <p className="profile-page__eyebrow">42 EVALS ACCOUNT</p>
+          <h1>Profile</h1>
+        </div>
+
+        {profile && !isEditing && (
+          <Button variant="secondary" onClick={startEditing}>
+            EDIT PROFILE
+          </Button>
+        )}
       </header>
 
       {isLoading && (
@@ -79,7 +155,7 @@ function ProfilePage() {
         </section>
       )}
 
-      {!isLoading && (error || !profile) && (
+      {!isLoading && (loadError || !profile) && (
         <section className="profile-card">
           <div className="profile-card__details">
             <div className="profile-detail">
@@ -111,26 +187,76 @@ function ProfilePage() {
             </div>
           </div>
 
-          <div className="profile-card__details">
-            <div className="profile-detail">
-              <span className="profile-detail__label">EMAIL</span>
-              <span className="profile-detail__value">{profile.email}</span>
-            </div>
+          {isEditing ? (
+            <form className="profile-edit-form" onSubmit={handleSubmit}>
+              <div className="profile-edit-form__fields">
+                <Input
+                  id="profile-display-name"
+                  label="Display name"
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  maxLength={64}
+                  autoComplete="username"
+                />
 
-            <div className="profile-detail">
-              <span className="profile-detail__label">LANGUAGE</span>
-              <span className="profile-detail__value">
-                {languageLabels[profile.language] ?? profile.language}
-              </span>
-            </div>
+                <div className="profile-edit-form__field">
+                  <label htmlFor="profile-language">Language</label>
+                  <select
+                    id="profile-language"
+                    value={language}
+                    onChange={(event) => setLanguage(event.target.value as Language)}
+                  >
+                    <option value="en">English</option>
+                    <option value="cs">Czech</option>
+                    <option value="es">Spanish</option>
+                  </select>
+                </div>
+              </div>
 
-            <div className="profile-detail">
-              <span className="profile-detail__label">ROLES</span>
-              <span className="profile-detail__value">
-                {profile.roles.length > 0 ? profile.roles.map(formatRole).join(", ") : "Student"}
-              </span>
+              {formError && (
+                <p className="profile-edit-form__error" role="alert">
+                  {formError}
+                </p>
+              )}
+
+              <div className="profile-edit-form__actions">
+                <Button type="button" variant="ghost" onClick={cancelEditing} disabled={isSaving}>
+                  CANCEL
+                </Button>
+
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? "SAVING..." : "SAVE CHANGES"}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="profile-card__details">
+              <div className="profile-detail">
+                <span className="profile-detail__label">EMAIL</span>
+                <span className="profile-detail__value">{profile.email}</span>
+              </div>
+
+              <div className="profile-detail">
+                <span className="profile-detail__label">LANGUAGE</span>
+                <span className="profile-detail__value">
+                  {languageLabels[profile.language] ?? profile.language}
+                </span>
+              </div>
+
+              <div className="profile-detail">
+                <span className="profile-detail__label">ROLES</span>
+                <span className="profile-detail__value">
+                  {profile.roles.length > 0 ? profile.roles.map(formatRole).join(", ") : "Student"}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
+
+          {saveMessage && (
+            <p className="profile-card__success" role="status">
+              {saveMessage}
+            </p>
+          )}
         </section>
       )}
     </main>
