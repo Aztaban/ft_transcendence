@@ -109,3 +109,17 @@
     font-size: 18px;
   }
 }
+
+.registration-form__message {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.registration-form__message--error {
+  color: #b42318;
+}
+
+.registration-form__message--success {
+  color: #16794b;
+}
