@@ -154,8 +154,12 @@ function ProfilePage() {
       setProfile(updatedProfile);
       setSettingsLanguage(updatedProfile.language);
       setSettingsMessage("Settings updated.");
-    } catch {
-      setSettingsError("Unable to save settings.");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setSettingsError(error.fields?.language?.[0] ?? error.message);
+      } else {
+        setSettingsError("Unable to save settings.");
+      }
     } finally {
       setIsSavingSettings(false);
     }
