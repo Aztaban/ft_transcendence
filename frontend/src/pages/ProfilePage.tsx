@@ -9,7 +9,6 @@ import "../styles/profile.css";
 const languageLabels: Record<Language, string> = {
   en: "English",
   cs: "Czech",
-  cz: "Czech",
   es: "Spanish",
 };
 
