@@ -1,15 +1,16 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { getCurrentUser, updateCurrentUser } from "../api/users";
+import { ApiError } from "../api/client";
 import avatar from "../assets/figma/avatar.png";
 import { Badge, Button, Input } from "../components/ui";
 import type { Language, UserProfile, UserRole } from "../types/user";
+import { DISPLAY_NAME_MAX_LENGTH } from "../utils/validation";
 import "../styles/profile.css";
 
 const languageLabels: Record<Language, string> = {
   en: "English",
   cs: "Czech",
-  cz: "Czech",
   es: "Spanish",
 };
 
@@ -102,8 +103,8 @@ function ProfilePage() {
       return;
     }
 
-    if (trimmedDisplayName.length > 64) {
-      setFormError("Display name must be 64 characters or fewer.");
+    if (trimmedDisplayName.length > DISPLAY_NAME_MAX_LENGTH) {
+      setFormError(`Display name must be ${DISPLAY_NAME_MAX_LENGTH} characters or fewer.`);
       return;
     }
 
@@ -123,8 +124,14 @@ function ProfilePage() {
       setSettingsLanguage(updatedProfile.language);
       setIsEditing(false);
       setSaveMessage("Profile updated.");
-    } catch {
-      setFormError("Unable to save profile changes.");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setFormError(
+          error.fields?.display_name?.[0] ?? error.fields?.language?.[0] ?? error.message,
+        );
+      } else {
+        setFormError("Unable to save profile changes.");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -147,8 +154,12 @@ function ProfilePage() {
       setProfile(updatedProfile);
       setSettingsLanguage(updatedProfile.language);
       setSettingsMessage("Settings updated.");
-    } catch {
-      setSettingsError("Unable to save settings.");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setSettingsError(error.fields?.language?.[0] ?? error.message);
+      } else {
+        setSettingsError("Unable to save settings.");
+      }
     } finally {
       setIsSavingSettings(false);
     }
@@ -227,7 +238,7 @@ function ProfilePage() {
                   label="Display name"
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
-                  maxLength={64}
+                  maxLength={DISPLAY_NAME_MAX_LENGTH}
                   autoComplete="username"
                 />
 
