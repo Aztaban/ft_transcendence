@@ -1,6 +1,6 @@
 """Views for the accounts application."""
 
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError, transaction
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -147,3 +147,15 @@ def session_status(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class LogoutView(APIView):
+    """Invalidate the current Django session, including on repeated logout."""
+
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        logout(request)
+        return Response(status=status.HTTP_204_NO_CONTENT)
