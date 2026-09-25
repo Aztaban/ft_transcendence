@@ -1,49 +1,79 @@
-import { useState } from "react";
-import { Button, Input } from "../components/ui";
+import { useState, type FormEvent } from "react";
+
+import { registerUser } from "../api/auth";
+import { ApiError } from "../api/client";
 import logo42 from "../assets/figma/42.svg";
+import { Button, Input } from "../components/ui";
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  EMAIL_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  validateRegistration,
+  type RegistrationFieldErrors,
+} from "../utils/validation";
 import "../styles/registration.css";
 
-interface RegistrationErrors {
-  display_name?: string;
-  email?: string;
-  password?: string;
-}
-
 function RegisterPage() {
-  const [errors, setErrors] = useState<RegistrationErrors>({});
+  const [errors, setErrors] = useState<RegistrationFieldErrors>({});
+  const [formError, setFormError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
 
-    const displayName = String(formData.get("display_name") ?? "").trim();
-    const email = String(formData.get("email") ?? "").trim();
-    const password = String(formData.get("password") ?? "");
+    const values = {
+      display_name: String(formData.get("display_name") ?? "").trim(),
+      email: String(formData.get("email") ?? "").trim(),
+      password: String(formData.get("password") ?? ""),
+    };
 
-    const nextErrors: RegistrationErrors = {};
+    const validationErrors = validateRegistration(values);
 
-    if (!displayName) {
-      nextErrors.display_name = "Display name is required.";
-    } else if (displayName.length > 64) {
-      nextErrors.display_name = "Display name must be 64 characters or fewer.";
+    setErrors(validationErrors);
+    setFormError("");
+    setSuccessMessage("");
+
+    if (Object.keys(validationErrors).length > 0) {
+      return;
     }
 
-    if (!email) {
-      nextErrors.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      nextErrors.email = "Enter a valid email address.";
-    }
+    setIsSubmitting(true);
 
-    if (!password) {
-      nextErrors.password = "Password is required.";
-    } else if (password.length < 8) {
-      nextErrors.password = "Password must contain at least 8 characters.";
-    } else if (/^\d+$/.test(password)) {
-      nextErrors.password = "Password cannot contain only numbers.";
-    }
+    try {
+      const response = await registerUser(values);
 
-    setErrors(nextErrors);
+      setErrors({});
+      setSuccessMessage(response.message);
+      form.reset();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const backendErrors: RegistrationFieldErrors = {
+          display_name: error.fields?.display_name?.[0],
+          email: error.fields?.email?.[0],
+          password: error.fields?.password?.[0],
+        };
+
+        if (error.status === 409 && error.code === "email_already_exists") {
+          backendErrors.email = error.message;
+        }
+
+        const hasFieldErrors = Object.values(backendErrors).some(Boolean);
+
+        setErrors(backendErrors);
+
+        if (!hasFieldErrors) {
+          setFormError(error.message);
+        }
+      } else {
+        setFormError("Unable to create the account. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -64,6 +94,7 @@ function RegisterPage() {
             placeholder="Display name"
             aria-label="Display name"
             autoComplete="username"
+            maxLength={DISPLAY_NAME_MAX_LENGTH}
             error={errors.display_name}
           />
 
@@ -74,6 +105,7 @@ function RegisterPage() {
             placeholder="Email"
             aria-label="Email"
             autoComplete="email"
+            maxLength={EMAIL_MAX_LENGTH}
             error={errors.email}
           />
 
@@ -84,11 +116,30 @@ function RegisterPage() {
             placeholder="Password"
             aria-label="Password"
             autoComplete="new-password"
+            minLength={PASSWORD_MIN_LENGTH}
             error={errors.password}
           />
 
-          <Button className="registration-form__submit" type="submit">
-            REGISTER
+          {formError && (
+            <p
+              className="registration-form__message registration-form__message--error"
+              role="alert"
+            >
+              {formError}
+            </p>
+          )}
+
+          {successMessage && (
+            <p
+              className="registration-form__message registration-form__message--success"
+              role="status"
+            >
+              {successMessage}
+            </p>
+          )}
+
+          <Button className="registration-form__submit" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "REGISTERING..." : "REGISTER"}
           </Button>
         </form>
       </div>
