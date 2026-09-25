@@ -3,10 +3,10 @@
 from django.contrib.auth import authenticate, login
 from django.db import IntegrityError, transaction
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -116,3 +116,34 @@ class LoginView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+@ensure_csrf_cookie
+@api_view(["GET"])
+@authentication_classes([SessionAuthentication])
+@permission_classes([AllowAny])
+def session_status(request):
+    """Expose the current Django session to the browser without creating a login."""
+    if not request.user.is_authenticated:
+        return Response(
+            {
+                "error": {
+                    "code": "not_authenticated",
+                    "message": "Authentication required.",
+                }
+            },
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    user = request.user
+    return Response(
+        {
+            "authenticated": True,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "display_name": user.display_name,
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
