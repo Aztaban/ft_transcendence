@@ -16,23 +16,48 @@ import intraLogo from "../../assets/figma/intra.png";
 import notionLogo from "../../assets/figma/notion.svg";
 import slackLogo from "../../assets/figma/slack.svg";
 
-const navigation = [
-  { label: "Home", to: "/", icon: homeIcon },
-  { label: "Request", to: "/requests", icon: requestIcon },
-  { label: "Pending", to: "/pending", icon: pendingIcon },
-  { label: "History", to: "/history", icon: historyIcon },
-  { label: "Student Council", to: "/council", icon: councilIcon },
-  { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
-  { label: "Profile", to: "/profile", icon: profileIcon },
-];
-
 const roles = ["STUDENT", "HITCHHIKER", "COUNCIL"] as const;
 
 type Role = (typeof roles)[number];
 
+interface NavigationItem {
+  label: string;
+  to: string;
+  icon: string;
+}
+
+const navigationByRole: Record<Role, NavigationItem[]> = {
+  STUDENT: [
+    { label: "Home", to: "/", icon: homeIcon },
+    { label: "Request", to: "/requests", icon: requestIcon },
+    { label: "Pending", to: "/pending", icon: pendingIcon },
+    { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
+    { label: "Profile", to: "/profile", icon: profileIcon },
+    { label: "Student Council", to: "/council", icon: councilIcon },
+  ],
+
+  HITCHHIKER: [
+    { label: "Home", to: "/", icon: homeIcon },
+    { label: "Requests", to: "/requests", icon: requestIcon },
+    { label: "Pending", to: "/pending", icon: pendingIcon },
+    { label: "Student Council", to: "/council", icon: councilIcon },
+    { label: "Profile", to: "/profile", icon: profileIcon },
+  ],
+
+  COUNCIL: [
+    { label: "Home", to: "/", icon: homeIcon },
+    { label: "Messages", to: "/council/messages", icon: councilIcon },
+    { label: "History", to: "/council/history", icon: historyIcon },
+    { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
+    { label: "Council Profile", to: "/council", icon: profileIcon },
+  ],
+};
+
 function Sidebar() {
   const [selectedRole, setSelectedRole] = useState<Role>("STUDENT");
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+
+  const visibleNavigation = navigationByRole[selectedRole];
 
   const selectRole = (role: Role) => {
     setSelectedRole(role);
@@ -48,7 +73,7 @@ function Sidebar() {
 
       <div className="sidebar__middle">
         <nav className="sidebar__nav" aria-label="Primary navigation">
-          {navigation.map((item) => (
+          {visibleNavigation.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
