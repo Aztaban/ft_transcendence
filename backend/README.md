@@ -40,6 +40,6 @@ Redis/Celery use `REDIS_URL` by default. `CELERY_BROKER_URL` and
 - `GET /health/` — MySQL, Redis, and Celery heartbeat status
 - `GET /api/schema/` — OpenAPI schema
 - `GET /api/docs/` — Swagger UI
-- `GET /api/v1/users/me/` — own profile (includes email, status, roles, eligibility)
-- `GET /api/v1/users/{id}/` — community profile (no email / intra_login / status)
-- `GET /api/v1/tutors/{id}/eligibility/` — approved projects for a tutor
+- `GET /api/v1/users/me/` — own profile (includes email, status, and assigned roles)
+- `POST /api/v1/users/{id}/roles/` — assign role (Admin any; Head Tutor → tutor only)
+- `DELETE /api/v1/users/{id}/roles/{role_name}/` — revoke role (Admin only)
