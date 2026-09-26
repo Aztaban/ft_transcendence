@@ -39,8 +39,10 @@ services:
       REDIS_URL: redis://redis:6379/0
     volumes:
       - ./backend:/app
+    # Bound to loopback, not 0.0.0.0: nginx is the only public entrypoint, and
+    # a network-reachable plain-HTTP backend could forge X-Forwarded-Proto.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
