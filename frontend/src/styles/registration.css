@@ -1,0 +1,111 @@
+.registration-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 150px 24px 60px;
+  background: #ffffff;
+}
+
+.registration-panel {
+  width: min(100%, 410px);
+}
+
+.registration-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 52px;
+  color: #000000;
+}
+
+.registration-brand img {
+  width: 138px;
+  height: auto;
+}
+
+.registration-brand span {
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.registration-brand__accent {
+  width: 52px;
+  height: 4px;
+  margin: -34px auto 46px;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
+.registration-form {
+  display: grid;
+  gap: 12px;
+}
+
+.registration-form .ui-field {
+  margin: 0;
+}
+
+.registration-form .ui-input {
+  width: 100%;
+  min-height: 49px;
+  padding: 0 28px;
+  border: 1px solid #d4d7d7;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #000000;
+  font-size: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+}
+
+.registration-form .ui-input::placeholder {
+  color: #707575;
+  opacity: 1;
+}
+
+.registration-form .ui-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(0, 186, 188, 0.14);
+}
+
+.registration-form__submit.ui-button {
+  width: 100%;
+  min-height: 49px;
+  margin-top: 36px;
+  border-color: #000000;
+  border-radius: 5px;
+  background: #000000;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.registration-form__submit.ui-button:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+@media (max-width: 680px) {
+  .registration-page {
+    padding: 100px 22px 40px;
+  }
+
+  .registration-brand {
+    margin-bottom: 44px;
+  }
+
+  .registration-brand img {
+    width: 110px;
+  }
+
+  .registration-brand span {
+    font-size: 25px;
+  }
+
+  .registration-form .ui-input {
+    font-size: 18px;
+  }
+}
