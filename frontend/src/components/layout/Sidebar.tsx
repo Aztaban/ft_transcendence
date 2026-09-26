@@ -15,10 +15,7 @@ import sidebarLine from "../../assets/figma/sidebar-line.svg";
 import intraLogo from "../../assets/figma/intra.png";
 import notionLogo from "../../assets/figma/notion.svg";
 import slackLogo from "../../assets/figma/slack.svg";
-
-const roles = ["STUDENT", "HITCHHIKER", "COUNCIL"] as const;
-
-type Role = (typeof roles)[number];
+import { roles, useRole, type AppRole } from "../../store/RoleContext";
 
 interface NavigationItem {
   label: string;
@@ -26,7 +23,7 @@ interface NavigationItem {
   icon: string;
 }
 
-const navigationByRole: Record<Role, NavigationItem[]> = {
+const navigationByRole: Record<AppRole, NavigationItem[]> = {
   STUDENT: [
     { label: "Home", to: "/", icon: homeIcon },
     { label: "Request", to: "/requests", icon: requestIcon },
@@ -54,13 +51,13 @@ const navigationByRole: Record<Role, NavigationItem[]> = {
 };
 
 function Sidebar() {
-  const [selectedRole, setSelectedRole] = useState<Role>("STUDENT");
+  const { activeRole, setActiveRole } = useRole();
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
 
-  const visibleNavigation = navigationByRole[selectedRole];
+  const visibleNavigation = navigationByRole[activeRole];
 
-  const selectRole = (role: Role) => {
-    setSelectedRole(role);
+  const selectRole = (role: AppRole) => {
+    setActiveRole(role);
     setIsRoleMenuOpen(false);
   };
 
@@ -101,7 +98,7 @@ function Sidebar() {
             aria-expanded={isRoleMenuOpen}
             onClick={() => setIsRoleMenuOpen((open) => !open)}
           >
-            <span>{selectedRole}</span>
+            <span>{activeRole}</span>
 
             <img
               className={[
@@ -123,13 +120,13 @@ function Sidebar() {
                   key={role}
                   className={[
                     "sidebar__role-option",
-                    selectedRole === role ? "sidebar__role-option--selected" : "",
+                    activeRole === role ? "sidebar__role-option--selected" : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
                   type="button"
                   role="option"
-                  aria-selected={selectedRole === role}
+                  aria-selected={activeRole === role}
                   onClick={() => selectRole(role)}
                 >
                   {role}
