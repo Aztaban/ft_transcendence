@@ -15,6 +15,11 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+# 42 Intra API v2 OAuth
+FT_OAUTH_CLIENT_ID = os.getenv("FT_OAUTH_CLIENT_ID", "")
+FT_OAUTH_CLIENT_SECRET = os.getenv("FT_OAUTH_CLIENT_SECRET", "")
+FT_OAUTH_REDIRECT_URI = os.getenv("FT_OAUTH_REDIRECT_URI", "")
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
