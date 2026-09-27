@@ -3,17 +3,20 @@ import { MemoryRouter } from "react-router";
 import { expect, test } from "vitest";
 
 import App from "./App";
+import { RoleProvider } from "./store/RoleContext";
 
 const renderAt = (path: string) =>
   render(
     <MemoryRouter initialEntries={[path]}>
-      <App />
+      <RoleProvider>
+        <App />
+      </RoleProvider>
     </MemoryRouter>,
   );
 
 test("renders the home page at /", () => {
   renderAt("/");
-  expect(screen.getByText(/Frontend application initialized/)).toBeDefined();
+  expect(screen.getByRole("heading", { name: "Welcome Back" })).toBeDefined();
 });
 
 test("renders the 404 page for an unknown path", () => {
