@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import Footer from "./Footer";
-import Header from "./Header";
+import Sidebar from "./Sidebar";
+import TopBar from "./TopBar";
 
 interface BaseLayoutProps {
   children: ReactNode;
@@ -8,10 +8,13 @@ interface BaseLayoutProps {
 
 function BaseLayout({ children }: BaseLayoutProps) {
   return (
-    <div>
-      <Header />
-      <main>{children}</main>
-      <Footer />
+    <div className="app-shell">
+      <Sidebar />
+
+      <div className="app-shell__main">
+        <TopBar />
+        <main className="app-shell__content">{children}</main>
+      </div>
     </div>
   );
 }
