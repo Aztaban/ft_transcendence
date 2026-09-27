@@ -2,8 +2,9 @@ import { Route, Routes } from "react-router";
 import BaseLayout from "./components/layout/BaseLayout";
 import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
+import RegisterPage from "./pages/RegisterPage";
 
-function App() {
+function AuthenticatedApp() {
   return (
     <BaseLayout>
       <Routes>
@@ -11,6 +12,15 @@ function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BaseLayout>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="*" element={<AuthenticatedApp />} />
+    </Routes>
   );
 }
 
