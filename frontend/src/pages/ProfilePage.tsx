@@ -208,7 +208,14 @@ function ProfilePage() {
         <>
           <section className="profile-card">
             <div className="profile-card__identity">
-              <img className="profile-card__avatar" src={avatar} alt="Profile avatar" />
+              <img
+                className="profile-card__avatar"
+                src={profile.avatar_url || avatar}
+                alt={`${profile.display_name}'s avatar`}
+                onError={(event) => {
+                  event.currentTarget.src = avatar;
+                }}
+              />
 
               <div className="profile-card__identity-copy">
                 <p className="profile-card__label">DISPLAY NAME</p>
