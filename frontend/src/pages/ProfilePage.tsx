@@ -39,10 +39,14 @@ function ProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
-  const [language, setLanguage] = useState<Language>("en");
   const [formError, setFormError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+
+  const [settingsLanguage, setSettingsLanguage] = useState<Language>("en");
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
+  const [settingsMessage, setSettingsMessage] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -52,7 +56,7 @@ function ProfilePage() {
         if (active) {
           setProfile(data);
           setDisplayName(data.display_name);
-          setLanguage(data.language);
+          setSettingsLanguage(data.language);
         }
       })
       .catch(() => {
@@ -75,7 +79,6 @@ function ProfilePage() {
     if (!profile) return;
 
     setDisplayName(profile.display_name);
-    setLanguage(profile.language);
     setFormError("");
     setSaveMessage("");
     setIsEditing(true);
@@ -84,14 +87,13 @@ function ProfilePage() {
   function cancelEditing() {
     if (profile) {
       setDisplayName(profile.display_name);
-      setLanguage(profile.language);
     }
 
     setFormError("");
     setIsEditing(false);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const trimmedDisplayName = displayName.trim();
@@ -113,14 +115,13 @@ function ProfilePage() {
     try {
       await updateCurrentUser({
         display_name: trimmedDisplayName,
-        language,
       });
 
       const updatedProfile = await getCurrentUser();
 
       setProfile(updatedProfile);
       setDisplayName(updatedProfile.display_name);
-      setLanguage(updatedProfile.language);
+      setSettingsLanguage(updatedProfile.language);
       setIsEditing(false);
       setSaveMessage("Profile updated.");
     } catch (error) {
@@ -133,6 +134,34 @@ function ProfilePage() {
       }
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleSettingsSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setSettingsError("");
+    setSettingsMessage("");
+    setIsSavingSettings(true);
+
+    try {
+      await updateCurrentUser({
+        language: settingsLanguage,
+      });
+
+      const updatedProfile = await getCurrentUser();
+
+      setProfile(updatedProfile);
+      setSettingsLanguage(updatedProfile.language);
+      setSettingsMessage("Settings updated.");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setSettingsError(error.fields?.language?.[0] ?? error.message);
+      } else {
+        setSettingsError("Unable to save settings.");
+      }
+    } finally {
+      setIsSavingSettings(false);
     }
   }
 
@@ -176,27 +205,27 @@ function ProfilePage() {
       )}
 
       {!isLoading && profile && (
-        <section className="profile-card">
-          <div className="profile-card__identity">
-            <img className="profile-card__avatar" src={avatar} alt="Profile avatar" />
+        <>
+          <section className="profile-card">
+            <div className="profile-card__identity">
+              <img className="profile-card__avatar" src={avatar} alt="Profile avatar" />
 
-            <div className="profile-card__identity-copy">
-              <p className="profile-card__label">DISPLAY NAME</p>
-              <h2>{profile.display_name}</h2>
+              <div className="profile-card__identity-copy">
+                <p className="profile-card__label">DISPLAY NAME</p>
+                <h2>{profile.display_name}</h2>
 
-              <div className="profile-card__roles">
-                {profile.roles.map((role, index) => (
-                  <Badge key={`${getRoleName(role)}-${index}`} variant="accent">
-                    {formatRole(role)}
-                  </Badge>
-                ))}
+                <div className="profile-card__roles">
+                  {profile.roles.map((role, index) => (
+                    <Badge key={`${getRoleName(role)}-${index}`} variant="accent">
+                      {formatRole(role)}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          {isEditing ? (
-            <form className="profile-edit-form" onSubmit={handleSubmit}>
-              <div className="profile-edit-form__fields">
+            {isEditing ? (
+              <form className="profile-edit-form" onSubmit={handleProfileSubmit}>
                 <Input
                   id="profile-display-name"
                   label="Display name"
@@ -206,65 +235,101 @@ function ProfilePage() {
                   autoComplete="username"
                 />
 
-                <div className="profile-edit-form__field">
-                  <label htmlFor="profile-language">Language</label>
-                  <select
-                    id="profile-language"
-                    value={language}
-                    onChange={(event) => setLanguage(event.target.value as Language)}
-                  >
-                    <option value="en">English</option>
-                    <option value="cs">Czech</option>
-                    <option value="es">Spanish</option>
-                  </select>
+                {formError && (
+                  <p className="profile-edit-form__error" role="alert">
+                    {formError}
+                  </p>
+                )}
+
+                <div className="profile-edit-form__actions">
+                  <Button type="button" variant="ghost" onClick={cancelEditing} disabled={isSaving}>
+                    CANCEL
+                  </Button>
+
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? "SAVING..." : "SAVE CHANGES"}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="profile-card__details">
+                <div className="profile-detail">
+                  <span className="profile-detail__label">EMAIL</span>
+                  <span className="profile-detail__value">{profile.email}</span>
+                </div>
+
+                <div className="profile-detail">
+                  <span className="profile-detail__label">LANGUAGE</span>
+                  <span className="profile-detail__value">
+                    {languageLabels[profile.language] ?? profile.language}
+                  </span>
+                </div>
+
+                <div className="profile-detail">
+                  <span className="profile-detail__label">ROLES</span>
+                  <span className="profile-detail__value">
+                    {profile.roles.length > 0
+                      ? profile.roles.map(formatRole).join(", ")
+                      : "Student"}
+                  </span>
                 </div>
               </div>
+            )}
 
-              {formError && (
+            {saveMessage && (
+              <p className="profile-card__success" role="status">
+                {saveMessage}
+              </p>
+            )}
+          </section>
+
+          <section className="profile-settings">
+            <div className="profile-settings__header">
+              <div>
+                <p className="profile-card__label">PREFERENCES</p>
+                <h2>Profile settings</h2>
+              </div>
+            </div>
+
+            <form className="profile-settings__form" onSubmit={handleSettingsSubmit}>
+              <div className="profile-edit-form__field">
+                <label htmlFor="profile-language">Language</label>
+
+                <select
+                  id="profile-language"
+                  value={settingsLanguage}
+                  onChange={(event) => setSettingsLanguage(event.target.value as Language)}
+                >
+                  <option value="en">English</option>
+                  <option value="cs">Czech</option>
+                  <option value="es">Spanish</option>
+                </select>
+
+                <p className="profile-settings__hint">
+                  Choose the language used across the application.
+                </p>
+              </div>
+
+              {settingsError && (
                 <p className="profile-edit-form__error" role="alert">
-                  {formError}
+                  {settingsError}
+                </p>
+              )}
+
+              {settingsMessage && (
+                <p className="profile-settings__success" role="status">
+                  {settingsMessage}
                 </p>
               )}
 
               <div className="profile-edit-form__actions">
-                <Button type="button" variant="ghost" onClick={cancelEditing} disabled={isSaving}>
-                  CANCEL
-                </Button>
-
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving ? "SAVING..." : "SAVE CHANGES"}
+                <Button type="submit" disabled={isSavingSettings}>
+                  {isSavingSettings ? "SAVING..." : "SAVE SETTINGS"}
                 </Button>
               </div>
             </form>
-          ) : (
-            <div className="profile-card__details">
-              <div className="profile-detail">
-                <span className="profile-detail__label">EMAIL</span>
-                <span className="profile-detail__value">{profile.email}</span>
-              </div>
-
-              <div className="profile-detail">
-                <span className="profile-detail__label">LANGUAGE</span>
-                <span className="profile-detail__value">
-                  {languageLabels[profile.language] ?? profile.language}
-                </span>
-              </div>
-
-              <div className="profile-detail">
-                <span className="profile-detail__label">ROLES</span>
-                <span className="profile-detail__value">
-                  {profile.roles.length > 0 ? profile.roles.map(formatRole).join(", ") : "Student"}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {saveMessage && (
-            <p className="profile-card__success" role="status">
-              {saveMessage}
-            </p>
-          )}
-        </section>
+          </section>
+        </>
       )}
     </main>
   );

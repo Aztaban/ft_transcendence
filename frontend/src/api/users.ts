@@ -2,8 +2,8 @@ import { apiRequest } from "./client";
 import type { Language, UserProfile } from "../types/user";
 
 export interface UpdateUserProfilePayload {
-  display_name: string;
-  language: Language;
+  display_name?: string;
+  language?: Language;
 }
 
 export function getCurrentUser(): Promise<UserProfile> {
