@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
+import UnauthorizedPage from "./pages/UnauthorizedPage";
 import { routePermissions } from "./utils/permissions";
 
 function AuthenticatedApp() {
@@ -16,7 +17,7 @@ function AuthenticatedApp() {
         <Route
           path="/profile"
           element={
-            <RoleGuard allowedRoles={routePermissions.profile}>
+            <RoleGuard allowedRoles={routePermissions.profile} fallback={<UnauthorizedPage />}>
               <ProfilePage />
             </RoleGuard>
           }
