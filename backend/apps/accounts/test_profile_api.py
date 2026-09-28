@@ -1,12 +1,11 @@
-"""HTTP-level tests for /api/v1/users/me/ and role assign/revoke endpoints."""
+"""HTTP-level tests for /api/v1/users/me/, role assign/revoke, and tutor eligibility."""
 
 import pytest
+from apps.accounts.models import Role
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
-
-from apps.accounts.models import Role
 
 pytestmark = pytest.mark.django_db
 
@@ -179,3 +178,35 @@ def test_head_tutor_cannot_revoke_role(api_client, make_user):
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert target.has_role(Role.Name.TUTOR) is True
+
+
+def test_tutor_eligibility_requires_authentication(api_client, make_user):
+    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+
+    response = api_client.get(
+        reverse("tutors-eligibility", kwargs={"user_id": tutor.id})
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_tutor_eligibility_returns_empty_list_when_no_data(api_client, make_user):
+    viewer = make_user("viewer@example.com", roles=(Role.Name.STUDENT,))
+    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+
+    api_client.force_authenticate(user=viewer)
+    response = api_client.get(
+        reverse("tutors-eligibility", kwargs={"user_id": tutor.id})
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+
+
+def test_tutor_eligibility_unknown_user_returns_404(api_client, make_user):
+    viewer = make_user("viewer@example.com")
+
+    api_client.force_authenticate(user=viewer)
+    response = api_client.get(reverse("tutors-eligibility", kwargs={"user_id": 999999}))
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND

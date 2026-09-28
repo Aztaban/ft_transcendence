@@ -43,3 +43,4 @@ Redis/Celery use `REDIS_URL` by default. `CELERY_BROKER_URL` and
 - `GET /api/v1/users/me/` — own profile (includes email, status, and assigned roles)
 - `POST /api/v1/users/{id}/roles/` — assign role (Admin any; Head Tutor → tutor only)
 - `DELETE /api/v1/users/{id}/roles/{role_id}/` — revoke role (Admin only)
+- `GET /api/v1/tutors/{id}/eligibility/` — approved projects for a hitchhiker (`[{id, slug, name}, …]`; empty until eligibility data exists)

@@ -1,19 +1,18 @@
 """Views for the accounts application: profile and role assignment"""
 
+from apps.accounts.eligibility import list_approved_projects_for_tutor
+from apps.accounts.models import Role
+from apps.accounts.permissions import CanAssignRoles, IsAdminRole
+from apps.accounts.serializers import (MeSerializer,
+                                       RoleAssignmentResultSerializer,
+                                       RoleAssignSerializer,
+                                       TutorEligibleProjectSerializer)
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from apps.accounts.models import Role
-from apps.accounts.permissions import CanAssignRoles, IsAdminRole
-from apps.accounts.serializers import (
-    MeSerializer,
-    RoleAssignmentResultSerializer,
-    RoleAssignSerializer,
-)
 
 User = get_user_model()
 
@@ -23,6 +22,16 @@ User = get_user_model()
 def me(request):
     """Return the authenticated user's full profile."""
     return Response(MeSerializer(request.user).data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def tutor_eligibility(request, user_id):
+    """Return projects this hitchhiker is approved to evaluate (public listing)."""
+    _ = request
+    tutor = get_object_or_404(User, pk=user_id)
+    projects = list_approved_projects_for_tutor(tutor)
+    return Response(TutorEligibleProjectSerializer(projects, many=True).data)
 
 
 @api_view(["POST"])
