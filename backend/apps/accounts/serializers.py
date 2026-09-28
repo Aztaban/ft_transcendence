@@ -1,4 +1,4 @@
-"""Serializers for user profiles and roles."""
+"""Serializers for user profiles, roles, and tutor eligibility."""
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
@@ -55,3 +55,11 @@ class RoleAssignmentResultSerializer(serializers.ModelSerializer):
 
     def get_roles(self, obj):
         return _role_names(obj)
+
+
+class TutorEligibleProjectSerializer(serializers.Serializer):
+    """Public project listing item for tutor eligibility (api-plan Project)."""
+
+    id = serializers.IntegerField()
+    slug = serializers.CharField()
+    name = serializers.CharField()
