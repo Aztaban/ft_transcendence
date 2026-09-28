@@ -11,8 +11,8 @@ from apps.accounts.models import Role
 from apps.accounts.permissions import CanAssignRoles, IsAdminRole
 from apps.accounts.serializers import (
     MeSerializer,
-    RoleAssignSerializer,
     RoleAssignmentResultSerializer,
+    RoleAssignSerializer,
 )
 
 User = get_user_model()
