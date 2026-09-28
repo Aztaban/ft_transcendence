@@ -1,8 +1,9 @@
 """Serializers for user profiles, roles, and tutor eligibility."""
 
-from apps.accounts.models import Role
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+
+from apps.accounts.models import Role
 
 User = get_user_model()
 
