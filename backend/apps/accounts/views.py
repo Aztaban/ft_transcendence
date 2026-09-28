@@ -9,7 +9,11 @@ from rest_framework.response import Response
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import CanAssignRoles, IsAdminRole
-from apps.accounts.serializers import MeSerializer, RoleAssignSerializer
+from apps.accounts.serializers import (
+    MeSerializer,
+    RoleAssignSerializer,
+    RoleAssignmentResultSerializer,
+)
 
 User = get_user_model()
 
@@ -38,15 +42,18 @@ def assign_role(request, user_id):
             )
     role = Role.objects.get(name=role_name)
     target.roles.add(role)
-    return Response(MeSerializer(target).data, status=status.HTTP_200_OK)
+    return Response(
+        RoleAssignmentResultSerializer(target).data,
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated, IsAdminRole])
-def revoke_role(request, user_id, role_name):
+def revoke_role(request, user_id, role_id):
     _ = request  # keep signature for DRF
     """Revoke a role from the target user (Admin only)."""
     target = get_object_or_404(User, pk=user_id)
-    role = get_object_or_404(Role, name=role_name)
+    role = get_object_or_404(Role, pk=role_id)
     target.roles.remove(role)
     return Response(status=status.HTTP_204_NO_CONTENT)

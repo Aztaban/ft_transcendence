@@ -42,4 +42,4 @@ Redis/Celery use `REDIS_URL` by default. `CELERY_BROKER_URL` and
 - `GET /api/docs/` — Swagger UI
 - `GET /api/v1/users/me/` — own profile (includes email, status, and assigned roles)
 - `POST /api/v1/users/{id}/roles/` — assign role (Admin any; Head Tutor → tutor only)
-- `DELETE /api/v1/users/{id}/roles/{role_name}/` — revoke role (Admin only)
+- `DELETE /api/v1/users/{id}/roles/{role_id}/` — revoke role (Admin only)

@@ -8,7 +8,7 @@ urlpatterns = [
     path("users/me/", views.me, name="users-me"),
     path("users/<int:user_id>/roles/", views.assign_role, name="users-assign-role"),
     path(
-        "users/<int:user_id>/roles/<str:role_name>/",
+        "users/<int:user_id>/roles/<int:role_id>/",
         views.revoke_role,
         name="users-revoke-role",
     ),

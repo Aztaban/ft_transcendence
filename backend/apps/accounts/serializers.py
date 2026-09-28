@@ -41,3 +41,17 @@ class MeSerializer(serializers.ModelSerializer):
 
     def get_roles(self, obj):
         return _role_names(obj)
+
+
+class RoleAssignmentResultSerializer(serializers.ModelSerializer):
+    """Limited payload after role assign — no email / intra_login."""
+
+    roles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ("id", "display_name", "roles")
+        read_only_fields = fields
+
+    def get_roles(self, obj):
+        return _role_names(obj)
