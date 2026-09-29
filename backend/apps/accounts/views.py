@@ -1,8 +1,11 @@
 """Views for the accounts application."""
 
+import secrets
+
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError, transaction
 from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -12,6 +15,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .serializers import LoginSerializer, RegistrationSerializer
+
+OAUTH_42_STATE_SESSION_KEY = "oauth_42_state"
 
 
 def _email_conflict_response():
@@ -159,3 +164,74 @@ class LogoutView(APIView):
     def post(self, request):
         logout(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@never_cache
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def oauth_42_callback(request):
+    """Validate the 42 callback; token exchange and sign-in belong to #133."""
+    expected_state = request.session.get(OAUTH_42_STATE_SESSION_KEY)
+    returned_state = request.query_params.get("state", "")
+
+    if (
+        not isinstance(expected_state, str)
+        or not expected_state
+        or not returned_state
+        or not secrets.compare_digest(expected_state, returned_state)
+    ):
+        return Response(
+            {
+                "error": {
+                    "code": "oauth_invalid_state",
+                    "message": "Invalid or expired 42 authorization request.",
+                }
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Each authorization response can be processed only once.
+    request.session.pop(OAUTH_42_STATE_SESSION_KEY, None)
+
+    # Django's SessionMiddleware does not persist modified sessions for 5xx
+    # responses. #132 intentionally returns 501 for the not-yet-implemented
+    # login step, so persist the consumed state before that response.
+    request.session.save()
+
+    if request.query_params.get("error"):
+        is_denied = request.query_params["error"] == "access_denied"
+        return Response(
+            {
+                "error": {
+                    "code": "oauth_access_denied" if is_denied else "oauth_provider_error",
+                    "message": (
+                        "42 authorization was cancelled."
+                        if is_denied
+                        else "42 authorization failed."
+                    ),
+                }
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not request.query_params.get("code"):
+        return Response(
+            {
+                "error": {
+                    "code": "oauth_missing_code",
+                    "message": "42 did not return an authorization code.",
+                }
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # #133 will exchange the code and continue the login flow. Never echo it.
+    return Response(
+        {
+            "error": {
+                "code": "oauth_login_not_implemented",
+                "message": "42 sign-in is not available yet.",
+            }
+        },
+        status=status.HTTP_501_NOT_IMPLEMENTED,
+    )
