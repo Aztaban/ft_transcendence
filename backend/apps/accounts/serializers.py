@@ -1,4 +1,4 @@
-"""Serializers for user profiles, roles, and tutor eligibility."""
+"""Serializers for user profiles, visibility, roles, and tutor eligibility."""
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
@@ -43,8 +43,8 @@ class MeSerializer(serializers.ModelSerializer):
         return _role_names(obj)
 
 
-class RoleAssignmentResultSerializer(serializers.ModelSerializer):
-    """Limited payload after role assign — no email / intra_login."""
+class PublicProfileSerializer(serializers.ModelSerializer):
+    """Authenticated community profile — no email, intra_login, status, language."""
 
     roles = serializers.SerializerMethodField()
 
@@ -55,6 +55,10 @@ class RoleAssignmentResultSerializer(serializers.ModelSerializer):
 
     def get_roles(self, obj):
         return _role_names(obj)
+
+
+class RoleAssignmentResultSerializer(PublicProfileSerializer):
+    """Limited payload after role assign — same visibility as public profile."""
 
 
 class TutorEligibleProjectSerializer(serializers.Serializer):

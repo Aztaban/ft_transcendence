@@ -41,6 +41,7 @@ Redis/Celery use `REDIS_URL` by default. `CELERY_BROKER_URL` and
 - `GET /api/schema/` — OpenAPI schema
 - `GET /api/docs/` — Swagger UI
 - `GET /api/v1/users/me/` — own profile (includes email, status, and assigned roles)
+- `GET /api/v1/users/{id}/` — public profile for authenticated users (display name + roles; no email / intra_login / status)
 - `POST /api/v1/users/{id}/roles/` — assign role (Admin any; Head Tutor → tutor only)
 - `DELETE /api/v1/users/{id}/roles/{role_id}/` — revoke role (Admin only)
 - `GET /api/v1/tutors/{id}/eligibility/` — approved projects for a hitchhiker (`[{id, slug, name}, …]`; empty until eligibility data exists)
