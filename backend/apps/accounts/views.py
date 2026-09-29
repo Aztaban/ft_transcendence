@@ -57,9 +57,7 @@ def register(request):
 
     return Response(
         {
-            "id": user.id,
-            "email": user.email,
-            "display_name": user.display_name,
+            **serializer.data,
             "message": "Account created successfully.",
         },
         status=status.HTTP_201_CREATED,
