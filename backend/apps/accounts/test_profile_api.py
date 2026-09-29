@@ -1,4 +1,4 @@
-"""HTTP-level tests for /api/v1/users/me/, role assign/revoke, and tutor eligibility."""
+"""HTTP-level tests for profile, visibility, roles, and tutor eligibility."""
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -64,6 +64,45 @@ def test_me_returns_current_users_profile_with_roles(api_client, make_user):
         "status": "active",
         "roles": [Role.Name.STUDENT, Role.Name.TUTOR],
     }
+
+
+def test_user_detail_requires_authentication(api_client, make_user):
+    target = make_user("target@example.com", display_name="Target")
+
+    response = api_client.get(reverse("users-detail", kwargs={"user_id": target.id}))
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_user_detail_returns_public_profile_without_private_fields(api_client, make_user):
+    viewer = make_user("viewer@example.com", roles=(Role.Name.STUDENT,))
+    target = make_user(
+        "target@example.com",
+        display_name="Target",
+        roles=(Role.Name.STUDENT, Role.Name.TUTOR),
+        intra_login="target42",
+    )
+
+    api_client.force_authenticate(user=viewer)
+    response = api_client.get(reverse("users-detail", kwargs={"user_id": target.id}))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "id": target.id,
+        "display_name": "Target",
+        "roles": [Role.Name.STUDENT, Role.Name.TUTOR],
+    }
+    for private_field in ("email", "intra_login", "language", "status"):
+        assert private_field not in response.json()
+
+
+def test_user_detail_unknown_user_returns_404(api_client, make_user):
+    viewer = make_user("viewer@example.com")
+
+    api_client.force_authenticate(user=viewer)
+    response = api_client.get(reverse("users-detail", kwargs={"user_id": 999999}))
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_student_cannot_assign_roles(api_client, make_user):

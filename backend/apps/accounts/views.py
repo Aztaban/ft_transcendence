@@ -12,6 +12,7 @@ from apps.accounts.models import Role
 from apps.accounts.permissions import CanAssignRoles, IsAdminRole
 from apps.accounts.serializers import (
     MeSerializer,
+    PublicProfileSerializer,
     RoleAssignmentResultSerializer,
     RoleAssignSerializer,
     TutorEligibleProjectSerializer,
@@ -25,6 +26,15 @@ User = get_user_model()
 def me(request):
     """Return the authenticated user's full profile."""
     return Response(MeSerializer(request.user).data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_detail(request, user_id):
+    """Return a user's public profile (authenticated community visibility)."""
+    _ = request
+    target = get_object_or_404(User, pk=user_id)
+    return Response(PublicProfileSerializer(target).data)
 
 
 @api_view(["GET"])
