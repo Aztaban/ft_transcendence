@@ -49,7 +49,7 @@ def register(request):
 
     try:
         with transaction.atomic():
-            user = serializer.save()
+            serializer.save()
     except IntegrityError:
         # Email is the only caller-supplied unique field in this endpoint.
         # Keep the database constraint as the final authority for races.
