@@ -210,3 +210,46 @@
     padding: 16px 28px;
   }
 }
+
+.profile-settings {
+  margin-top: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.profile-settings__header {
+  padding: 28px 44px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile-settings__header h2 {
+  margin: 5px 0 0;
+  font-size: 1.35rem;
+}
+
+.profile-settings__form {
+  padding: 28px 44px;
+}
+
+.profile-settings__hint {
+  margin: 7px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.profile-settings__success {
+  margin: 18px 0 0;
+  color: #16794b;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+@media (max-width: 680px) {
+  .profile-settings__header,
+  .profile-settings__form {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+}
