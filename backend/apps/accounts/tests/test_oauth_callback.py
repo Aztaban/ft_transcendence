@@ -2,6 +2,7 @@
 
 import pytest
 from django.contrib.auth import SESSION_KEY
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -81,13 +82,22 @@ def test_callback_rejects_missing_code_after_valid_state():
     assert OAUTH_42_STATE_SESSION_KEY not in client.session
 
 
-def test_callback_accepts_valid_state_and_code_but_does_not_login_yet():
+@override_settings(
+    FT_OAUTH_CLIENT_ID="test-client-id",
+    FT_OAUTH_CLIENT_SECRET="test-client-secret",
+    FT_OAUTH_REDIRECT_URI="https://localhost/api/v1/auth/42/callback/",
+)
+def test_callback_accepts_valid_state_and_code_but_does_not_login_yet(monkeypatch):
+    monkeypatch.setattr(
+        "apps.accounts.views._exchange_42_code_for_access_token",
+        lambda code: "temporary-provider-token",
+    )
     client = client_with_state()
 
     response = callback(client, code="secret-authorization-code", state=STATE)
 
     assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
-    assert response.json()["error"]["code"] == "oauth_login_not_implemented"
+    assert response.json()["error"]["code"] == "oauth_profile_not_implemented"
     assert "secret-authorization-code" not in response.content.decode()
     assert "no-store" in response["Cache-Control"]
     assert OAUTH_42_STATE_SESSION_KEY not in client.session

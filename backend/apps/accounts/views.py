@@ -1,9 +1,15 @@
 """Views for the accounts application."""
 
+import json
 import secrets
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError, transaction
+from django.http import HttpResponseRedirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -17,6 +23,64 @@ from rest_framework.views import APIView
 from .serializers import LoginSerializer, RegistrationSerializer
 
 OAUTH_42_STATE_SESSION_KEY = "oauth_42_state"
+OAUTH_42_AUTHORIZE_URL = "https://api.intra.42.fr/oauth/authorize"
+OAUTH_42_TOKEN_URL = "https://api.intra.42.fr/oauth/token"
+OAUTH_42_HTTP_TIMEOUT_SECONDS = 5
+
+
+def _oauth_42_is_configured():
+    return all(
+        (
+            settings.FT_OAUTH_CLIENT_ID,
+            settings.FT_OAUTH_CLIENT_SECRET,
+            settings.FT_OAUTH_REDIRECT_URI,
+        )
+    )
+
+
+def _oauth_42_not_configured_response():
+    return Response(
+        {
+            "error": {
+                "code": "oauth_not_configured",
+                "message": "42 OAuth is not configured.",
+            }
+        },
+        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
+
+
+def _exchange_42_code_for_access_token(code):
+    payload = urlencode(
+        {
+            "grant_type": "authorization_code",
+            "client_id": settings.FT_OAUTH_CLIENT_ID,
+            "client_secret": settings.FT_OAUTH_CLIENT_SECRET,
+            "code": code,
+            "redirect_uri": settings.FT_OAUTH_REDIRECT_URI,
+        }
+    ).encode()
+    token_request = Request(
+        OAUTH_42_TOKEN_URL,
+        data=payload,
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method="POST",
+    )
+
+    try:
+        with urlopen(token_request, timeout=OAUTH_42_HTTP_TIMEOUT_SECONDS) as response:
+            token_data = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+
+    access_token = token_data.get("access_token") if isinstance(token_data, dict) else None
+    if not isinstance(access_token, str) or not access_token:
+        return None
+
+    return access_token
 
 
 def _email_conflict_response():
@@ -169,8 +233,30 @@ class LogoutView(APIView):
 @never_cache
 @api_view(["GET"])
 @permission_classes([AllowAny])
+def oauth_42_redirect(request):
+    """Start the 42 OAuth authorization-code flow."""
+    if not _oauth_42_is_configured():
+        return _oauth_42_not_configured_response()
+
+    oauth_state = secrets.token_urlsafe(32)
+    request.session[OAUTH_42_STATE_SESSION_KEY] = oauth_state
+
+    authorization_query = urlencode(
+        {
+            "client_id": settings.FT_OAUTH_CLIENT_ID,
+            "redirect_uri": settings.FT_OAUTH_REDIRECT_URI,
+            "response_type": "code",
+            "state": oauth_state,
+        }
+    )
+    return HttpResponseRedirect(f"{OAUTH_42_AUTHORIZE_URL}?{authorization_query}")
+
+
+@never_cache
+@api_view(["GET"])
+@permission_classes([AllowAny])
 def oauth_42_callback(request):
-    """Validate the 42 callback; token exchange and sign-in belong to #133."""
+    """Validate the callback and exchange its authorization code for a token."""
     expected_state = request.session.get(OAUTH_42_STATE_SESSION_KEY)
     returned_state = request.query_params.get("state", "")
 
@@ -192,10 +278,6 @@ def oauth_42_callback(request):
 
     # Each authorization response can be processed only once.
     request.session.pop(OAUTH_42_STATE_SESSION_KEY, None)
-
-    # Django's SessionMiddleware does not persist modified sessions for 5xx
-    # responses. #132 intentionally returns 501 for the not-yet-implemented
-    # login step, so persist the consumed state before that response.
     request.session.save()
 
     if request.query_params.get("error"):
@@ -214,7 +296,8 @@ def oauth_42_callback(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    if not request.query_params.get("code"):
+    code = request.query_params.get("code")
+    if not code:
         return Response(
             {
                 "error": {
@@ -225,12 +308,28 @@ def oauth_42_callback(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # #133 will exchange the code and continue the login flow. Never echo it.
+    if not _oauth_42_is_configured():
+        return _oauth_42_not_configured_response()
+
+    access_token = _exchange_42_code_for_access_token(code)
+    if access_token is None:
+        return Response(
+            {
+                "error": {
+                    "code": "oauth_token_exchange_failed",
+                    "message": "Could not complete 42 authorization.",
+                }
+            },
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    # #134 will use this token to retrieve the verified 42 account profile.
+    # Do not return or persist the provider token here.
     return Response(
         {
             "error": {
-                "code": "oauth_login_not_implemented",
-                "message": "42 sign-in is not available yet.",
+                "code": "oauth_profile_not_implemented",
+                "message": "42 account retrieval is not available yet.",
             }
         },
         status=status.HTTP_501_NOT_IMPLEMENTED,
