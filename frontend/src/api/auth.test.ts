@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { getSession, loginUser } from "./auth";
+import { getSession, loginUser, logoutUser } from "./auth";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -121,5 +121,49 @@ describe("getSession", () => {
         display_name: "test-login",
       },
     });
+  });
+});
+
+describe("logoutUser", () => {
+  test("gets a CSRF cookie and logs out the current session", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    fetchMock.mockImplementationOnce(async () => {
+      document.cookie = "csrftoken=test-csrf-token; path=/";
+
+      return new Response(JSON.stringify({ status: "ok", version: "v1" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await logoutUser();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/",
+      expect.objectContaining({
+        credentials: "same-origin",
+      }),
+    );
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/auth/logout/",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "same-origin",
+        headers: expect.any(Headers),
+      }),
+    );
+
+    const logoutRequest = fetchMock.mock.calls[1][1] as RequestInit;
+    const headers = logoutRequest.headers as Headers;
+
+    expect(headers.get("X-CSRFToken")).toBe("test-csrf-token");
   });
 });
