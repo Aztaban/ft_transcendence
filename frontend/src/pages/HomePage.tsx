@@ -4,6 +4,7 @@ import historyIcon from "../assets/figma/history.svg";
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import pendingIcon from "../assets/figma/pending.svg";
 import requestIcon from "../assets/figma/request.svg";
+import OpenRequests from "../features/student/OpenRequests";
 import { useRole, type AppRole } from "../store/RoleContext";
 import "../styles/dashboard.css";
 
@@ -148,21 +149,25 @@ function HomePage() {
       </section>
 
       <div className="dashboard__columns">
-        <section className="dashboard__section">
-          <h2>{dashboard.emptyTitle}</h2>
+        {activeRole === "STUDENT" ? (
+          <OpenRequests requests={[]} />
+        ) : (
+          <section className="dashboard__section">
+            <h2>{dashboard.emptyTitle}</h2>
 
-          <div className="dashboard-empty">
-            <Link
-              className="dashboard-empty__add"
-              to={dashboard.ctaTo}
-              aria-label={dashboard.actionAriaLabel}
-            >
-              {dashboard.actionSymbol}
-            </Link>
-            <h3>{dashboard.emptyStateTitle}</h3>
-            <p>{dashboard.emptyStateText}</p>
-          </div>
-        </section>
+            <div className="dashboard-empty">
+              <Link
+                className="dashboard-empty__add"
+                to={dashboard.ctaTo}
+                aria-label={dashboard.actionAriaLabel}
+              >
+                {dashboard.actionSymbol}
+              </Link>
+              <h3>{dashboard.emptyStateTitle}</h3>
+              <p>{dashboard.emptyStateText}</p>
+            </div>
+          </section>
+        )}
 
         <section className="dashboard__section">
           <h2>{dashboard.historyTitle}</h2>
