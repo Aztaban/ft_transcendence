@@ -7,7 +7,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_me_requires_authentication(client):
-    response = client.get(reverse("me"))
+    response = client.get(reverse("api:me"))
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {
@@ -32,7 +32,7 @@ def test_me_returns_only_current_users_profile_fields(client):
     )
 
     client.force_login(user)
-    response = client.get(reverse("me"))
+    response = client.get(reverse("api:me"))
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {

@@ -15,27 +15,49 @@ import sidebarLine from "../../assets/figma/sidebar-line.svg";
 import intraLogo from "../../assets/figma/intra.png";
 import notionLogo from "../../assets/figma/notion.svg";
 import slackLogo from "../../assets/figma/slack.svg";
+import { roles, useRole, type AppRole } from "../../store/RoleContext";
 
-const navigation = [
-  { label: "Home", to: "/", icon: homeIcon },
-  { label: "Request", to: "/requests", icon: requestIcon },
-  { label: "Pending", to: "/pending", icon: pendingIcon },
-  { label: "History", to: "/history", icon: historyIcon },
-  { label: "Student Council", to: "/council", icon: councilIcon },
-  { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
-  { label: "Profile", to: "/profile", icon: profileIcon },
-];
+interface NavigationItem {
+  label: string;
+  to: string;
+  icon: string;
+}
 
-const roles = ["STUDENT", "HITCHHIKER", "COUNCIL"] as const;
+const navigationByRole: Record<AppRole, NavigationItem[]> = {
+  STUDENT: [
+    { label: "Home", to: "/", icon: homeIcon },
+    { label: "Request", to: "/requests", icon: requestIcon },
+    { label: "Pending", to: "/pending", icon: pendingIcon },
+    { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
+    { label: "Profile", to: "/profile", icon: profileIcon },
+    { label: "Student Council", to: "/council", icon: councilIcon },
+  ],
 
-type Role = (typeof roles)[number];
+  HITCHHIKER: [
+    { label: "Home", to: "/", icon: homeIcon },
+    { label: "Requests", to: "/requests", icon: requestIcon },
+    { label: "Pending", to: "/pending", icon: pendingIcon },
+    { label: "Student Council", to: "/council", icon: councilIcon },
+    { label: "Profile", to: "/profile", icon: profileIcon },
+  ],
+
+  COUNCIL: [
+    { label: "Home", to: "/", icon: homeIcon },
+    { label: "Messages", to: "/council/messages", icon: councilIcon },
+    { label: "History", to: "/council/history", icon: historyIcon },
+    { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
+    { label: "Council Profile", to: "/council", icon: profileIcon },
+  ],
+};
 
 function Sidebar() {
-  const [selectedRole, setSelectedRole] = useState<Role>("STUDENT");
+  const { activeRole, setActiveRole } = useRole();
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
 
-  const selectRole = (role: Role) => {
-    setSelectedRole(role);
+  const visibleNavigation = navigationByRole[activeRole];
+
+  const selectRole = (role: AppRole) => {
+    setActiveRole(role);
     setIsRoleMenuOpen(false);
   };
 
@@ -48,7 +70,7 @@ function Sidebar() {
 
       <div className="sidebar__middle">
         <nav className="sidebar__nav" aria-label="Primary navigation">
-          {navigation.map((item) => (
+          {visibleNavigation.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -76,7 +98,7 @@ function Sidebar() {
             aria-expanded={isRoleMenuOpen}
             onClick={() => setIsRoleMenuOpen((open) => !open)}
           >
-            <span>{selectedRole}</span>
+            <span>{activeRole}</span>
 
             <img
               className={[
@@ -98,13 +120,13 @@ function Sidebar() {
                   key={role}
                   className={[
                     "sidebar__role-option",
-                    selectedRole === role ? "sidebar__role-option--selected" : "",
+                    activeRole === role ? "sidebar__role-option--selected" : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
                   type="button"
                   role="option"
-                  aria-selected={selectedRole === role}
+                  aria-selected={activeRole === role}
                   onClick={() => selectRole(role)}
                 >
                   {role}
