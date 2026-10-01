@@ -17,6 +17,13 @@ from apps.accounts.permissions import (
     IsTutorRole,
 )
 
+# DRF SessionAuthentication currently rejects anonymous callers with 403.
+# docs/api-plan.md defines unauthenticated as 401; align when integrating #23.
+UNAUTHENTICATED_REJECTED_MSG = (
+    "Unauthenticated requests currently return 403 under DRF SessionAuthentication; "
+    "api-plan expects 401 — update this assertion when integrating issue #23."
+)
+
 pytestmark = pytest.mark.django_db
 
 factory = APIRequestFactory()
@@ -116,7 +123,7 @@ def test_assign_role_rejects_unauthenticated(api_client, make_user):
         format="json",
     )
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_403_FORBIDDEN, UNAUTHENTICATED_REJECTED_MSG
     assert target.has_role(Role.Name.TUTOR) is False
 
 
@@ -202,7 +209,7 @@ def test_revoke_role_rejects_unauthenticated(api_client, make_user):
         )
     )
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_403_FORBIDDEN, UNAUTHENTICATED_REJECTED_MSG
     assert target.has_role(Role.Name.TUTOR) is True
 
 
