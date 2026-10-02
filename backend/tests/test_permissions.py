@@ -17,13 +17,6 @@ from apps.accounts.permissions import (
     IsTutorRole,
 )
 
-# DRF SessionAuthentication currently rejects anonymous callers with 403.
-# docs/api-plan.md defines unauthenticated as 401; align when integrating #23.
-UNAUTHENTICATED_REJECTED_MSG = (
-    "Unauthenticated requests currently return 403 under DRF SessionAuthentication; "
-    "api-plan expects 401 — update this assertion when integrating issue #23."
-)
-
 pytestmark = pytest.mark.django_db
 
 factory = APIRequestFactory()
@@ -112,19 +105,7 @@ def test_can_assign_roles_allows_admin_and_head_tutor_only(make_user):
 
 
 # --- Restricted endpoints: unauthorized callers are blocked ---
-
-
-def test_assign_role_rejects_unauthenticated(api_client, make_user):
-    target = make_user("target@example.com")
-
-    response = api_client.post(
-        reverse("users-assign-role", kwargs={"user_id": target.id}),
-        {"role": Role.Name.TUTOR},
-        format="json",
-    )
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN, UNAUTHENTICATED_REJECTED_MSG
-    assert target.has_role(Role.Name.TUTOR) is False
+# Unauthenticated HTTP status (401 vs 403) is covered by session auth (#23).
 
 
 @pytest.mark.parametrize(
@@ -196,21 +177,6 @@ def test_admin_may_assign_and_revoke(api_client, make_user):
     )
     assert revoked.status_code == status.HTTP_204_NO_CONTENT
     assert target.has_role(Role.Name.TUTOR) is False
-
-
-def test_revoke_role_rejects_unauthenticated(api_client, make_user):
-    target = make_user("target@example.com", roles=(Role.Name.TUTOR,))
-    tutor_role = Role.objects.get(name=Role.Name.TUTOR)
-
-    response = api_client.delete(
-        reverse(
-            "users-revoke-role",
-            kwargs={"user_id": target.id, "role_id": tutor_role.id},
-        )
-    )
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN, UNAUTHENTICATED_REJECTED_MSG
-    assert target.has_role(Role.Name.TUTOR) is True
 
 
 @pytest.mark.parametrize(

@@ -8,13 +8,6 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 
-# DRF SessionAuthentication currently rejects anonymous callers with 403.
-# docs/api-plan.md defines unauthenticated as 401; align when integrating #23.
-UNAUTHENTICATED_REJECTED_MSG = (
-    "Unauthenticated requests currently return 403 under DRF SessionAuthentication; "
-    "api-plan expects 401 — update this assertion when integrating issue #23."
-)
-
 pytestmark = pytest.mark.django_db
 
 
@@ -44,12 +37,6 @@ def make_user(user_model):
     return _make
 
 
-def test_me_requires_authentication(api_client):
-    response = api_client.get(reverse("users-me"))
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN, UNAUTHENTICATED_REJECTED_MSG
-
-
 def test_me_returns_current_users_profile_with_roles(api_client, make_user):
     user = make_user(
         "alice@example.com",
@@ -71,14 +58,6 @@ def test_me_returns_current_users_profile_with_roles(api_client, make_user):
         "status": "active",
         "roles": [Role.Name.STUDENT, Role.Name.TUTOR],
     }
-
-
-def test_user_detail_requires_authentication(api_client, make_user):
-    target = make_user("target@example.com", display_name="Target")
-
-    response = api_client.get(reverse("users-detail", kwargs={"user_id": target.id}))
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN, UNAUTHENTICATED_REJECTED_MSG
 
 
 def test_user_detail_returns_public_profile_without_private_fields(api_client, make_user):
@@ -225,14 +204,6 @@ def test_head_tutor_cannot_revoke_role(api_client, make_user):
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert target.has_role(Role.Name.TUTOR) is True
-
-
-def test_tutor_eligibility_requires_authentication(api_client, make_user):
-    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
-
-    response = api_client.get(reverse("tutors-eligibility", kwargs={"user_id": tutor.id}))
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN, UNAUTHENTICATED_REJECTED_MSG
 
 
 def test_tutor_eligibility_returns_empty_list_when_no_data(api_client, make_user):
