@@ -40,3 +40,11 @@ class RegistrationSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254)
     password = serializers.CharField(trim_whitespace=False)
+
+
+class OAuth42ProfileSerializer(serializers.Serializer):
+    """Validate the subset of the raw 42 `/v2/me` profile we rely on."""
+
+    id = serializers.IntegerField(min_value=1)
+    login = serializers.CharField(max_length=64, allow_blank=False)
+    email = serializers.EmailField(max_length=254)
