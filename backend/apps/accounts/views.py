@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.db import IntegrityError, transaction
 from django.http import HttpResponseRedirect
 from django.utils.decorators import method_decorator
@@ -20,13 +20,21 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import LoginSerializer, OAuth42ProfileSerializer, RegistrationSerializer
+from .serializers import (
+    LoginSerializer,
+    OAuth42IdentitySerializer,
+    OAuth42ProfileSerializer,
+    OAuth42UserCreationSerializer,
+    RegistrationSerializer,
+)
 
 OAUTH_42_STATE_SESSION_KEY = "oauth_42_state"
 OAUTH_42_AUTHORIZE_URL = "https://api.intra.42.fr/oauth/authorize"
 OAUTH_42_TOKEN_URL = "https://api.intra.42.fr/oauth/token"
 OAUTH_42_ME_URL = "https://api.intra.42.fr/v2/me"
 OAUTH_42_HTTP_TIMEOUT_SECONDS = 5
+
+User = get_user_model()
 
 
 def _oauth_42_is_configured():
@@ -110,6 +118,137 @@ def _retrieve_42_account_information(access_token):
         "intra_login": profile["login"],
         "email": profile["email"],
     }
+
+
+def _oauth_42_account_conflict_response(code, message):
+    return Response(
+        {
+            "error": {
+                "code": code,
+                "message": message,
+            }
+        },
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
+def _oauth_42_suspended_response():
+    return Response(
+        {
+            "error": {
+                "code": "oauth_account_suspended",
+                "message": "This account is suspended.",
+            }
+        },
+        status=status.HTTP_403_FORBIDDEN,
+    )
+
+
+def _oauth_42_success_response(user, message):
+    return Response(
+        {
+            "authenticated": True,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "display_name": user.display_name,
+            },
+            "message": message,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+def _persist_42_identity(user, account_information):
+    serializer = OAuth42IdentitySerializer(
+        user,
+        data={
+            "intra_id": account_information["intra_id"],
+            "intra_login": account_information["intra_login"],
+        },
+    )
+    if not serializer.is_valid():
+        return None
+    return serializer.save()
+
+
+def _handle_authenticated_42_link(request, account_information):
+    user = request.user
+    if not user.is_active:
+        return _oauth_42_suspended_response()
+
+    if user.intra_id not in (None, account_information["intra_id"]):
+        return _oauth_42_account_conflict_response(
+            "oauth_account_already_linked",
+            "This account is already linked to a different 42 account.",
+        )
+
+    identity_in_use = User.objects.filter(intra_id=account_information["intra_id"]).exclude(
+        pk=user.pk
+    )
+    if identity_in_use.exists():
+        return _oauth_42_account_conflict_response(
+            "oauth_identity_in_use",
+            "This 42 account is already linked to another user.",
+        )
+
+    linked_user = _persist_42_identity(user, account_information)
+    if linked_user is None:
+        return _oauth_42_account_conflict_response(
+            "oauth_identity_conflict",
+            "Could not link this 42 account.",
+        )
+
+    return _oauth_42_success_response(linked_user, "42 account linked successfully.")
+
+
+def _handle_anonymous_42_login(request, account_information):
+    user = User.objects.filter(intra_id=account_information["intra_id"]).first()
+    if user is not None:
+        if not user.is_active:
+            return _oauth_42_suspended_response()
+
+        user = _persist_42_identity(user, account_information)
+        if user is None:
+            return _oauth_42_account_conflict_response(
+                "oauth_identity_conflict",
+                "Could not update this 42 account identity.",
+            )
+
+        login(request, user)
+        return _oauth_42_success_response(user, "Logged in with 42 successfully.")
+
+    normalized_email = User.objects.normalize_email(account_information["email"])
+    if User.objects.filter(email=normalized_email).exists():
+        return _oauth_42_account_conflict_response(
+            "oauth_account_exists",
+            "An account with this email already exists.",
+        )
+
+    serializer = OAuth42UserCreationSerializer(
+        data={
+            "email": normalized_email,
+            "intra_id": account_information["intra_id"],
+            "intra_login": account_information["intra_login"],
+        }
+    )
+    if not serializer.is_valid():
+        return _oauth_42_account_conflict_response(
+            "oauth_account_conflict",
+            "Could not create an account from this 42 identity.",
+        )
+
+    try:
+        with transaction.atomic():
+            user = serializer.save()
+    except IntegrityError:
+        return _oauth_42_account_conflict_response(
+            "oauth_account_conflict",
+            "Could not create an account from this 42 identity.",
+        )
+
+    login(request, user)
+    return _oauth_42_success_response(user, "Logged in with 42 successfully.")
 
 
 def _email_conflict_response():
@@ -364,14 +503,9 @@ def oauth_42_callback(request):
             status=status.HTTP_502_BAD_GATEWAY,
         )
 
-    # #135 will persist the verified external identity. Keep the provider token
-    # and account payload server-side; neither should be exposed to the browser.
-    return Response(
-        {
-            "error": {
-                "code": "oauth_identity_storage_not_implemented",
-                "message": "42 identity storage is not available yet.",
-            }
-        },
-        status=status.HTTP_501_NOT_IMPLEMENTED,
-    )
+    # Keep the provider token server-side. The frontend can later replace this
+    # JSON completion response with navigation after the backend session exists.
+    if request.user.is_authenticated:
+        return _handle_authenticated_42_link(request, account_information)
+
+    return _handle_anonymous_42_login(request, account_information)

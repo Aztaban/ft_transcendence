@@ -134,7 +134,7 @@ def test_retrieve_42_account_information_rejects_malformed_json(monkeypatch):
 
 
 @override_settings(**OAUTH_SETTINGS)
-def test_callback_retrieves_profile_without_creating_user_yet(monkeypatch):
+def test_callback_retrieves_profile_and_creates_user(monkeypatch):
     monkeypatch.setattr(
         "apps.accounts.views._exchange_42_code_for_access_token",
         lambda code: "secret-provider-token",
@@ -155,11 +155,10 @@ def test_callback_retrieves_profile_without_creating_user_yet(monkeypatch):
         HTTP_HOST="localhost",
     )
 
-    assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
-    assert response.json()["error"]["code"] == "oauth_identity_storage_not_implemented"
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["authenticated"] is True
     assert "secret-provider-token" not in response.content.decode()
-    assert "oauth-user@student.42.fr" not in response.content.decode()
-    assert get_user_model().objects.count() == 0
+    assert get_user_model().objects.count() == 1
 
 
 @override_settings(**OAUTH_SETTINGS)

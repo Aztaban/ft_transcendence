@@ -69,3 +69,39 @@ class OAuth42IdentitySerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError("42 user ID must be a positive integer.")
         return value
+
+
+class OAuth42UserCreationSerializer(serializers.ModelSerializer):
+    """Create a local user from a verified 42 identity."""
+
+    class Meta:
+        model = User
+        fields = ("email", "intra_id", "intra_login")
+        extra_kwargs = {
+            "email": {"required": True},
+            "intra_id": {"required": True, "allow_null": False},
+            "intra_login": {
+                "required": True,
+                "allow_null": False,
+                "allow_blank": False,
+            },
+        }
+
+    def validate_email(self, value):
+        return User.objects.normalize_email(value)
+
+    def validate_intra_id(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("42 user ID must be a positive integer.")
+        return value
+
+    def create(self, validated_data):
+        user = User(
+            email=validated_data["email"],
+            display_name=validated_data["intra_login"],
+            intra_id=validated_data["intra_id"],
+            intra_login=validated_data["intra_login"],
+        )
+        user.set_unusable_password()
+        user.save()
+        return user

@@ -102,8 +102,8 @@ def test_callback_exchanges_code_without_exposing_secrets(monkeypatch):
         HTTP_HOST="localhost",
     )
 
-    assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
-    assert response.json()["error"]["code"] == "oauth_identity_storage_not_implemented"
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["authenticated"] is True
     assert captured["request"].full_url == OAUTH_42_TOKEN_URL
     assert captured["request"].get_method() == "POST"
     payload = parse_qs(captured["request"].data.decode())
