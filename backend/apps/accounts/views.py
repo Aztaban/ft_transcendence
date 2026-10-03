@@ -20,11 +20,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import LoginSerializer, RegistrationSerializer
+from .serializers import LoginSerializer, OAuth42ProfileSerializer, RegistrationSerializer
 
 OAUTH_42_STATE_SESSION_KEY = "oauth_42_state"
 OAUTH_42_AUTHORIZE_URL = "https://api.intra.42.fr/oauth/authorize"
 OAUTH_42_TOKEN_URL = "https://api.intra.42.fr/oauth/token"
+OAUTH_42_ME_URL = "https://api.intra.42.fr/v2/me"
 OAUTH_42_HTTP_TIMEOUT_SECONDS = 5
 
 
@@ -81,6 +82,34 @@ def _exchange_42_code_for_access_token(code):
         return None
 
     return access_token
+
+
+def _retrieve_42_account_information(access_token):
+    profile_request = Request(
+        OAUTH_42_ME_URL,
+        headers={
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        },
+        method="GET",
+    )
+
+    try:
+        with urlopen(profile_request, timeout=OAUTH_42_HTTP_TIMEOUT_SECONDS) as response:
+            profile_data = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+
+    serializer = OAuth42ProfileSerializer(data=profile_data)
+    if not serializer.is_valid():
+        return None
+
+    profile = serializer.validated_data
+    return {
+        "intra_id": profile["id"],
+        "intra_login": profile["login"],
+        "email": profile["email"],
+    }
 
 
 def _email_conflict_response():
@@ -256,7 +285,7 @@ def oauth_42_redirect(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def oauth_42_callback(request):
-    """Validate the callback and exchange its authorization code for a token."""
+    """Validate the callback, exchange its code, and retrieve the 42 account."""
     expected_state = request.session.get(OAUTH_42_STATE_SESSION_KEY)
     returned_state = request.query_params.get("state", "")
 
@@ -323,13 +352,25 @@ def oauth_42_callback(request):
             status=status.HTTP_502_BAD_GATEWAY,
         )
 
-    # #134 will use this token to retrieve the verified 42 account profile.
-    # Do not return or persist the provider token here.
+    account_information = _retrieve_42_account_information(access_token)
+    if account_information is None:
+        return Response(
+            {
+                "error": {
+                    "code": "oauth_profile_retrieval_failed",
+                    "message": "Could not retrieve the 42 account information.",
+                }
+            },
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    # #135 will persist the verified external identity. Keep the provider token
+    # and account payload server-side; neither should be exposed to the browser.
     return Response(
         {
             "error": {
-                "code": "oauth_profile_not_implemented",
-                "message": "42 account retrieval is not available yet.",
+                "code": "oauth_identity_storage_not_implemented",
+                "message": "42 identity storage is not available yet.",
             }
         },
         status=status.HTTP_501_NOT_IMPLEMENTED,
