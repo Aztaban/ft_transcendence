@@ -17,6 +17,12 @@ from apps.accounts.permissions import (
     IsTutorRole,
 )
 
+# Accept 401 or 403 until session auth (#23) aligns with api-plan (401).
+UNAUTHENTICATED_STATUSES = {
+    status.HTTP_401_UNAUTHORIZED,
+    status.HTTP_403_FORBIDDEN,
+}
+
 pytestmark = pytest.mark.django_db
 
 factory = APIRequestFactory()
@@ -105,7 +111,19 @@ def test_can_assign_roles_allows_admin_and_head_tutor_only(make_user):
 
 
 # --- Restricted endpoints: unauthorized callers are blocked ---
-# Unauthenticated HTTP status (401 vs 403) is covered by session auth (#23).
+
+
+def test_assign_role_rejects_unauthenticated(api_client, make_user):
+    target = make_user("target@example.com")
+
+    response = api_client.post(
+        reverse("users-assign-role", kwargs={"user_id": target.id}),
+        {"role": Role.Name.TUTOR},
+        format="json",
+    )
+
+    assert response.status_code in UNAUTHENTICATED_STATUSES
+    assert target.has_role(Role.Name.TUTOR) is False
 
 
 @pytest.mark.parametrize(
@@ -177,6 +195,21 @@ def test_admin_may_assign_and_revoke(api_client, make_user):
     )
     assert revoked.status_code == status.HTTP_204_NO_CONTENT
     assert target.has_role(Role.Name.TUTOR) is False
+
+
+def test_revoke_role_rejects_unauthenticated(api_client, make_user):
+    target = make_user("target@example.com", roles=(Role.Name.TUTOR,))
+    tutor_role = Role.objects.get(name=Role.Name.TUTOR)
+
+    response = api_client.delete(
+        reverse(
+            "users-revoke-role",
+            kwargs={"user_id": target.id, "role_id": tutor_role.id},
+        )
+    )
+
+    assert response.status_code in UNAUTHENTICATED_STATUSES
+    assert target.has_role(Role.Name.TUTOR) is True
 
 
 @pytest.mark.parametrize(
