@@ -86,6 +86,14 @@ def test_callback_exchanges_code_without_exposing_secrets(monkeypatch):
         return FakeTokenResponse({"access_token": "secret-provider-token"})
 
     monkeypatch.setattr("apps.accounts.views.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "apps.accounts.views._retrieve_42_account_information",
+        lambda token: {
+            "intra_id": 4242,
+            "intra_login": "oauth-user",
+            "email": "oauth-user@student.42.fr",
+        },
+    )
     client = client_with_state()
 
     response = client.get(
@@ -95,7 +103,7 @@ def test_callback_exchanges_code_without_exposing_secrets(monkeypatch):
     )
 
     assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
-    assert response.json()["error"]["code"] == "oauth_profile_not_implemented"
+    assert response.json()["error"]["code"] == "oauth_identity_storage_not_implemented"
     assert captured["request"].full_url == OAUTH_42_TOKEN_URL
     assert captured["request"].get_method() == "POST"
     payload = parse_qs(captured["request"].data.decode())
