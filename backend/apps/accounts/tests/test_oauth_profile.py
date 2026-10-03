@@ -5,6 +5,7 @@ from urllib.error import HTTPError, URLError
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -17,6 +18,11 @@ from apps.accounts.views import (
 )
 
 pytestmark = pytest.mark.django_db
+OAUTH_SETTINGS = {
+    "FT_OAUTH_CLIENT_ID": "test-client-id",
+    "FT_OAUTH_CLIENT_SECRET": "test-client-secret",
+    "FT_OAUTH_REDIRECT_URI": "https://localhost/api/v1/auth/42/callback/",
+}
 
 
 class FakeProfileResponse:
@@ -127,6 +133,7 @@ def test_retrieve_42_account_information_rejects_malformed_json(monkeypatch):
     assert _retrieve_42_account_information("secret-provider-token") is None
 
 
+@override_settings(**OAUTH_SETTINGS)
 def test_callback_retrieves_profile_without_creating_user_yet(monkeypatch):
     monkeypatch.setattr(
         "apps.accounts.views._exchange_42_code_for_access_token",
@@ -155,6 +162,7 @@ def test_callback_retrieves_profile_without_creating_user_yet(monkeypatch):
     assert get_user_model().objects.count() == 0
 
 
+@override_settings(**OAUTH_SETTINGS)
 def test_callback_returns_bad_gateway_when_profile_retrieval_fails(monkeypatch):
     monkeypatch.setattr(
         "apps.accounts.views._exchange_42_code_for_access_token",
