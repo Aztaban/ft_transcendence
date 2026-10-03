@@ -37,6 +37,7 @@ def test_create_user_hashes_password_and_sets_defaults(user_model):
     assert user.language == user_model.Language.ENGLISH
     assert user.status == user_model.Status.ACTIVE
     assert user.is_active is True
+    assert user.intra_id is None
     assert user.intra_login is None
     assert str(user) == "alice@example.com"
     assert user.created_at is not None
@@ -75,6 +76,23 @@ def test_mysql_email_unique_constraint_is_case_insensitive(user_model):
             user_model.objects.create(email="alice@example.com", display_name="Another")
 
     assert user_model.objects.count() == 1
+
+
+def test_intra_id_is_unique_when_provided(user_model):
+    user_model.objects.create_user("one@example.com", "secret", display_name="One", intra_id=4242)
+
+    with pytest.raises(IntegrityError):
+        with transaction.atomic():
+            user_model.objects.create_user(
+                "two@example.com", "secret", display_name="Two", intra_id=4242
+            )
+
+
+def test_multiple_users_can_have_no_intra_id(user_model):
+    user_model.objects.create_user("one@example.com", "secret", display_name="One")
+    user_model.objects.create_user("two@example.com", "secret", display_name="Two")
+
+    assert user_model.objects.filter(intra_id__isnull=True).count() == 2
 
 
 def test_intra_login_is_unique_when_provided(user_model):

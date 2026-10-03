@@ -27,6 +27,12 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         max_length=64,
     )
 
+    intra_id = models.PositiveBigIntegerField(
+        unique=True,
+        null=True,
+        blank=True,
+    )
+
     intra_login = models.CharField(
         max_length=64,
         unique=True,
