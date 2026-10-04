@@ -331,6 +331,24 @@ Message Marked As Read
 
 ## 8. Data Models
 
+### User
+
+Returned by `GET /api/v1/users/me/` and accepted by `PATCH /api/v1/users/me/`.
+
+| Field | Type | Writable | Description |
+|---|---|---|---|
+| id | integer | no | Unique user ID. |
+| email | string | no | Login identifier. Changing it is not supported. |
+| display_name | string (max 64) | yes | Name shown in the UI. |
+| avatar_url | string or null | no | URL of the user's avatar, or `null` to use the default. Uploaded through the Files API, not this endpoint. |
+| language | enum | yes | One of `en`, `cs`, `es`. Note `cs` — the language code, not the country code `cz`. |
+| roles | array of objects | no | Always present, possibly empty. Each entry is `{"id": int, "name": string}` with `name` one of `student`, `tutor`, `head_tutor`, `sc_member`, `admin`. |
+| intra_login | string or null | no | 42 login when the account is linked. Only exposed on `/users/me/` — never on `/users/{id}/`. |
+
+`roles` is always serialized, even when empty, so clients can iterate it without a null check.
+
+Public profiles (`GET /api/v1/users/{id}/`) return `id`, `display_name`, `avatar_url` and `roles` only.
+
 ### Evaluation Request
 
 | Field | Description |
@@ -490,6 +508,61 @@ Search is people-only: it discovers Hitchhikers and Student Council members, not
 | GET | `/api/v1/search/people/?q=...` | Authenticated | Searches Hitchhikers and Student Council members by display name. 42 login may be matched against internally but is never returned. |
 
 ## 11. Payload Examples
+
+### Get Own Profile
+
+**Request**
+
+```
+GET /api/v1/users/me/
+```
+
+**Response 200**
+
+```json
+{
+  "id": 7,
+  "email": "student@example.com",
+  "display_name": "Alice",
+  "avatar_url": null,
+  "language": "en",
+  "roles": [{ "id": 1, "name": "student" }],
+  "intra_login": null
+}
+```
+
+### Update Own Profile
+
+Partial update — send only the fields being changed.
+
+**Request**
+
+```
+PATCH /api/v1/users/me/
+```
+
+```json
+{
+  "display_name": "Alice B.",
+  "language": "cs"
+}
+```
+
+**Response 204** on success, with no body. Clients re-fetch `GET /api/v1/users/me/` for the updated profile.
+
+**Response 400**
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Please correct the profile fields.",
+    "fields": {
+      "display_name": ["Ensure this field has no more than 64 characters."]
+    }
+  }
+}
+```
 
 ### Create Evaluation Request
 
