@@ -5,6 +5,31 @@ from rest_framework import serializers
 User = get_user_model()
 
 
+class ProfileSerializer(serializers.ModelSerializer):
+    # Stubs until Files API (avatar) and Role model exist — always present for clients.
+    avatar_url = serializers.SerializerMethodField()
+    roles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "email",
+            "display_name",
+            "avatar_url",
+            "language",
+            "roles",
+            "intra_login",
+        )
+        read_only_fields = fields
+
+    def get_avatar_url(self, obj):
+        return None
+
+    def get_roles(self, obj):
+        return []
+
+
 class RegistrationSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     email = serializers.EmailField(max_length=254)
