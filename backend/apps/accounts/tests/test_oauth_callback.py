@@ -1,4 +1,6 @@
-"""42 OAuth callback boundary tests; no external provider requests."""
+"""42 OAuth callback browser-redirect tests; no external provider requests."""
+
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.contrib.auth import SESSION_KEY
@@ -7,7 +9,11 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.accounts.views import OAUTH_42_STATE_SESSION_KEY
+from apps.accounts.views import (
+    OAUTH_42_ERROR_PATH,
+    OAUTH_42_STATE_SESSION_KEY,
+    OAUTH_42_SUCCESS_PATH,
+)
 
 pytestmark = pytest.mark.django_db
 CALLBACK_URL = "api:oauth_42_callback"
@@ -26,13 +32,23 @@ def callback(client, **query):
     return client.get(reverse(CALLBACK_URL), query, HTTP_HOST="localhost")
 
 
+def assert_frontend_redirect(response, path, error_code=None):
+    assert response.status_code == status.HTTP_302_FOUND
+    location = urlparse(response["Location"])
+    assert location.path == path
+    query = parse_qs(location.query)
+    if error_code is None:
+        assert query == {}
+    else:
+        assert query == {"oauth": [error_code]}
+
+
 def test_callback_route_is_public_but_rejects_request_without_session_state():
     client = APIClient(enforce_csrf_checks=True)
 
     response = callback(client, code="fake-code", state=STATE)
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["error"]["code"] == "oauth_invalid_state"
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_invalid_state")
     assert SESSION_KEY not in client.session
 
 
@@ -42,8 +58,7 @@ def test_callback_rejects_missing_or_mismatched_state_without_consuming_valid_st
 
     response = callback(client, code="fake-code", state=state)
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["error"]["code"] == "oauth_invalid_state"
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_invalid_state")
     assert client.session[OAUTH_42_STATE_SESSION_KEY] == STATE
     assert SESSION_KEY not in client.session
 
@@ -65,9 +80,8 @@ def test_callback_handles_provider_error_without_echoing_description(provider_er
         state=STATE,
     )
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["error"]["code"] == expected_code
-    assert "sensitive provider detail" not in response.content.decode()
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, expected_code)
+    assert "sensitive provider detail" not in response["Location"]
     assert OAUTH_42_STATE_SESSION_KEY not in client.session
     assert SESSION_KEY not in client.session
 
@@ -77,8 +91,7 @@ def test_callback_rejects_missing_code_after_valid_state():
 
     response = callback(client, state=STATE)
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["error"]["code"] == "oauth_missing_code"
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_missing_code")
     assert OAUTH_42_STATE_SESSION_KEY not in client.session
 
 
@@ -104,16 +117,14 @@ def test_callback_accepts_valid_state_and_code_and_creates_session(monkeypatch):
 
     response = callback(client, code="secret-authorization-code", state=STATE)
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["authenticated"] is True
-    assert "secret-authorization-code" not in response.content.decode()
+    assert_frontend_redirect(response, OAUTH_42_SUCCESS_PATH)
+    assert "secret-authorization-code" not in response["Location"]
     assert "no-store" in response["Cache-Control"]
     assert OAUTH_42_STATE_SESSION_KEY not in client.session
     assert SESSION_KEY in client.session
 
     replay = callback(client, code="secret-authorization-code", state=STATE)
-    assert replay.status_code == status.HTTP_400_BAD_REQUEST
-    assert replay.json()["error"]["code"] == "oauth_invalid_state"
+    assert_frontend_redirect(replay, OAUTH_42_ERROR_PATH, "oauth_invalid_state")
 
 
 def test_callback_only_accepts_get():

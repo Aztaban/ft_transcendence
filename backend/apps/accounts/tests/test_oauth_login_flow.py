@@ -12,7 +12,9 @@ from rest_framework.test import APIClient
 
 from apps.accounts.views import (
     OAUTH_42_AUTHORIZE_URL,
+    OAUTH_42_ERROR_PATH,
     OAUTH_42_STATE_SESSION_KEY,
+    OAUTH_42_SUCCESS_PATH,
     OAUTH_42_TOKEN_URL,
 )
 
@@ -46,6 +48,17 @@ def client_with_state(state="known-state"):
     return client
 
 
+def assert_frontend_redirect(response, path, error_code=None):
+    assert response.status_code == status.HTTP_302_FOUND
+    location = urlparse(response["Location"])
+    assert location.path == path
+    query = parse_qs(location.query)
+    if error_code is None:
+        assert query == {}
+    else:
+        assert query == {"oauth": [error_code]}
+
+
 @override_settings(**OAUTH_SETTINGS)
 def test_oauth_redirect_generates_state_and_redirects_to_42():
     client = APIClient()
@@ -69,11 +82,10 @@ def test_oauth_redirect_generates_state_and_redirects_to_42():
     FT_OAUTH_CLIENT_SECRET="",
     FT_OAUTH_REDIRECT_URI="",
 )
-def test_oauth_redirect_rejects_missing_provider_configuration():
+def test_oauth_redirect_returns_frontend_error_when_provider_is_not_configured():
     response = APIClient().get(reverse("api:oauth_42_redirect"), HTTP_HOST="localhost")
 
-    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-    assert response.json()["error"]["code"] == "oauth_not_configured"
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_not_configured")
 
 
 @override_settings(**OAUTH_SETTINGS)
@@ -102,8 +114,7 @@ def test_callback_exchanges_code_without_exposing_secrets(monkeypatch):
         HTTP_HOST="localhost",
     )
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["authenticated"] is True
+    assert_frontend_redirect(response, OAUTH_42_SUCCESS_PATH)
     assert captured["request"].full_url == OAUTH_42_TOKEN_URL
     assert captured["request"].get_method() == "POST"
     payload = parse_qs(captured["request"].data.decode())
@@ -114,10 +125,10 @@ def test_callback_exchanges_code_without_exposing_secrets(monkeypatch):
         "code": ["secret-authorization-code"],
         "redirect_uri": [OAUTH_SETTINGS["FT_OAUTH_REDIRECT_URI"]],
     }
-    body = response.content.decode()
-    assert "secret-provider-token" not in body
-    assert "secret-authorization-code" not in body
-    assert OAUTH_SETTINGS["FT_OAUTH_CLIENT_SECRET"] not in body
+    location = response["Location"]
+    assert "secret-provider-token" not in location
+    assert "secret-authorization-code" not in location
+    assert OAUTH_SETTINGS["FT_OAUTH_CLIENT_SECRET"] not in location
     assert OAUTH_42_STATE_SESSION_KEY not in client.session
 
 
@@ -142,9 +153,8 @@ def test_callback_handles_token_exchange_failure(monkeypatch, provider_failure):
         HTTP_HOST="localhost",
     )
 
-    assert response.status_code == status.HTTP_502_BAD_GATEWAY
-    assert response.json()["error"]["code"] == "oauth_token_exchange_failed"
-    assert "secret-code" not in response.content.decode()
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_token_exchange_failed")
+    assert "secret-code" not in response["Location"]
     assert OAUTH_42_STATE_SESSION_KEY not in client.session
 
 
@@ -163,5 +173,4 @@ def test_callback_rejects_token_response_without_access_token(monkeypatch, paylo
         HTTP_HOST="localhost",
     )
 
-    assert response.status_code == status.HTTP_502_BAD_GATEWAY
-    assert response.json()["error"]["code"] == "oauth_token_exchange_failed"
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_token_exchange_failed")

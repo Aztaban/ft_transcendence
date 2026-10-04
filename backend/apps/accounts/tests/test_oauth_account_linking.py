@@ -1,4 +1,6 @@
-"""Tests for linking verified 42 identities to local users."""
+"""Tests for resolving verified 42 identities to local users during OAuth login."""
+
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.contrib.auth import SESSION_KEY, get_user_model
@@ -7,7 +9,11 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.accounts.views import OAUTH_42_STATE_SESSION_KEY
+from apps.accounts.views import (
+    OAUTH_42_ERROR_PATH,
+    OAUTH_42_STATE_SESSION_KEY,
+    OAUTH_42_SUCCESS_PATH,
+)
 
 pytestmark = pytest.mark.django_db
 OAUTH_SETTINGS = {
@@ -54,6 +60,17 @@ def callback(client, state="known-state"):
     )
 
 
+def assert_frontend_redirect(response, path, error_code=None):
+    assert response.status_code == status.HTTP_302_FOUND
+    location = urlparse(response["Location"])
+    assert location.path == path
+    query = parse_qs(location.query)
+    if error_code is None:
+        assert query == {}
+    else:
+        assert query == {"oauth": [error_code]}
+
+
 @override_settings(**OAUTH_SETTINGS)
 def test_first_oauth_login_creates_local_user_with_unusable_password(monkeypatch):
     mock_verified_42_identity(monkeypatch)
@@ -61,7 +78,7 @@ def test_first_oauth_login_creates_local_user_with_unusable_password(monkeypatch
 
     response = callback(client)
 
-    assert response.status_code == status.HTTP_200_OK
+    assert_frontend_redirect(response, OAUTH_42_SUCCESS_PATH)
     user = get_user_model().objects.get()
     assert user.email == "oauth-user@student.42.fr"
     assert user.display_name == "oauth-user"
@@ -70,11 +87,6 @@ def test_first_oauth_login_creates_local_user_with_unusable_password(monkeypatch
     assert user.has_usable_password() is False
     assert user.is_active is True
     assert client.session[SESSION_KEY] == str(user.pk)
-    assert response.json()["user"] == {
-        "id": user.id,
-        "email": user.email,
-        "display_name": user.display_name,
-    }
 
 
 @override_settings(**OAUTH_SETTINGS)
@@ -97,7 +109,7 @@ def test_repeat_oauth_login_reuses_user_by_intra_id(monkeypatch):
 
     response = callback(client)
 
-    assert response.status_code == status.HTTP_200_OK
+    assert_frontend_redirect(response, OAUTH_42_SUCCESS_PATH)
     assert get_user_model().objects.count() == 1
     user.refresh_from_db()
     assert user.email == "stored@example.com"
@@ -107,7 +119,7 @@ def test_repeat_oauth_login_reuses_user_by_intra_id(monkeypatch):
 
 
 @override_settings(**OAUTH_SETTINGS)
-def test_anonymous_oauth_login_rejects_existing_unlinked_email(monkeypatch):
+def test_oauth_login_rejects_existing_unlinked_email(monkeypatch):
     existing = get_user_model().objects.create_user(
         email="oauth-user@student.42.fr",
         password="local-password",
@@ -118,8 +130,7 @@ def test_anonymous_oauth_login_rejects_existing_unlinked_email(monkeypatch):
 
     response = callback(client)
 
-    assert response.status_code == status.HTTP_409_CONFLICT
-    assert response.json()["error"]["code"] == "oauth_account_exists"
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_account_exists")
     existing.refresh_from_db()
     assert existing.intra_id is None
     assert existing.intra_login is None
@@ -128,78 +139,48 @@ def test_anonymous_oauth_login_rejects_existing_unlinked_email(monkeypatch):
 
 
 @override_settings(**OAUTH_SETTINGS)
-def test_authenticated_user_can_link_42_without_overwriting_local_profile(monkeypatch):
-    user = get_user_model().objects.create_user(
+def test_authenticated_password_user_is_not_linked_by_oauth_login(monkeypatch):
+    local_user = get_user_model().objects.create_user(
         email="local@example.com",
         password="local-password",
         display_name="Local Display Name",
     )
     client = APIClient()
-    client.force_login(user)
+    client.force_login(local_user)
     client = client_with_state(client)
     mock_verified_42_identity(monkeypatch)
 
     response = callback(client)
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["message"] == "42 account linked successfully."
-    user.refresh_from_db()
-    assert user.email == "local@example.com"
-    assert user.display_name == "Local Display Name"
-    assert user.intra_id == 4242
-    assert user.intra_login == "oauth-user"
-    assert client.session[SESSION_KEY] == str(user.pk)
+    assert_frontend_redirect(response, OAUTH_42_SUCCESS_PATH)
+    local_user.refresh_from_db()
+    assert local_user.intra_id is None
+    assert local_user.intra_login is None
+    oauth_user = get_user_model().objects.get(intra_id=4242)
+    assert oauth_user.pk != local_user.pk
+    assert client.session[SESSION_KEY] == str(oauth_user.pk)
 
 
 @override_settings(**OAUTH_SETTINGS)
-def test_authenticated_user_cannot_replace_different_42_identity(monkeypatch):
-    user = get_user_model().objects.create_user(
-        email="local@example.com",
+def test_authenticated_user_with_same_email_is_not_auto_linked(monkeypatch):
+    local_user = get_user_model().objects.create_user(
+        email="oauth-user@student.42.fr",
         password="local-password",
-        display_name="Local User",
-        intra_id=1111,
-        intra_login="already-linked",
+        display_name="Existing User",
     )
     client = APIClient()
-    client.force_login(user)
+    client.force_login(local_user)
     client = client_with_state(client)
     mock_verified_42_identity(monkeypatch)
 
     response = callback(client)
 
-    assert response.status_code == status.HTTP_409_CONFLICT
-    assert response.json()["error"]["code"] == "oauth_account_already_linked"
-    user.refresh_from_db()
-    assert user.intra_id == 1111
-    assert user.intra_login == "already-linked"
-
-
-@override_settings(**OAUTH_SETTINGS)
-def test_42_identity_cannot_be_linked_to_second_authenticated_user(monkeypatch):
-    get_user_model().objects.create_user(
-        email="first@example.com",
-        password=None,
-        display_name="First",
-        intra_id=4242,
-        intra_login="oauth-user",
-    )
-    second = get_user_model().objects.create_user(
-        email="second@example.com",
-        password="local-password",
-        display_name="Second",
-    )
-    client = APIClient()
-    client.force_login(second)
-    client = client_with_state(client)
-    mock_verified_42_identity(monkeypatch)
-
-    response = callback(client)
-
-    assert response.status_code == status.HTTP_409_CONFLICT
-    assert response.json()["error"]["code"] == "oauth_identity_in_use"
-    second.refresh_from_db()
-    assert second.intra_id is None
-    assert second.intra_login is None
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_account_exists")
+    local_user.refresh_from_db()
+    assert local_user.intra_id is None
+    assert local_user.intra_login is None
+    assert client.session[SESSION_KEY] == str(local_user.pk)
+    assert get_user_model().objects.count() == 1
 
 
 @override_settings(**OAUTH_SETTINGS)
@@ -218,6 +199,5 @@ def test_suspended_oauth_user_cannot_login(monkeypatch):
 
     response = callback(client)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert response.json()["error"]["code"] == "oauth_account_suspended"
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_account_suspended")
     assert SESSION_KEY not in client.session
