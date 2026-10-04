@@ -28,7 +28,8 @@ def _email_conflict_response():
 
 def _has_unique_email_error(serializer):
     return any(
-        getattr(error, "code", None) == "unique" for error in serializer.errors.get("email", [])
+        getattr(error, "code", None) == "unique"
+        for error in serializer.errors.get("email", [])
     )
 
 
@@ -54,7 +55,7 @@ def register(request):
 
     try:
         with transaction.atomic():
-            user = serializer.save()
+            serializer.save()
     except IntegrityError:
         # Email is the only caller-supplied unique field in this endpoint.
         # Keep the database constraint as the final authority for races.
@@ -62,9 +63,7 @@ def register(request):
 
     return Response(
         {
-            "id": user.id,
-            "email": user.email,
-            "display_name": user.display_name,
+            **serializer.data,
             "message": "Account created successfully.",
         },
         status=status.HTTP_201_CREATED,
