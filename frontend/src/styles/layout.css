@@ -587,3 +587,28 @@
     padding: 28px 20px;
   }
 }
+
+.sidebar__logout:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.sidebar__logout:disabled:hover {
+  border-color: #5a5a5a;
+  background: var(--color-sidebar-surface);
+}
+
+.sidebar__logout-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1000;
+  max-width: 320px;
+  padding: 12px 18px;
+  border: 1px solid #d9534f;
+  border-radius: var(--radius-sm);
+  background: #2b2b2b;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
+  color: #ffffff;
+  font-size: 14px;
+}

@@ -85,3 +85,14 @@ export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
 export function getSession(): Promise<SessionResponse> {
   return apiRequest<SessionResponse>("/api/v1/auth/session/");
 }
+
+export async function logoutUser(): Promise<void> {
+  const csrfToken = await ensureCsrfToken();
+
+  await apiRequest<void>("/api/v1/auth/logout/", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+  });
+}

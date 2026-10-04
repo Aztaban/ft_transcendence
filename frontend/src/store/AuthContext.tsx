@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-import { getSession, loginUser, type AuthUser, type LoginPayload } from "../api/auth";
+import { getSession, loginUser, logoutUser, type AuthUser, type LoginPayload } from "../api/auth";
 
 interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (payload: LoginPayload) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -57,6 +58,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
   }
 
+  async function logout() {
+    await logoutUser();
+    setUser(null);
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -64,6 +70,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAuthenticated: user !== null,
         isLoading,
         login,
+        logout,
       }}
     >
       {children}
