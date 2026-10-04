@@ -28,8 +28,7 @@ def _email_conflict_response():
 
 def _has_unique_email_error(serializer):
     return any(
-        getattr(error, "code", None) == "unique"
-        for error in serializer.errors.get("email", [])
+        getattr(error, "code", None) == "unique" for error in serializer.errors.get("email", [])
     )
 
 
