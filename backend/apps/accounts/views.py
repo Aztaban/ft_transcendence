@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 
 from .serializers import LoginSerializer, ProfileSerializer, RegistrationSerializer
 
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def me(request):
