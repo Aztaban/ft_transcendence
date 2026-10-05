@@ -2,6 +2,7 @@
 
 import json
 from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -11,9 +12,11 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.accounts.views import (
+    OAUTH_42_ERROR_PATH,
     OAUTH_42_HTTP_TIMEOUT_SECONDS,
     OAUTH_42_ME_URL,
     OAUTH_42_STATE_SESSION_KEY,
+    OAUTH_42_SUCCESS_PATH,
     _retrieve_42_account_information,
 )
 
@@ -155,9 +158,10 @@ def test_callback_retrieves_profile_and_creates_user(monkeypatch):
         HTTP_HOST="localhost",
     )
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["authenticated"] is True
-    assert "secret-provider-token" not in response.content.decode()
+    assert response.status_code == status.HTTP_302_FOUND
+    assert urlparse(response["Location"]).path == OAUTH_42_SUCCESS_PATH
+    assert parse_qs(urlparse(response["Location"]).query) == {}
+    assert "secret-provider-token" not in response["Location"]
     assert get_user_model().objects.count() == 1
 
 
@@ -179,6 +183,8 @@ def test_callback_returns_bad_gateway_when_profile_retrieval_fails(monkeypatch):
         HTTP_HOST="localhost",
     )
 
-    assert response.status_code == status.HTTP_502_BAD_GATEWAY
-    assert response.json()["error"]["code"] == "oauth_profile_retrieval_failed"
-    assert "secret-provider-token" not in response.content.decode()
+    assert response.status_code == status.HTTP_302_FOUND
+    location = urlparse(response["Location"])
+    assert location.path == OAUTH_42_ERROR_PATH
+    assert parse_qs(location.query) == {"oauth": ["oauth_profile_retrieval_failed"]}
+    assert "secret-provider-token" not in response["Location"]

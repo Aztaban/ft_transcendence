@@ -33,6 +33,8 @@ OAUTH_42_AUTHORIZE_URL = "https://api.intra.42.fr/oauth/authorize"
 OAUTH_42_TOKEN_URL = "https://api.intra.42.fr/oauth/token"
 OAUTH_42_ME_URL = "https://api.intra.42.fr/v2/me"
 OAUTH_42_HTTP_TIMEOUT_SECONDS = 5
+OAUTH_42_SUCCESS_PATH = "/"
+OAUTH_42_ERROR_PATH = "/login"
 
 User = get_user_model()
 
@@ -44,18 +46,6 @@ def _oauth_42_is_configured():
             settings.FT_OAUTH_CLIENT_SECRET,
             settings.FT_OAUTH_REDIRECT_URI,
         )
-    )
-
-
-def _oauth_42_not_configured_response():
-    return Response(
-        {
-            "error": {
-                "code": "oauth_not_configured",
-                "message": "42 OAuth is not configured.",
-            }
-        },
-        status=status.HTTP_503_SERVICE_UNAVAILABLE,
     )
 
 
@@ -120,43 +110,11 @@ def _retrieve_42_account_information(access_token):
     }
 
 
-def _oauth_42_account_conflict_response(code, message):
-    return Response(
-        {
-            "error": {
-                "code": code,
-                "message": message,
-            }
-        },
-        status=status.HTTP_409_CONFLICT,
-    )
-
-
-def _oauth_42_suspended_response():
-    return Response(
-        {
-            "error": {
-                "code": "oauth_account_suspended",
-                "message": "This account is suspended.",
-            }
-        },
-        status=status.HTTP_403_FORBIDDEN,
-    )
-
-
-def _oauth_42_success_response(user, message):
-    return Response(
-        {
-            "authenticated": True,
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "display_name": user.display_name,
-            },
-            "message": message,
-        },
-        status=status.HTTP_200_OK,
-    )
+def _oauth_42_frontend_redirect(error_code=None):
+    if error_code:
+        query = urlencode({"oauth": error_code})
+        return HttpResponseRedirect(f"{OAUTH_42_ERROR_PATH}?{query}")
+    return HttpResponseRedirect(OAUTH_42_SUCCESS_PATH)
 
 
 def _persist_42_identity(user, account_information):
@@ -172,58 +130,22 @@ def _persist_42_identity(user, account_information):
     return serializer.save()
 
 
-def _handle_authenticated_42_link(request, account_information):
-    user = request.user
-    if not user.is_active:
-        return _oauth_42_suspended_response()
-
-    if user.intra_id not in (None, account_information["intra_id"]):
-        return _oauth_42_account_conflict_response(
-            "oauth_account_already_linked",
-            "This account is already linked to a different 42 account.",
-        )
-
-    identity_in_use = User.objects.filter(intra_id=account_information["intra_id"]).exclude(
-        pk=user.pk
-    )
-    if identity_in_use.exists():
-        return _oauth_42_account_conflict_response(
-            "oauth_identity_in_use",
-            "This 42 account is already linked to another user.",
-        )
-
-    linked_user = _persist_42_identity(user, account_information)
-    if linked_user is None:
-        return _oauth_42_account_conflict_response(
-            "oauth_identity_conflict",
-            "Could not link this 42 account.",
-        )
-
-    return _oauth_42_success_response(linked_user, "42 account linked successfully.")
-
-
-def _handle_anonymous_42_login(request, account_information):
+def _handle_42_login(request, account_information):
     user = User.objects.filter(intra_id=account_information["intra_id"]).first()
     if user is not None:
         if not user.is_active:
-            return _oauth_42_suspended_response()
+            return "oauth_account_suspended"
 
         user = _persist_42_identity(user, account_information)
         if user is None:
-            return _oauth_42_account_conflict_response(
-                "oauth_identity_conflict",
-                "Could not update this 42 account identity.",
-            )
+            return "oauth_identity_conflict"
 
         login(request, user)
-        return _oauth_42_success_response(user, "Logged in with 42 successfully.")
+        return None
 
     normalized_email = User.objects.normalize_email(account_information["email"])
     if User.objects.filter(email=normalized_email).exists():
-        return _oauth_42_account_conflict_response(
-            "oauth_account_exists",
-            "An account with this email already exists.",
-        )
+        return "oauth_account_exists"
 
     serializer = OAuth42UserCreationSerializer(
         data={
@@ -233,22 +155,16 @@ def _handle_anonymous_42_login(request, account_information):
         }
     )
     if not serializer.is_valid():
-        return _oauth_42_account_conflict_response(
-            "oauth_account_conflict",
-            "Could not create an account from this 42 identity.",
-        )
+        return "oauth_account_conflict"
 
     try:
         with transaction.atomic():
             user = serializer.save()
     except IntegrityError:
-        return _oauth_42_account_conflict_response(
-            "oauth_account_conflict",
-            "Could not create an account from this 42 identity.",
-        )
+        return "oauth_account_conflict"
 
     login(request, user)
-    return _oauth_42_success_response(user, "Logged in with 42 successfully.")
+    return None
 
 
 def _email_conflict_response():
@@ -402,7 +318,7 @@ class LogoutView(APIView):
 def oauth_42_redirect(request):
     """Start the 42 OAuth authorization-code flow."""
     if not _oauth_42_is_configured():
-        return _oauth_42_not_configured_response()
+        return _oauth_42_frontend_redirect("oauth_not_configured")
 
     oauth_state = secrets.token_urlsafe(32)
     request.session[OAUTH_42_STATE_SESSION_KEY] = oauth_state
@@ -422,7 +338,7 @@ def oauth_42_redirect(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def oauth_42_callback(request):
-    """Validate the callback, exchange its code, and retrieve the 42 account."""
+    """Complete 42 OAuth login and return the browser to the frontend."""
     expected_state = request.session.get(OAUTH_42_STATE_SESSION_KEY)
     returned_state = request.query_params.get("state", "")
 
@@ -432,78 +348,40 @@ def oauth_42_callback(request):
         or not returned_state
         or not secrets.compare_digest(expected_state, returned_state)
     ):
-        return Response(
-            {
-                "error": {
-                    "code": "oauth_invalid_state",
-                    "message": "Invalid or expired 42 authorization request.",
-                }
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return _oauth_42_frontend_redirect("oauth_invalid_state")
 
     # Each authorization response can be processed only once.
     request.session.pop(OAUTH_42_STATE_SESSION_KEY, None)
     request.session.save()
 
     if request.query_params.get("error"):
-        is_denied = request.query_params["error"] == "access_denied"
-        return Response(
-            {
-                "error": {
-                    "code": "oauth_access_denied" if is_denied else "oauth_provider_error",
-                    "message": (
-                        "42 authorization was cancelled."
-                        if is_denied
-                        else "42 authorization failed."
-                    ),
-                }
-            },
-            status=status.HTTP_400_BAD_REQUEST,
+        error_code = (
+            "oauth_access_denied"
+            if request.query_params["error"] == "access_denied"
+            else "oauth_provider_error"
         )
+        return _oauth_42_frontend_redirect(error_code)
 
     code = request.query_params.get("code")
     if not code:
-        return Response(
-            {
-                "error": {
-                    "code": "oauth_missing_code",
-                    "message": "42 did not return an authorization code.",
-                }
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return _oauth_42_frontend_redirect("oauth_missing_code")
 
     if not _oauth_42_is_configured():
-        return _oauth_42_not_configured_response()
+        return _oauth_42_frontend_redirect("oauth_not_configured")
 
     access_token = _exchange_42_code_for_access_token(code)
     if access_token is None:
-        return Response(
-            {
-                "error": {
-                    "code": "oauth_token_exchange_failed",
-                    "message": "Could not complete 42 authorization.",
-                }
-            },
-            status=status.HTTP_502_BAD_GATEWAY,
-        )
+        return _oauth_42_frontend_redirect("oauth_token_exchange_failed")
 
     account_information = _retrieve_42_account_information(access_token)
     if account_information is None:
-        return Response(
-            {
-                "error": {
-                    "code": "oauth_profile_retrieval_failed",
-                    "message": "Could not retrieve the 42 account information.",
-                }
-            },
-            status=status.HTTP_502_BAD_GATEWAY,
-        )
+        return _oauth_42_frontend_redirect("oauth_profile_retrieval_failed")
 
-    # Keep the provider token server-side. The frontend can later replace this
-    # JSON completion response with navigation after the backend session exists.
-    if request.user.is_authenticated:
-        return _handle_authenticated_42_link(request, account_information)
+    # The provider token remains server-side. OAuth login creates/reuses a local
+    # account and establishes the normal Django session. Existing password
+    # accounts are not automatically linked by matching email.
+    error_code = _handle_42_login(request, account_information)
+    if error_code:
+        return _oauth_42_frontend_redirect(error_code)
 
-    return _handle_anonymous_42_login(request, account_information)
+    return _oauth_42_frontend_redirect()
