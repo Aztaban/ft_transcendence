@@ -29,7 +29,7 @@ def _correct_fields_response(errors):
         {
             "error": {
                 "code": "validation_error",
-                "message": "Please correct the profile fields",
+                "message": "Please correct the profile fields.",
                 "fields": errors,
             },
         },
@@ -38,7 +38,6 @@ def _correct_fields_response(errors):
 
 
 class MeView(APIView):
-
     authentication_classes = [SessionAuthentication]
     permission_classes = [AllowAny]
 
