@@ -1,264 +1,374 @@
 # Database Schema
 
-**Status:** Draft for team review
+**Status:** Approved for implementation (sections marked "?" excepted)
 **Owner:** rkravche, IT Architect
-**Last updated:** July 28, 2026
+**Last updated:** October 6, 2026
 
 ---
 
 ## 1. Purpose
 
-This document describes the MySQL schema: entities, relations and the constraints that enforce product rules (single claim per slot, role attribution, message anonymity). Tables are implemented as Django models; migrations are the source of truth once code exists.
+This document describes the MySQL schema: tables, columns, relations and the constraints that enforce product rules. It is the reference for writing Django models and migrations. The HTTP contract built on top of it is `docs/api-plan.md`.
 
-Conventions:
+Once a model is merged to `main`, its migration is the source of truth for exact column types. If code and this document disagree, the disagreement is a bug: fix one of them in the same PR, do not silently follow either.
 
-- `id` is a `BIGINT AUTO_INCREMENT` surrogate key on every table; `created_at` / `updated_at` exist everywhere (omitted below for clarity); FKs note `ON DELETE` only where non-obvious.
-- All tables are InnoDB.
-- Datetime columns are `DATETIME(6)` holding UTC.
-- The default collation is case-insensitive, so unique indexes on email and slugs reject case-variant duplicates without extra work.
-- Sections marked "YES" are agreed by the team and safe to build against. Sections marked "?" are proposals only, pending a team decision do not implement until confirmed.
+### Conventions
 
----
-
-## 2. Identity and access "YES"
-
-### user
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT | |
-| email | varchar(254) UNIQUE | login identifier (mandatory email+password auth); case-insensitive by collation |
-| password_hash | text | managed by Django (Argon2, salted) |
-| display_name | varchar(64) | shown in the UI — email is not a display name |
-| intra_login | varchar(64) UNIQUE NULL | set when linked via 42 OAuth |
-| avatar_file_id | FK file.id NULL | default avatar when NULL |
-| language | enum | `en`, `cs`, `es` |
-| status | enum | `active`, `suspended` |
-
-### role
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT| |
-| name | varchar(254) UNIQUE | |
-
-Seed rows: `student`, `tutor`, `head_tutor`, `sc_member`, `admin`.
-
-### user_roles
-| Column | Type | Notes |
-| --- | --- | --- |
-| user_id | FK user.id | |
-| role_id | FK role.id | |
-
-`UNIQUE (user_id, role_id)`. Every authenticated user implicitly holds Student capabilities.
+- Every table has `id BIGINT AUTO_INCREMENT` (`models.BigAutoField`) unless stated otherwise.
+- Every table has `created_at` and `updated_at` (`apps.core.models.TimeStampedModel`). They are omitted from the tables below.
+- All tables are InnoDB. Datetime columns are `DATETIME(6)` holding UTC (`USE_TZ = True`).
+- The default collation is case-insensitive, so unique indexes on email and slugs reject case-variant duplicates. Emails are additionally normalized to lowercase by `UserManager.normalize_email`.
+- Enums are stored as `varchar` with Django `TextChoices`. Stored values are lowercase `snake_case` and are exactly the values the API sends.
+- Foreign keys are `ON DELETE PROTECT` unless the table says otherwise. Users are never hard-deleted through the application (see §2.4), so most FKs to `user` never fire.
+- Table names are set explicitly with `Meta.db_table` and match the headings below.
+- Sections marked **YES** are agreed and safe to build. Sections marked **?** are proposals: do not implement them until the team approves them.
 
 ---
 
-## 3. Evaluations "YES"
+## 2. Identity and access — YES
 
-### project
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT| |
-| slug | varchar(64) UNIQUE | e.g. `libft` |
-| name | text | |
-| is_active | bool | inactive projects are hidden but not deleted |
+### 2.1 user
 
-### tutor_eligibility
-| Column | Type | Notes |
-| --- | --- | --- |
-| tutor_id | FK user.id | |
-| project_id | FK project.id | |
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| email | varchar(254) UNIQUE | no | Login identifier. Lowercased on save. |
+| password | varchar(128) | no | Django hash (Argon2). Unusable hash for 42-only accounts. |
+| display_name | varchar(64) | no | Shown in the UI. Not unique. |
+| intra_id | BIGINT UNSIGNED UNIQUE | yes | 42 user id. Set on first 42 OAuth login; used to recognize returning 42 users. |
+| intra_login | varchar(64) UNIQUE | yes | 42 login. Private: never returned by public endpoints. |
+| avatar_file_id | FK file.id | yes | `ON DELETE SET NULL`. NULL means the default avatar. |
+| language | varchar(2) | no | `en`, `cs`, `es`. Default `en`. |
+| status | varchar(16) | no | `active`, `suspended`, `deleted`. Default `active`. Only `active` users can log in. |
+| is_staff | bool | no | Access to the Django admin site (`/admin/`). Team members only. Unrelated to the `admin` role. |
+| is_superuser | bool | no | Django built-in (`PermissionsMixin`). |
+| last_login | datetime(6) | yes | Django built-in. |
+
+`is_active` is a Python property (`status == "active"`), not a column, so Django authentication refuses suspended and deleted users.
+
+There is no `bio` column. Profiles show display name, avatar and roles only.
+
+### 2.2 role
+
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| name | varchar(254) UNIQUE | no | One of the seeded names below. |
+
+Seeded by a data migration, never created through the API: `student`, `tutor`, `head_tutor`, `sc_member`, `admin`.
+
+The UI shows `tutor` as "Hitchhiker" and `sc_member` as "Student Council". The stored and transmitted names never change.
+
+### 2.3 user_roles
+
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| user_id | FK user.id | no | `ON DELETE CASCADE`. |
+| role_id | FK role.id | no | `ON DELETE CASCADE`. |
+
+`UNIQUE (user_id, role_id)`. `User.roles` is a `ManyToManyField(Role, through="UserRole")`.
+
+Role rules (enforced in code, described in api-plan §5.8):
+
+- Every account receives `student` when it is created, through registration or first 42 login. `student` is never revoked. The migration that seeds the roles also gives `student` to every user that already exists.
+- `head_tutor` includes every `tutor` capability. Code that checks "is a Hitchhiker" accepts either role.
+- `admin` does not imply any other role.
+
+### 2.4 Account deletion
+
+Users are never removed with `DELETE FROM user`, because their rows are referenced by other people's evaluation history. Deleting an account (api-plan §10.2) anonymizes it in one transaction:
+
+- `status` = `deleted`, `email` = `deleted-<id>@deleted.invalid`, `display_name` = `Deleted user`
+- `intra_id`, `intra_login`, `avatar_file_id` = NULL; the avatar `file` row and its bytes are deleted
+- password set unusable; all `user_roles` rows deleted; all sessions of the user ended
+- the user's open evaluation requests (`pending`, `awaiting_confirmation`, `confirmed` in the future) are cancelled, with `cancelled_by` = the admin who deleted the account; slots they picked as a Hitchhiker are released (back to `pending`)
+- their pending eligibility request, if any, is declined (`reviewed_by` = the admin); their `tutor_eligibility` rows are deleted
+- `sender_id` is set to NULL on the messages they sent to the Student Council
+- their notifications are deleted
+- tutor resources they uploaded are kept, and show the anonymized owner
+
+---
+
+## 3. Projects and eligibility — YES
+
+### 3.1 project
+
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| slug | varchar(64) UNIQUE | no | e.g. `libft`. Used in URLs. |
+| name | varchar(128) | no | e.g. `Libft`. |
+| is_active | bool | no | Default true. Inactive projects are hidden from lists and cannot get new requests, but existing rows keep pointing at them. |
+
+Projects are seeded by a data migration with the 42 Prague curriculum and maintained afterwards in the Django admin. There is no API for creating or editing projects.
+
+### 3.2 tutor_eligibility_request
+
+One submission by a Hitchhiker listing every project they want to evaluate. A Head Tutor approves or declines the whole request.
+
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| requester_id | FK user.id | no | Holds `tutor` or `head_tutor` at submission time. |
+| status | varchar(16) | no | `pending`, `approved`, `declined`. Default `pending`. |
+| reviewed_by_id | FK user.id | yes | `ON DELETE SET NULL`. The Head Tutor or Admin who decided. |
+| reviewed_at | datetime(6) | yes | |
+| review_note | varchar(500) | no | Optional reason shown to the requester. Default empty string. |
+
+Constraints:
+
+- `CHECK ((status = 'pending' AND reviewed_by_id IS NULL AND reviewed_at IS NULL) OR (status <> 'pending' AND reviewed_at IS NOT NULL))`
+- At most one `pending` request per requester. MySQL cannot express a partial unique index, so this is enforced in code: the create endpoint locks the requester's `user` row (`select_for_update()`) and checks for an existing pending request inside the same transaction.
+
+Index: `(status, created_at)` for the review table.
+
+### 3.3 tutor_eligibility_request_projects
+
+The many-to-many link `TutorEligibilityRequest.projects = ManyToManyField(Project)`.
+
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| tutoreligibilityrequest_id | FK tutor_eligibility_request.id | no | `ON DELETE CASCADE`. |
+| project_id | FK project.id | no | `ON DELETE PROTECT`. |
+
+`UNIQUE (tutoreligibilityrequest_id, project_id)` (created by Django).
+
+### 3.4 tutor_eligibility
+
+The current permission: which Hitchhiker may pick slots for which project. Every eligibility check reads only this table.
+
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| tutor_id | FK user.id | no | `ON DELETE CASCADE`. |
+| project_id | FK project.id | no | `ON DELETE CASCADE`. |
+| granted_by_request_id | FK tutor_eligibility_request.id | yes | `ON DELETE SET NULL`. The request whose approval created this row. |
 
 `UNIQUE (tutor_id, project_id)`.
 
-### evaluation_request
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT| |
-| student_id | FK user.id | |
-| project_id | FK project.id | |
-| note | text | optional |
-| status | enum | `open`, `scheduled`, `cancelled`, `expired`, `completed` |
-| expires_at | datetime(6) | Celery decides `open` → `expired` |
+Rules:
 
-### request_slot
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT| |
-| request_id | FK evaluation_request.id | CASCADE |
-| starts_at | datetime(6) | must be future at creation |
-| ends_at | datetime(6) | must be after `starts_at` at creation |
-
-### evaluation
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT| |
-| tutor_id | FK user.id | |
-| slot_id | FK request_slot.id UNIQUE | we want the evaluation to explicitly show which slot it used to free it if someone cancels the evaluation |
-| status | enum | `scheduled`, `completed` |
-| feedback | text NULL | required on completed |
-| completed_at | datetime(6) NULL | |
-
-**`UNIQUE (slot_id)` is what prevents two tutors claiming the same time.** The foreign key alone would not, it happily allows many evaluations pointing at one slot. With the unique index MySQL rejects the second tutor's insert even if our code has a bug, and the API turns that rejection into "this time is no longer available".
-
-The request is reached through the slot (`slot_id` → `request_slot.request_id`), so no separate `request_id` column is needed.
-
-**Open item:** no rule is yet defined for what happens to a request's *other* proposed slots once one is claimed. Needs a decision likely: leave them, and let the API stop surfacing them once `evaluation_request.status != open`.
+- Approving a request runs in one transaction: a conditional update moves the request from `pending` to `approved` (0 rows updated means another reviewer was first: 409), then `bulk_create(..., ignore_conflicts=True)` inserts one row per listed project. Projects the tutor was already eligible for are skipped silently.
+- Revoking eligibility (api-plan §10.3) deletes the row. It does not change existing `awaiting_confirmation` or `confirmed` evaluation requests; it only prevents new picks.
+- Losing the `tutor` role leaves the rows in place. Every pick checks the role and eligibility together, so the rows are inert until the role is given back.
 
 ---
 
-## 4. Notifications "YES"
+## 4. Evaluations — YES
 
-### notification
-| Column | Type | Notes |
-| --- | --- | --- |
-| target_id | FK user.id | recipient |
-| type | varchar(64) | what happened, e.g. `evaluation.claimed` |
-| payload | json | the details needed to write the text: project, tutor name, time |
-| target_url | varchar(255) | in-app link, e.g. `/evaluations/42`. |
-| read_at | datetime(6) NULL | unread = NULL |
+There is one table. A request is created by the student, picked by a Hitchhiker, confirmed or declined by the student, and finally kept as history. There is no separate slot or evaluation table.
 
-The sentence the user reads is never stored. It is written on screen from `type` + `payload` at the moment it is displayed, which is what keeps old notifications correct after a user switches language.
+### 4.1 evaluation_request
 
----
-
-## 5. Student Council domain
-
-### sc_message "YES" — CONFIRMED, agreed by the team
-
-The only Student Council feature currently agreed: students/hitchhikers send anonymous messages, SC members read them, mark them read, and they remain as a shared history for the council to discuss internally.
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT | |
-| sender_id | FK user.id NULL | retained even though messages are anonymous, in case abuse ever needs tracing — see note below |
-| body | text | the message content |
-| read_at | datetime(6) NULL | NULL = unread. Set when any SC member opens it. |
-| discussion_note | text NULL | optional internal note SC members add while discussing it among themselves — never shown to the sender |
-
-**Anonymity is an API/UI contract, not a database contract.** `sender_id` is stored, but no API response or SC facing screen ever includes it. This is the only compromise on "fully anonymous"  it exists purely so abuse can be traced by an Administrator through a separate, audited path, not so SC members can see who sent something. If the team wants *zero* identity retention instead (true fire and forget anonymity, no abuse tracing possible), that's a one line change here (drop `sender_id` entirely) should be confirmed either way rather than left implicit.
-
-There's no `subject` or `status` field — the only agreed behavior is read/unread plus a shared discussion trail. Add fields back if/when a real triage or categorization workflow is confirmed.
-
----
-
-### announcement "?" — NOT YET AGREED
-
-> **Status: open for team discussion, not confirmed.** Describes a possible SC to community posting board (public/students/tutors broadcasts). Do not build against this until the team confirms it's in scope.
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| author_id | FK user.id |  |
-| title | text | |
-| body | text | |
-| audience | enum | `public`, `students`, `tutors`, `sc_members`, `all_authenticated` — an enum, not an FK to `role`, because `public` and `all_authenticated` are not roles |
-| published_at | datetime(6) NULL | NULL = draft |
-
----
-
-### Polls "?" — NOT YET AGREED
-
-> **Status: open for team discussion, not confirmed.** Proposal only, written to resolve the anonymity gap flagged in `architecture-questions.md` Q2 (the original single table `poll_vote` let anyone with DB access match a voter to their choice, contradicting the anonymity promise in `privacy-requirements.md` §8). Before this is final, the team should agree on:
-> - whether split ballot/vote tables are the right approach at all,
-> - whether poll results should ever be recomputable/auditable (this design makes that structurally impossible),
-> - who is allowed to create polls,
-> - and the open per-poll questions from `privacy-requirements.md` §8 (can users change their vote? how long is ballot data retained?).
->
-> Do not build against this until confirmed.
-
-### poll
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT| |
-| author_id | FK user.id | |
-| question | text | |
-
-### poll_option
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT| |
-| poll_id | FK poll.id | |
-| body | text | |
-| position | int | |
-
-### poll_ballot
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT | |
-| poll_id | FK poll.id | |
-| user_id | FK user.id | records *that* this user voted, not *what* they chose |
-
-`UNIQUE (poll_id, user_id)` — this alone prevents double voting.
-
-### poll_vote
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT | |
-| poll_id | FK poll.id | |
-| option_id | FK poll_option.id | |
-
-No `user_id` column here, and no FK, join, or code path connecting a `poll_vote` row back to a `poll_ballot` row. That absence is what makes anonymity a database-level guarantee instead of a documented policy — *if the team confirms this is the approach they want* (see warning above). The vote is inserted in the same transaction as the ballot, but as two independent inserts, so a rollback can't leave one without the other.
-
----
-
-## 6. Files "YES"
-
-### file
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | BIGINT AUTO_INCREMENT| |
-| owner_id | FK user.id | |
-| kind | enum | `avatar`, `tutor_resource`, `announcement_attachment` |
-| name | text | the original name, shown to the user |
-| random_name | text | two users upload `image.png` and now we have two ambiguous files on the disk |
-| visibility | enum | `owner`, `tutors`, `authenticated`, `public` — checked by Django before the file is served |
-
-Note: `announcement_attachment` as a `kind` value depends on the `announcement` table above ("?" not yet agreed). If announcements end up out of scope, this enum value should be dropped too.
-
----
-
-# Administration "YES"
-
-The administration module provides tools for managing the platform and handling exceptional situations.
-
-This module is restricted to users with elevated permissions.
-
-Main responsibilities:
-
-- Monitor invalid system states.
-- Resolve evaluation problems manually.
-- Maintain audit records.
-- Provide administrative control over important actions.
-
-All administrative actions should be logged for security and accountability.
-
----
-
-| Method | Path | Auth | Notes |
+| Column | Type | Null | Notes |
 | --- | --- | --- | --- |
-| GET | `/admin/evaluations/exceptions/` | Head Tutor, Administrator | Returns evaluations or requests that are stuck in an invalid state. |
-| POST | `/admin/evaluations/{id}/resolve/` | Head Tutor, Administrator | Allows manual correction of evaluation states. Action must be logged. |
-| GET | `/admin/audit-log/` | Administrator | Read-only access to administrative activity logs. |
+| id | BIGINT | no | |
+| student_id | FK user.id | no | The requester. |
+| project_id | FK project.id | no | |
+| note | varchar(500) | no | Optional message from the student. Default empty string. |
+| status | varchar(32) | no | `pending`, `awaiting_confirmation`, `confirmed`, `cancelled`, `expired`. Default `pending`. |
+| picked_by_id | FK user.id | yes | The Hitchhiker holding the slot. |
+| starts_at | datetime(6) | yes | Proposed by the Hitchhiker on pick. |
+| ends_at | datetime(6) | yes | |
+| cancelled_by_id | FK user.id | yes | `ON DELETE SET NULL`. The student, or the Head Tutor or Admin who cancelled by override. |
+| cancelled_at | datetime(6) | yes | |
+| expired_at | datetime(6) | yes | Set by the expiry job. |
+| result | varchar(16) | yes | `passed`, `failed`. Entered manually by the team in the Django admin. |
+| feedback | text | no | Entered manually with the result. Default empty string. |
+| completed_at | datetime(6) | yes | Entered manually with the result. |
 
----
+Check constraints (`Meta.constraints`, one `CheckConstraint` each):
 
-# Administrative Action Logging
+| Name | Rule |
+| --- | --- |
+| `eval_req_pick_consistent` | `picked_by_id`, `starts_at` and `ends_at` are all NULL or all NOT NULL. |
+| `eval_req_pick_matches_status` | Picked fields are NOT NULL exactly when `status` is `awaiting_confirmation` or `confirmed`. A cancelled or expired request keeps no pick. |
+| `eval_req_slot_order` | `ends_at > starts_at` when both are set. |
+| `eval_req_cancel_consistent` | `cancelled_at` is NOT NULL exactly when `status = 'cancelled'`. |
+| `eval_req_expire_consistent` | `expired_at` is NOT NULL exactly when `status = 'expired'`. |
+| `eval_req_result_only_confirmed` | `result` and `completed_at` are NULL unless `status = 'confirmed'`. |
 
-Sensitive administrative operations should record:
+A student may have at most one active request per project (api-plan §7.1). MySQL cannot express this as an index, so the create endpoint enforces it in code: it locks the student's `user` row with `select_for_update()` and checks for an active request inside the same transaction.
 
-```text id="x7d3vz"
-actor
-action
-target
-timestamp
-reason
+When a pick is cleared (decline, release, cancel, expire), `picked_by_id`, `starts_at` and `ends_at` are reset to NULL. The fact that a Hitchhiker once picked a request is recorded in the notification and audit trail, not on the row.
+
+Indexes:
+
+- `(status, project_id, created_at)`: the open queue for Hitchhikers
+- `(student_id, status)`: a student's requests
+- `(picked_by_id, status, starts_at)`: a Hitchhiker's slots and the overlap check
+- `(status, starts_at)`: the expiry job
+
+### 4.2 Concurrency: atomic conditional updates
+
+Two Hitchhikers may press "pick" on the same request at the same moment. Protection does not rely on a unique index. Every state change is a single conditional `UPDATE` that names the state it expects:
+
+```python
+updated = EvaluationRequest.objects.filter(
+    pk=pk, status=Status.PENDING, picked_by__isnull=True
+).update(
+    status=Status.AWAITING_CONFIRMATION,
+    picked_by=tutor, starts_at=starts_at, ends_at=ends_at, updated_at=now(),
+)
+if updated == 0:
+    raise RequestNotPending()  # 409 request_not_pending
 ```
 
-## Final Notes
+MySQL locks the row for the statement, so of two simultaneous picks exactly one sees `updated == 1`. The same pattern is mandatory for every transition (confirm, decline, release, cancel, expire), each filtering on its expected `status` and, where relevant, `picked_by`. A plain read-then-`save()` is not allowed for these fields.
 
-This API plan represents the communication contract between the React frontend and Python backend.
+The overlap checks (api-plan §7.1) read other rows, so the pick runs inside `transaction.atomic()` and first locks the `user` rows of both the Hitchhiker and the student with `select_for_update()`, in ascending id order so two picks can never deadlock. That serializes picks involving the same people without blocking anyone else.
 
-The goal is to keep development consistent, predictable, and maintainable.
+The check constraints in §4.1 are the database-level safety net: a buggy code path that tries to write an inconsistent row fails instead of corrupting data.
 
-Confirmed features marked as **YES** can be implemented.
+### 4.3 Expiry
 
-Features marked with **?** require team discussion before development.
+A Celery beat task runs every 5 minutes and applies two conditional updates:
+
+- `pending` requests with `created_at` older than 14 days become `expired`
+- `awaiting_confirmation` requests whose `starts_at` has passed become `expired` (the student never confirmed)
+
+Both set `expired_at` and clear the pick fields. `confirmed` requests are never expired: once `ends_at` has passed they are history and wait for the team to enter a result.
+
+The 14 days is the setting `EVALUATION_REQUEST_TTL_DAYS`.
+
+---
+
+## 5. Notifications — YES
+
+### 5.1 notification
+
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| recipient_id | FK user.id | no | `ON DELETE CASCADE`. |
+| type | varchar(64) | no | One of the types in api-plan §8.8, e.g. `evaluation.slot_picked`. |
+| payload | json | no | The facts needed to write the message (ids, names, times). Schema per type in api-plan §8.8. |
+| target_url | varchar(255) | no | In-app path the notification opens, e.g. `/evaluations/42`. Empty string when there is none. |
+| read_at | datetime(6) | yes | NULL means unread. |
+
+Index: `(recipient_id, read_at, created_at)`.
+
+The sentence the user reads is never stored. The frontend builds it from `type` and `payload` in the user's current language, so old notifications stay correct after a language switch.
+
+Notifications are created only by backend code, in the same transaction as the action that caused them (`transaction.on_commit` for the WebSocket push). A Celery beat task deletes notifications older than 90 days (`NOTIFICATION_RETENTION_DAYS`).
+
+---
+
+## 6. Student Council — sc_message YES, the rest ?
+
+### 6.1 sc_message — YES
+
+Anonymous messages from any user to the Student Council. Council members read them, mark them read or unread, and keep an internal note.
+
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| sender_id | FK user.id | yes | `ON DELETE SET NULL`. Stored only for abuse investigation. |
+| body | text | no | 1–5000 characters. |
+| read_at | datetime(6) | yes | NULL means unread. Shared by all council members. |
+| discussion_note | text | no | Internal note by council members. Never shown to the sender. Default empty string. |
+| discussion_note_version | int UNSIGNED | no | Default 0. Incremented on every note change; protects against two members overwriting each other. |
+
+Index: `(read_at, created_at)`.
+
+Several council members may edit the note at the same time. A note update is a conditional update on the version the editor started from (`filter(pk=…, discussion_note_version=v).update(discussion_note=…, discussion_note_version=v + 1)`); 0 rows updated means someone else saved first, and the API answers 409 `edit_conflict` (api-plan §10.6).
+
+Anonymity is an API contract, not a database guarantee. `sender_id` is never included in any response except the audited admin endpoint (api-plan §10.6), and every use of that endpoint writes an `audit_log` row. Senders cannot list the messages they sent.
+
+There is no status, archive or reply. "Answered" is impossible by design, because the sender is anonymous.
+
+### 6.2 announcement — ? NOT YET AGREED
+
+> Proposal only. Do not build until the team approves it.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| author_id | FK user.id | |
+| title | varchar(200) | |
+| body | text | |
+| audience | varchar(32) | `public`, `all_authenticated`, `students`, `tutors`, `sc_members`. An enum, not an FK to `role`, because `public` and `all_authenticated` are not roles. |
+| published_at | datetime(6) NULL | NULL = draft |
+
+### 6.3 Polls — ? NOT YET AGREED
+
+> Proposal only. Before it is final the team must agree whether split ballot/vote tables are wanted (results can never be audited or recounted), who may create polls, and whether votes can be changed.
+
+- `poll` (author_id, question)
+- `poll_option` (poll_id, body, position)
+- `poll_ballot` (poll_id, user_id) with `UNIQUE (poll_id, user_id)`: records that a user voted, which prevents double voting
+- `poll_vote` (poll_id, option_id): records what was chosen, with no column, FK or code path linking it back to a ballot
+
+The ballot and vote are inserted in the same transaction as two independent rows, so a rollback cannot leave one without the other.
+
+---
+
+## 7. Files — YES
+
+### 7.1 file
+
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| owner_id | FK user.id | no | Uploader. |
+| kind | varchar(32) | no | `avatar`, `tutor_resource`. |
+| visibility | varchar(16) | no | `authenticated` (any logged-in user) or `tutors` (`tutor`, `head_tutor`, `admin`). Avatars are always `authenticated`. |
+| project_id | FK project.id | yes | `ON DELETE SET NULL`. Optional project a tutor resource belongs to. Always NULL for avatars. |
+| title | varchar(200) | no | Display title. Defaults to the original name. |
+| description | varchar(1000) | no | Default empty string. |
+| original_name | varchar(255) | no | Filename as uploaded, shown to users. |
+| storage_name | varchar(64) UNIQUE | no | Random `uuid4().hex` plus extension. The only name used on disk. |
+| content_type | varchar(100) | no | Detected from the file contents, not trusted from the upload. |
+| size_bytes | BIGINT UNSIGNED | no | |
+
+Bytes live in the `media` Docker volume under `MEDIA_ROOT/<kind>/<storage_name>`. Nginx never serves that folder; every download goes through Django, which checks permission first.
+
+Deleting a `file` row deletes its bytes (`transaction.on_commit`). Replacing an avatar deletes the previous avatar file; the replacement locks the user's row so two simultaneous uploads cannot leave an orphaned file.
+
+---
+
+## 8. Audit log — YES
+
+### 8.1 audit_log
+
+Append-only record of sensitive actions. Rows are never updated or deleted by the application.
+
+| Column | Type | Null | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | no | |
+| actor_id | FK user.id | yes | `ON DELETE SET NULL`. The user who performed the action. |
+| action | varchar(64) | no | One of the actions in api-plan §10.9. |
+| target_type | varchar(32) | no | `user`, `evaluation_request`, `tutor_eligibility_request`, `tutor_eligibility`, `sc_message`, `file`. |
+| target_id | BIGINT | no | Id of the target row. Not an FK, so the log survives deletion of the target. |
+| reason | varchar(500) | no | Required for admin overrides and sender reveals; empty otherwise. |
+| metadata | json | no | Before/after values or other context. Never contains passwords or message bodies. |
+
+`updated_at` is unused on this table. Index: `(target_type, target_id)`, `(actor_id, created_at)`, `(action, created_at)`.
+
+---
+
+## 9. Background jobs
+
+| Task | Schedule | Effect |
+| --- | --- | --- |
+| `expire_evaluation_requests` | every 5 min | §4.3 |
+| `purge_old_notifications` | daily | §5.1 |
+
+Each task is idempotent: running it twice, or late, gives the same result.
+
+---
+
+## 10. Relationship overview
+
+```
+user ──< user_roles >── role
+user ──< tutor_eligibility_request ──< tutor_eligibility_request_projects >── project
+user ──< tutor_eligibility >── project
+user ──< evaluation_request (student) >── project
+user ──< evaluation_request (picked_by)
+user ──< notification
+user ──< sc_message (sender, hidden)
+user ──< file (owner);  user ── avatar ──> file
+user ──< audit_log (actor)
+```
