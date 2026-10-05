@@ -6,7 +6,7 @@ from django.db import connection
 from django.http import JsonResponse
 
 
-def health(request):
+def health():
     """Report connectivity to the backend's core runtime services."""
     try:
         with connection.cursor() as cursor:

@@ -35,8 +35,9 @@ def _correct_fields_response(errors):
         status=status.HTTP_400_BAD_REQUEST,
     )
 
+
 class MeView(APIView):
-    
+
     permission_classes = [AllowAny]
 
     def get(self, request: Request):
@@ -54,7 +55,7 @@ class MeView(APIView):
         serializer = ProfileUpdateSerializer(instance=request.user, data=request.data, partial=True)
         if not serializer.is_valid():
             return _correct_fields_response(serializer.errors)
-        
+
         serializer.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
