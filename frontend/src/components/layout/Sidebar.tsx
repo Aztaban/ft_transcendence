@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { NavLink } from "react-router";
+import { useEffect, useState } from "react";
+import { NavLink, useNavigate } from "react-router";
 
 import logo42 from "../../assets/figma/42.svg";
 import homeIcon from "../../assets/figma/home.svg";
@@ -15,6 +15,7 @@ import sidebarLine from "../../assets/figma/sidebar-line.svg";
 import intraLogo from "../../assets/figma/intra.png";
 import notionLogo from "../../assets/figma/notion.svg";
 import slackLogo from "../../assets/figma/slack.svg";
+import { useAuth } from "../../store/AuthContext";
 import { roles, useRole, type AppRole } from "../../store/RoleContext";
 
 interface NavigationItem {
@@ -52,9 +53,39 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
 
 function Sidebar() {
   const { activeRole, setActiveRole } = useRole();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState(false);
 
   const visibleNavigation = navigationByRole[activeRole];
+
+  useEffect(() => {
+    if (!logoutError) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setLogoutError(false);
+    }, 3500);
+
+    return () => window.clearTimeout(timeout);
+  }, [logoutError]);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    setLogoutError(false);
+
+    try {
+      await logout();
+      navigate("/login");
+    } catch {
+      setLogoutError(true);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const selectRole = (role: AppRole) => {
     setActiveRole(role);
@@ -140,10 +171,21 @@ function Sidebar() {
       <div className="sidebar__bottom">
         <img className="sidebar__divider" src={sidebarLine} alt="" aria-hidden="true" />
 
-        <button className="sidebar__logout" type="button">
-          <span>Logout</span>
+        <button
+          className="sidebar__logout"
+          type="button"
+          onClick={() => void handleLogout()}
+          disabled={isLoggingOut}
+        >
+          <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
           <img src={logoutIcon} alt="" aria-hidden="true" />
         </button>
+
+        {logoutError && (
+          <div className="sidebar__logout-toast" role="alert">
+            Logout failed. Please try again.
+          </div>
+        )}
 
         <div className="sidebar__external" aria-label="External tools">
           <a
