@@ -2,29 +2,61 @@
 
 from django.db import IntegrityError, transaction
 from rest_framework import status
+from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .serializers import ProfileSerializer, RegistrationSerializer
+from .serializers import ProfileSerializer, ProfileUpdateSerializer, RegistrationSerializer
 
 
-@api_view(["GET"])
-@permission_classes([AllowAny])
-def me(request):
-    """Return the authenticated user's profile (GET /api/v1/users/me/)."""
-    if not request.user.is_authenticated:
-        return Response(
-            {
-                "error": {
-                    "code": "not_authenticated",
-                    "message": "Authentication required.",
-                }
+def _not_authenticated_response():
+    return Response(
+        {
+            "error": {
+                "code": "not_authenticated",
+                "message": "Authentication required.",
+            }
+        },
+        status=status.HTTP_401_UNAUTHORIZED,
+    )
+
+
+def _correct_fields_response(errors):
+    return Response(
+        {
+            "error": {
+                "code": "validation_error",
+                "message": "Please correct the profile fields",
+                "fields": errors,
             },
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
-    return Response(ProfileSerializer(request.user).data)
+class MeView(APIView):
+    
+    permission_classes = [AllowAny]
+
+    def get(self, request: Request):
+        """Return the authenticated user's profile (GET /api/v1/users/me/)."""
+        if not request.user.is_authenticated:
+            return _not_authenticated_response()
+
+        return Response(ProfileSerializer(request.user).data)
+
+    def patch(self, request: Request):
+        """Update the current user's display name or language"""
+        if not request.user.is_authenticated:
+            return _not_authenticated_response()
+
+        serializer = ProfileUpdateSerializer(instance=request.user, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return _correct_fields_response(serializer.errors)
+        
+        serializer.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def _email_conflict_response():

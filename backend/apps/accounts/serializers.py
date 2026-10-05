@@ -30,6 +30,12 @@ class ProfileSerializer(serializers.ModelSerializer):
         return []
 
 
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("display_name", "language")
+
+
 class RegistrationSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     email = serializers.EmailField(max_length=254)
@@ -60,3 +66,4 @@ class RegistrationSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+    
