@@ -2,6 +2,7 @@
 
 from django.db import IntegrityError, transaction
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -38,6 +39,7 @@ def _correct_fields_response(errors):
 
 class MeView(APIView):
 
+    authentication_classes = [SessionAuthentication]
     permission_classes = [AllowAny]
 
     def get(self, request: Request):
