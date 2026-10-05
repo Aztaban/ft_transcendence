@@ -8,40 +8,67 @@ from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import LoginSerializer, ProfileSerializer, RegistrationSerializer
+from .serializers import (
+    LoginSerializer,
+    ProfileSerializer,
+    ProfileUpdateSerializer,
+    RegistrationSerializer,
+)
 
 
-@api_view(["GET"])
-@permission_classes([AllowAny])
-def me(request):
-    """Return the authenticated user's profile (GET /api/v1/users/me/)."""
-    if not request.user.is_authenticated:
-        return Response(
-            {
-                "error": {
-                    "code": "not_authenticated",
-                    "message": "Authentication required.",
-                }
-            },
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
+def _error_response(code, message, http_status, fields=None):
+    error = {"code": code, "message": message}
+    if fields is not None:
+        error["fields"] = fields
+    return Response({"error": error}, status=http_status)
 
-    return Response(ProfileSerializer(request.user).data)
+
+def _validation_error_response(errors, message):
+    return _error_response("validation_error", message, status.HTTP_400_BAD_REQUEST, errors)
+
+
+def _not_authenticated_response():
+    return _error_response(
+        "not_authenticated", "Authentication required.", status.HTTP_401_UNAUTHORIZED
+    )
 
 
 def _email_conflict_response():
-    return Response(
-        {
-            "error": {
-                "code": "email_already_exists",
-                "message": "An account with this email already exists.",
-            }
-        },
-        status=status.HTTP_409_CONFLICT,
+    return _error_response(
+        "email_already_exists",
+        "An account with this email already exists.",
+        status.HTTP_409_CONFLICT,
     )
+
+
+class MeView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [AllowAny]
+
+    def get(self, request: Request):
+        """Return the authenticated user's profile (GET /api/v1/users/me/)."""
+        if not request.user.is_authenticated:
+            return _not_authenticated_response()
+
+        return Response(ProfileSerializer(request.user).data)
+
+    def patch(self, request: Request):
+        """Update the current user's display name or language"""
+        if not request.user.is_authenticated:
+            return _not_authenticated_response()
+
+        serializer = ProfileUpdateSerializer(instance=request.user, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return _validation_error_response(
+                serializer.errors, "Please correct the profile fields."
+            )
+
+        serializer.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def _has_unique_email_error(serializer):
@@ -59,15 +86,8 @@ def register(request):
         if _has_unique_email_error(serializer):
             return _email_conflict_response()
 
-        return Response(
-            {
-                "error": {
-                    "code": "validation_error",
-                    "message": "Please correct the registration fields.",
-                    "fields": serializer.errors,
-                }
-            },
-            status=status.HTTP_400_BAD_REQUEST,
+        return _validation_error_response(
+            serializer.errors, "Please correct the registration fields."
         )
 
     try:
@@ -97,29 +117,14 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(
-                {
-                    "error": {
-                        "code": "validation_error",
-                        "message": "Please correct the login fields.",
-                        "fields": serializer.errors,
-                    }
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return _validation_error_response(serializer.errors, "Please correct the login fields.")
 
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
         user = authenticate(request, email=email, password=password)
         if user is None:
-            return Response(
-                {
-                    "error": {
-                        "code": "invalid_credentials",
-                        "message": "Invalid email or password.",
-                    }
-                },
-                status=status.HTTP_401_UNAUTHORIZED,
+            return _error_response(
+                "invalid_credentials", "Invalid email or password.", status.HTTP_401_UNAUTHORIZED
             )
 
         login(request, user)
@@ -141,15 +146,7 @@ class LoginView(APIView):
 def session_status(request):
     """Expose the current Django session to the browser without creating a login."""
     if not request.user.is_authenticated:
-        return Response(
-            {
-                "error": {
-                    "code": "not_authenticated",
-                    "message": "Authentication required.",
-                }
-            },
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
+        return _not_authenticated_response()
 
     user = request.user
     return Response(

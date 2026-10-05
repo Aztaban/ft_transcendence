@@ -138,8 +138,8 @@ def test_me_returns_configured_language(client, language):
     assert payload["language"] == language
 
 
-@pytest.mark.parametrize("method", ["post", "put", "patch", "delete"])
-def test_me_rejects_non_get_methods(client, method):
+@pytest.mark.parametrize("method", ["post", "put", "delete"])
+def test_me_rejects_unsupported_methods(client, method):
     user = _create_user(
         email=f"methods-{method}@example.com",
         display_name="Methods",
