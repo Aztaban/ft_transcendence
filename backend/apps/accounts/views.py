@@ -11,7 +11,24 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import LoginSerializer, RegistrationSerializer
+from .serializers import LoginSerializer, ProfileSerializer, RegistrationSerializer
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def me(request):
+    """Return the authenticated user's profile (GET /api/v1/users/me/)."""
+    if not request.user.is_authenticated:
+        return Response(
+            {
+                "error": {
+                    "code": "not_authenticated",
+                    "message": "Authentication required.",
+                }
+            },
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    return Response(ProfileSerializer(request.user).data)
 
 
 def _email_conflict_response():

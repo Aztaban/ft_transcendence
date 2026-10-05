@@ -40,3 +40,4 @@ Redis/Celery use `REDIS_URL` by default. `CELERY_BROKER_URL` and
 - `GET /health/` — MySQL, Redis, and Celery heartbeat status
 - `GET /api/schema/` — OpenAPI schema
 - `GET /api/docs/` — Swagger UI
+- `GET /api/v1/users/me/` — Authenticated user's profile (401 if anonymous)
