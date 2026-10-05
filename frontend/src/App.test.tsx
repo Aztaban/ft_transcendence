@@ -3,14 +3,17 @@ import { MemoryRouter } from "react-router";
 import { expect, test } from "vitest";
 
 import App from "./App";
+import { AuthProvider } from "./store/AuthContext";
 import { RoleProvider } from "./store/RoleContext";
 
 const renderAt = (path: string) =>
   render(
     <MemoryRouter initialEntries={[path]}>
-      <RoleProvider>
-        <App />
-      </RoleProvider>
+      <AuthProvider>
+        <RoleProvider>
+          <App />
+        </RoleProvider>
+      </AuthProvider>
     </MemoryRouter>,
   );
 
