@@ -125,15 +125,15 @@ Index: `(status, created_at)` for the review table.
 
 ### 3.3 tutor_eligibility_request_projects
 
-The many-to-many link `TutorEligibilityRequest.projects = ManyToManyField(Project)`.
+The many-to-many link `TutorEligibilityRequest.projects`, through the explicit model `TutorEligibilityRequestProject` so that a listed project cannot be deleted.
 
 | Column | Type | Null | Notes |
 | --- | --- | --- | --- |
 | id | BIGINT | no | |
-| tutoreligibilityrequest_id | FK tutor_eligibility_request.id | no | `ON DELETE CASCADE`. |
+| request_id | FK tutor_eligibility_request.id | no | `ON DELETE CASCADE`. |
 | project_id | FK project.id | no | `ON DELETE PROTECT`. |
 
-`UNIQUE (tutoreligibilityrequest_id, project_id)` (created by Django).
+`UNIQUE (request_id, project_id)`.
 
 ### 3.4 tutor_eligibility
 
