@@ -52,15 +52,35 @@ class IsAdminRole(HasRole):
     role_name = Role.Name.ADMIN
 
 
-class CanAssignRoles(BasePermission):
-    """Admin or Head Tutor may hit the assign endpoint.
+# Who may assign which role through the API (api-plan §5.8). `student` is given at
+# account creation and `admin` only in the Django admin, so neither is listed.
+ASSIGNABLE_BY = {
+    Role.Name.TUTOR: {Role.Name.HEAD_TUTOR, Role.Name.ADMIN},
+    Role.Name.HEAD_TUTOR: {Role.Name.ADMIN},
+    Role.Name.SC_MEMBER: {Role.Name.SC_MEMBER, Role.Name.ADMIN},
+}
 
-    Head Tutor is limited to the tutor role inside the view body.
+# Roles the API never revokes (api-plan §5.8).
+NOT_REVOCABLE = {Role.Name.STUDENT, Role.Name.ADMIN}
+
+
+def can_assign(user, role_name):
+    """True when ``user`` may assign ``role_name`` to someone."""
+    allowed = ASSIGNABLE_BY.get(role_name, set())
+    return user.roles.filter(name__in=allowed).exists()
+
+
+class CanAssignRoles(BasePermission):
+    """Users who may assign at least one role: Admin, Head Tutor, SC Member.
+
+    Which role each of them may assign is checked in the view with ``can_assign``.
     """
+
+    ASSIGNERS = {Role.Name.ADMIN, Role.Name.HEAD_TUTOR, Role.Name.SC_MEMBER}
 
     def has_permission(self, request, view):
         _ = view
         user = request.user
         if not user or not user.is_authenticated:
             return False
-        return user.has_role(Role.Name.ADMIN) or user.has_role(Role.Name.HEAD_TUTOR)
+        return user.roles.filter(name__in=self.ASSIGNERS).exists()

@@ -17,12 +17,6 @@ from apps.accounts.permissions import (
     IsTutorRole,
 )
 
-# Accept 401 or 403 until session auth (#23) aligns with api-plan (401).
-UNAUTHENTICATED_STATUSES = {
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-}
-
 pytestmark = pytest.mark.django_db
 
 factory = APIRequestFactory()
@@ -98,15 +92,17 @@ def test_role_permissions_match_assigned_role(make_user):
     assert _allowed(IsAdminRole(), student) is False
 
 
-def test_can_assign_roles_allows_admin_and_head_tutor_only(make_user):
+def test_can_assign_roles_allows_admin_head_tutor_and_sc_member(make_user):
     student = make_user("student@example.com", roles=(Role.Name.STUDENT,))
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     head = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
+    council = make_user("council@example.com", roles=(Role.Name.SC_MEMBER,))
     admin = make_user("admin@example.com", roles=(Role.Name.ADMIN,))
 
     assert _allowed(CanAssignRoles(), student) is False
     assert _allowed(CanAssignRoles(), tutor) is False
     assert _allowed(CanAssignRoles(), head) is True
+    assert _allowed(CanAssignRoles(), council) is True
     assert _allowed(CanAssignRoles(), admin) is True
 
 
@@ -122,7 +118,10 @@ def test_assign_role_rejects_unauthenticated(api_client, make_user):
         format="json",
     )
 
-    assert response.status_code in UNAUTHENTICATED_STATUSES
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {
+        "error": {"code": "not_authenticated", "message": "Authentication required."}
+    }
     assert target.has_role(Role.Name.TUTOR) is False
 
 
@@ -208,7 +207,10 @@ def test_revoke_role_rejects_unauthenticated(api_client, make_user):
         )
     )
 
-    assert response.status_code in UNAUTHENTICATED_STATUSES
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {
+        "error": {"code": "not_authenticated", "message": "Authentication required."}
+    }
     assert target.has_role(Role.Name.TUTOR) is True
 
 

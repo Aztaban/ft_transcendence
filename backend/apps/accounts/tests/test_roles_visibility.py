@@ -8,12 +8,6 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 
-# Accept 401 or 403 until session auth (#23) aligns with api-plan (401).
-UNAUTHENTICATED_STATUSES = {
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-}
-
 pytestmark = pytest.mark.django_db
 
 
@@ -53,7 +47,10 @@ def expected_roles(*names):
 def test_me_requires_authentication(api_client):
     response = api_client.get(reverse("api:me"))
 
-    assert response.status_code in UNAUTHENTICATED_STATUSES
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {
+        "error": {"code": "not_authenticated", "message": "Authentication required."}
+    }
 
 
 def test_me_returns_current_users_profile_with_roles(api_client, make_user):
@@ -84,7 +81,10 @@ def test_user_detail_requires_authentication(api_client, make_user):
 
     response = api_client.get(reverse("api:users-detail", kwargs={"user_id": target.id}))
 
-    assert response.status_code in UNAUTHENTICATED_STATUSES
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {
+        "error": {"code": "not_authenticated", "message": "Authentication required."}
+    }
 
 
 def test_user_detail_returns_public_profile_without_private_fields(api_client, make_user):
@@ -240,7 +240,10 @@ def test_tutor_eligibility_requires_authentication(api_client, make_user):
 
     response = api_client.get(reverse("api:tutors-eligibility", kwargs={"user_id": tutor.id}))
 
-    assert response.status_code in UNAUTHENTICATED_STATUSES
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {
+        "error": {"code": "not_authenticated", "message": "Authentication required."}
+    }
 
 
 def test_tutor_eligibility_returns_empty_list_when_no_data(api_client, make_user):

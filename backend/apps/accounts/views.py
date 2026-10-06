@@ -4,10 +4,12 @@ from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -15,7 +17,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.eligibility import list_approved_projects_for_tutor
 from apps.accounts.models import Role
-from apps.accounts.permissions import CanAssignRoles, IsAdminRole
+from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
 from apps.accounts.serializers import (
     LoginSerializer,
     ProfileSerializer,
@@ -206,18 +208,13 @@ def tutor_eligibility(request, user_id):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, CanAssignRoles])
 def assign_role(request, user_id):
-    """Assign a role to the target user (Admin any; Head Tutor only tutor)."""
+    """Assign a role to the target user, following the rules of api-plan §5.8."""
     target = get_object_or_404(User, pk=user_id)
     serializer = RoleAssignSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     role_name = serializer.validated_data["role"]
-    actor = request.user
-    if not actor.has_role(Role.Name.ADMIN):
-        if role_name != Role.Name.TUTOR:
-            return Response(
-                {"detail": "Head Tutors may only assign the tutor role."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+    if not can_assign(request.user, role_name):
+        raise PermissionDenied(_("You may not assign this role."), code="role_not_assignable")
     role = Role.objects.get(name=role_name)
     target.roles.add(role)
     return Response(
@@ -229,9 +226,16 @@ def assign_role(request, user_id):
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def revoke_role(request, user_id, role_id):
-    """Revoke a role from the target user (Admin only)."""
-    _ = request  # keep signature for DRF
+    """Revoke a role from the target user (Admin only, api-plan §5.8)."""
     target = get_object_or_404(User, pk=user_id)
     role = get_object_or_404(Role, pk=role_id)
+    if role.name in NOT_REVOCABLE:
+        return _error_response(
+            "role_not_revocable", _("This role cannot be revoked."), status.HTTP_409_CONFLICT
+        )
+    if target.pk == request.user.pk:
+        return _error_response(
+            "cannot_modify_self", _("You cannot change your own roles."), status.HTTP_409_CONFLICT
+        )
     target.roles.remove(role)
     return Response(status=status.HTTP_204_NO_CONTENT)
