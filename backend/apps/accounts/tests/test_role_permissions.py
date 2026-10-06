@@ -117,7 +117,7 @@ def test_assign_role_rejects_unauthenticated(api_client, make_user):
     target = make_user("target@example.com")
 
     response = api_client.post(
-        reverse("users-assign-role", kwargs={"user_id": target.id}),
+        reverse("api:users-assign-role", kwargs={"user_id": target.id}),
         {"role": Role.Name.TUTOR},
         format="json",
     )
@@ -140,7 +140,7 @@ def test_assign_role_rejects_roles_without_assign_permission(api_client, make_us
 
     api_client.force_authenticate(user=actor)
     response = api_client.post(
-        reverse("users-assign-role", kwargs={"user_id": target.id}),
+        reverse("api:users-assign-role", kwargs={"user_id": target.id}),
         {"role": Role.Name.TUTOR},
         format="json",
     )
@@ -156,7 +156,7 @@ def test_head_tutor_may_assign_tutor_but_not_admin(api_client, make_user):
     api_client.force_authenticate(user=head)
 
     ok = api_client.post(
-        reverse("users-assign-role", kwargs={"user_id": target.id}),
+        reverse("api:users-assign-role", kwargs={"user_id": target.id}),
         {"role": Role.Name.TUTOR},
         format="json",
     )
@@ -164,7 +164,7 @@ def test_head_tutor_may_assign_tutor_but_not_admin(api_client, make_user):
     assert target.has_role(Role.Name.TUTOR) is True
 
     denied = api_client.post(
-        reverse("users-assign-role", kwargs={"user_id": target.id}),
+        reverse("api:users-assign-role", kwargs={"user_id": target.id}),
         {"role": Role.Name.ADMIN},
         format="json",
     )
@@ -180,7 +180,7 @@ def test_admin_may_assign_and_revoke(api_client, make_user):
     api_client.force_authenticate(user=admin)
 
     assigned = api_client.post(
-        reverse("users-assign-role", kwargs={"user_id": target.id}),
+        reverse("api:users-assign-role", kwargs={"user_id": target.id}),
         {"role": Role.Name.TUTOR},
         format="json",
     )
@@ -189,7 +189,7 @@ def test_admin_may_assign_and_revoke(api_client, make_user):
 
     revoked = api_client.delete(
         reverse(
-            "users-revoke-role",
+            "api:users-revoke-role",
             kwargs={"user_id": target.id, "role_id": tutor_role.id},
         )
     )
@@ -203,7 +203,7 @@ def test_revoke_role_rejects_unauthenticated(api_client, make_user):
 
     response = api_client.delete(
         reverse(
-            "users-revoke-role",
+            "api:users-revoke-role",
             kwargs={"user_id": target.id, "role_id": tutor_role.id},
         )
     )
@@ -229,7 +229,7 @@ def test_revoke_role_allows_admin_only(api_client, make_user, roles):
     api_client.force_authenticate(user=actor)
     response = api_client.delete(
         reverse(
-            "users-revoke-role",
+            "api:users-revoke-role",
             kwargs={"user_id": target.id, "role_id": tutor_role.id},
         )
     )

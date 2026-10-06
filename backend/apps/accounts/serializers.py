@@ -9,6 +9,41 @@ from apps.accounts.models import Role
 User = get_user_model()
 
 
+class RoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = ("id", "name")
+        read_only_fields = fields
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    # avatar_url stub until Files API exists — always present for clients.
+    avatar_url = serializers.SerializerMethodField()
+    roles = RoleSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "email",
+            "display_name",
+            "avatar_url",
+            "language",
+            "roles",
+            "intra_login",
+        )
+        read_only_fields = fields
+
+    def get_avatar_url(self, obj):
+        return None
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("display_name", "language")
+
+
 class RegistrationSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     email = serializers.EmailField(max_length=254)
@@ -41,6 +76,11 @@ class RegistrationSerializer(serializers.Serializer):
         return User.objects.create_user(**validated_data)
 
 
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+    password = serializers.CharField(trim_whitespace=False)
+
+
 class RoleAssignSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=Role.Name.choices)
 
@@ -50,44 +90,19 @@ class RoleAssignSerializer(serializers.Serializer):
         return value
 
 
-def _role_names(user):
-    return list(user.roles.order_by("name").values_list("name", flat=True))
-
-
-class MeSerializer(serializers.ModelSerializer):
-    """Own profile including assigned roles."""
-
-    roles = serializers.SerializerMethodField()
-
-    class Meta:
-        model = User
-        fields = (
-            "id",
-            "email",
-            "display_name",
-            "intra_login",
-            "language",
-            "status",
-            "roles",
-        )
-        read_only_fields = fields
-
-    def get_roles(self, obj):
-        return _role_names(obj)
-
-
 class PublicProfileSerializer(serializers.ModelSerializer):
-    """Authenticated community profile — no email, intra_login, status, language."""
+    """Authenticated community profile — no email, intra_login, language."""
 
-    roles = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+    roles = RoleSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
-        fields = ("id", "display_name", "roles")
+        fields = ("id", "display_name", "avatar_url", "roles")
         read_only_fields = fields
 
-    def get_roles(self, obj):
-        return _role_names(obj)
+    def get_avatar_url(self, obj):
+        return None
 
 
 class RoleAssignmentResultSerializer(PublicProfileSerializer):

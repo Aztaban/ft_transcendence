@@ -43,8 +43,15 @@ def make_user(user_model):
     return _make
 
 
+def expected_roles(*names):
+    return [
+        {"id": role.id, "name": role.name}
+        for role in Role.objects.filter(name__in=names).order_by("name")
+    ]
+
+
 def test_me_requires_authentication(api_client):
-    response = api_client.get(reverse("users-me"))
+    response = api_client.get(reverse("api:me"))
 
     assert response.status_code in UNAUTHENTICATED_STATUSES
 
@@ -58,24 +65,24 @@ def test_me_returns_current_users_profile_with_roles(api_client, make_user):
     make_user("bob@example.com", display_name="Bob")
 
     api_client.force_authenticate(user=user)
-    response = api_client.get(reverse("users-me"))
+    response = api_client.get(reverse("api:me"))
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "id": user.id,
         "email": "alice@example.com",
         "display_name": "Alice",
+        "avatar_url": None,
         "intra_login": None,
         "language": "en",
-        "status": "active",
-        "roles": [Role.Name.STUDENT, Role.Name.TUTOR],
+        "roles": expected_roles(Role.Name.STUDENT, Role.Name.TUTOR),
     }
 
 
 def test_user_detail_requires_authentication(api_client, make_user):
     target = make_user("target@example.com")
 
-    response = api_client.get(reverse("users-detail", kwargs={"user_id": target.id}))
+    response = api_client.get(reverse("api:users-detail", kwargs={"user_id": target.id}))
 
     assert response.status_code in UNAUTHENTICATED_STATUSES
 
@@ -90,13 +97,14 @@ def test_user_detail_returns_public_profile_without_private_fields(api_client, m
     )
 
     api_client.force_authenticate(user=viewer)
-    response = api_client.get(reverse("users-detail", kwargs={"user_id": target.id}))
+    response = api_client.get(reverse("api:users-detail", kwargs={"user_id": target.id}))
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "id": target.id,
         "display_name": "Target",
-        "roles": [Role.Name.STUDENT, Role.Name.TUTOR],
+        "avatar_url": None,
+        "roles": expected_roles(Role.Name.STUDENT, Role.Name.TUTOR),
     }
     for private_field in ("email", "intra_login", "language", "status"):
         assert private_field not in response.json()
@@ -106,7 +114,7 @@ def test_user_detail_unknown_user_returns_404(api_client, make_user):
     viewer = make_user("viewer@example.com")
 
     api_client.force_authenticate(user=viewer)
-    response = api_client.get(reverse("users-detail", kwargs={"user_id": 999999}))
+    response = api_client.get(reverse("api:users-detail", kwargs={"user_id": 999999}))
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -117,7 +125,7 @@ def test_student_cannot_assign_roles(api_client, make_user):
 
     api_client.force_authenticate(user=student)
     response = api_client.post(
-        reverse("users-assign-role", kwargs={"user_id": target.id}),
+        reverse("api:users-assign-role", kwargs={"user_id": target.id}),
         {"role": Role.Name.TUTOR},
         format="json",
     )
@@ -133,7 +141,7 @@ def test_head_tutor_can_only_assign_tutor(api_client, make_user):
     api_client.force_authenticate(user=head)
 
     ok = api_client.post(
-        reverse("users-assign-role", kwargs={"user_id": target.id}),
+        reverse("api:users-assign-role", kwargs={"user_id": target.id}),
         {"role": Role.Name.TUTOR},
         format="json",
     )
@@ -141,7 +149,7 @@ def test_head_tutor_can_only_assign_tutor(api_client, make_user):
     assert target.has_role(Role.Name.TUTOR) is True
 
     denied = api_client.post(
-        reverse("users-assign-role", kwargs={"user_id": target.id}),
+        reverse("api:users-assign-role", kwargs={"user_id": target.id}),
         {"role": Role.Name.ADMIN},
         format="json",
     )
@@ -155,7 +163,7 @@ def test_admin_can_assign_any_role(api_client, make_user):
 
     api_client.force_authenticate(user=admin)
     response = api_client.post(
-        reverse("users-assign-role", kwargs={"user_id": target.id}),
+        reverse("api:users-assign-role", kwargs={"user_id": target.id}),
         {"role": Role.Name.HEAD_TUTOR},
         format="json",
     )
@@ -166,7 +174,8 @@ def test_admin_can_assign_any_role(api_client, make_user):
     assert data == {
         "id": target.id,
         "display_name": "target",
-        "roles": [Role.Name.HEAD_TUTOR, Role.Name.STUDENT],
+        "avatar_url": None,
+        "roles": expected_roles(Role.Name.HEAD_TUTOR, Role.Name.STUDENT),
     }
     assert "email" not in data
     assert "intra_login" not in data
@@ -183,7 +192,7 @@ def test_admin_can_revoke_role(api_client, make_user):
     api_client.force_authenticate(user=admin)
     response = api_client.delete(
         reverse(
-            "users-revoke-role",
+            "api:users-revoke-role",
             kwargs={"user_id": target.id, "role_id": tutor_role.id},
         )
     )
@@ -200,7 +209,7 @@ def test_ordinary_user_cannot_revoke_role(api_client, make_user):
     api_client.force_authenticate(user=student)
     response = api_client.delete(
         reverse(
-            "users-revoke-role",
+            "api:users-revoke-role",
             kwargs={"user_id": target.id, "role_id": tutor_role.id},
         )
     )
@@ -217,7 +226,7 @@ def test_head_tutor_cannot_revoke_role(api_client, make_user):
     api_client.force_authenticate(user=head)
     response = api_client.delete(
         reverse(
-            "users-revoke-role",
+            "api:users-revoke-role",
             kwargs={"user_id": target.id, "role_id": tutor_role.id},
         )
     )
@@ -229,7 +238,7 @@ def test_head_tutor_cannot_revoke_role(api_client, make_user):
 def test_tutor_eligibility_requires_authentication(api_client, make_user):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
 
-    response = api_client.get(reverse("tutors-eligibility", kwargs={"user_id": tutor.id}))
+    response = api_client.get(reverse("api:tutors-eligibility", kwargs={"user_id": tutor.id}))
 
     assert response.status_code in UNAUTHENTICATED_STATUSES
 
@@ -239,7 +248,7 @@ def test_tutor_eligibility_returns_empty_list_when_no_data(api_client, make_user
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
 
     api_client.force_authenticate(user=viewer)
-    response = api_client.get(reverse("tutors-eligibility", kwargs={"user_id": tutor.id}))
+    response = api_client.get(reverse("api:tutors-eligibility", kwargs={"user_id": tutor.id}))
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
@@ -249,6 +258,6 @@ def test_tutor_eligibility_unknown_user_returns_404(api_client, make_user):
     viewer = make_user("viewer@example.com")
 
     api_client.force_authenticate(user=viewer)
-    response = api_client.get(reverse("tutors-eligibility", kwargs={"user_id": 999999}))
+    response = api_client.get(reverse("api:tutors-eligibility", kwargs={"user_id": 999999}))
 
     assert response.status_code == status.HTTP_404_NOT_FOUND

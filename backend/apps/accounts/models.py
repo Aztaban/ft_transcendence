@@ -21,6 +21,7 @@ class Role(TimeStampedModel):
 
     class Meta:
         db_table = "role"
+        ordering = ("name",)
 
     def __str__(self):
         return self.name
