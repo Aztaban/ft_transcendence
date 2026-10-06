@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -6,6 +6,7 @@ import { AuthProvider } from "../store/AuthContext";
 import LoginPage from "./LoginPage";
 
 afterEach(() => {
+  cleanup();
   vi.restoreAllMocks();
   document.cookie = "csrftoken=; Max-Age=0; path=/";
 });
@@ -14,9 +15,9 @@ function mockFetch() {
   return vi.spyOn(globalThis, "fetch");
 }
 
-function renderLoginPage() {
+function renderLoginPage(initialEntry = "/login") {
   return render(
-    <MemoryRouter initialEntries={["/login"]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -138,5 +139,35 @@ describe("LoginPage", () => {
     const alert = await screen.findByRole("alert");
 
     expect(alert.textContent).toBe("Invalid email or password.");
+  });
+
+  test("links to the backend 42 OAuth redirect", () => {
+    mockAnonymousSession(mockFetch());
+
+    renderLoginPage();
+
+    const link = screen.getByRole("link", { name: "CONTINUE WITH 42" });
+
+    expect(link.getAttribute("href")).toBe("/api/v1/auth/42/redirect/");
+  });
+
+  test("shows an error when 42 OAuth fails", async () => {
+    mockAnonymousSession(mockFetch());
+
+    renderLoginPage("/login?oauth=oauth_token_exchange_failed");
+
+    const alert = await screen.findByRole("alert");
+
+    expect(alert.textContent).toBe("Could not verify your 42 login. Please try again.");
+  });
+
+  test("shows a generic error for an unknown 42 OAuth error code", async () => {
+    mockAnonymousSession(mockFetch());
+
+    renderLoginPage("/login?oauth=something_unexpected");
+
+    const alert = await screen.findByRole("alert");
+
+    expect(alert.textContent).toBe("42 login failed. Please try again.");
   });
 });
