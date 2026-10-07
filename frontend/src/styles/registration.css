@@ -117,6 +117,10 @@
 }
 
 .registration-form__message--error {
+  padding: 10px 12px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
   color: #b42318;
 }
 
