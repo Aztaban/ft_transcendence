@@ -1,23 +1,35 @@
-"""Views for the accounts application."""
+"""Views for the accounts application: registration, profile, and role assignment."""
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.db import IntegrityError, transaction
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import (
+from apps.accounts.eligibility import list_approved_projects_for_tutor
+from apps.accounts.models import Role
+from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
+from apps.accounts.serializers import (
     LoginSerializer,
     ProfileSerializer,
     ProfileUpdateSerializer,
+    PublicProfileSerializer,
     RegistrationSerializer,
+    RoleAssignmentResultSerializer,
+    RoleAssignSerializer,
+    TutorEligibleProjectSerializer,
 )
+
+User = get_user_model()
 
 
 def _error_response(code, message, http_status, fields=None):
@@ -172,3 +184,58 @@ class LogoutView(APIView):
     def post(self, request):
         logout(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_detail(request, user_id):
+    """Return a user's public profile (authenticated community visibility)."""
+    _ = request
+    target = get_object_or_404(User, pk=user_id)
+    return Response(PublicProfileSerializer(target).data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def tutor_eligibility(request, user_id):
+    """Return projects this hitchhiker is approved to evaluate (public listing)."""
+    _ = request
+    tutor = get_object_or_404(User, pk=user_id)
+    projects = list_approved_projects_for_tutor(tutor)
+    return Response(TutorEligibleProjectSerializer(projects, many=True).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, CanAssignRoles])
+def assign_role(request, user_id):
+    """Assign a role to the target user, following the rules of api-plan §5.8."""
+    target = get_object_or_404(User, pk=user_id)
+    serializer = RoleAssignSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    role_name = serializer.validated_data["role"]
+    if not can_assign(request.user, role_name):
+        raise PermissionDenied(_("You may not assign this role."), code="role_not_assignable")
+    role = Role.objects.get(name=role_name)
+    target.roles.add(role)
+    return Response(
+        RoleAssignmentResultSerializer(target).data,
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def revoke_role(request, user_id, role_id):
+    """Revoke a role from the target user (Admin only, api-plan §5.8)."""
+    target = get_object_or_404(User, pk=user_id)
+    role = get_object_or_404(Role, pk=role_id)
+    if role.name in NOT_REVOCABLE:
+        return _error_response(
+            "role_not_revocable", _("This role cannot be revoked."), status.HTTP_409_CONFLICT
+        )
+    if target.pk == request.user.pk:
+        return _error_response(
+            "cannot_modify_self", _("You cannot change your own roles."), status.HTTP_409_CONFLICT
+        )
+    target.roles.remove(role)
+    return Response(status=status.HTTP_204_NO_CONTENT)
