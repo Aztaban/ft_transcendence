@@ -1,11 +1,4 @@
-export type EvaluationRequestStatus =
-  "PENDING" | "AWAITING_CONFIRMATION" | "CONFIRMED" | "CANCELLED";
-
-export interface EvaluationRequest {
-  id: number;
-  projectName: string;
-  status: EvaluationRequestStatus;
-}
+import type { EvaluationRequest } from "../../types/evaluation";
 
 interface OpenRequestsProps {
   requests: EvaluationRequest[];
@@ -13,7 +6,7 @@ interface OpenRequestsProps {
 
 function OpenRequests({ requests }: OpenRequestsProps) {
   const openRequests = requests.filter(
-    (request) => request.status === "PENDING" || request.status === "AWAITING_CONFIRMATION",
+    (request) => request.status === "pending" || request.status === "awaiting_confirmation",
   );
 
   return (
@@ -33,12 +26,12 @@ function OpenRequests({ requests }: OpenRequestsProps) {
           {openRequests.map((request) => (
             <article className="dashboard-request" key={request.id}>
               <div>
-                <h3>{request.projectName}</h3>
+                <h3>{request.project.name}</h3>
                 <p>Evaluation request</p>
               </div>
 
               <span className="dashboard-request__status">
-                {request.status === "AWAITING_CONFIRMATION" ? "Awaiting confirmation" : "Pending"}
+                {request.status === "awaiting_confirmation" ? "Awaiting confirmation" : "Pending"}
               </span>
             </article>
           ))}
