@@ -37,7 +37,7 @@ def test_roles_are_seeded():
 
 def test_assign_role_and_has_role(user_model, student_role, tutor_role):
     user = user_model.objects.create_user("roles@example.com", "secret", display_name="Roles")
-    assert user.has_role(Role.Name.STUDENT) is False
+    assert user.has_role(Role.Name.STUDENT) is True
 
     user.roles.add(student_role)
     assert user.has_role(Role.Name.STUDENT) is True
@@ -55,7 +55,7 @@ def test_user_role_unique_constraint(user_model, student_role):
     user = user_model.objects.create_user(
         "unique-role@example.com", "secret", display_name="Unique"
     )
-    UserRole.objects.create(user=user, role=student_role)
+    assert UserRole.objects.filter(user=user, role=student_role).count() == 1
 
     with pytest.raises(IntegrityError):
         with transaction.atomic():

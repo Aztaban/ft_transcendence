@@ -117,6 +117,7 @@ def test_callback_exchanges_code_without_exposing_secrets(monkeypatch):
     assert_frontend_redirect(response, OAUTH_42_SUCCESS_PATH)
     assert captured["request"].full_url == OAUTH_42_TOKEN_URL
     assert captured["request"].get_method() == "POST"
+    assert captured["request"].get_header("User-agent") == "ft-transcendence/1.0"
     payload = parse_qs(captured["request"].data.decode())
     assert payload == {
         "grant_type": ["authorization_code"],

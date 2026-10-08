@@ -86,6 +86,7 @@ def test_first_oauth_login_creates_local_user_with_unusable_password(monkeypatch
     assert user.intra_login == "oauth-user"
     assert user.has_usable_password() is False
     assert user.is_active is True
+    assert list(user.roles.values_list("name", flat=True)) == ["student"]
     assert client.session[SESSION_KEY] == str(user.pk)
 
 

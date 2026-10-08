@@ -171,7 +171,7 @@ class LoginView(APIView):
 def session_status(request):
     """Expose the current Django session to the browser without creating a login."""
     if not request.user.is_authenticated:
-        return _not_authenticated_response()
+        return Response({"authenticated": False, "user": None}, status=status.HTTP_200_OK)
 
     user = request.user
     return Response(
@@ -258,6 +258,7 @@ OAUTH_42_STATE_SESSION_KEY = "oauth_42_state"
 OAUTH_42_AUTHORIZE_URL = "https://api.intra.42.fr/oauth/authorize"
 OAUTH_42_TOKEN_URL = "https://api.intra.42.fr/oauth/token"
 OAUTH_42_ME_URL = "https://api.intra.42.fr/v2/me"
+OAUTH_42_USER_AGENT = "ft-transcendence/1.0"
 OAUTH_42_HTTP_TIMEOUT_SECONDS = 5
 OAUTH_42_SUCCESS_PATH = "/"
 OAUTH_42_ERROR_PATH = "/login"
@@ -289,6 +290,7 @@ def _exchange_42_code_for_access_token(code):
         headers={
             "Accept": "application/json",
             "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": OAUTH_42_USER_AGENT,
         },
         method="POST",
     )
@@ -312,6 +314,7 @@ def _retrieve_42_account_information(access_token):
         headers={
             "Accept": "application/json",
             "Authorization": f"Bearer {access_token}",
+            "User-Agent": OAUTH_42_USER_AGENT,
         },
         method="GET",
     )
@@ -424,7 +427,9 @@ def oauth_42_callback(request):
     if (
         not isinstance(expected_state, str)
         or not expected_state
+        or not expected_state.isascii()
         or not returned_state
+        or not returned_state.isascii()
         or not secrets.compare_digest(expected_state, returned_state)
     ):
         return _oauth_42_frontend_redirect("oauth_invalid_state")

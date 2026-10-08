@@ -38,13 +38,11 @@ function mockAnonymousSession(fetchMock: ReturnType<typeof mockFetch>) {
   fetchMock.mockResolvedValueOnce(
     new Response(
       JSON.stringify({
-        error: {
-          code: "not_authenticated",
-          message: "Authentication required.",
-        },
+        authenticated: false,
+        user: null,
       }),
       {
-        status: 401,
+        status: 200,
         headers: { "Content-Type": "application/json" },
       },
     ),

@@ -171,12 +171,10 @@ class OAuth42UserCreationSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        user = User(
+        return User.objects.create_user(
             email=validated_data["email"],
+            password=None,
             display_name=validated_data["intra_login"],
             intra_id=validated_data["intra_id"],
             intra_login=validated_data["intra_login"],
         )
-        user.set_unusable_password()
-        user.save()
-        return user

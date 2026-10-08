@@ -52,14 +52,32 @@ def test_callback_route_is_public_but_rejects_request_without_session_state():
     assert SESSION_KEY not in client.session
 
 
-@pytest.mark.parametrize("state", ["", "wrong-state"])
-def test_callback_rejects_missing_or_mismatched_state_without_consuming_valid_state(state):
+@pytest.mark.parametrize("state", ["", "wrong-state", "č", "🙂"])
+def test_callback_rejects_missing_or_mismatched_state_without_consuming_valid_state(
+    state, monkeypatch
+):
+    def unexpected_provider_call(*args, **kwargs):
+        pytest.fail("An invalid state must be rejected before contacting 42.")
+
+    monkeypatch.setattr("apps.accounts.views.urlopen", unexpected_provider_call)
     client = client_with_state()
 
     response = callback(client, code="fake-code", state=state)
 
     assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_invalid_state")
     assert client.session[OAUTH_42_STATE_SESSION_KEY] == STATE
+    assert SESSION_KEY not in client.session
+
+
+def test_callback_rejects_non_ascii_session_state():
+    client = client_with_state()
+    session = client.session
+    session[OAUTH_42_STATE_SESSION_KEY] = "č"
+    session.save()
+
+    response = callback(client, code="fake-code", state=STATE)
+
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_invalid_state")
     assert SESSION_KEY not in client.session
 
 

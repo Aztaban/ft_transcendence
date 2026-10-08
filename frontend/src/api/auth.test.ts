@@ -86,6 +86,17 @@ describe("loginUser", () => {
 });
 
 describe("getSession", () => {
+  test("returns an anonymous session as a successful response", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ authenticated: false, user: null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    expect(await getSession()).toEqual({ authenticated: false, user: null });
+  });
+
   test("restores the authenticated user from the session endpoint", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
