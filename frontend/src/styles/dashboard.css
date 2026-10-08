@@ -315,6 +315,16 @@
   font-weight: 600;
 }
 
+.dashboard-request--needs-confirmation {
+  border-left-color: #f5a524;
+  background: #fffaf0;
+}
+
+.dashboard-request--needs-confirmation .dashboard-request__status {
+  border-color: #f5a524;
+  background: #fff1d6;
+}
+
 @media (max-width: 760px) {
   .dashboard-request {
     align-items: flex-start;
