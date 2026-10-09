@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from apps.accounts.views import LoginView, LogoutView, MeView, register, session_status
+from apps.evaluations.views import ProjectListView
 
 from .views import api_root
 
@@ -13,5 +14,6 @@ urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/session/", session_status, name="session"),
+    path("projects/", ProjectListView.as_view(), name="project-list"),
     path("", include("apps.accounts.urls")),
 ]
