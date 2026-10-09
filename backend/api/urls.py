@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from apps.accounts.views import LoginView, LogoutView, MeView, register, session_status
 
@@ -13,4 +13,5 @@ urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/session/", session_status, name="session"),
+    path("", include("apps.accounts.urls")),
 ]

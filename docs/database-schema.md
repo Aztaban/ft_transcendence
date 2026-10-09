@@ -1,7 +1,9 @@
 # Database Schema
 
 **Status:** Approved for implementation (sections marked "?" excepted)
+**Status:** Approved for implementation (sections marked "?" excepted)
 **Owner:** rkravche, IT Architect
+**Last updated:** October 6, 2026
 **Last updated:** October 6, 2026
 
 ---
