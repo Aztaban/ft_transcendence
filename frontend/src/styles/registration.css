@@ -117,9 +117,58 @@
 }
 
 .registration-form__message--error {
+  padding: 10px 12px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
   color: #b42318;
 }
 
 .registration-form__message--success {
   color: #16794b;
+}
+
+.registration-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  color: #7a7a7a;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.registration-divider::before,
+.registration-divider::after {
+  flex: 1;
+  height: 1px;
+  background: #d0d0d0;
+  content: "";
+}
+
+.registration-oauth.ui-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 49px;
+  border: 1px solid #000000;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #000000;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+
+.registration-oauth.ui-button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.registration-oauth img {
+  width: 28px;
+  height: auto;
 }

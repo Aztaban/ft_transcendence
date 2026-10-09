@@ -38,10 +38,8 @@ export interface LoginResponse extends AuthUser {
   message: string;
 }
 
-export interface SessionResponse {
-  authenticated: true;
-  user: AuthUser;
-}
+export type SessionResponse =
+  { authenticated: true; user: AuthUser } | { authenticated: false; user: null };
 
 function getCookie(name: string): string | null {
   const prefix = `${name}=`;

@@ -54,7 +54,8 @@ def test_request_without_session_remains_anonymous():
 
     response = client.get(reverse("api:session"), HTTP_HOST="localhost")
 
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"authenticated": False, "user": None}
     assert response.wsgi_request.user.is_anonymous
 
 
@@ -73,5 +74,12 @@ def test_basic_auth_header_is_not_accepted():
         HTTP_AUTHORIZATION=f"Basic {credentials}",
     )
 
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"authenticated": False, "user": None}
     assert response.wsgi_request.user.is_anonymous
+    assert (
+        client.get(
+            reverse("api:me"), HTTP_HOST="localhost", HTTP_AUTHORIZATION=f"Basic {credentials}"
+        ).status_code
+        == status.HTTP_401_UNAUTHORIZED
+    )

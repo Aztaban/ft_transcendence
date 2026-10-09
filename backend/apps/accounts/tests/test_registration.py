@@ -52,6 +52,7 @@ def test_register_creates_active_user_without_logging_in():
     }
     assert user.display_name == "issue118user"
     assert user.status == get_user_model().Status.ACTIVE
+    assert list(user.roles.values_list("name", flat=True)) == ["student"]
     assert user.intra_login is None
     assert "password" not in response.json()
     assert SESSION_KEY not in client.session

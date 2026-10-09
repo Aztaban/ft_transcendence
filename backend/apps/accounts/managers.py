@@ -1,4 +1,5 @@
 from django.contrib.auth.base_user import BaseUserManager
+from django.db import transaction
 
 
 class UserManager(BaseUserManager):
@@ -24,7 +25,12 @@ class UserManager(BaseUserManager):
         )
 
         user.set_password(password)
-        user.save(using=self._db)
+        # Create the account and its baseline permission together.
+        with transaction.atomic(using=self.db):
+            user.save(using=self.db)
+            role_model = self.model._meta.get_field("roles").remote_field.model
+            student = role_model.objects.using(self.db).get(name="student")
+            user.roles.add(student)
 
         return user
 

@@ -5,6 +5,8 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 
+from apps.accounts.models import Role
+
 pytestmark = pytest.mark.django_db
 
 PROFILE_FIELDS = {
@@ -37,7 +39,7 @@ def expected_profile(user):
         "display_name": user.display_name,
         "avatar_url": None,
         "language": user.language,
-        "roles": [],
+        "roles": [{"id": Role.objects.get(name="student").id, "name": "student"}],
         "intra_login": user.intra_login,
     }
 

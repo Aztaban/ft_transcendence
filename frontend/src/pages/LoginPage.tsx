@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 
 import logo42 from "../assets/figma/42.svg";
 import { ApiError } from "../api/client";
@@ -7,12 +7,47 @@ import { Button, Input } from "../components/ui";
 import { useAuth } from "../store/AuthContext";
 import "../styles/registration.css";
 
+const OAUTH_42_REDIRECT_URL = "/api/v1/auth/42/redirect/";
+
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  oauth_not_configured: "42 login is not available right now.",
+  oauth_invalid_state: "Your 42 login session expired. Please try again.",
+  oauth_missing_code: "42 login was cancelled or did not complete.",
+  oauth_token_exchange_failed: "Could not verify your 42 login. Please try again.",
+  oauth_profile_retrieval_failed: "Could not load your 42 profile. Please try again.",
+  oauth_access_denied: "42 login was denied. Please authorize access to continue.",
+  oauth_provider_error: "42 is having trouble right now. Please try again later.",
+  oauth_account_suspended: "Your account is suspended or disabled.",
+  oauth_account_exists:
+    "An account with this email already exists. Log in with your email and password.",
+  oauth_identity_conflict: "Your 42 account could not be linked. Please contact support.",
+  oauth_account_conflict: "Could not create your account from 42. Please try again.",
+};
+
+function getOAuthErrorMessage(code: string | null) {
+  if (!code) {
+    return "";
+  }
+
+  return OAUTH_ERROR_MESSAGES[code] ?? "42 login failed. Please try again.";
+}
+
 function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { login } = useAuth();
 
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => getOAuthErrorMessage(searchParams.get("oauth")));
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Drop ?oauth= once the message is in state so a reload does not show it again.
+  useEffect(() => {
+    if (searchParams.has("oauth")) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("oauth");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,7 +107,10 @@ function LoginPage() {
           />
 
           {error && (
-            <p className="registration-form__error" role="alert">
+            <p
+              className="registration-form__message registration-form__message--error"
+              role="alert"
+            >
               {error}
             </p>
           )}
@@ -81,6 +119,18 @@ function LoginPage() {
             {isSubmitting ? "LOGGING IN..." : "LOGIN"}
           </Button>
         </form>
+
+        <div className="registration-divider">
+          <span>or</span>
+        </div>
+
+        <a
+          className="ui-button ui-button--secondary registration-oauth"
+          href={OAUTH_42_REDIRECT_URL}
+        >
+          <img src={logo42} alt="" aria-hidden="true" />
+          CONTINUE WITH 42
+        </a>
       </div>
     </main>
   );
