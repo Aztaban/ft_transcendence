@@ -16,7 +16,11 @@ describe("AwaitingConfirmation", () => {
   });
 
   it("displays proposed slots waiting for the student", () => {
-    render(<AwaitingConfirmation requests={[makeRequest(1, "Born to be root", "awaiting_confirmation")]} />);
+    render(
+      <AwaitingConfirmation
+        requests={[makeRequest(1, "Born to be root", "awaiting_confirmation")]}
+      />,
+    );
 
     expect(screen.getByText("Born to be root")).toBeTruthy();
     expect(screen.getByText("Proposed to Student")).toBeTruthy();
