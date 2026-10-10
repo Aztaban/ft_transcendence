@@ -5,6 +5,7 @@ import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import pendingIcon from "../assets/figma/pending.svg";
 import requestIcon from "../assets/figma/request.svg";
 import OpenRequests from "../features/student/OpenRequests";
+import PendingEvaluations from "../features/student/PendingEvaluations";
 import { useRole, type AppRole } from "../store/RoleContext";
 import "../styles/dashboard.css";
 
@@ -150,7 +151,10 @@ function HomePage() {
 
       <div className="dashboard__columns">
         {activeRole === "STUDENT" ? (
-          <OpenRequests requests={[]} />
+          <>
+            <OpenRequests requests={[]} />
+            <PendingEvaluations requests={[]} />
+          </>
         ) : (
           <section className="dashboard__section">
             <h2>{dashboard.emptyTitle}</h2>
