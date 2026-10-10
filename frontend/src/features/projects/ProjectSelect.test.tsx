@@ -40,7 +40,7 @@ describe("ProjectSelect", () => {
     expect(getSelect().disabled).toBe(false);
   });
 
-  it("reports the chosen project id", async () => {
+  it("reports the chosen project id and project", async () => {
     vi.mocked(listProjects).mockResolvedValue(projects);
     const onChange = vi.fn();
 
@@ -48,7 +48,7 @@ describe("ProjectSelect", () => {
     await screen.findByRole("option", { name: "push_swap" });
     fireEvent.change(getSelect(), { target: { value: "2" } });
 
-    expect(onChange).toHaveBeenCalledWith(2);
+    expect(onChange).toHaveBeenCalledWith(2, projects[1]);
   });
 
   it("shows an error when the projects cannot be loaded", async () => {

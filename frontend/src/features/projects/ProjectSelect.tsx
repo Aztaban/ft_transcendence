@@ -6,7 +6,7 @@ import "../../styles/project-select.css";
 
 interface ProjectSelectProps {
   value: number | null;
-  onChange: (projectId: number) => void;
+  onChange: (projectId: number, project: ProjectRef) => void;
 }
 
 type LoadState = "loading" | "ready" | "error";
@@ -64,7 +64,14 @@ function ProjectSelect({ value, onChange }: ProjectSelectProps) {
           className="project-select__input"
           value={value ?? ""}
           disabled={loadState !== "ready" || isEmpty}
-          onChange={(event) => onChange(Number(event.target.value))}
+          onChange={(event) => {
+            const projectId = Number(event.target.value);
+            const project = projects.find((candidate) => candidate.id === projectId);
+
+            if (project) {
+              onChange(projectId, project);
+            }
+          }}
         >
           <option value="" disabled>
             {placeholderText(loadState, isEmpty)}

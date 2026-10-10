@@ -1,3 +1,4 @@
+import { ensureCsrfToken } from "./auth";
 import { apiRequest } from "./client";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
 import type { Paginated } from "../types/pagination";
@@ -33,4 +34,26 @@ export function listEvaluationRequests(
   return apiRequest<Paginated<EvaluationRequest>>(
     `/api/v1/evaluation-requests/${search ? `?${search}` : ""}`,
   );
+}
+
+export interface CreateEvaluationRequestPayload {
+  project_id: number;
+  note?: string;
+}
+
+// POST /api/v1/evaluation-requests/ (api-plan §10.4). Answers 201 with the new EvaluationRequest
+// (§8.7); the page only needs to know it succeeded, so the body is not typed here.
+export async function createEvaluationRequest(
+  payload: CreateEvaluationRequestPayload,
+): Promise<void> {
+  const csrfToken = await ensureCsrfToken();
+
+  await apiRequest<unknown>("/api/v1/evaluation-requests/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(payload),
+  });
 }

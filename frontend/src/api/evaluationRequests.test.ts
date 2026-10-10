@@ -1,14 +1,15 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { listEvaluationRequests } from "./evaluationRequests";
+import { createEvaluationRequest, listEvaluationRequests } from "./evaluationRequests";
 
 afterEach(() => {
   vi.restoreAllMocks();
+  document.cookie = "csrftoken=; Max-Age=0; path=/";
 });
 
-function jsonResponse(body: unknown) {
+function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
-    status: 200,
+    status,
     headers: { "Content-Type": "application/json" },
   });
 }
@@ -39,5 +40,28 @@ describe("listEvaluationRequests", () => {
     await listEvaluationRequests();
 
     expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/evaluation-requests/");
+  });
+});
+
+describe("createEvaluationRequest", () => {
+  test("posts the project with the CSRF token", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    fetchMock.mockImplementationOnce(async () => {
+      document.cookie = "csrftoken=test-csrf-token; path=/";
+
+      return jsonResponse({ status: "ok", version: "v1" });
+    });
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 17, status: "pending" }, 201));
+
+    await createEvaluationRequest({ project_id: 4 });
+
+    const [path, options] = fetchMock.mock.calls[1];
+    const headers = new Headers(options?.headers);
+
+    expect(path).toBe("/api/v1/evaluation-requests/");
+    expect(options?.method).toBe("POST");
+    expect(headers.get("X-CSRFToken")).toBe("test-csrf-token");
+    expect(options?.body).toBe(JSON.stringify({ project_id: 4 }));
   });
 });
