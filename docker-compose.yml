@@ -34,6 +34,8 @@ services:
   backend:
     build: ./backend
     restart: unless-stopped
+    # Daphne provides this ASGI development server, including auto-reload.
+    command: python manage.py runserver 0.0.0.0:8000
     env_file:
       - .env
     environment:
