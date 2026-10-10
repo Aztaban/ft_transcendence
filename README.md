@@ -34,7 +34,3 @@ Development Compose overrides that command with Daphne's Django `runserver`,
 which retains auto-reload. The Channels Redis layer shares `REDIS_URL` with
 Celery; Redis holds transient messages, while application state stays in MySQL.
 Rebuild the backend image after dependency changes: `docker compose build backend`.
-
-This is the server foundation for #229, following api-plan §2 and §9 and
-database-schema §5.1. The `/ws/` route, authentication, connection handling and
-event dispatch are implemented in the following WebSocket sub-issues.
