@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 
 import os
 
-from channels.routing import ProtocolTypeRouter
+from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
@@ -17,9 +17,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 # Initialize Django before subsequent routing imports can load ORM models.
 django_asgi_application = get_asgi_application()
 
+from .routing import websocket_urlpatterns  # noqa: E402
+
 application = ProtocolTypeRouter(
     {
         "http": django_asgi_application,
-        # WebSocket routing and session/origin checks are implemented in #230–#232.
+        "websocket": URLRouter(websocket_urlpatterns),
     }
 )
