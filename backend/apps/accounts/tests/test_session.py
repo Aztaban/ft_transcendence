@@ -22,7 +22,8 @@ def logged_in_client():
     )
     client = APIClient(enforce_csrf_checks=True)
     csrf_response = client.get(reverse("api:session"), HTTP_HOST="localhost")
-    assert csrf_response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert csrf_response.status_code == status.HTTP_200_OK
+    assert csrf_response.json() == {"authenticated": False, "user": None}
     assert "csrftoken" in client.cookies
 
     login_response = client.post(
@@ -36,18 +37,13 @@ def logged_in_client():
     return user, client
 
 
-def test_anonymous_session_returns_401_and_provides_csrf_cookie():
+def test_anonymous_session_returns_200_and_provides_csrf_cookie():
     client = APIClient(enforce_csrf_checks=True)
 
     response = client.get(reverse("api:session"), HTTP_HOST="localhost")
 
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {
-        "error": {
-            "code": "not_authenticated",
-            "message": "Authentication required.",
-        }
-    }
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"authenticated": False, "user": None}
     assert "csrftoken" in client.cookies
     assert "sessionid" not in client.cookies
 
@@ -82,8 +78,9 @@ def test_suspended_user_cannot_use_an_existing_session():
 
     response = client.get(reverse("api:session"), HTTP_HOST="localhost")
 
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json()["error"]["code"] == "not_authenticated"
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"authenticated": False, "user": None}
+    assert client.get(reverse("api:me"), HTTP_HOST="localhost").status_code == 401
 
 
 def test_deleted_server_side_session_is_not_authenticated():
@@ -93,8 +90,9 @@ def test_deleted_server_side_session_is_not_authenticated():
 
     response = client.get(reverse("api:session"), HTTP_HOST="localhost")
 
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json()["error"]["code"] == "not_authenticated"
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"authenticated": False, "user": None}
+    assert client.get(reverse("api:me"), HTTP_HOST="localhost").status_code == 401
 
 
 def test_session_endpoint_is_get_only():

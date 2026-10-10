@@ -22,7 +22,8 @@ def create_user():
 def csrf_client():
     client = APIClient(enforce_csrf_checks=True)
     response = client.get(reverse("api:session"), HTTP_HOST="localhost")
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"authenticated": False, "user": None}
     assert "csrftoken" in client.cookies
     return client
 
@@ -60,7 +61,10 @@ def test_logout_invalidates_authenticated_session():
     assert response.content == b""
     assert SESSION_KEY not in client.session
     assert not Session.objects.filter(session_key=session_key).exists()
-    assert client.get(reverse("api:session"), HTTP_HOST="localhost").status_code == 401
+    session_response = client.get(reverse("api:session"), HTTP_HOST="localhost")
+    assert session_response.status_code == status.HTTP_200_OK
+    assert session_response.json() == {"authenticated": False, "user": None}
+    assert client.get(reverse("api:me"), HTTP_HOST="localhost").status_code == 401
 
 
 def test_logout_revoked_session_cookie_cannot_be_reused():
@@ -73,8 +77,9 @@ def test_logout_revoked_session_cookie_cannot_be_reused():
     replay = APIClient()
     replay.cookies["sessionid"] = old_session_key
     response = replay.get(reverse("api:session"), HTTP_HOST="localhost")
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json()["error"]["code"] == "not_authenticated"
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"authenticated": False, "user": None}
+    assert replay.get(reverse("api:me"), HTTP_HOST="localhost").status_code == 401
 
 
 def test_logout_without_csrf_rejected_and_session_remains_active():
