@@ -14,7 +14,7 @@ function pastEvaluation(id: number, projectName: string, result: "passed" | "fai
 
 describe("EvaluationHistory", () => {
   it("shows the empty state when there is no history", () => {
-    render(<EvaluationHistory requests={[]} />);
+    render(<EvaluationHistory requests={[]} viewer="hitchhiker" />);
 
     expect(screen.getByText("No history yet")).toBeTruthy();
   });
@@ -28,7 +28,7 @@ describe("EvaluationHistory", () => {
       makeRequest(5, "Codexion", "expired"),
     ];
 
-    render(<EvaluationHistory requests={requests} />);
+    render(<EvaluationHistory requests={requests} viewer="hitchhiker" />);
 
     expect(screen.getByText("Passed")).toBeTruthy();
     expect(screen.getByText("Failed")).toBeTruthy();
@@ -44,11 +44,39 @@ describe("EvaluationHistory", () => {
       makeRequest(3, "upcoming-project", "confirmed"),
     ];
 
-    render(<EvaluationHistory requests={requests} />);
+    render(<EvaluationHistory requests={requests} viewer="hitchhiker" />);
 
     expect(screen.queryByText("pending-project")).toBeNull();
     expect(screen.queryByText("awaiting-project")).toBeNull();
     expect(screen.queryByText("upcoming-project")).toBeNull();
     expect(screen.getByText("No history yet")).toBeTruthy();
+  });
+
+  it("shows the student to a Hitchhiker", () => {
+    render(
+      <EvaluationHistory
+        requests={[pastEvaluation(1, "minishell", "passed")]}
+        viewer="hitchhiker"
+      />,
+    );
+
+    expect(screen.getByText("With Student")).toBeTruthy();
+  });
+
+  it("shows the Hitchhiker to a student", () => {
+    render(
+      <EvaluationHistory requests={[pastEvaluation(1, "minishell", "passed")]} viewer="student" />,
+    );
+
+    expect(screen.getByText("With Hitchhiker")).toBeTruthy();
+  });
+
+  it("shows no person when nobody picked the request", () => {
+    render(
+      <EvaluationHistory requests={[makeRequest(1, "cpp09", "cancelled")]} viewer="student" />,
+    );
+
+    expect(screen.queryByText(/^With /)).toBeNull();
+    expect(screen.getByText("Cancelled")).toBeTruthy();
   });
 });
