@@ -8,6 +8,7 @@ import OpenRequests from "../features/student/OpenRequests";
 import PendingEvaluations from "../features/student/PendingEvaluations";
 import { useRole, type AppRole } from "../store/RoleContext";
 import "../styles/dashboard.css";
+import EvaluationHistory from "../features/hitchhiker/EvaluationHistory";
 
 interface OverviewItem {
   value: string;
@@ -154,6 +155,7 @@ function HomePage() {
           <>
             <OpenRequests requests={[]} />
             <PendingEvaluations requests={[]} />
+            <EvaluationHistory requests={[]} viewer="student" />
           </>
         ) : (
           <section className="dashboard__section">
@@ -173,15 +175,17 @@ function HomePage() {
           </section>
         )}
 
-        <section className="dashboard__section">
-          <h2>{dashboard.historyTitle}</h2>
+        {activeRole !== "STUDENT" && (
+          <section className="dashboard__section">
+            <h2>{dashboard.historyTitle}</h2>
 
-          <div className="dashboard-empty">
-            <div className="dashboard-empty__history-mark">—</div>
-            <h3>No history yet</h3>
-            <p>Your recent activity will appear here.</p>
-          </div>
-        </section>
+            <div className="dashboard-empty">
+              <div className="dashboard-empty__history-mark">—</div>
+              <h3>No history yet</h3>
+              <p>Your recent activity will appear here.</p>
+            </div>
+          </section>
+        )}
       </div>
 
       <section className="dashboard-cta">
