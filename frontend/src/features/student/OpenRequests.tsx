@@ -1,13 +1,19 @@
 import type { EvaluationRequest } from "../../types/evaluation";
+import { formatSlot } from "../../utils/dateTime";
 
 interface OpenRequestsProps {
   requests: EvaluationRequest[];
 }
 
+function needsConfirmation(request: EvaluationRequest) {
+  return request.status === "awaiting_confirmation";
+}
+
 function OpenRequests({ requests }: OpenRequestsProps) {
-  const openRequests = requests.filter(
-    (request) => request.status === "pending" || request.status === "awaiting_confirmation",
-  );
+  // Requests waiting for the student's answer are listed first.
+  const openRequests = requests
+    .filter((request) => request.status === "pending" || needsConfirmation(request))
+    .sort((a, b) => Number(needsConfirmation(b)) - Number(needsConfirmation(a)));
 
   return (
     <section className="dashboard__section" aria-labelledby="open-requests-title">
@@ -24,14 +30,31 @@ function OpenRequests({ requests }: OpenRequestsProps) {
       ) : (
         <div className="dashboard-requests">
           {openRequests.map((request) => (
-            <article className="dashboard-request" key={request.id}>
+            <article
+              className={
+                needsConfirmation(request)
+                  ? "dashboard-request dashboard-request--needs-confirmation"
+                  : "dashboard-request"
+              }
+              key={request.id}
+            >
               <div>
                 <h3>{request.project.name}</h3>
-                <p>Evaluation request</p>
+
+                {needsConfirmation(request) && request.starts_at && request.ends_at ? (
+                  <p>
+                    {request.picked_by?.display_name} proposed{" "}
+                    <time dateTime={request.starts_at}>
+                      {formatSlot(request.starts_at, request.ends_at)}
+                    </time>
+                  </p>
+                ) : (
+                  <p>Evaluation request</p>
+                )}
               </div>
 
               <span className="dashboard-request__status">
-                {request.status === "awaiting_confirmation" ? "Awaiting confirmation" : "Pending"}
+                {needsConfirmation(request) ? "Needs your confirmation" : "Pending"}
               </span>
             </article>
           ))}

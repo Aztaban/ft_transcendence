@@ -1,22 +1,8 @@
 import type { EvaluationRequest } from "../../types/evaluation";
+import { formatSlot } from "../../utils/dateTime";
 
 interface PendingEvaluationsProps {
   requests: EvaluationRequest[];
-}
-
-// Shows the slot in the user's local time, e.g. "Mon, 12 Oct, 17:00–17:45".
-function formatSlot(startsAt: string, endsAt: string) {
-  const start = new Date(startsAt);
-  const end = new Date(endsAt);
-  const time: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
-
-  const day = start.toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-
-  return `${day}, ${start.toLocaleTimeString(undefined, time)}–${end.toLocaleTimeString(undefined, time)}`;
 }
 
 function PendingEvaluations({ requests }: PendingEvaluationsProps) {
