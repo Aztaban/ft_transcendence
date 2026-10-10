@@ -1,0 +1,135 @@
+.project-select {
+  display: flex;
+  max-width: 420px;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.project-select__label {
+  font-size: 1.75rem;
+  font-weight: 400;
+}
+
+.project-select__control {
+  position: relative;
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.project-select__control:hover:not(.project-select__control--loading) {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.project-select__control:focus-within {
+  box-shadow:
+    0 0 0 4px rgba(0, 186, 188, 0.18),
+    0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.project-select__input {
+  width: 100%;
+  min-height: 58px;
+  padding: 0 60px 0 26px;
+  border: 1px solid #111111;
+  border-left: 6px solid var(--color-accent);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111111;
+  font: inherit;
+  font-size: 1.15rem;
+  appearance: none;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.project-select__input:hover:enabled {
+  background: #f6fdfd;
+}
+
+.project-select__input:focus-visible {
+  border-color: var(--color-accent-dark);
+  outline: none;
+}
+
+.project-select__input:disabled {
+  border-color: #c9cfcf;
+  border-left-color: #c9cfcf;
+  background: #f4f5f5;
+  color: #687070;
+  cursor: not-allowed;
+}
+
+.project-select__chevron {
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  width: 16px;
+  height: 10px;
+  background: url("../assets/figma/role-chevron.svg") no-repeat center / contain;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: transform 0.25s ease;
+}
+
+.project-select__control:focus-within .project-select__chevron {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.project-select__control--loading .project-select__input {
+  animation: project-select-pulse 1.2s ease-in-out infinite;
+}
+
+.project-select__control--error .project-select__input {
+  border-color: #b42318;
+  border-left-color: #b42318;
+}
+
+.project-select__error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 0.9rem;
+  animation: project-select-fade-in 0.25s ease;
+}
+
+@keyframes project-select-pulse {
+  0%,
+  100% {
+    background-color: #f4f5f5;
+  }
+
+  50% {
+    background-color: #e9ecec;
+  }
+}
+
+@keyframes project-select-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-select__control,
+  .project-select__input,
+  .project-select__chevron,
+  .project-select__error {
+    animation: none;
+    transition: none;
+  }
+}
