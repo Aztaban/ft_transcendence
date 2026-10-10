@@ -27,4 +27,5 @@ urlpatterns = [
     path("auth/42/redirect/", oauth_42_redirect, name="oauth_42_redirect"),
     path("auth/42/callback/", oauth_42_callback, name="oauth_42_callback"),
     path("", include("apps.accounts.urls")),
+    path("", include("apps.evaluations.urls")),
 ]
