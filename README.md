@@ -27,7 +27,14 @@ Nginx fronts everything on `https://localhost` (self-signed cert, auto-generated
 
 Other commands: `make down`, `make build`, `make logs`.
 
-This is a minimal bootstrap of `backend/` and `frontend/` — just enough to
-prove the Docker wiring works end to end. The real Django app structure and
-React app structure land separately as the corresponding milestone issues
-are completed.
+## Backend ASGI server
+
+The backend image starts Daphne on port 8000 with `config.asgi:application`.
+Development Compose overrides that command with Daphne's Django `runserver`,
+which retains auto-reload. The Channels Redis layer shares `REDIS_URL` with
+Celery; Redis holds transient messages, while application state stays in MySQL.
+Rebuild the backend image after dependency changes: `docker compose build backend`.
+
+This is the server foundation for #229, following api-plan §2 and §9 and
+database-schema §5.1. The `/ws/` route, authentication, connection handling and
+event dispatch are implemented in the following WebSocket sub-issues.

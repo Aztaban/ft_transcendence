@@ -21,6 +21,8 @@ FT_OAUTH_CLIENT_SECRET = os.getenv("FT_OAUTH_CLIENT_SECRET", "")
 FT_OAUTH_REDIRECT_URI = os.getenv("FT_OAUTH_REDIRECT_URI", "")
 
 INSTALLED_APPS = [
+    # Daphne's ASGI runserver must take precedence over staticfiles' command.
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -131,6 +133,12 @@ SPECTACULAR_SETTINGS = {
 }
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [REDIS_URL]},
+    }
+}
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
