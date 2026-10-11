@@ -65,9 +65,18 @@ def test_projects_are_listed_by_name():
             "completed_at": END,
         },
         {"status": "cancelled", "cancelled_at": NOW},
+        {"status": "cancelled", "cancelled_at": NOW, "pick": True},
         {"status": "expired", "expired_at": NOW},
     ],
-    ids=["pending", "awaiting", "confirmed", "confirmed_with_result", "cancelled", "expired"],
+    ids=[
+        "pending",
+        "awaiting",
+        "confirmed",
+        "confirmed_with_result",
+        "cancelled",
+        "cancelled_after_pick",
+        "expired",
+    ],
 )
 def test_consistent_requests_are_accepted(people, project, extra):
     student, tutor = people
@@ -89,7 +98,7 @@ def test_consistent_requests_are_accepted(people, project, extra):
         {"status": "pending", "pick": True},
         {"status": "awaiting_confirmation"},
         {"status": "confirmed"},
-        {"status": "cancelled", "cancelled_at": NOW, "pick": True},
+        {"status": "expired", "expired_at": NOW, "pick": True},
         # eval_req_slot_order
         {"status": "confirmed", "pick": True, "ends_at": START},
         # eval_req_cancel_consistent
@@ -107,7 +116,7 @@ def test_consistent_requests_are_accepted(people, project, extra):
         "pending_with_pick",
         "awaiting_without_pick",
         "confirmed_without_pick",
-        "cancelled_keeps_pick",
+        "expired_keeps_pick",
         "ends_not_after_start",
         "cancelled_without_time",
         "cancel_time_on_pending",
