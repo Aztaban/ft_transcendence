@@ -23,3 +23,7 @@ DATABASES["default"]["TEST"] = {
 
 if DATABASES["default"]["TEST"]["NAME"] == _development_db_name:
     raise RuntimeError("Test database must differ from the development database")
+
+# Rate limit counters stay out of the development Redis. conftest.py clears
+# this cache before each test, so every test starts with fresh limits.
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
