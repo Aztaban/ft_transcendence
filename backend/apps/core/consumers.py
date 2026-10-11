@@ -1,5 +1,7 @@
 """Connection handling for the server-push WebSocket."""
 
+import json
+
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 
@@ -36,3 +38,11 @@ class ConnectionConsumer(AsyncWebsocketConsumer):
         # This socket is server-push only. Ignore even malformed text/binary
         # frames instead of decoding, echoing or treating them as commands.
         pass
+
+    async def session_ended(self, event):
+        """Notify the client before closing an ended session."""
+        if getattr(self, "_session_closed", False):
+            return
+        self._session_closed = True
+        await self.send(text_data=json.dumps({"event": "session.ended", "data": {}}))
+        await self.close(code=4401)
