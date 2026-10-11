@@ -11,7 +11,7 @@ from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 
-from config.asgi import application
+from apps.core.consumers import ConnectionConsumer
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -22,7 +22,7 @@ def memory_channel_layer(settings):
 
 
 def socket(*, user=None, session=None):
-    communicator = WebsocketCommunicator(application, "/ws/")
+    communicator = WebsocketCommunicator(ConnectionConsumer.as_asgi(), "/ws/")
     if user is not None:
         communicator.scope["user"] = user
     if session is not None:
