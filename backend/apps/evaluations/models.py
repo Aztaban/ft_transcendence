@@ -172,12 +172,12 @@ class EvaluationRequest(TimeStampedModel):
                 name="eval_req_pick_consistent",
             ),
             models.CheckConstraint(
+                # A cancelled request keeps its pick, if it had one, so both people
+                # keep it in their history (api-plan §7.1).
                 condition=(
                     Q(status__in=["awaiting_confirmation", "confirmed"], picked_by__isnull=False)
-                    | (
-                        ~Q(status__in=["awaiting_confirmation", "confirmed"])
-                        & Q(picked_by__isnull=True)
-                    )
+                    | Q(status__in=["pending", "expired"], picked_by__isnull=True)
+                    | Q(status="cancelled")
                 ),
                 name="eval_req_pick_matches_status",
             ),
