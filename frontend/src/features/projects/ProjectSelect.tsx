@@ -11,21 +11,18 @@ interface ProjectSelectProps {
 
 type LoadState = "loading" | "ready" | "error";
 
-function placeholderText(loadState: LoadState, isEmpty: boolean) {
-  if (loadState === "loading") {
-    return "Loading projects…";
-  }
-
-  if (isEmpty) {
-    return "No projects available";
-  }
-
-  return "Select a project";
+// "minishell" → "MI", "RAG against the machine" → "RA"
+function projectInitials(name: string) {
+  return name
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
-// Project dropdown for "Create New Request – step 1/3" (Figma), filled from GET /api/v1/projects/.
+// Project picker for "Create New Request – step 1" (Figma), filled from GET /api/v1/projects/.
+// Native radio buttons styled as tiles, so arrow keys and screen readers work.
 function ProjectSelect({ value, onChange }: ProjectSelectProps) {
-  const selectId = useId();
+  const groupName = useId();
   const [projects, setProjects] = useState<ProjectRef[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
 
@@ -50,48 +47,60 @@ function ProjectSelect({ value, onChange }: ProjectSelectProps) {
     };
   }, []);
 
-  const isEmpty = loadState === "ready" && projects.length === 0;
-
   return (
-    <div className="project-select">
-      <label className="project-select__label" htmlFor={selectId}>
-        Choose the project
-      </label>
+    <fieldset className="project-select">
+      <legend className="project-select__label">Choose the project</legend>
 
-      <div className={`project-select__control project-select__control--${loadState}`}>
-        <select
-          id={selectId}
-          className="project-select__input"
-          value={value ?? ""}
-          disabled={loadState !== "ready" || isEmpty}
-          onChange={(event) => {
-            const projectId = Number(event.target.value);
-            const project = projects.find((candidate) => candidate.id === projectId);
-
-            if (project) {
-              onChange(projectId, project);
-            }
-          }}
-        >
-          <option value="" disabled>
-            {placeholderText(loadState, isEmpty)}
-          </option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
+      {loadState === "loading" && (
+        <div className="project-select__grid" aria-busy="true">
+          {[1, 2, 3, 4, 5, 6].map((placeholder) => (
+            <span className="project-select__skeleton" key={placeholder} />
           ))}
-        </select>
-
-        <span className="project-select__chevron" aria-hidden="true" />
-      </div>
+          <span className="project-select__sr-only">Loading projects…</span>
+        </div>
+      )}
 
       {loadState === "error" && (
         <p className="project-select__error" role="alert">
           Could not load the projects. Please try again later.
         </p>
       )}
-    </div>
+
+      {loadState === "ready" && projects.length === 0 && (
+        <p className="project-select__empty">No projects available</p>
+      )}
+
+      {loadState === "ready" && projects.length > 0 && (
+        <div className="project-select__grid">
+          {projects.map((project) => (
+            <label
+              className={
+                value === project.id
+                  ? "project-select__tile project-select__tile--selected"
+                  : "project-select__tile"
+              }
+              key={project.id}
+            >
+              <input
+                className="project-select__radio"
+                type="radio"
+                name={groupName}
+                value={project.id}
+                checked={value === project.id}
+                onChange={() => onChange(project.id, project)}
+              />
+              <span className="project-select__badge" aria-hidden="true">
+                {projectInitials(project.name)}
+              </span>
+              <span className="project-select__name">{project.name}</span>
+              <span className="project-select__check" aria-hidden="true">
+                ✓
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </fieldset>
   );
 }
 

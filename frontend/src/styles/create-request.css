@@ -385,3 +385,69 @@
     transition: none !important;
   }
 }
+
+/* Optional note for the Hitchhiker */
+
+.create-request__note {
+  display: flex;
+  max-width: 420px;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 26px;
+}
+
+.create-request__note label {
+  font-size: 1.05rem;
+}
+
+.create-request__note label span {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.create-request__note textarea {
+  min-height: 92px;
+  padding: 12px 14px;
+  border: 1px solid #c9cfcf;
+  border-radius: 10px;
+  color: #111111;
+  font: inherit;
+  line-height: 1.45;
+  resize: vertical;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.create-request__note textarea:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 186, 188, 0.15);
+}
+
+.create-request__note-count {
+  align-self: flex-end;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.create-request__summary-note {
+  margin: 4px 0 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--color-accent);
+  border-radius: 0 8px 8px 0;
+  background: #f6f8f8;
+}
+
+.create-request__summary-note span {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.create-request__summary-note p {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}

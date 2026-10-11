@@ -36,11 +36,7 @@ function renderPage() {
 }
 
 async function chooseProject(name: string) {
-  const option = await screen.findByRole("option", { name });
-
-  fireEvent.change(screen.getByLabelText("Choose the project"), {
-    target: { value: (option as HTMLOptionElement).value },
-  });
+  fireEvent.click(await screen.findByRole("radio", { name }));
 }
 
 function getButton(name: string) {
@@ -88,6 +84,30 @@ describe("CreateRequestPage", () => {
     fireEvent.click(screen.getByTestId("request-dialog-backdrop"));
 
     expect(screen.getByText("Home page")).toBeTruthy();
+  });
+
+  it("sends the optional note and shows it on the confirmation step", async () => {
+    vi.mocked(createEvaluationRequest).mockResolvedValue();
+    renderPage();
+    await chooseProject("push_swap");
+
+    fireEvent.change(screen.getByLabelText(/Note for the Hitchhiker/), {
+      target: { value: "  I'm free after 18:00 on Friday.  " },
+    });
+
+    expect(screen.getByText("35 / 500")).toBeTruthy();
+
+    fireEvent.click(getButton("Next"));
+
+    expect(screen.getByText("I'm free after 18:00 on Friday.")).toBeTruthy();
+
+    fireEvent.click(getButton("Submit"));
+
+    await screen.findByRole("dialog");
+    expect(createEvaluationRequest).toHaveBeenCalledWith({
+      project_id: 2,
+      note: "I'm free after 18:00 on Friday.",
+    });
   });
 
   it("explains when the student already has an active request for the project", async () => {

@@ -11,10 +11,6 @@ const projects = [
   { id: 2, slug: "push_swap", name: "push_swap" },
 ];
 
-function getSelect() {
-  return screen.getByLabelText("Choose the project") as HTMLSelectElement;
-}
-
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
@@ -26,18 +22,18 @@ describe("ProjectSelect", () => {
 
     render(<ProjectSelect value={null} onChange={() => {}} />);
 
-    expect(getSelect().disabled).toBe(true);
     expect(screen.getByText("Loading projects…")).toBeTruthy();
+    expect(screen.queryByRole("radio")).toBeNull();
   });
 
-  it("lists the projects from the API", async () => {
+  it("lists the projects from the API as choices", async () => {
     vi.mocked(listProjects).mockResolvedValue(projects);
 
     render(<ProjectSelect value={null} onChange={() => {}} />);
 
-    expect(await screen.findByRole("option", { name: "push_swap" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "born2beroot" })).toBeTruthy();
-    expect(getSelect().disabled).toBe(false);
+    expect(await screen.findByRole("radio", { name: "push_swap" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "born2beroot" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Choose the project" })).toBeTruthy();
   });
 
   it("reports the chosen project id and project", async () => {
@@ -45,10 +41,21 @@ describe("ProjectSelect", () => {
     const onChange = vi.fn();
 
     render(<ProjectSelect value={null} onChange={onChange} />);
-    await screen.findByRole("option", { name: "push_swap" });
-    fireEvent.change(getSelect(), { target: { value: "2" } });
+    fireEvent.click(await screen.findByRole("radio", { name: "push_swap" }));
 
     expect(onChange).toHaveBeenCalledWith(2, projects[1]);
+  });
+
+  it("marks the selected project", async () => {
+    vi.mocked(listProjects).mockResolvedValue(projects);
+
+    render(<ProjectSelect value={2} onChange={() => {}} />);
+
+    const pushSwap = (await screen.findByRole("radio", { name: "push_swap" })) as HTMLInputElement;
+    const born2beroot = screen.getByRole("radio", { name: "born2beroot" }) as HTMLInputElement;
+
+    expect(pushSwap.checked).toBe(true);
+    expect(born2beroot.checked).toBe(false);
   });
 
   it("shows an error when the projects cannot be loaded", async () => {
@@ -67,6 +74,5 @@ describe("ProjectSelect", () => {
     render(<ProjectSelect value={null} onChange={() => {}} />);
 
     expect(await screen.findByText("No projects available")).toBeTruthy();
-    expect(getSelect().disabled).toBe(true);
   });
 });
