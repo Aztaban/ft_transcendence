@@ -55,7 +55,7 @@ function getCookie(name: string): string | null {
   return null;
 }
 
-async function ensureCsrfToken(): Promise<string> {
+export async function ensureCsrfToken(): Promise<string> {
   await apiRequest<{ status: string; version: string }>("/api/v1/");
 
   const csrfToken = getCookie("csrftoken");
