@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router";
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
+import EvaluationPage from "./pages/EvaluationPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -23,6 +24,7 @@ function AuthenticatedApp() {
             </RoleGuard>
           }
         />
+        <Route path="/evaluations/:id" element={<EvaluationPage />} />
         <Route
           path="/profile"
           element={

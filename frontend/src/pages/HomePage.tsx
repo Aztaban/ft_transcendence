@@ -6,6 +6,7 @@ import pendingIcon from "../assets/figma/pending.svg";
 import requestIcon from "../assets/figma/request.svg";
 import OpenRequests from "../features/student/OpenRequests";
 import PendingEvaluations from "../features/student/PendingEvaluations";
+import { useStudentRequests } from "../features/student/useStudentRequests";
 import { useRole, type AppRole } from "../store/RoleContext";
 import "../styles/dashboard.css";
 import EvaluationHistory from "../features/hitchhiker/EvaluationHistory";
@@ -158,6 +159,23 @@ const dashboards: Record<AppRole, DashboardDefinition> = {
   COUNCIL: councilDashboard,
 };
 
+// The student's request boxes, filled from the API (#507).
+function StudentRequestSections() {
+  const { requests, hasError } = useStudentRequests();
+
+  return (
+    <>
+      {hasError && (
+        <p className="dashboard__load-error" role="alert">
+          Could not load your requests. Please try again later.
+        </p>
+      )}
+      <OpenRequests requests={requests} />
+      <PendingEvaluations requests={requests} />
+    </>
+  );
+}
+
 function HomePage() {
   const { activeRole } = useRole();
   const dashboard = dashboards[activeRole];
@@ -192,11 +210,15 @@ function HomePage() {
 
       <div className="dashboard__columns">
         {activeRole === "STUDENT" ? (
+<<<<<<< HEAD
           <>
             <OpenRequests requests={[]} />
             <PendingEvaluations requests={[]} />
             <EvaluationHistory requests={[]} viewer="student" />
           </>
+=======
+          <StudentRequestSections />
+>>>>>>> 37c30d9 (feat: let students confirm or decline a proposed slot (#507))
         ) : (
           <section className="dashboard__section">
             <h2>{dashboard.emptyTitle}</h2>
