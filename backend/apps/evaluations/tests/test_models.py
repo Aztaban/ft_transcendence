@@ -45,10 +45,13 @@ def test_project_slug_is_unique(project):
 
 
 def test_projects_are_listed_by_name():
-    Project.objects.create(slug="push_swap", name="push_swap")
-    Project.objects.create(slug="born2beroot", name="Born2beroot")
+    Project.objects.create(slug="so_long", name="so_long")
+    Project.objects.create(slug="fdf", name="FdF")
 
-    assert [p.name for p in Project.objects.all()] == ["Born2beroot", "push_swap"]
+    assert [p.name for p in Project.objects.filter(slug__in=["so_long", "fdf"])] == [
+        "FdF",
+        "so_long",
+    ]
 
 
 @pytest.mark.parametrize(
