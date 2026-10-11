@@ -17,7 +17,20 @@ class ConnectionConsumer(AsyncWebsocketConsumer):
             await self.close(code=4401)
             return
 
-        await self.accept()
+        # Instance-local membership: the base consumer discards these groups
+        # on disconnect. Join only after authentication (api-plan §9.1).
+        self.groups = []
+        try:
+            for group in (f"user_{user.pk}", f"session_{session.session_key}"):
+                await self.channel_layer.group_add(group, self.channel_name)
+                self.groups.append(group)
+            await self.accept()
+        except Exception:
+            # A failed second join or handshake must not leave a partial member.
+            for group in self.groups:
+                await self.channel_layer.group_discard(group, self.channel_name)
+            self.groups = []
+            raise
 
     async def receive(self, text_data=None, bytes_data=None):
         # This socket is server-push only. Ignore even malformed text/binary

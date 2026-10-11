@@ -1,9 +1,10 @@
-"""Real session-cookie authentication and origin checks (api-plan §5.3, §9.1)."""
+"""Real session-cookie authentication and origin checks."""
 
 from datetime import timedelta
 
 import pytest
 from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from channels.testing import WebsocketCommunicator
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -86,6 +87,10 @@ def test_http_login_cookie_authenticates_websocket(logged_in_client, user, monke
         communicator = socket(key)
         try:
             assert await communicator.connect() == (True, None)
+            groups = get_channel_layer().groups
+            assert set(groups) == {f"user_{user.pk}", f"session_{key}"}
+            assert set(groups[f"user_{user.pk}"]) == set(groups[f"session_{key}"])
+            assert len(groups[f"user_{user.pk}"]) == 1
             assert await communicator.receive_nothing(timeout=0.05)
         finally:
             await communicator.disconnect()
