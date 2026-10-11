@@ -10,6 +10,7 @@ from urllib.request import urlopen
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.db import IntegrityError, transaction
+from django.db.models import Prefetch
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -19,7 +20,8 @@ from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -29,6 +31,7 @@ from apps.accounts.eligibility import list_approved_projects_for_tutor
 from apps.accounts.models import Role
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
 from apps.accounts.serializers import (
+    EligibilityRequestSerializer,
     LoginSerializer,
     OAuth42IdentitySerializer,
     OAuth42ProfileSerializer,
@@ -41,6 +44,7 @@ from apps.accounts.serializers import (
     RoleAssignSerializer,
     TutorEligibleProjectSerializer,
 )
+from apps.evaluations.models import Project, TutorEligibilityRequest
 
 User = get_user_model()
 
@@ -216,6 +220,58 @@ def tutor_eligibility(request, user_id):
     tutor = get_object_or_404(User, pk=user_id)
     projects = list_approved_projects_for_tutor(tutor)
     return Response(TutorEligibleProjectSerializer(projects, many=True).data)
+
+
+_ELIGIBILITY_REQUEST_ORDERINGS = frozenset({"created_at", "-created_at"})
+_ELIGIBILITY_REQUEST_STATUSES = frozenset(TutorEligibilityRequest.Status.values)
+_ELIGIBILITY_REQUEST_SEE_ALL = frozenset({Role.Name.HEAD_TUTOR, Role.Name.ADMIN})
+
+
+class EligibilityRequestPagination(PageNumberPagination):
+    """Same limits as api-plan §5.7 (and RequestPagination in evaluations PR #498)."""
+
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def tutor_eligibility_request_list(request):
+    """List eligibility requests (api-plan §10.3). Head Tutor/Admin see all; others own."""
+    projects = Prefetch("projects", queryset=Project.objects.order_by("name"))
+    qs = TutorEligibilityRequest.objects.select_related(
+        "requester", "reviewed_by"
+    ).prefetch_related(projects)
+
+    if not request.user.roles.filter(name__in=_ELIGIBILITY_REQUEST_SEE_ALL).exists():
+        qs = qs.filter(requester=request.user)
+
+    status_param = request.query_params.get("status")
+    if status_param is not None:
+        statuses = [part.strip() for part in status_param.split(",") if part.strip()]
+        if not statuses:
+            raise ValidationError({"status": [_("This field may not be blank.")]})
+        unknown = sorted(
+            {value for value in statuses if value not in _ELIGIBILITY_REQUEST_STATUSES}
+        )
+        if unknown:
+            raise ValidationError(
+                {"status": [_("Unknown status: %(value)s.") % {"value": ", ".join(unknown)}]}
+            )
+        qs = qs.filter(status__in=statuses)
+
+    ordering = request.query_params.get("ordering", "created_at")
+    if ordering not in _ELIGIBILITY_REQUEST_ORDERINGS:
+        raise ValidationError(
+            {"ordering": [_("Ordering must be one of: created_at, -created_at.")]}
+        )
+    qs = qs.order_by(ordering)
+
+    paginator = EligibilityRequestPagination()
+    page = paginator.paginate_queryset(qs, request)
+    serializer = EligibilityRequestSerializer(page, many=True)
+    return paginator.get_paginated_response(serializer.data)
 
 
 @api_view(["POST"])

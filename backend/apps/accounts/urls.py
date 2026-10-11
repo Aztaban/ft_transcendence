@@ -17,4 +17,9 @@ urlpatterns = [
         views.tutor_eligibility,
         name="tutors-eligibility",
     ),
+    path(
+        "tutor-eligibility-requests/",
+        views.tutor_eligibility_request_list,
+        name="tutor-eligibility-requests-list",
+    ),
 ]

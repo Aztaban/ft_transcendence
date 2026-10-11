@@ -2,9 +2,11 @@
 
 from django.contrib.auth import get_user_model, password_validation
 from django.core.exceptions import ValidationError as DjangoValidationError
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.models import Role
+from apps.evaluations.models import TutorEligibilityRequest
 
 User = get_user_model()
 
@@ -110,11 +112,53 @@ class RoleAssignmentResultSerializer(PublicProfileSerializer):
 
 
 class TutorEligibleProjectSerializer(serializers.Serializer):
-    """Public project listing item for tutor eligibility (api-plan Project)."""
+    """Public project listing item for tutor eligibility (api-plan ProjectRef)."""
 
     id = serializers.IntegerField()
     slug = serializers.CharField()
     name = serializers.CharField()
+
+
+class UserRefSerializer(serializers.ModelSerializer):
+    """Short user reference (api-plan §8.1)."""
+
+    avatar_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ("id", "display_name", "avatar_url")
+        read_only_fields = fields
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_avatar_url(self, obj):
+        return None
+
+
+class EligibilityRequestSerializer(serializers.ModelSerializer):
+    """Eligibility request representation (api-plan §8.9)."""
+
+    requester = UserRefSerializer(read_only=True)
+    reviewed_by = UserRefSerializer(read_only=True, allow_null=True)
+    projects = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TutorEligibilityRequest
+        fields = (
+            "id",
+            "requester",
+            "projects",
+            "status",
+            "reviewed_by",
+            "reviewed_at",
+            "review_note",
+            "created_at",
+        )
+        read_only_fields = fields
+
+    @extend_schema_field(TutorEligibleProjectSerializer(many=True))
+    def get_projects(self, obj):
+        projects = sorted(obj.projects.all(), key=lambda project: project.name)
+        return TutorEligibleProjectSerializer(projects, many=True).data
 
 
 class OAuth42ProfileSerializer(serializers.Serializer):
