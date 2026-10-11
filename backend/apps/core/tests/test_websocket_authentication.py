@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import pytest
 from asgiref.sync import async_to_sync
+from channels.db import database_sync_to_async
 from channels.layers import get_channel_layer
 from channels.testing import WebsocketCommunicator
 from django.conf import settings
@@ -154,5 +155,59 @@ def test_invalid_origin_rejects_even_authenticated_session(logged_in_client, ori
             assert await communicator.connect() == (False, 1000)
         finally:
             await communicator.disconnect()
+
+    async_to_sync(connect)()
+
+
+def test_http_logout_closes_session_tabs_and_preserves_other_device(logged_in_client, user):
+    device_client = APIClient(enforce_csrf_checks=True)
+    assert device_client.get(reverse("api:session"), HTTP_HOST="localhost").status_code == 200
+    assert (
+        device_client.post(
+            reverse("api:login"),
+            {"email": user.email, "password": PASSWORD},
+            format="json",
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=device_client.cookies["csrftoken"].value,
+        ).status_code
+        == 200
+    )
+    key = logged_in_client.cookies[settings.SESSION_COOKIE_NAME].value
+    device_key = device_client.cookies[settings.SESSION_COOKIE_NAME].value
+    assert key != device_key
+
+    def logout():
+        response = logged_in_client.post(
+            reverse("api:logout"),
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=logged_in_client.cookies["csrftoken"].value,
+        )
+        assert response.status_code == 204
+        assert response.content == b""
+        assert not Session.objects.filter(session_key=key).exists()
+        assert Session.objects.filter(session_key=device_key).exists()
+
+    async def connect():
+        first, second, device = socket(key), socket(key), socket(device_key)
+        try:
+            for communicator in (first, second, device):
+                assert await communicator.connect() == (True, None)
+            await database_sync_to_async(logout)()
+            for communicator in (first, second):
+                assert await communicator.receive_json_from() == {
+                    "event": "session.ended",
+                    "data": {},
+                }
+                assert await communicator.receive_output() == {
+                    "type": "websocket.close",
+                    "code": 4401,
+                }
+                await communicator.disconnect(code=4401)
+            assert await device.receive_nothing(timeout=0.05)
+            assert set(get_channel_layer().groups) == {f"user_{user.pk}", f"session_{device_key}"}
+        finally:
+            for communicator in (first, second, device):
+                await communicator.disconnect()
+        assert get_channel_layer().groups == {}
 
     async_to_sync(connect)()
