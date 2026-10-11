@@ -1,8 +1,9 @@
-"""Consumer routes mounted at /ws/ by config.routing.
+"""Consumer routes mounted at /ws/ by config.routing."""
 
-The connection consumer is added as an empty-path route in #231. Keep this
-registry empty until it exists; no placeholder consumer accepts connections.
-Session authentication and origin checks follow in #232.
-"""
+from django.urls import path
 
-websocket_urlpatterns = []
+from .consumers import ConnectionConsumer
+
+websocket_urlpatterns = [
+    path("", ConnectionConsumer.as_asgi()),
+]
