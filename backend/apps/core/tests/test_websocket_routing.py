@@ -6,6 +6,7 @@ from channels.testing import WebsocketCommunicator
 from django.urls import path
 
 from config.asgi import application
+from config.routing import websocket_urlpatterns
 
 
 @pytest.fixture
@@ -18,14 +19,16 @@ def routed_handler(monkeypatch):
         await send({"type": "websocket.accept"})
         assert (await receive())["type"] == "websocket.disconnect"
 
-    router = application.application_mapping["websocket"].routes[0].callback
+    router = websocket_urlpatterns[0].callback
     monkeypatch.setattr(router, "routes", [path("", handler)])
     return scopes
 
 
 def test_websocket_dispatches_documented_path(routed_handler):
     async def connect():
-        communicator = WebsocketCommunicator(application, "/ws/")
+        communicator = WebsocketCommunicator(
+            application, "/ws/", headers=[(b"origin", b"http://localhost")]
+        )
         try:
             assert await communicator.connect() == (True, None)
         finally:
@@ -42,7 +45,9 @@ def test_websocket_dispatches_documented_path(routed_handler):
 @pytest.mark.parametrize("url", ["/ws", "/ws/extra/", "/api/v1/ws/", "/api/v1/"])
 def test_other_websocket_paths_do_not_reach_handler(routed_handler, url):
     async def connect():
-        communicator = WebsocketCommunicator(application, url)
+        communicator = WebsocketCommunicator(
+            application, url, headers=[(b"origin", b"http://localhost")]
+        )
         with pytest.raises(ValueError, match="No route found for path"):
             await communicator.connect()
 
