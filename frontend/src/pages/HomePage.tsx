@@ -5,6 +5,7 @@ import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import pendingIcon from "../assets/figma/pending.svg";
 import requestIcon from "../assets/figma/request.svg";
 import OpenRequests from "../features/student/OpenRequests";
+import PendingEvaluations from "../features/student/PendingEvaluations";
 import { useRole, type AppRole } from "../store/RoleContext";
 import "../styles/dashboard.css";
 
@@ -70,6 +71,46 @@ const studentDashboard: DashboardDefinition = {
   actionAriaLabel: "Create new request",
 };
 
+const hitchhikerDashboard: DashboardDefinition = {
+  greeting: "Welcome Back",
+  overview: [
+    {
+      value: "—",
+      label: "Open requests",
+      icon: requestIcon,
+      tone: "turquoise",
+    },
+    {
+      value: "—",
+      label: "Awaiting confirmation",
+      icon: pendingIcon,
+      tone: "blue",
+    },
+    {
+      value: "—",
+      label: "Evaluations done",
+      icon: historyIcon,
+      tone: "mint",
+    },
+    {
+      value: "Hitchhiker",
+      label: "Workspace",
+      icon: hitchhikersIcon,
+      tone: "yellow",
+    },
+  ],
+  emptyTitle: "Upcoming Evaluations",
+  emptyStateTitle: "Nothing scheduled yet",
+  emptyStateText: "Evaluations you pick and students confirm will appear here.",
+  historyTitle: "History",
+  ctaTitle: "READY TO EVALUATE?",
+  ctaText: "Browse open requests for your projects and pick a time slot.",
+  ctaLabel: "Open Requests",
+  ctaTo: "/requests",
+  actionSymbol: "→",
+  actionAriaLabel: "Browse open requests",
+};
+
 const councilDashboard: DashboardDefinition = {
   greeting: "Welcome Back",
   overview: [
@@ -112,7 +153,7 @@ const councilDashboard: DashboardDefinition = {
 
 const dashboards: Record<AppRole, DashboardDefinition> = {
   STUDENT: studentDashboard,
-  HITCHHIKER: studentDashboard,
+  HITCHHIKER: hitchhikerDashboard,
   COUNCIL: councilDashboard,
 };
 
@@ -150,7 +191,10 @@ function HomePage() {
 
       <div className="dashboard__columns">
         {activeRole === "STUDENT" ? (
-          <OpenRequests requests={[]} />
+          <>
+            <OpenRequests requests={[]} />
+            <PendingEvaluations requests={[]} />
+          </>
         ) : (
           <section className="dashboard__section">
             <h2>{dashboard.emptyTitle}</h2>
