@@ -4,8 +4,9 @@ import { listEvaluationRequests } from "../../api/evaluationRequests";
 import { useAuth } from "../../store/AuthContext";
 import type { EvaluationRequest } from "../../types/evaluation";
 
-// The student's active requests for the Home dashboard:
-// GET /evaluation-requests/?scope=mine&history=false (api-plan §10.4).
+// All of the student's requests for the Home dashboard (open, scheduled and history):
+// GET /evaluation-requests/?scope=mine (api-plan §10.4). Each box filters what it shows.
+// TODO: only the first page (20) is loaded; add paging when students have more requests.
 // Only called once the session check says the user is logged in, so no 401 in the console.
 export function useStudentRequests() {
   const { isAuthenticated } = useAuth();
@@ -14,7 +15,7 @@ export function useStudentRequests() {
 
   const reload = useCallback(async () => {
     try {
-      const page = await listEvaluationRequests({ scope: "mine", history: false });
+      const page = await listEvaluationRequests({ scope: "mine" });
 
       setRequests(page.results);
       setHasError(false);

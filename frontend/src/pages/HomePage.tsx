@@ -172,6 +172,7 @@ function StudentRequestSections() {
       )}
       <OpenRequests requests={requests} />
       <PendingEvaluations requests={requests} />
+      <EvaluationHistory requests={requests} viewer="student" />
     </>
   );
 }
@@ -210,15 +211,7 @@ function HomePage() {
 
       <div className="dashboard__columns">
         {activeRole === "STUDENT" ? (
-<<<<<<< HEAD
-          <>
-            <OpenRequests requests={[]} />
-            <PendingEvaluations requests={[]} />
-            <EvaluationHistory requests={[]} viewer="student" />
-          </>
-=======
           <StudentRequestSections />
->>>>>>> 37c30d9 (feat: let students confirm or decline a proposed slot (#507))
         ) : (
           <section className="dashboard__section">
             <h2>{dashboard.emptyTitle}</h2>

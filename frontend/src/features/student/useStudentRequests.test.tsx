@@ -33,7 +33,7 @@ describe("useStudentRequests", () => {
     expect(listEvaluationRequests).not.toHaveBeenCalled();
   });
 
-  it("loads the student's active requests once logged in", async () => {
+  it("loads all of the student's requests once logged in", async () => {
     loggedIn(true);
     vi.mocked(listEvaluationRequests).mockResolvedValue({
       count: 1,
@@ -45,7 +45,7 @@ describe("useStudentRequests", () => {
     render(<Probe />);
 
     expect(await screen.findByText("push_swap")).toBeTruthy();
-    expect(listEvaluationRequests).toHaveBeenCalledWith({ scope: "mine", history: false });
+    expect(listEvaluationRequests).toHaveBeenCalledWith({ scope: "mine" });
   });
 
   it("reports when the requests cannot be loaded", async () => {
