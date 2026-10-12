@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router";
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
+import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -14,6 +15,14 @@ function AuthenticatedApp() {
     <BaseLayout>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route
+          path="/requests"
+          element={
+            <RoleGuard allowedRoles={["HITCHHIKER"]} fallback={<UnauthorizedPage />}>
+              <HitchhikerRequestsPage />
+            </RoleGuard>
+          }
+        />
         <Route
           path="/profile"
           element={
