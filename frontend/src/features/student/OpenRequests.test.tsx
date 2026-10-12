@@ -1,40 +1,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { EvaluationRequest, EvaluationRequestStatus } from "../../types/evaluation";
 import OpenRequests from "./OpenRequests";
+import { makeRequest } from "./testUtils";
 
 afterEach(() => {
   cleanup();
 });
-
-function makeRequest(
-  id: number,
-  projectName: string,
-  status: EvaluationRequestStatus,
-): EvaluationRequest {
-  const isPicked = status === "awaiting_confirmation" || status === "confirmed";
-
-  return {
-    id,
-    student: { id: 1, display_name: "Student", avatar_url: null },
-    project: { id, slug: projectName, name: projectName },
-    note: "",
-    status,
-    picked_by: isPicked ? { id: 2, display_name: "Hitchhiker", avatar_url: null } : null,
-    starts_at: isPicked ? "2026-10-12T15:00:00Z" : null,
-    ends_at: isPicked ? "2026-10-12T15:45:00Z" : null,
-    cancelled_by: null,
-    cancelled_at: status === "cancelled" ? "2026-10-11T10:00:00Z" : null,
-    expired_at: status === "expired" ? "2026-10-11T10:00:00Z" : null,
-    result: null,
-    feedback: "",
-    completed_at: null,
-    is_history: status === "cancelled" || status === "expired",
-    created_at: "2026-10-10T09:00:00Z",
-    updated_at: "2026-10-10T09:00:00Z",
-  };
-}
 
 describe("OpenRequests", () => {
   it("shows the empty state when there are no open requests", () => {
@@ -54,7 +26,7 @@ describe("OpenRequests", () => {
     expect(screen.getByText("ft_transcendence")).toBeTruthy();
     expect(screen.getByText("webserv")).toBeTruthy();
     expect(screen.getByText("Pending")).toBeTruthy();
-    expect(screen.getByText("Awaiting confirmation")).toBeTruthy();
+    expect(screen.getByText("Needs your confirmation")).toBeTruthy();
   });
 
   it("does not display confirmed, cancelled or expired requests", () => {
@@ -70,5 +42,37 @@ describe("OpenRequests", () => {
     expect(screen.queryByText("cancelled-project")).toBeNull();
     expect(screen.queryByText("expired-project")).toBeNull();
     expect(screen.getByText("No open requests")).toBeTruthy();
+  });
+
+  it("highlights requests awaiting confirmation with the proposed slot", () => {
+    const requests = [
+      makeRequest(1, "ft_transcendence", "pending"),
+      makeRequest(2, "webserv", "awaiting_confirmation"),
+    ];
+
+    render(<OpenRequests requests={requests} />);
+
+    const awaitingCard = screen.getByText("webserv").closest("article");
+    const pendingCard = screen.getByText("ft_transcendence").closest("article");
+
+    expect(awaitingCard?.classList.contains("dashboard-request--needs-confirmation")).toBe(true);
+    expect(pendingCard?.classList.contains("dashboard-request--needs-confirmation")).toBe(false);
+    expect(screen.getByText("Hitchhiker proposed")).toBeTruthy();
+    expect(awaitingCard?.querySelector("time")?.getAttribute("datetime")).toBe(
+      "2026-10-12T15:00:00Z",
+    );
+  });
+
+  it("lists requests awaiting confirmation first", () => {
+    const requests = [
+      makeRequest(1, "ft_transcendence", "pending"),
+      makeRequest(2, "webserv", "awaiting_confirmation"),
+    ];
+
+    render(<OpenRequests requests={requests} />);
+
+    const titles = screen.getAllByRole("heading", { level: 3 }).map((title) => title.textContent);
+
+    expect(titles).toEqual(["webserv", "ft_transcendence"]);
   });
 });
