@@ -261,10 +261,11 @@ def test_tutor_eligibility_returns_empty_list_when_no_data(api_client, make_user
 def test_tutor_eligibility_returns_active_projects_sorted_by_name(api_client, make_user):
     viewer = make_user("viewer@example.com", roles=(Role.Name.STUDENT,))
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
-    push_swap = Project.objects.create(slug="push_swap", name="push_swap")
+    # Slugs must not collide with projects seeded by migration 0003_seed_projects.
+    zebra = Project.objects.create(slug="zebra_eval", name="Zebra")
     libft = Project.objects.create(slug="libft", name="Libft")
     inactive = Project.objects.create(slug="old_proj", name="Old", is_active=False)
-    TutorEligibility.objects.create(tutor=tutor, project=push_swap)
+    TutorEligibility.objects.create(tutor=tutor, project=zebra)
     TutorEligibility.objects.create(tutor=tutor, project=libft)
     TutorEligibility.objects.create(tutor=tutor, project=inactive)
 
@@ -274,7 +275,7 @@ def test_tutor_eligibility_returns_active_projects_sorted_by_name(api_client, ma
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == [
         {"id": libft.id, "slug": "libft", "name": "Libft"},
-        {"id": push_swap.id, "slug": "push_swap", "name": "push_swap"},
+        {"id": zebra.id, "slug": "zebra_eval", "name": "Zebra"},
     ]
 
 
