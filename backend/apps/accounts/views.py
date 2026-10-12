@@ -19,7 +19,12 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -44,6 +49,7 @@ from apps.accounts.serializers import (
     RoleAssignSerializer,
     TutorEligibleProjectSerializer,
 )
+from apps.core.throttling import AuthRateThrottle
 from apps.evaluations.models import Project, TutorEligibilityRequest
 
 User = get_user_model()
@@ -108,6 +114,7 @@ def _has_unique_email_error(serializer):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def register(request):
     """Create a user account without authenticating the new user."""
     serializer = RegistrationSerializer(data=request.data)
@@ -142,6 +149,7 @@ class LoginView(APIView):
 
     authentication_classes = [SessionAuthentication]
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
