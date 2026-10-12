@@ -12,6 +12,7 @@ urlpatterns = [
         views.revoke_role,
         name="users-revoke-role",
     ),
+    path("projects/", views.project_list, name="projects-list"),
     path(
         "tutors/<int:user_id>/eligibility/",
         views.tutor_eligibility,

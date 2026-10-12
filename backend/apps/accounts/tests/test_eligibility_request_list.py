@@ -1,4 +1,4 @@
-"""GET /api/v1/tutor-eligibility-requests/ (api-plan §10.3, §8.9)."""
+"""GET/POST /api/v1/tutor-eligibility-requests/ (api-plan §10.3, §8.9)."""
 
 from datetime import datetime, timedelta, timezone
 
@@ -11,7 +11,7 @@ from rest_framework.fields import DateTimeField
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
-from apps.evaluations.models import Project, TutorEligibilityRequest
+from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
 
 pytestmark = pytest.mark.django_db
 
@@ -221,3 +221,117 @@ def test_invalid_ordering_returns_validation_error(api_client, make_user):
     body = response.json()
     assert body["error"]["code"] == "validation_error"
     assert "ordering" in body["error"]["fields"]
+
+
+# --- POST /tutor-eligibility-requests/ -------------------------------------------------
+
+
+PASSWORD = "secret"
+URL = "api:tutor-eligibility-requests-list"
+
+
+def test_create_requires_authentication(api_client):
+    response = api_client.post(reverse(URL), {"project_ids": [1]}, format="json")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {
+        "error": {"code": "not_authenticated", "message": "Authentication required."}
+    }
+
+
+def test_create_requires_hitchhiker_role(api_client, make_user):
+    student = make_user("student@example.com", roles=(Role.Name.STUDENT,))
+    project = Project.objects.create(slug="libft", name="Libft")
+
+    api_client.force_authenticate(user=student)
+    response = api_client.post(reverse(URL), {"project_ids": [project.id]}, format="json")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["error"]["code"] == "permission_denied"
+
+
+def test_create_returns_eligibility_request(api_client, make_user):
+    tutor = make_user("tutor@example.com", display_name="Bob", roles=(Role.Name.TUTOR,))
+    zebra = Project.objects.create(slug="zebra_eval", name="Zebra")
+    libft = Project.objects.create(slug="libft", name="Libft")
+
+    api_client.force_authenticate(user=tutor)
+    response = api_client.post(
+        reverse(URL),
+        {"project_ids": [zebra.id, libft.id]},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    body = response.json()
+    created = TutorEligibilityRequest.objects.get(pk=body["id"])
+    assert body == expected_eligibility_request(created)
+    assert body["status"] == "pending"
+    assert body["projects"] == [project_ref(libft), project_ref(zebra)]
+    assert body["requester"] == user_ref(tutor)
+
+
+def test_create_rejects_already_eligible_projects(api_client, make_user):
+    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+    libft = Project.objects.create(slug="libft", name="Libft")
+    TutorEligibility.objects.create(tutor=tutor, project=libft)
+
+    api_client.force_authenticate(user=tutor)
+    response = api_client.post(reverse(URL), {"project_ids": [libft.id]}, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    body = response.json()
+    assert body["error"]["code"] == "validation_error"
+    assert "project_ids" in body["error"]["fields"]
+    assert "Libft" in body["error"]["fields"]["project_ids"][0]
+
+
+def test_create_rejects_when_pending_exists(api_client, make_user):
+    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+    libft = Project.objects.create(slug="libft", name="Libft")
+    make_request(tutor, [libft])
+
+    api_client.force_authenticate(user=tutor)
+    response = api_client.post(reverse(URL), {"project_ids": [libft.id]}, format="json")
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {
+        "error": {
+            "code": "eligibility_request_pending",
+            "message": "You already have a pending eligibility request.",
+        }
+    }
+
+
+def test_create_through_session_needs_csrf(api_client, make_user):
+    _ = api_client
+    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+    project = Project.objects.create(slug="libft", name="Libft")
+    browser = APIClient(enforce_csrf_checks=True)
+    browser.get(reverse("api:session"), HTTP_HOST="localhost")
+    login = browser.post(
+        reverse("api:login"),
+        {"email": tutor.email, "password": PASSWORD},
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=browser.cookies["csrftoken"].value,
+    )
+    assert login.status_code == status.HTTP_200_OK
+
+    without = browser.post(
+        reverse(URL),
+        {"project_ids": [project.id]},
+        format="json",
+        HTTP_HOST="localhost",
+    )
+    with_token = browser.post(
+        reverse(URL),
+        {"project_ids": [project.id]},
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=browser.cookies["csrftoken"].value,
+    )
+
+    assert without.status_code == status.HTTP_403_FORBIDDEN
+    assert without.json()["error"]["code"] == "csrf_failed"
+    assert with_token.status_code == status.HTTP_201_CREATED

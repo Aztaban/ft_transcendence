@@ -36,6 +36,7 @@ from apps.accounts.eligibility import list_approved_projects_for_tutor
 from apps.accounts.models import Role
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
 from apps.accounts.serializers import (
+    EligibilityRequestCreateSerializer,
     EligibilityRequestSerializer,
     LoginSerializer,
     OAuth42IdentitySerializer,
@@ -50,7 +51,7 @@ from apps.accounts.serializers import (
     TutorEligibleProjectSerializer,
 )
 from apps.core.throttling import AuthRateThrottle
-from apps.evaluations.models import Project, TutorEligibilityRequest
+from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
 
 User = get_user_model()
 
@@ -222,6 +223,15 @@ def user_detail(request, user_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def project_list(request):
+    """Return active projects as ProjectRef[], sorted by name (api-plan §10.3)."""
+    _ = request
+    projects = Project.objects.filter(is_active=True).order_by("name")
+    return Response(TutorEligibleProjectSerializer(projects, many=True).data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def tutor_eligibility(request, user_id):
     """Return projects this hitchhiker is approved to evaluate (public listing)."""
     _ = request
@@ -233,6 +243,7 @@ def tutor_eligibility(request, user_id):
 _ELIGIBILITY_REQUEST_ORDERINGS = frozenset({"created_at", "-created_at"})
 _ELIGIBILITY_REQUEST_STATUSES = frozenset(TutorEligibilityRequest.Status.values)
 _ELIGIBILITY_REQUEST_SEE_ALL = frozenset({Role.Name.HEAD_TUTOR, Role.Name.ADMIN})
+_HITCHHIKER_ROLES = frozenset({Role.Name.TUTOR, Role.Name.HEAD_TUTOR})
 
 
 class EligibilityRequestPagination(PageNumberPagination):
@@ -243,10 +254,7 @@ class EligibilityRequestPagination(PageNumberPagination):
     max_page_size = 100
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def tutor_eligibility_request_list(request):
-    """List eligibility requests (api-plan §10.3). Head Tutor/Admin see all; others own."""
+def _list_eligibility_requests(request):
     projects = Prefetch("projects", queryset=Project.objects.order_by("name"))
     qs = TutorEligibilityRequest.objects.select_related(
         "requester", "reviewed_by"
@@ -280,6 +288,73 @@ def tutor_eligibility_request_list(request):
     page = paginator.paginate_queryset(qs, request)
     serializer = EligibilityRequestSerializer(page, many=True)
     return paginator.get_paginated_response(serializer.data)
+
+
+def _create_eligibility_request(request):
+    """Submit one eligibility request (api-plan §10.3)."""
+    if not request.user.roles.filter(name__in=_HITCHHIKER_ROLES).exists():
+        raise PermissionDenied(
+            _("You do not have permission to perform this action."),
+            code="permission_denied",
+        )
+
+    serializer = EligibilityRequestCreateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    project_ids = serializer.validated_data["project_ids"]
+
+    projects = list(Project.objects.filter(pk__in=project_ids, is_active=True))
+    found_ids = {project.pk for project in projects}
+    missing = sorted(set(project_ids) - found_ids)
+    if missing:
+        raise ValidationError(
+            {
+                "project_ids": [
+                    _("Unknown or inactive project id(s): %(ids)s.")
+                    % {"ids": ", ".join(str(pk) for pk in missing)}
+                ]
+            }
+        )
+
+    already_eligible = list(
+        TutorEligibility.objects.filter(tutor=request.user, project_id__in=project_ids)
+        .select_related("project")
+        .order_by("project__name")
+    )
+    if already_eligible:
+        names = ", ".join(row.project.name for row in already_eligible)
+        raise ValidationError(
+            {"project_ids": [_("Already eligible for: %(names)s.") % {"names": names}]}
+        )
+
+    with transaction.atomic():
+        # Schema §3.2: lock the requester row, then check pending in the same transaction.
+        User.objects.select_for_update().get(pk=request.user.pk)
+        if TutorEligibilityRequest.objects.filter(
+            requester=request.user,
+            status=TutorEligibilityRequest.Status.PENDING,
+        ).exists():
+            return _error_response(
+                "eligibility_request_pending",
+                _("You already have a pending eligibility request."),
+                status.HTTP_409_CONFLICT,
+            )
+        eligibility_request = TutorEligibilityRequest.objects.create(requester=request.user)
+        eligibility_request.projects.set(projects)
+
+    # TODO(notifications): eligibility.requested + WebSocket event (notifications app not yet).
+    return Response(
+        EligibilityRequestSerializer(eligibility_request).data,
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def tutor_eligibility_request_list(request):
+    """List or submit eligibility requests (api-plan §10.3)."""
+    if request.method == "POST":
+        return _create_eligibility_request(request)
+    return _list_eligibility_requests(request)
 
 
 @api_view(["POST"])
