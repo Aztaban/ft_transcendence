@@ -18,7 +18,10 @@ function OpenRequests({ requests }: OpenRequestsProps) {
     .sort((a, b) => Number(needsConfirmation(b)) - Number(needsConfirmation(a)));
 
   return (
-    <section className="dashboard__section" aria-labelledby="open-requests-title">
+    <section
+      className="dashboard__section dashboard__section--teal"
+      aria-labelledby="open-requests-title"
+    >
       <h2 id="open-requests-title">Open Requests</h2>
 
       {openRequests.length === 0 ? (
