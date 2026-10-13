@@ -7,7 +7,7 @@ from rest_framework.test import APIClient
 
 from apps.evaluations.models import Project
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
 
 
 @pytest.fixture
