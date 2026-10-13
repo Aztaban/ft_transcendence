@@ -271,6 +271,29 @@ def test_create_returns_eligibility_request(api_client, make_user):
     assert body["requester"] == user_ref(tutor)
 
 
+def test_head_tutor_can_submit_eligibility_request(api_client, make_user):
+    head = make_user("head@example.com", display_name="Ada", roles=(Role.Name.HEAD_TUTOR,))
+    libft = Project.objects.create(slug="libft", name="Libft")
+
+    api_client.force_authenticate(user=head)
+    response = api_client.post(reverse(URL), {"project_ids": [libft.id]}, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    created = TutorEligibilityRequest.objects.get()
+    assert response.json() == {
+        "id": created.id,
+        "requester": {"id": head.id, "display_name": "Ada", "avatar_url": None},
+        "projects": [{"id": libft.id, "slug": "libft", "name": "Libft"}],
+        "status": "pending",
+        "reviewed_by": None,
+        "reviewed_at": None,
+        "review_note": "",
+        "created_at": iso(created.created_at),
+    }
+    assert created.requester_id == head.id
+    assert created.status == TutorEligibilityRequest.Status.PENDING
+
+
 def test_create_rejects_already_eligible_projects(api_client, make_user):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     libft = Project.objects.create(slug="libft", name="Libft")
