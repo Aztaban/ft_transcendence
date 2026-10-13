@@ -118,16 +118,26 @@ def test_lifecycle_decline_then_resubmit(api_client, make_user):
     )
 
 
+def _validation_error(field_errors):
+    return {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the highlighted fields.",
+            "fields": field_errors,
+        }
+    }
+
+
 @pytest.mark.parametrize(
-    "project_ids",
+    ("project_ids", "field_errors"),
     [
-        None,
-        [],
-        [1, 1],
+        (None, ["This field is required."]),
+        ([], ["This list may not be empty."]),
+        ([1, 1], ["Project ids must be distinct."]),
     ],
     ids=["missing", "empty", "duplicates"],
 )
-def test_create_rejects_invalid_project_ids_shape(api_client, make_user, project_ids):
+def test_create_rejects_invalid_project_ids_shape(api_client, make_user, project_ids, field_errors):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     Project.objects.create(slug="libft", name="Libft")
 
@@ -136,14 +146,29 @@ def test_create_rejects_invalid_project_ids_shape(api_client, make_user, project
     response = api_client.post(reverse(LIST), body, format="json")
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["error"]["code"] == "validation_error"
-    assert "project_ids" in response.json()["error"]["fields"]
+    assert response.json() == _validation_error({"project_ids": field_errors})
+    assert TutorEligibilityRequest.objects.count() == 0
+
+
+def test_create_rejects_malformed_project_id(api_client, make_user):
+    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+    Project.objects.create(slug="libft", name="Libft")
+
+    api_client.force_authenticate(user=tutor)
+    response = api_client.post(reverse(LIST), {"project_ids": ["abc"]}, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == _validation_error(
+        {"project_ids": {"0": ["A valid integer is required."]}}
+    )
+    assert TutorEligibilityRequest.objects.count() == 0
 
 
 def test_create_rejects_unknown_or_inactive_project(api_client, make_user):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     active = Project.objects.create(slug="libft", name="Libft")
     inactive = Project.objects.create(slug="old_proj", name="Old", is_active=False)
+    missing_ids = ", ".join(str(pk) for pk in sorted([inactive.id, 999999]))
 
     api_client.force_authenticate(user=tutor)
     response = api_client.post(
@@ -153,12 +178,25 @@ def test_create_rejects_unknown_or_inactive_project(api_client, make_user):
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    error = response.json()["error"]
-    assert error["code"] == "validation_error"
-    assert "project_ids" in error["fields"]
-    message = error["fields"]["project_ids"][0]
-    assert str(inactive.id) in message
-    assert "999999" in message
+    assert response.json() == _validation_error(
+        {"project_ids": [f"Unknown or inactive project id(s): {missing_ids}."]}
+    )
+    assert TutorEligibilityRequest.objects.count() == 0
+    assert TutorEligibility.objects.count() == 0
+
+
+def test_create_rejects_more_than_50_project_ids(api_client, make_user):
+    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+
+    api_client.force_authenticate(user=tutor)
+    response = api_client.post(
+        reverse(LIST),
+        {"project_ids": list(range(1, 52))},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == _validation_error({"project_ids": ["Select at most 50 projects."]})
     assert TutorEligibilityRequest.objects.count() == 0
 
 
@@ -175,8 +213,7 @@ def test_create_rejects_more_than_max_projects(api_client, make_user, settings):
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json()["error"]["code"] == "validation_error"
-    assert "project_ids" in response.json()["error"]["fields"]
+    assert response.json() == _validation_error({"project_ids": ["Select at most 2 projects."]})
     assert TutorEligibilityRequest.objects.count() == 0
 
 

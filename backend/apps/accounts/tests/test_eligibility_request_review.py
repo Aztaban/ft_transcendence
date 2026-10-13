@@ -264,6 +264,67 @@ def test_already_reviewed_returns_409(api_client, make_user, prior_status):
     }
 
 
+def test_review_note_of_500_characters_succeeds(api_client, make_user):
+    tutor = make_user("tutor@example.com", display_name="Bob", roles=(Role.Name.TUTOR,))
+    head = make_user("head@example.com", display_name="Ada", roles=(Role.Name.HEAD_TUTOR,))
+    libft = Project.objects.create(slug="libft", name="Libft")
+    pending = make_pending(tutor, [libft])
+    note = "a" * 500
+
+    api_client.force_authenticate(user=head)
+    response = api_client.post(
+        review_url(pending.id),
+        {"decision": "approved", "review_note": note},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    pending.refresh_from_db()
+    assert response.json() == {
+        "id": pending.id,
+        "requester": {"id": tutor.id, "display_name": "Bob", "avatar_url": None},
+        "projects": [{"id": libft.id, "slug": "libft", "name": "Libft"}],
+        "status": "approved",
+        "reviewed_by": {"id": head.id, "display_name": "Ada", "avatar_url": None},
+        "reviewed_at": iso(pending.reviewed_at),
+        "review_note": note,
+        "created_at": iso(pending.created_at),
+    }
+    assert pending.status == TutorEligibilityRequest.Status.APPROVED
+    assert pending.review_note == note
+    assert TutorEligibility.objects.filter(tutor=tutor, project=libft).count() == 1
+
+
+def test_review_note_of_501_characters_is_rejected(api_client, make_user):
+    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+    head = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
+    libft = Project.objects.create(slug="libft", name="Libft")
+    pending = make_pending(tutor, [libft])
+
+    api_client.force_authenticate(user=head)
+    response = api_client.post(
+        review_url(pending.id),
+        {"decision": "approved", "review_note": "b" * 501},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the highlighted fields.",
+            "fields": {"review_note": ["Ensure this field has no more than 500 characters."]},
+        }
+    }
+    pending.refresh_from_db()
+    assert pending.status == TutorEligibilityRequest.Status.PENDING
+    assert pending.review_note == ""
+    assert pending.reviewed_by_id is None
+    assert pending.reviewed_at is None
+    assert TutorEligibility.objects.count() == 0
+    assert TutorEligibilityRequest.objects.count() == 1
+
+
 def test_review_through_session_needs_csrf(api_client, make_user):
     _ = api_client
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
