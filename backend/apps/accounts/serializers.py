@@ -1,7 +1,9 @@
 """Serializers for registration, user profiles, visibility, roles, and tutor eligibility."""
 
+from django.conf import settings
 from django.contrib.auth import get_user_model, password_validation
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -159,6 +161,42 @@ class EligibilityRequestSerializer(serializers.ModelSerializer):
     def get_projects(self, obj):
         projects = sorted(obj.projects.all(), key=lambda project: project.name)
         return TutorEligibleProjectSerializer(projects, many=True).data
+
+
+class EligibilityRequestCreateSerializer(serializers.Serializer):
+    """Body for POST /tutor-eligibility-requests/ (api-plan §10.3)."""
+
+    project_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=False,
+    )
+
+    def validate_project_ids(self, value):
+        if len(value) != len(set(value)):
+            raise serializers.ValidationError(_("Project ids must be distinct."))
+        max_projects = settings.ELIGIBILITY_REQUEST_MAX_PROJECTS
+        if len(value) > max_projects:
+            raise serializers.ValidationError(
+                _("Select at most %(max)s projects.") % {"max": max_projects}
+            )
+        return value
+
+
+class EligibilityRequestReviewSerializer(serializers.Serializer):
+    """Body for POST /tutor-eligibility-requests/{id}/review/ (api-plan §10.3)."""
+
+    decision = serializers.ChoiceField(
+        choices=(
+            TutorEligibilityRequest.Status.APPROVED,
+            TutorEligibilityRequest.Status.DECLINED,
+        )
+    )
+    review_note = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=500,
+        default="",
+    )
 
 
 class OAuth42ProfileSerializer(serializers.Serializer):
