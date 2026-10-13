@@ -8,6 +8,7 @@ export interface ListEvaluationRequestsParams {
   scope?: EvaluationRequestScope;
   status?: EvaluationRequestStatus[];
   history?: boolean;
+  ordering?: "created_at" | "-created_at" | "starts_at" | "-starts_at";
   // 1-based page number (§5.7).
   page?: number;
 }
@@ -28,6 +29,10 @@ export function listEvaluationRequests(
 
   if (params.history !== undefined) {
     query.set("history", String(params.history));
+  }
+
+  if (params.ordering) {
+    query.set("ordering", params.ordering);
   }
 
   if (params.page && params.page > 1) {
@@ -63,8 +68,11 @@ export function pickSlot(id: number, payload: PickSlotPayload): Promise<Evaluati
   });
 }
 
-// Shared by the student's transitions, which take no body. apiRequest adds the CSRF header (§5.4).
-function postTransition(id: number, action: "confirm" | "decline"): Promise<EvaluationRequest> {
+// Shared by the transitions that take no body. apiRequest adds the CSRF header (§5.4).
+function postTransition(
+  id: number,
+  action: "confirm" | "decline" | "cancel" | "release",
+): Promise<EvaluationRequest> {
   return apiRequest<EvaluationRequest>(`/api/v1/evaluation-requests/${id}/${action}/`, {
     method: "POST",
   });
@@ -98,4 +106,16 @@ export async function createEvaluationRequest(
     },
     body: JSON.stringify(payload),
   });
+}
+
+// POST …/{id}/cancel/ (api-plan §10.4): the student sends no body.
+// 200 `cancelled`; 409 `evaluation_already_started` once `starts_at` has passed.
+export function cancelEvaluationRequest(id: number): Promise<EvaluationRequest> {
+  return postTransition(id, "cancel");
+}
+
+// POST …/{id}/release/ (api-plan §10.4): the picking Hitchhiker sends no body.
+// 200 `pending` with the pick cleared; 409 `evaluation_already_started`.
+export function releaseEvaluationRequest(id: number): Promise<EvaluationRequest> {
+  return postTransition(id, "release");
 }

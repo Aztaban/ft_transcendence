@@ -7,6 +7,7 @@ import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import PendingPage from "./pages/PendingPage";
 import PickSlotPage from "./pages/PickSlotPage";
 import ProfilePage from "./pages/ProfilePage";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
@@ -41,6 +42,14 @@ function AuthenticatedApp() {
           element={
             <RoleGuard allowedRoles={["HITCHHIKER"]} fallback={<UnauthorizedPage />}>
               <PickSlotPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/pending"
+          element={
+            <RoleGuard allowedRoles={routePermissions.pending} fallback={<UnauthorizedPage />}>
+              <PendingPage />
             </RoleGuard>
           }
         />
