@@ -1,6 +1,6 @@
 .create-request {
   display: flex;
-  max-width: 760px;
+  max-width: 1080px;
   flex-direction: column;
   gap: 24px;
   margin: 0 auto;
@@ -65,6 +65,90 @@
   border-radius: inherit;
   background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dark));
   transition: width 0.45s ease;
+}
+
+/* Two columns: step content and side panel */
+
+.create-request__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  align-items: start;
+  gap: 24px;
+}
+
+.create-request__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: create-request-slide-in 0.45s ease;
+}
+
+.create-request__panel {
+  padding: 20px 22px;
+  border: 1px solid #e3e7e7;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.create-request__panel h2 {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.create-request__panel p {
+  margin: 0;
+  color: #4d5555;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.create-request__panel--tip {
+  border-color: #f5d27a;
+  background: #fffaf0;
+}
+
+.create-request__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+  list-style: none;
+}
+
+.create-request__steps li {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  column-gap: 12px;
+  counter-increment: step;
+}
+
+.create-request__steps li::before {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  grid-row: span 2;
+  place-items: center;
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  color: var(--color-accent-dark);
+  content: counter(step);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.create-request__steps strong {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.create-request__steps span {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 /* Step content */
@@ -353,6 +437,12 @@
 
   50% {
     transform: translateY(-6px);
+  }
+}
+
+@media (max-width: 960px) {
+  .create-request__layout {
+    grid-template-columns: 1fr;
   }
 }
 

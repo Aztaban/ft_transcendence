@@ -18,6 +18,13 @@ const steps = [
 
 type StepId = (typeof steps)[number]["id"];
 
+// The request lifecycle from the student's side (api-plan §7.1).
+const howItWorks = [
+  { title: "Choose a project", text: "Pick the project and add a note if you like." },
+  { title: "A Hitchhiker proposes a time", text: "An eligible Hitchhiker picks your request." },
+  { title: "You confirm", text: "Accept the time, or decline it to wait for another one." },
+];
+
 // api-plan §10.4: `note` is optional, up to 500 characters.
 const NOTE_MAX_LENGTH = 500;
 
@@ -104,104 +111,125 @@ function CreateRequestPage() {
         <span style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }} />
       </div>
 
-      <div className="create-request__body" key={stepId}>
-        {stepId === "project" && (
-          <>
-            <div className="create-request__card">
-              <ProjectSelect
-                value={project?.id ?? null}
-                onChange={(_projectId, chosenProject) => setProject(chosenProject)}
-              />
-
-              <div className="create-request__note">
-                <label htmlFor="request-note">
-                  Note for the Hitchhiker <span>(optional)</span>
-                </label>
-                <textarea
-                  id="request-note"
-                  value={note}
-                  maxLength={NOTE_MAX_LENGTH}
-                  rows={3}
-                  placeholder="e.g. I'm free after 18:00 until 21:00 on Friday and Saturday."
-                  onChange={(event) => setNote(event.target.value)}
+      <div className="create-request__layout">
+        <div className="create-request__body" key={stepId}>
+          {stepId === "project" && (
+            <>
+              <div className="create-request__card">
+                <ProjectSelect
+                  value={project?.id ?? null}
+                  onChange={(_projectId, chosenProject) => setProject(chosenProject)}
                 />
-                <span className="create-request__note-count" aria-live="polite">
-                  {note.length} / {NOTE_MAX_LENGTH}
-                </span>
+
+                <div className="create-request__note">
+                  <label htmlFor="request-note">
+                    Note for the Hitchhiker <span>(optional)</span>
+                  </label>
+                  <textarea
+                    id="request-note"
+                    value={note}
+                    maxLength={NOTE_MAX_LENGTH}
+                    rows={3}
+                    placeholder="e.g. I'm free after 18:00 until 21:00 on Friday and Saturday."
+                    onChange={(event) => setNote(event.target.value)}
+                  />
+                  <span className="create-request__note-count" aria-live="polite">
+                    {note.length} / {NOTE_MAX_LENGTH}
+                  </span>
+                </div>
               </div>
-            </div>
 
-            <InfoNotice>
-              <p>
-                Before requesting your evaluation, make sure the Hitchhiker evaluation is the last
-                evaluation, after receiving two successful peer evaluations.
-              </p>
-              <p>
-                If you request the Hitchhiker evaluation before meeting this requirement, your
-                evaluation will fail immediately.
-              </p>
-            </InfoNotice>
+              <InfoNotice>
+                <p>
+                  Before requesting your evaluation, make sure the Hitchhiker evaluation is the last
+                  evaluation, after receiving two successful peer evaluations.
+                </p>
+                <p>
+                  If you request the Hitchhiker evaluation before meeting this requirement, your
+                  evaluation will fail immediately.
+                </p>
+              </InfoNotice>
 
-            <div className="create-request__actions">
-              <button
-                className="create-request__button"
-                type="button"
-                disabled={!project}
-                onClick={() => setStepId("confirm")}
-              >
-                Next <span aria-hidden="true">→</span>
-              </button>
-            </div>
-          </>
-        )}
-
-        {stepId === "confirm" && project && (
-          <>
-            <article className="create-request__summary">
-              <div className="create-request__summary-head">
-                <span className="create-request__summary-icon" aria-hidden="true">
-                  ⛁
-                </span>
-                <h2>{project.name}</h2>
+              <div className="create-request__actions">
+                <button
+                  className="create-request__button"
+                  type="button"
+                  disabled={!project}
+                  onClick={() => setStepId("confirm")}
+                >
+                  Next <span aria-hidden="true">→</span>
+                </button>
               </div>
-              <p>A Hitchhiker who can evaluate this project will propose a time slot.</p>
-              {note.trim() && (
-                <blockquote className="create-request__summary-note">
-                  <span>Your note</span>
-                  <p>{note.trim()}</p>
-                </blockquote>
+            </>
+          )}
+
+          {stepId === "confirm" && project && (
+            <>
+              <article className="create-request__summary">
+                <div className="create-request__summary-head">
+                  <span className="create-request__summary-icon" aria-hidden="true">
+                    ⛁
+                  </span>
+                  <h2>{project.name}</h2>
+                </div>
+                <p>A Hitchhiker who can evaluate this project will propose a time slot.</p>
+                {note.trim() && (
+                  <blockquote className="create-request__summary-note">
+                    <span>Your note</span>
+                    <p>{note.trim()}</p>
+                  </blockquote>
+                )}
+                <button
+                  className="create-request__edit"
+                  type="button"
+                  onClick={() => setStepId("project")}
+                >
+                  Edit
+                </button>
+              </article>
+
+              <InfoNotice>
+                <p>Your request will be visible to Hitchhikers who can evaluate this project.</p>
+              </InfoNotice>
+
+              {submitError && (
+                <p className="create-request__error" role="alert">
+                  {submitError}
+                </p>
               )}
-              <button
-                className="create-request__edit"
-                type="button"
-                onClick={() => setStepId("project")}
-              >
-                Edit
-              </button>
-            </article>
 
-            <InfoNotice>
-              <p>Your request will be visible to Hitchhikers who can evaluate this project.</p>
-            </InfoNotice>
+              <div className="create-request__actions">
+                <button
+                  className="create-request__button create-request__button--submit"
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleSubmit}
+                >
+                  {isSubmitting ? "Sending…" : "Submit"} <span aria-hidden="true">✓</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
 
-            {submitError && (
-              <p className="create-request__error" role="alert">
-                {submitError}
-              </p>
-            )}
+        <aside className="create-request__aside">
+          <section className="create-request__panel">
+            <h2>How it works</h2>
+            <ol className="create-request__steps">
+              {howItWorks.map((item) => (
+                <li key={item.title}>
+                  <strong>{item.title}</strong>
+                  <span>{item.text}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
 
-            <div className="create-request__actions">
-              <button
-                className="create-request__button create-request__button--submit"
-                type="button"
-                disabled={isSubmitting}
-                onClick={handleSubmit}
-              >
-                {isSubmitting ? "Sending…" : "Submit"} <span aria-hidden="true">✓</span>
-              </button>
-            </div>
-          </>
-        )}
+          <section className="create-request__panel create-request__panel--tip">
+            <h2>Tip</h2>
+            <p>Open “Details” on a project to see its topics and what you will be tested on.</p>
+          </section>
+        </aside>
       </div>
 
       {isSent && <RequestSuccessDialog onClose={() => navigate("/")} />}

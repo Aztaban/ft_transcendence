@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { Link } from "react-router";
 
 import { listProjects } from "../../api/projects";
 import type { ProjectRef } from "../../types/project";
@@ -21,6 +22,7 @@ function projectInitials(name: string) {
 
 // Project picker for "Create New Request – step 1" (Figma), filled from GET /api/v1/projects/.
 // Native radio buttons styled as tiles, so arrow keys and screen readers work.
+// "Details" sits outside the radio's label, so opening a project does not select it.
 function ProjectSelect({ value, onChange }: ProjectSelectProps) {
   const groupName = useId();
   const [projects, setProjects] = useState<ProjectRef[]>([]);
@@ -73,7 +75,7 @@ function ProjectSelect({ value, onChange }: ProjectSelectProps) {
       {loadState === "ready" && projects.length > 0 && (
         <div className="project-select__grid">
           {projects.map((project) => (
-            <label
+            <div
               className={
                 value === project.id
                   ? "project-select__tile project-select__tile--selected"
@@ -81,22 +83,31 @@ function ProjectSelect({ value, onChange }: ProjectSelectProps) {
               }
               key={project.id}
             >
-              <input
-                className="project-select__radio"
-                type="radio"
-                name={groupName}
-                value={project.id}
-                checked={value === project.id}
-                onChange={() => onChange(project.id, project)}
-              />
-              <span className="project-select__badge" aria-hidden="true">
-                {projectInitials(project.name)}
-              </span>
-              <span className="project-select__name">{project.name}</span>
-              <span className="project-select__check" aria-hidden="true">
-                ✓
-              </span>
-            </label>
+              <label className="project-select__choice">
+                <input
+                  className="project-select__radio"
+                  type="radio"
+                  name={groupName}
+                  value={project.id}
+                  checked={value === project.id}
+                  onChange={() => onChange(project.id, project)}
+                />
+                <span className="project-select__badge" aria-hidden="true">
+                  {projectInitials(project.name)}
+                </span>
+                <span className="project-select__name">{project.name}</span>
+                <span className="project-select__check" aria-hidden="true">
+                  ✓
+                </span>
+              </label>
+              <Link
+                className="project-select__details"
+                to={`/projects/${project.slug}`}
+                aria-label={`Details about ${project.name}`}
+              >
+                Details <span aria-hidden="true">→</span>
+              </Link>
+            </div>
           ))}
         </div>
       )}

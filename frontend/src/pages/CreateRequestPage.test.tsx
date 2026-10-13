@@ -56,6 +56,20 @@ describe("CreateRequestPage", () => {
     expect(getButton("Next").disabled).toBe(false);
   });
 
+  it("explains how a request works next to the form", async () => {
+    renderPage();
+    await screen.findByRole("radio", { name: "push_swap" });
+
+    const steps = screen.getAllByRole("listitem").map((item) => item.textContent);
+
+    expect(screen.getByRole("heading", { name: "How it works" })).toBeTruthy();
+    expect(steps).toEqual([
+      "Choose a projectPick the project and add a note if you like.",
+      "A Hitchhiker proposes a timeAn eligible Hitchhiker picks your request.",
+      "You confirmAccept the time, or decline it to wait for another one.",
+    ]);
+  });
+
   it("shows the chosen project on the confirmation step and can go back", async () => {
     renderPage();
     await chooseProject("push_swap");

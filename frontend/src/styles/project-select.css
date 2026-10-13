@@ -26,15 +26,13 @@
 .project-select__tile {
   position: relative;
   display: flex;
-  min-height: 104px;
+  min-height: 132px;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 14px;
+  gap: 10px;
   padding: 16px;
   border: 1px solid #d5d9d9;
   border-radius: 12px;
   background: #ffffff;
-  cursor: pointer;
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
@@ -47,7 +45,16 @@
   transform: translateY(-2px);
 }
 
-.project-select__tile:focus-within {
+.project-select__choice {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+}
+
+.project-select__tile:has(.project-select__radio:focus-visible) {
   outline: 3px solid rgba(0, 186, 188, 0.4);
   outline-offset: 2px;
 }
@@ -56,6 +63,34 @@
   border-color: var(--color-accent);
   background: #f2fbfb;
   box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.project-select__details {
+  align-self: flex-start;
+  padding: 2px 0;
+  color: var(--color-accent-dark);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.project-select__details span {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.project-select__details:hover {
+  text-decoration: underline;
+}
+
+.project-select__details:hover span {
+  transform: translateX(3px);
+}
+
+.project-select__details:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
 }
 
 .project-select__radio {
@@ -119,7 +154,7 @@
 /* States */
 
 .project-select__skeleton {
-  min-height: 104px;
+  min-height: 132px;
   border-radius: 12px;
   background: linear-gradient(90deg, #eceff0 25%, #f6f7f7 50%, #eceff0 75%);
   background-size: 200% 100%;
