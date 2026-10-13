@@ -6,6 +6,7 @@ import { createEvaluationRequest } from "../api/evaluationRequests";
 import ProjectSelect from "../features/projects/ProjectSelect";
 import InfoNotice from "../features/requests/InfoNotice";
 import RequestSuccessDialog from "../features/requests/RequestSuccessDialog";
+import MyRequests from "../features/student/MyRequests";
 import type { ProjectRef } from "../types/project";
 import "../styles/create-request.css";
 
@@ -282,6 +283,8 @@ function CreateRequestPage() {
           </section>
         </aside>
       </div>
+
+      {stepId === "project" && <MyRequests />}
 
       {isSent && <RequestSuccessDialog onClose={() => navigate("/")} />}
     </section>

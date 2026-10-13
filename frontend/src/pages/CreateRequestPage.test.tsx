@@ -9,6 +9,9 @@ import CreateRequestPage from "./CreateRequestPage";
 
 vi.mock("../api/projects", () => ({ listProjects: vi.fn() }));
 vi.mock("../api/evaluationRequests", () => ({ createEvaluationRequest: vi.fn() }));
+vi.mock("../features/student/MyRequests", () => ({
+  default: () => <section>Your requests list</section>,
+}));
 
 const projects = [
   { id: 1, slug: "born2beroot", name: "born2beroot" },
@@ -55,6 +58,17 @@ describe("CreateRequestPage", () => {
     await chooseProject("push_swap");
 
     expect(getButton("Next").disabled).toBe(false);
+  });
+
+  it("shows the student's requests only on the first step", async () => {
+    renderPage();
+    await chooseProject("push_swap");
+
+    expect(screen.getByText("Your requests list")).toBeTruthy();
+
+    fireEvent.click(getButton("Next"));
+
+    expect(screen.queryByText("Your requests list")).toBeNull();
   });
 
   it("explains how a request works next to the form", async () => {
