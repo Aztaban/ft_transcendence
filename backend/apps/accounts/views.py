@@ -13,6 +13,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Prefetch
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
@@ -37,6 +38,7 @@ from apps.accounts.models import Role
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
 from apps.accounts.serializers import (
     EligibilityRequestCreateSerializer,
+    EligibilityRequestReviewSerializer,
     EligibilityRequestSerializer,
     LoginSerializer,
     OAuth42IdentitySerializer,
@@ -355,6 +357,65 @@ def tutor_eligibility_request_list(request):
     if request.method == "POST":
         return _create_eligibility_request(request)
     return _list_eligibility_requests(request)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def tutor_eligibility_request_review(request, request_id):
+    """Approve or decline one eligibility request (api-plan §10.3, #176/#177)."""
+    if not request.user.roles.filter(name__in=_ELIGIBILITY_REQUEST_SEE_ALL).exists():
+        raise PermissionDenied(
+            _("You do not have permission to perform this action."),
+            code="permission_denied",
+        )
+
+    eligibility_request = get_object_or_404(TutorEligibilityRequest, pk=request_id)
+    if eligibility_request.requester_id == request.user.pk:
+        raise PermissionDenied(
+            _("You cannot review your own eligibility request."),
+            code="cannot_review_own_request",
+        )
+
+    serializer = EligibilityRequestReviewSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    decision = serializer.validated_data["decision"]
+    review_note = serializer.validated_data["review_note"]
+    reviewed_at = timezone.now()
+
+    with transaction.atomic():
+        updated = TutorEligibilityRequest.objects.filter(
+            pk=request_id,
+            status=TutorEligibilityRequest.Status.PENDING,
+        ).update(
+            status=decision,
+            reviewed_by=request.user,
+            reviewed_at=reviewed_at,
+            review_note=review_note,
+        )
+        if updated != 1:
+            return _error_response(
+                "eligibility_request_already_reviewed",
+                _("This eligibility request has already been reviewed."),
+                status.HTTP_409_CONFLICT,
+            )
+
+        if decision == TutorEligibilityRequest.Status.APPROVED:
+            projects = list(eligibility_request.projects.all())
+            TutorEligibility.objects.bulk_create(
+                [
+                    TutorEligibility(
+                        tutor_id=eligibility_request.requester_id,
+                        project=project,
+                        granted_by_request_id=eligibility_request.pk,
+                    )
+                    for project in projects
+                ],
+                ignore_conflicts=True,
+            )
+
+    # TODO(notifications): eligibility.decided + WS + audit eligibility.reviewed.
+    eligibility_request.refresh_from_db()
+    return Response(EligibilityRequestSerializer(eligibility_request).data)
 
 
 @api_view(["POST"])

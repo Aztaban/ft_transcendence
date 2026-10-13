@@ -182,6 +182,23 @@ class EligibilityRequestCreateSerializer(serializers.Serializer):
         return value
 
 
+class EligibilityRequestReviewSerializer(serializers.Serializer):
+    """Body for POST /tutor-eligibility-requests/{id}/review/ (api-plan §10.3)."""
+
+    decision = serializers.ChoiceField(
+        choices=(
+            TutorEligibilityRequest.Status.APPROVED,
+            TutorEligibilityRequest.Status.DECLINED,
+        )
+    )
+    review_note = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=500,
+        default="",
+    )
+
+
 class OAuth42ProfileSerializer(serializers.Serializer):
     """Validate the subset of the raw 42 `/v2/me` profile we rely on."""
 
