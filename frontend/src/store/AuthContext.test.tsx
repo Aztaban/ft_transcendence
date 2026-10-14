@@ -88,3 +88,37 @@ test("restores an OAuth session after remount and clears it after logout", async
   expect(options?.credentials).toBe("same-origin");
   expect(new Headers(options?.headers).get("X-CSRFToken")).toBe("logout-csrf");
 });
+
+function EndSessionProbe() {
+  const { user, isLoading, endSession } = useAuth();
+  if (isLoading) return <p>Loading</p>;
+  return (
+    <>
+      <p>{user ? user.display_name : "Logged out"}</p>
+      <button onClick={endSession}>End session</button>
+    </>
+  );
+}
+
+test("endSession forgets the user without calling the API", async () => {
+  const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+    new Response(
+      JSON.stringify({
+        authenticated: true,
+        user: { id: 42, email: "dkolarov@42.cz", display_name: "dkolarov" },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  );
+  render(
+    <AuthProvider>
+      <EndSessionProbe />
+    </AuthProvider>,
+  );
+  expect(await screen.findByText("dkolarov")).toBeDefined();
+
+  fireEvent.click(screen.getByRole("button", { name: "End session" }));
+
+  expect(screen.getByText("Logged out")).toBeDefined();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
