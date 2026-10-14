@@ -310,6 +310,22 @@ def test_project_filter_excludes_council_only_with_stale_eligibility(searchable_
     assert [person["id"] for person in response.json()["results"]] == [tutor.id, head.id]
 
 
+def test_project_filter_rejects_inactive_projects_with_existing_eligibility(searchable_directory):
+    client, _, _, _, _, project, _ = searchable_directory
+    Project.objects.filter(pk=project.pk).update(is_active=False)
+
+    response = client.get(reverse("api:search-people"), {"project": project.slug})
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the highlighted fields.",
+            "fields": {"project": ["Unknown project slug."]},
+        }
+    }
+
+
 def test_combined_filters_sort_and_paginate(searchable_directory):
     client, roles, tutor, head, _, project, other = searchable_directory
     tutor.roles.add(roles["head_tutor"], roles["sc_member"])

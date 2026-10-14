@@ -47,7 +47,7 @@ class PeopleSearchQuerySerializer(serializers.Serializer):
     project = serializers.SlugRelatedField(
         required=False,
         slug_field="slug",
-        queryset=Project.objects.all(),
+        queryset=Project.objects.filter(is_active=True),
         error_messages={"does_not_exist": _("Unknown project slug.")},
     )
     ordering = serializers.ChoiceField(
