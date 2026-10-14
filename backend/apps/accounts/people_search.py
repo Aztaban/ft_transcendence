@@ -136,9 +136,9 @@ class PeopleSearchView(ListAPIView):
                 Prefetch("roles", queryset=Role.objects.order_by("name")),
                 Prefetch(
                     "eligibilities",
-                    queryset=TutorEligibility.objects.select_related("project").order_by(
-                        "project__name", "project_id"
-                    ),
+                    queryset=TutorEligibility.objects.filter(project__is_active=True)
+                    .select_related("project")
+                    .order_by("project__name", "project_id"),
                     to_attr="search_eligibilities",
                 ),
             )
