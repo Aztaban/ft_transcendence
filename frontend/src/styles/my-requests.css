@@ -141,11 +141,41 @@
   animation: my-requests-shimmer 1.3s ease-in-out infinite;
 }
 
-.my-requests__empty,
-.my-requests__more {
+.my-requests__empty {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: 0.9rem;
+}
+
+.my-requests__more {
+  align-self: flex-start;
+  padding: 7px 16px;
+  border: 1px solid #c9cfcf;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #00797b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.my-requests__more:hover:enabled {
+  border-color: var(--color-accent);
+  background: #f2fbfb;
+}
+
+.my-requests__more:disabled {
+  color: #9aa1a1;
+  cursor: wait;
+}
+
+.my-requests__more:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
 }
 
 .my-requests__error {

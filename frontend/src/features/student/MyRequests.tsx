@@ -71,39 +71,101 @@ function RequestRow({ request }: { request: EvaluationRequest }) {
   );
 }
 
-// "Your requests" on the student Request page (#189): the student's own requests,
-// GET /evaluation-requests/?scope=mine (api-plan §10.4), split into active and past by
-// `is_history` (§7.1). Only the first page (20 newest, §5.7) is shown.
-// TODO: link each row to /evaluations/{id} once that page (#507) is merged.
-function MyRequests() {
+interface RequestList {
+  requests: EvaluationRequest[];
+  total: number;
+  hasMore: boolean;
+  loadState: LoadState;
+  isLoadingMore: boolean;
+  loadMore: () => void;
+}
+
+// One paginated list of the student's requests (§5.7): the first page on mount, then
+// "Show more" appends the next one.
+function useRequestList(history: boolean): RequestList {
   const [requests, setRequests] = useState<EvaluationRequest[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     let active = true;
 
-    listEvaluationRequests({ scope: "mine" })
-      .then((page) => {
+    listEvaluationRequests({ scope: "mine", history, page })
+      .then((result) => {
         if (active) {
-          setRequests(page.results);
-          setTotal(page.count);
+          setRequests((current) => (page === 1 ? result.results : [...current, ...result.results]));
+          setTotal(result.count);
+          setHasMore(result.next !== null);
           setLoadState("ready");
         }
       })
       .catch(() => {
-        if (active) {
+        if (active && page === 1) {
           setLoadState("error");
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsLoadingMore(false);
         }
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [history, page]);
 
-  const activeRequests = requests.filter((request) => !request.is_history);
-  const pastRequests = requests.filter((request) => request.is_history);
+  return {
+    requests,
+    total,
+    hasMore,
+    loadState,
+    isLoadingMore,
+    loadMore: () => {
+      setIsLoadingMore(true);
+      setPage((current) => current + 1);
+    },
+  };
+}
+
+function ShowMore({ list, label }: { list: RequestList; label: string }) {
+  if (!list.hasMore) {
+    return null;
+  }
+
+  return (
+    <button
+      className="my-requests__more"
+      type="button"
+      disabled={list.isLoadingMore}
+      onClick={list.loadMore}
+    >
+      {list.isLoadingMore
+        ? "Loading…"
+        : `Show more ${label} (${list.total - list.requests.length} left)`}
+    </button>
+  );
+}
+
+// "Your requests" on the student Request page (#189). Active and past requests are two
+// separate paginated lists, as the contract maps them (api-plan §10.4):
+// GET /evaluation-requests/?scope=mine&history=false and ?scope=mine&history=true.
+// Each is loaded on its own, so an older active request is never pushed out by newer past ones.
+// TODO: link each row to /evaluations/{id} once that page (#507) is merged.
+function MyRequests() {
+  const active = useRequestList(false);
+  const past = useRequestList(true);
+
+  const loadState: LoadState =
+    active.loadState === "error" || past.loadState === "error"
+      ? "error"
+      : active.loadState === "loading" || past.loadState === "loading"
+        ? "loading"
+        : "ready";
+  const isEmpty = active.total === 0 && past.total === 0;
 
   return (
     <section className="my-requests" aria-labelledby="my-requests-title">
@@ -124,40 +186,36 @@ function MyRequests() {
         </p>
       )}
 
-      {loadState === "ready" && requests.length === 0 && (
+      {loadState === "ready" && isEmpty && (
         <p className="my-requests__empty">You haven't requested an evaluation yet.</p>
       )}
 
-      {loadState === "ready" && requests.length > 0 && (
+      {loadState === "ready" && !isEmpty && (
         <>
           <div className="my-requests__group">
             <h3>Active</h3>
-            {activeRequests.length === 0 ? (
+            {active.requests.length === 0 ? (
               <p className="my-requests__empty">No active requests.</p>
             ) : (
               <ul className="my-requests__list">
-                {activeRequests.map((request) => (
+                {active.requests.map((request) => (
                   <RequestRow request={request} key={request.id} />
                 ))}
               </ul>
             )}
+            <ShowMore list={active} label="active requests" />
           </div>
 
-          {pastRequests.length > 0 && (
+          {past.requests.length > 0 && (
             <div className="my-requests__group">
               <h3>Past</h3>
               <ul className="my-requests__list">
-                {pastRequests.map((request) => (
+                {past.requests.map((request) => (
                   <RequestRow request={request} key={request.id} />
                 ))}
               </ul>
+              <ShowMore list={past} label="past requests" />
             </div>
-          )}
-
-          {total > requests.length && (
-            <p className="my-requests__more">
-              Showing your {requests.length} most recent requests.
-            </p>
           )}
         </>
       )}

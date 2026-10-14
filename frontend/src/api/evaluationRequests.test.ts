@@ -154,3 +154,19 @@ describe("createEvaluationRequest", () => {
     expect(options?.body).toBe(JSON.stringify({ project_id: 4 }));
   });
 });
+
+describe("listEvaluationRequests pages", () => {
+  test("sends the page number, but not page 1", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => jsonResponse(emptyPage));
+
+    await listEvaluationRequests({ scope: "mine", history: true, page: 2 });
+    await listEvaluationRequests({ scope: "mine", history: true, page: 1 });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/v1/evaluation-requests/?scope=mine&history=true&page=2",
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe("/api/v1/evaluation-requests/?scope=mine&history=true");
+  });
+});

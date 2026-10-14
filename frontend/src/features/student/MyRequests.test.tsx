@@ -1,7 +1,10 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { listEvaluationRequests } from "../../api/evaluationRequests";
+import {
+  listEvaluationRequests,
+  type ListEvaluationRequestsParams,
+} from "../../api/evaluationRequests";
 import type { EvaluationRequest } from "../../types/evaluation";
 import MyRequests from "./MyRequests";
 import { makeRequest } from "./testUtils";
@@ -13,12 +16,28 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
-function page(results: EvaluationRequest[], count = results.length) {
-  return { count, next: null, previous: null, results };
+function page(results: EvaluationRequest[], count = results.length, next: string | null = null) {
+  return { count, next, previous: null, results };
 }
 
 function pastConfirmed(id: number, name: string, result: EvaluationRequest["result"]) {
   return { ...makeRequest(id, name, "confirmed"), is_history: true, result };
+}
+
+// Answers like the API: separate lists for active (`history=false`) and past (`history=true`).
+function mockLists(
+  active: ReturnType<typeof page>,
+  past: ReturnType<typeof page> | ((pageNumber: number) => ReturnType<typeof page>),
+) {
+  vi.mocked(listEvaluationRequests).mockImplementation(
+    async (params: ListEvaluationRequestsParams = {}) => {
+      if (!params.history) {
+        return active;
+      }
+
+      return typeof past === "function" ? past(params.page ?? 1) : past;
+    },
+  );
 }
 
 function rowStatuses(groupName: string) {
@@ -33,21 +52,24 @@ function rowStatuses(groupName: string) {
 }
 
 describe("MyRequests", () => {
-  it("asks for the student's own requests", async () => {
-    vi.mocked(listEvaluationRequests).mockResolvedValue(page([]));
+  it("loads active and past requests as two separate lists", async () => {
+    mockLists(page([]), page([]));
 
     render(<MyRequests />);
 
     expect(await screen.findByText("You haven't requested an evaluation yet.")).toBeTruthy();
-    expect(listEvaluationRequests).toHaveBeenCalledWith({ scope: "mine" });
+    expect(listEvaluationRequests).toHaveBeenCalledWith({ scope: "mine", history: false, page: 1 });
+    expect(listEvaluationRequests).toHaveBeenCalledWith({ scope: "mine", history: true, page: 1 });
   });
 
-  it("splits active and past requests with their status", async () => {
-    vi.mocked(listEvaluationRequests).mockResolvedValue(
+  it("shows active and past requests with their status", async () => {
+    mockLists(
       page([
         makeRequest(1, "push_swap", "pending"),
         makeRequest(2, "minishell", "awaiting_confirmation"),
         makeRequest(3, "cpp09", "confirmed"),
+      ]),
+      page([
         pastConfirmed(4, "born2beroot", "passed"),
         pastConfirmed(5, "Fly-In", "failed"),
         pastConfirmed(6, "Codexion", null),
@@ -73,34 +95,60 @@ describe("MyRequests", () => {
     ]);
   });
 
-  it("says when there are no active requests and hides an empty past list", async () => {
-    vi.mocked(listEvaluationRequests).mockResolvedValue(
-      page([makeRequest(7, "push_swap", "cancelled")]),
+  it("keeps an older active request visible next to more than 20 newer past ones", async () => {
+    const newerPast = Array.from({ length: 20 }, (_, index) =>
+      makeRequest(100 + index, `past-${index}`, "cancelled"),
     );
+
+    mockLists(
+      page([{ ...makeRequest(1, "push_swap", "pending"), created_at: "2026-09-01T09:00:00Z" }]),
+      page(newerPast, 21, "https://localhost/api/v1/evaluation-requests/?page=2"),
+    );
+
+    render(<MyRequests />);
+    await screen.findByRole("heading", { name: "Active" });
+
+    expect(rowStatuses("Active")).toEqual([["push_swap", "Waiting for a Hitchhiker"]]);
+    expect(screen.queryByText("No active requests.")).toBeNull();
+    expect(rowStatuses("Past")).toHaveLength(20);
+  });
+
+  it("loads the next page of past requests with Show more", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) =>
+      makeRequest(100 + index, `past-${index}`, "cancelled"),
+    );
+
+    mockLists(page([]), (pageNumber) =>
+      pageNumber === 1
+        ? page(firstPage, 21, "https://localhost/api/v1/evaluation-requests/?page=2")
+        : page([makeRequest(200, "oldest", "expired")], 21),
+    );
+
+    render(<MyRequests />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Show more past requests (1 left)" }),
+    );
+
+    expect(await screen.findByRole("heading", { name: "oldest" })).toBeTruthy();
+    expect(rowStatuses("Past")).toHaveLength(21);
+    expect(listEvaluationRequests).toHaveBeenCalledWith({ scope: "mine", history: true, page: 2 });
+    expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
+  });
+
+  it("says when there are no active requests and hides an empty past list", async () => {
+    mockLists(page([]), page([makeRequest(7, "push_swap", "cancelled")]));
 
     render(<MyRequests />);
 
     expect(await screen.findByText("No active requests.")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Past" })).toBeTruthy();
 
-    vi.mocked(listEvaluationRequests).mockResolvedValue(
-      page([makeRequest(1, "push_swap", "pending")]),
-    );
     cleanup();
+    mockLists(page([makeRequest(1, "push_swap", "pending")]), page([]));
     render(<MyRequests />);
 
     await screen.findByRole("heading", { name: "Active" });
     expect(screen.queryByRole("heading", { name: "Past" })).toBeNull();
-  });
-
-  it("tells when only the newest requests are shown", async () => {
-    vi.mocked(listEvaluationRequests).mockResolvedValue(
-      page([makeRequest(1, "push_swap", "pending")], 21),
-    );
-
-    render(<MyRequests />);
-
-    expect(await screen.findByText("Showing your 1 most recent requests.")).toBeTruthy();
   });
 
   it("shows an error when the requests cannot be loaded", async () => {
