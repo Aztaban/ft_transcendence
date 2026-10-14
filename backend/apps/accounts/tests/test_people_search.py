@@ -115,6 +115,34 @@ def test_excludes_students_admin_only_and_inactive_people(directory):
     assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
 
 
+def test_inactive_projects_are_hidden_without_hiding_the_tutor(directory):
+    client, roles, _ = directory
+    alice = make_person("Alice", [roles["student"], roles["tutor"]])
+    project = Project.objects.create(slug="inactive-search-test", name="Inactive", is_active=False)
+    TutorEligibility.objects.create(tutor=alice, project=project)
+
+    response = client.get(reverse("api:search-people"))
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "id": alice.id,
+                "display_name": "Alice",
+                "avatar_url": None,
+                "roles": [
+                    {"id": roles["student"].id, "name": "student"},
+                    {"id": roles["tutor"].id, "name": "tutor"},
+                ],
+                "eligible_projects": [],
+            }
+        ],
+    }
+
+
 def test_session_authentication_allows_an_ordinary_student(directory):
     _, _, caller = directory
     client = APIClient()

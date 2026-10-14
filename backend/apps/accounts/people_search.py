@@ -1,4 +1,4 @@
-"""Core people directory (api-plan §§5.7, 5.9, 8.3 and 10.8).
+"""Core people directory.
 
 Query matching and optional role/project/ordering controls belong to the next PR.
 """
@@ -73,9 +73,9 @@ class PeopleSearchView(ListAPIView):
                 Prefetch("roles", queryset=Role.objects.order_by("name")),
                 Prefetch(
                     "eligibilities",
-                    queryset=TutorEligibility.objects.select_related("project").order_by(
-                        "project__name", "project_id"
-                    ),
+                    queryset=TutorEligibility.objects.filter(project__is_active=True)
+                    .select_related("project")
+                    .order_by("project__name", "project_id"),
                     to_attr="search_eligibilities",
                 ),
             )
