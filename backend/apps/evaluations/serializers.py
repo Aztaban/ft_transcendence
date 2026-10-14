@@ -5,6 +5,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import EvaluationRequest, Project
+from .permissions import OVERRIDE_ROLES
 
 
 class UserRefSerializer(serializers.Serializer):
@@ -32,11 +33,31 @@ class ProjectSerializer(ProjectRefSerializer):
 
 
 class EvaluationRequestSerializer(serializers.ModelSerializer):
-    student = UserRefSerializer(read_only=True)
+    student = serializers.SerializerMethodField()
     project = ProjectRefSerializer(read_only=True)
     picked_by = UserRefSerializer(read_only=True, allow_null=True)
     cancelled_by = UserRefSerializer(read_only=True, allow_null=True)
     is_history = serializers.SerializerMethodField()
+
+    @extend_schema_field(UserRefSerializer(allow_null=True))
+    def get_student(self, instance):
+        """A pending request is anonymous to Hitchhikers until one picks it (api-plan 8.7).
+
+        Only the student, the Hitchhiker in picked_by, Head Tutors and Admins see who asked
+        """
+        request = self.context.get("request")
+        if request is None:
+            return None
+        viewer_id = request.user.pk
+        if viewer_id in (instance.student_id, instance.picked_by_id) or self._sees_all_students():
+            return UserRefSerializer(instance.student).data
+        return None
+
+    def _sees_all_students(self):
+        if "sees_all_students" not in self.context:
+            user = self.context["request"].user
+            self.context["sees_all_students"] = user.roles.filter(name__in=OVERRIDE_ROLES).exists()
+        return self.context["sees_all_students"]
 
     @extend_schema_field(serializers.BooleanField())
     def get_is_history(self, instance):
@@ -86,10 +107,16 @@ class EvaluationRequestQuerySerializer(serializers.Serializer):
     status = serializers.CharField(required=False)
     history = serializers.ChoiceField(choices=("true", "false"), required=False)
     project = serializers.CharField(required=False)
+    result = serializers.CharField(required=False)
     ordering = serializers.ChoiceField(
         choices=("created_at", "-created_at", "starts_at", "-starts_at"), default="-created_at"
     )
 
     def validate_status(self, value):
         field = serializers.ChoiceField(choices=EvaluationRequest.Status.choices)
+        return [field.run_validation(item) for item in value.split(",")]
+
+    def validate_result(self, value):
+        # `none` is requests without a result (api-plan 10.4)
+        field = serializers.ChoiceField(choices=(*EvaluationRequest.Result.values, "none"))
         return [field.run_validation(item) for item in value.split(",")]

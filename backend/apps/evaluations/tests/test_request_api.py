@@ -263,6 +263,8 @@ def test_private_detail(other, project, evaluation, expected, role, eligible, al
     client.force_authenticate(other)
     response = client.get(detail_url())
     assert response.status_code == (200 if allowed else 404)
+    if role == "tutor":
+        expected["student"] = None
     assert response.json() == (
         expected if allowed else {"error": {"code": "not_found", "message": "Not found."}}
     )
@@ -406,6 +408,9 @@ def test_open_scope(other, student, project, evaluation, expected, role):
     client = APIClient()
     client.force_authenticate(other)
     response = client.get(list_url(), {"scope": "open"})
+    if role == "tutor":
+        # Head Tutors still see the student; plain Hitchhikers do not (api-plan §8.7, R15).
+        expected["student"] = None
     assert response.status_code == 200
     assert response.json() == {"count": 1, "next": None, "previous": None, "results": [expected]}
 
@@ -427,6 +432,7 @@ def test_all_scope(other, evaluation, expected, role):
         ({"status": "pending,wrong"}, "status", '"wrong" is not a valid choice.'),
         ({"history": "yes"}, "history", '"yes" is not a valid choice.'),
         ({"ordering": "note"}, "ordering", '"note" is not a valid choice.'),
+        ({"result": "passed,wrong"}, "result", '"wrong" is not a valid choice.'),
     ],
 )
 def test_filter_validation(client, params, field, message):
@@ -594,3 +600,76 @@ def test_note_conditional_update_detects_state_change(evaluation, other):
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
     assert evaluation.note == "Parsing."
+
+
+# Tests for hidden student
+def eligible_tutor(user, project):
+    grant(user, "tutor")
+    TutorEligibility.objects.create(tutor=user, project=project)
+    client = APIClient()
+    client.force_authenticate(user)
+    return client
+
+
+def test_student_is_hidden_again_when_the_request_returns_to_pending(other, project, evaluation):
+    client = eligible_tutor(other, project)
+    set_state("awaiting_confirmation", other)
+    assert client.get(detail_url()).json()["student"] == {
+        "id": 7,
+        "display_name": "Alice",
+        "avatar_url": None,
+    }
+
+    # Declined or released: the former picker is one of the eligible Hitchhikers again.
+    EvaluationRequest.objects.filter(pk=17).update(
+        status="pending", picked_by=None, starts_at=None, ends_at=None
+    )
+    assert client.get(detail_url()).json()["student"] is None
+
+
+@pytest.fixture
+def results(student, project, other, evaluation):
+    """17: passed; 18: confirmed in the past, no result yet; 19: pending."""
+    past = {
+        "status": "confirmed",
+        "picked_by": other,
+        "starts_at": NOW - timedelta(hours=2),
+        "ends_at": NOW - timedelta(hours=1),
+    }
+    EvaluationRequest.objects.filter(pk=17).update(
+        **past, result="passed", feedback="Clean code.", completed_at=NOW
+    )
+    EvaluationRequest.objects.create(id=18, student=student, project=project, **past)
+    EvaluationRequest.objects.create(id=19, student=student, project=project)
+
+
+def test_result_filter_returns_whole_requests(client, results, expected):
+    response = client.get(list_url(), {"result": "passed"})
+    expected.update(
+        status="confirmed",
+        picked_by={"id": 42, "display_name": "Bob", "avatar_url": None},
+        starts_at="2026-10-10T07:00:00Z",
+        ends_at="2026-10-10T08:00:00Z",
+        result="passed",
+        feedback="Clean code.",
+        completed_at="2026-10-10T09:00:00Z",
+        is_history=True,
+    )
+    assert response.status_code == 200
+    assert response.json() == {"count": 1, "next": None, "previous": None, "results": [expected]}
+
+
+@pytest.mark.parametrize(
+    "params,ids",
+    [
+        ({"result": "failed"}, []),
+        ({"result": "none"}, [18, 19]),
+        ({"result": "passed,none"}, [17, 18, 19]),
+        # The History page's "Result pending" filter (api-plan §10.4).
+        ({"result": "none", "status": "confirmed", "history": "true"}, [18]),
+    ],
+)
+def test_result_filter(client, results, params, ids):
+    response = client.get(list_url(), {**params, "ordering": "created_at"})
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()["results"]] == ids

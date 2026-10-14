@@ -116,6 +116,12 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
             queryset = queryset.filter(status__in=filters["status"])
         if "project" in filters:
             queryset = queryset.filter(project__slug=filters["project"])
+        if "result" in filters:
+            results = filters["result"]
+            match = Q(result__in=[result for result in results if result != "none"])
+            if "none" in results:
+                match |= Q(result__isnull=True)
+            queryset = queryset.filter(match)
         if "history" in filters:
             history = history_filter(timezone.now())
             queryset = (
