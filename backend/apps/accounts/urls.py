@@ -2,9 +2,12 @@
 
 from django.urls import path
 
+from apps.accounts.people_search import PeopleSearchView
+
 from . import views
 
 urlpatterns = [
+    path("search/people/", PeopleSearchView.as_view(), name="search-people"),
     path("users/<int:user_id>/", views.user_detail, name="users-detail"),
     path("users/<int:user_id>/roles/", views.assign_role, name="users-assign-role"),
     path(
