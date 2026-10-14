@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { ApiError } from "../api/client";
@@ -44,17 +44,65 @@ function submitErrorMessage(error: unknown) {
   return "Could not send your request. Please try again.";
 }
 
+// The chosen project and note are kept for this browser tab, so opening a project's "Details"
+// and coming back with Back does not lose them. Storage can be unavailable (private mode,
+// blocked site data), so every access is guarded and the page works without it.
+const DRAFT_KEY = "create-request-draft";
+
+interface Draft {
+  project: ProjectRef | null;
+  note: string;
+}
+
+function readDraft(): Draft {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "null") as Partial<Draft> | null;
+
+    return {
+      project: saved?.project ?? null,
+      note: typeof saved?.note === "string" ? saved.note.slice(0, NOTE_MAX_LENGTH) : "",
+    };
+  } catch {
+    return { project: null, note: "" };
+  }
+}
+
+function writeDraft(draft: Draft | null) {
+  try {
+    if (draft && (draft.project || draft.note)) {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } else {
+      sessionStorage.removeItem(DRAFT_KEY);
+    }
+  } catch {
+    // The draft is a convenience only.
+  }
+}
+
 function CreateRequestPage() {
   const navigate = useNavigate();
   const [stepId, setStepId] = useState<StepId>("project");
-  const [project, setProject] = useState<ProjectRef | null>(null);
-  const [note, setNote] = useState("");
+  const [project, setProject] = useState<ProjectRef | null>(() => readDraft().project);
+  const [note, setNote] = useState(() => readDraft().note);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isSent, setIsSent] = useState(false);
 
   const stepIndex = steps.findIndex((step) => step.id === stepId);
   const step = steps[stepIndex];
+
+  useEffect(() => {
+    if (!isSent) {
+      writeDraft({ project, note });
+    }
+  }, [project, note, isSent]);
+
+  // Going back to change the request clears the last submit error, so it never shows up
+  // under another project.
+  function goToStep(nextStepId: StepId) {
+    setSubmitError("");
+    setStepId(nextStepId);
+  }
 
   async function handleSubmit() {
     if (!project) {
@@ -70,6 +118,7 @@ function CreateRequestPage() {
       await createEvaluationRequest(
         trimmedNote ? { project_id: project.id, note: trimmedNote } : { project_id: project.id },
       );
+      writeDraft(null);
       setIsSent(true);
     } catch (error) {
       setSubmitError(submitErrorMessage(error));
@@ -86,7 +135,8 @@ function CreateRequestPage() {
             className="create-request__back"
             type="button"
             aria-label="Back to the previous step"
-            onClick={() => setStepId(steps[stepIndex - 1].id)}
+            disabled={isSubmitting}
+            onClick={() => goToStep(steps[stepIndex - 1].id)}
           >
             ‹
           </button>
@@ -182,7 +232,8 @@ function CreateRequestPage() {
                 <button
                   className="create-request__edit"
                   type="button"
-                  onClick={() => setStepId("project")}
+                  disabled={isSubmitting}
+                  onClick={() => goToStep("project")}
                 >
                   Edit
                 </button>

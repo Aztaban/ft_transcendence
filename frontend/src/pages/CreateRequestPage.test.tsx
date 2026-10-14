@@ -22,6 +22,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  sessionStorage.clear();
 });
 
 function renderPage() {
@@ -122,6 +123,73 @@ describe("CreateRequestPage", () => {
       project_id: 2,
       note: "I'm free after 18:00 on Friday.",
     });
+  });
+
+  it("disables Edit and Back while the request is being sent", async () => {
+    vi.mocked(createEvaluationRequest).mockReturnValue(new Promise(() => {}));
+    renderPage();
+    await chooseProject("push_swap");
+    fireEvent.click(getButton("Next"));
+
+    fireEvent.click(getButton("Submit"));
+
+    expect(getButton("Sending…").disabled).toBe(true);
+    expect(getButton("Edit").disabled).toBe(true);
+    expect(getButton("Back to the previous step").disabled).toBe(true);
+  });
+
+  it("does not show a previous project's error after going back to change it", async () => {
+    vi.mocked(createEvaluationRequest).mockRejectedValue(
+      new ApiError(409, "Conflict", "active_request_exists"),
+    );
+    renderPage();
+    await chooseProject("push_swap");
+    fireEvent.click(getButton("Next"));
+    fireEvent.click(getButton("Submit"));
+    await screen.findByRole("alert");
+
+    fireEvent.click(getButton("Edit"));
+    await chooseProject("born2beroot");
+    fireEvent.click(getButton("Next"));
+
+    expect(screen.getByRole("heading", { name: "born2beroot" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps the chosen project and note after leaving the page and coming back", async () => {
+    renderPage();
+    await chooseProject("push_swap");
+    fireEvent.change(screen.getByLabelText(/Note for the Hitchhiker/), {
+      target: { value: "Free on Friday." },
+    });
+
+    // Opening "Details" leaves the page; Back mounts it again.
+    cleanup();
+    renderPage();
+
+    const pushSwap = (await screen.findByRole("radio", { name: "push_swap" })) as HTMLInputElement;
+
+    expect(pushSwap.checked).toBe(true);
+    expect((screen.getByLabelText(/Note for the Hitchhiker/) as HTMLTextAreaElement).value).toBe(
+      "Free on Friday.",
+    );
+    expect(getButton("Next").disabled).toBe(false);
+  });
+
+  it("forgets the draft once the request is sent", async () => {
+    vi.mocked(createEvaluationRequest).mockResolvedValue();
+    renderPage();
+    await chooseProject("push_swap");
+    fireEvent.click(getButton("Next"));
+    fireEvent.click(getButton("Submit"));
+    await screen.findByRole("dialog");
+
+    cleanup();
+    renderPage();
+
+    const pushSwap = (await screen.findByRole("radio", { name: "push_swap" })) as HTMLInputElement;
+
+    expect(pushSwap.checked).toBe(false);
   });
 
   it("explains when the student already has an active request for the project", async () => {
