@@ -1,4 +1,4 @@
-"""Core people-search contract tests; query controls are covered in the next PR."""
+"""People-search responses, filters, sorting, pagination and permissions contract tests."""
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -211,3 +211,190 @@ def test_search_throttles_per_user(directory):
     other = make_person("Other", [])
     client.force_authenticate(other)
     assert client.get(url).status_code == 200
+
+
+@pytest.fixture
+def searchable_directory(directory):
+    client, roles, caller = directory
+    tutor = make_person("Alice", [roles["student"], roles["tutor"]], intra_login="hidden_login")
+    head = make_person("Alina", [roles["student"], roles["head_tutor"]])
+    council = make_person("Alicia", [roles["student"], roles["sc_member"]])
+    project = Project.objects.create(slug="search-test", name="Search test")
+    other = Project.objects.create(slug="other-test", name="Other test")
+    for person in (tutor, head, council):
+        TutorEligibility.objects.create(tutor=person, project=project)
+    TutorEligibility.objects.create(tutor=tutor, project=other)
+    make_person("AliceStudent", [roles["student"]])
+    make_person("AliceSuspended", [roles["tutor"]], status="suspended")
+    return client, roles, tutor, head, council, project, other
+
+
+@pytest.mark.parametrize("query", ["LiCe", "HIDDEN"])
+def test_name_and_private_login_matching(searchable_directory, query):
+    client, roles, tutor, _, _, project, other = searchable_directory
+    response = client.get(reverse("api:search-people"), {"q": query})
+    assert response.status_code == 200
+    assert response.json() == {
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "id": tutor.id,
+                "display_name": "Alice",
+                "avatar_url": None,
+                "roles": [
+                    {"id": roles["student"].id, "name": "student"},
+                    {"id": roles["tutor"].id, "name": "tutor"},
+                ],
+                "eligible_projects": [
+                    {"id": other.id, "slug": "other-test", "name": "Other test"},
+                    {"id": project.id, "slug": "search-test", "name": "Search test"},
+                ],
+            }
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    ("role", "names"),
+    [
+        ("tutor", ["Alice", "Alina"]),
+        ("head_tutor", ["Alina"]),
+        ("sc_member", ["Alicia"]),
+        ("head_tutor,sc_member", ["Alicia", "Alina"]),
+        ("tutor,head_tutor,tutor", ["Alice", "Alina"]),
+    ],
+)
+def test_role_filters_include_head_tutors_without_duplicates(searchable_directory, role, names):
+    client, *_ = searchable_directory
+    response = client.get(reverse("api:search-people"), {"role": role})
+    assert response.status_code == 200
+    assert response.json()["count"] == len(names)
+    assert [person["display_name"] for person in response.json()["results"]] == names
+
+
+def test_project_filter_excludes_council_only_with_stale_eligibility(searchable_directory):
+    client, _, tutor, head, _, _, _ = searchable_directory
+    response = client.get(reverse("api:search-people"), {"project": "search-test"})
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+    assert [person["id"] for person in response.json()["results"]] == [tutor.id, head.id]
+
+
+def test_combined_filters_sort_and_paginate(searchable_directory):
+    client, roles, tutor, head, _, project, other = searchable_directory
+    tutor.roles.add(roles["head_tutor"], roles["sc_member"])
+    url = reverse("api:search-people")
+    params = {
+        "q": "ALI",
+        "role": "tutor",
+        "project": "search-test",
+        "ordering": "-display_name",
+        "page_size": 1,
+    }
+    first = client.get(url, params)
+    assert first.status_code == 200
+    assert first.json() == {
+        "count": 2,
+        "next": (
+            f"http://testserver{url}?ordering=-display_name&page=2&page_size=1"
+            "&project=search-test&q=ALI&role=tutor"
+        ),
+        "previous": None,
+        "results": [
+            {
+                "id": head.id,
+                "display_name": "Alina",
+                "avatar_url": None,
+                "roles": [
+                    {"id": roles["head_tutor"].id, "name": "head_tutor"},
+                    {"id": roles["student"].id, "name": "student"},
+                ],
+                "eligible_projects": [
+                    {"id": project.id, "slug": "search-test", "name": "Search test"}
+                ],
+            }
+        ],
+    }
+    second = client.get(url, {**params, "page": 2})
+    assert second.status_code == 200
+    assert second.json() == {
+        "count": 2,
+        "next": None,
+        "previous": (
+            f"http://testserver{url}?ordering=-display_name&page_size=1"
+            "&project=search-test&q=ALI&role=tutor"
+        ),
+        "results": [
+            {
+                "id": tutor.id,
+                "display_name": "Alice",
+                "avatar_url": None,
+                "roles": [
+                    {"id": roles["head_tutor"].id, "name": "head_tutor"},
+                    {"id": roles["sc_member"].id, "name": "sc_member"},
+                    {"id": roles["student"].id, "name": "student"},
+                    {"id": roles["tutor"].id, "name": "tutor"},
+                ],
+                "eligible_projects": [
+                    {"id": other.id, "slug": "other-test", "name": "Other test"},
+                    {"id": project.id, "slug": "search-test", "name": "Search test"},
+                ],
+            }
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("q", "a", "Ensure this field has at least 2 characters."),
+        ("q", "a" * 65, "Ensure this field has no more than 64 characters."),
+        ("q", "", "This field may not be blank."),
+        ("role", "student", "Choose tutor, head_tutor or sc_member."),
+        ("role", "admin", "Choose tutor, head_tutor or sc_member."),
+        ("role", "tutor,unknown", "Choose tutor, head_tutor or sc_member."),
+        ("role", "tutor,", "Choose tutor, head_tutor or sc_member."),
+        ("project", "missing-project", "Unknown project slug."),
+        ("ordering", "email", '"email" is not a valid choice.'),
+    ],
+)
+def test_invalid_parameters_use_contract_envelope(directory, field, value, message):
+    client, _, _ = directory
+    response = client.get(reverse("api:search-people"), {field: value})
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the highlighted fields.",
+            "fields": {field: [message]},
+        }
+    }
+
+
+def test_no_matches_returns_empty_page(searchable_directory):
+    client, *_ = searchable_directory
+    response = client.get(reverse("api:search-people"), {"q": "no-match"})
+    assert response.status_code == 200
+    assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+
+
+def test_display_name_ties_have_stable_pagination(directory):
+    client, roles, _ = directory
+    first = make_person("Alice", [roles["tutor"]])
+    second = get_user_model().objects.create_user(
+        email="another-alice@example.com", display_name="Alice", password="secret"
+    )
+    second.roles.add(roles["tutor"])
+    url = reverse("api:search-people")
+    assert client.get(url, {"page_size": 1}).json()["results"][0]["id"] == first.id
+    assert client.get(url, {"page_size": 1, "page": 2}).json()["results"][0]["id"] == second.id
+
+
+def test_query_length_boundaries_are_accepted(directory):
+    client, _, _ = directory
+    for q in ("ab", "a" * 64):
+        response = client.get(reverse("api:search-people"), {"q": q})
+        assert response.status_code == 200
+        assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
