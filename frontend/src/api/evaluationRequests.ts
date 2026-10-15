@@ -8,6 +8,8 @@ export interface ListEvaluationRequestsParams {
   scope?: EvaluationRequestScope;
   status?: EvaluationRequestStatus[];
   history?: boolean;
+  // 1-based page number (§5.7).
+  page?: number;
 }
 
 // GET /api/v1/evaluation-requests/ (api-plan §10.4), paginated (§5.7).
@@ -26,6 +28,10 @@ export function listEvaluationRequests(
 
   if (params.history !== undefined) {
     query.set("history", String(params.history));
+  }
+
+  if (params.page && params.page > 1) {
+    query.set("page", String(params.page));
   }
 
   const search = query.toString();
@@ -72,4 +78,24 @@ export function confirmEvaluationRequest(id: number): Promise<EvaluationRequest>
 // POST …/{id}/decline/ (api-plan §10.4), no body: back to `pending`, the pick is cleared.
 export function declineEvaluationRequest(id: number): Promise<EvaluationRequest> {
   return postTransition(id, "decline");
+}
+
+export interface CreateEvaluationRequestPayload {
+  project_id: number;
+  note?: string;
+}
+
+// POST /api/v1/evaluation-requests/ (api-plan §10.4). Answers 201 with the new EvaluationRequest
+// (§8.7); the page only needs to know it succeeded, so the body is not typed here.
+// apiRequest adds the CSRF header (§5.4).
+export async function createEvaluationRequest(
+  payload: CreateEvaluationRequestPayload,
+): Promise<void> {
+  await apiRequest<unknown>("/api/v1/evaluation-requests/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 }

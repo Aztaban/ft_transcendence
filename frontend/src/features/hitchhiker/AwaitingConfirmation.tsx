@@ -30,7 +30,7 @@ function AwaitingConfirmation({ requests }: AwaitingConfirmationProps) {
             <article className="dashboard-request" key={request.id}>
               <div>
                 <h3>{request.project.name}</h3>
-                <p>Proposed to {request.student.display_name}</p>
+                <p>Proposed to {request.student?.display_name ?? "the student"}</p>
                 {request.starts_at && request.ends_at && (
                   <p>
                     <time dateTime={request.starts_at}>

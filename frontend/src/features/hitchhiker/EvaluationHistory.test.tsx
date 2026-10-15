@@ -79,4 +79,16 @@ describe("EvaluationHistory", () => {
     expect(screen.queryByText(/^With /)).toBeNull();
     expect(screen.getByText("Cancelled")).toBeTruthy();
   });
+
+  it("shows no student to a Hitchhiker when the API hides it", () => {
+    render(
+      <EvaluationHistory
+        requests={[{ ...makeRequest(1, "cpp09", "expired"), student: null }]}
+        viewer="hitchhiker"
+      />,
+    );
+
+    expect(screen.queryByText(/^With /)).toBeNull();
+    expect(screen.getByText("Expired")).toBeTruthy();
+  });
 });
