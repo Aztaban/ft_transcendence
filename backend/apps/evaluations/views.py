@@ -200,6 +200,7 @@ class EvaluationRequestPickSlotView(EvaluationRequestBaseView):
         serializer.is_valid(raise_exception=True)
         evaluation = pick_slot(
             evaluation,
+            request.user,
             serializer.validated_data["starts_at"],
             serializer.validated_data["ends_at"],
         )
