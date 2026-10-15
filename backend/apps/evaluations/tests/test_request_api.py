@@ -13,7 +13,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
 PASSWORD = "RequestPassword123!"
 
@@ -521,8 +521,15 @@ def test_pagination_and_ordering(client, student, project, evaluation, expected)
     }
 
 
+@pytest.fixture
+def student_role():
+    # A transactional test that ran before may have emptied the whole database, roles seeded by
+    # migrations included, and create_user() gives every new user the "student" role.
+    Role.objects.get_or_create(name="student")
+
+
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_creates(student, project):
+def test_concurrent_creates(student_role, student, project):
     barrier = Barrier(2)
 
     def submit(_):
