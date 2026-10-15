@@ -551,3 +551,109 @@ def test_same_student_slots_are_serialized(seeded_roles, student):
     assert sorted(responses) == [(200, None), (409, "student_unavailable")]
     assert EvaluationRequest.objects.filter(status="awaiting_confirmation").count() == 1
     assert EvaluationRequest.objects.filter(status="pending").count() == 1
+
+
+def test_hitchhiker_overlap_wins_when_both_are_busy(hitchhiker, student, evaluation):
+    fay = get_user_model().objects.create_user(
+        id=46, email="fay@example.com", display_name="Fay", password=PASSWORD
+    )
+    cara = get_user_model().objects.create_user(
+        id=8, email="cara@example.com", display_name="Cara", password=PASSWORD
+    )
+    overlap = (
+        datetime(2026, 10, 12, 15, tzinfo=timezone.utc),
+        datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc),
+    )
+    book(student, other_project(), fay, *overlap)
+    book(
+        cara,
+        Project.objects.create(id=6, slug="get_next_line", name="get_next_line"),
+        hitchhiker,
+        *overlap,
+    )
+    client = APIClient()
+    client.force_authenticate(hitchhiker)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 409
+    assert response.json() == SLOT_OVERLAPS
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+
+
+def test_eligible_head_tutor_picks(project, evaluation, expected):
+    head = get_user_model().objects.create_user(
+        id=43, email="dana@example.com", display_name="Dana", password=PASSWORD
+    )
+    grant(head, "head_tutor")
+    TutorEligibility.objects.create(tutor=head, project=project)
+    client = APIClient()
+    client.force_authenticate(head)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 200
+    expected.update(
+        status="awaiting_confirmation",
+        picked_by={"id": 43, "display_name": "Dana", "avatar_url": None},
+        starts_at=SLOT["starts_at"],
+        ends_at=SLOT["ends_at"],
+    )
+    assert response.json() == expected
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == head.pk
+
+
+@pytest.mark.parametrize("status,stamp", [("cancelled", "cancelled_at"), ("expired", "expired_at")])
+def test_closed_request_cannot_be_picked(project, evaluation, status, stamp):
+    head = get_user_model().objects.create_user(
+        id=43, email="dana@example.com", display_name="Dana", password=PASSWORD
+    )
+    grant(head, "head_tutor")
+    TutorEligibility.objects.create(tutor=head, project=project)
+    EvaluationRequest.objects.filter(pk=evaluation.pk).update(status=status, **{stamp: NOW})
+    client = APIClient()
+    client.force_authenticate(head)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 409
+    assert response.json() == NOT_PENDING
+    evaluation.refresh_from_db()
+    assert evaluation.status == status
+    assert evaluation.picked_by_id is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_one_hitchhiker_cannot_take_two_slots(seeded_roles):
+    alice = get_user_model().objects.create_user(
+        id=7, email="alice@example.com", display_name="Alice", password=PASSWORD
+    )
+    cara = get_user_model().objects.create_user(
+        id=8, email="cara@example.com", display_name="Cara", password=PASSWORD
+    )
+    bob = get_user_model().objects.create_user(
+        id=42, email="bob@example.com", display_name="Bob", password=PASSWORD
+    )
+    grant(bob, "tutor")
+    libft = Project.objects.create(id=4, slug="libft", name="Libft")
+    printf = Project.objects.create(id=5, slug="ft_printf", name="ft_printf")
+    TutorEligibility.objects.create(tutor=bob, project=libft)
+    TutorEligibility.objects.create(tutor=bob, project=printf)
+    first = EvaluationRequest.objects.create(id=17, student=alice, project=libft)
+    second = EvaluationRequest.objects.create(id=18, student=cara, project=printf)
+    barrier = Barrier(2)
+
+    def submit(request_id):
+        close_old_connections()
+        try:
+            client = APIClient()
+            client.force_authenticate(get_user_model().objects.get(pk=bob.pk))
+            barrier.wait(timeout=10)
+            response = client.post(pick_url(request_id), SLOT, format="json")
+            code = None if response.status_code == 200 else response.json()["error"]["code"]
+            return response.status_code, code
+        finally:
+            close_old_connections()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(submit, (first.pk, second.pk)))
+    assert sorted(responses) == [(200, None), (409, "slot_overlaps")]
+    assert EvaluationRequest.objects.filter(status="awaiting_confirmation").count() == 1
+    assert EvaluationRequest.objects.get(status="awaiting_confirmation").picked_by_id == bob.pk
