@@ -1,0 +1,389 @@
+.project-details {
+  display: flex;
+  max-width: 960px;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0 auto;
+  padding: 28px 16px 64px;
+}
+
+.project-details__back {
+  align-self: flex-start;
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.project-details__back:hover {
+  color: var(--color-accent-dark);
+}
+
+.project-details__back:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.4);
+  outline-offset: 2px;
+}
+
+/* Header */
+
+.project-details__header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #e3e7e7;
+  animation: project-details-rise 0.3s ease;
+}
+
+.project-details__badge {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 18px;
+  background: #e6f8f8;
+  color: var(--color-accent-dark);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.project-details__header h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.project-details__header p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+}
+
+/* Cards */
+
+.project-details__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 24px;
+}
+
+.project-details__card {
+  padding: 26px 28px;
+  border: 1px solid #e3e7e7;
+  border-top: 4px solid var(--color-accent);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+  animation: project-details-rise 0.35s ease both;
+}
+
+.project-details__card h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.project-details__info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+}
+
+.project-details__info div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f2f2;
+}
+
+.project-details__info div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.project-details__info dt {
+  color: var(--color-text-secondary);
+}
+
+.project-details__info dd {
+  margin: 0;
+  color: #111111;
+  text-align: right;
+}
+
+.project-details__empty {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed #c9cfcf;
+  border-radius: 12px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* States */
+
+.project-details__skeleton {
+  height: 320px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #eceff0 25%, #f6f7f7 50%, #eceff0 75%);
+  background-size: 200% 100%;
+  animation: project-details-shimmer 1.3s ease-in-out infinite;
+}
+
+.project-details__error {
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+@keyframes project-details-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes project-details-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .project-details__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-details__header h1 {
+    font-size: 1.7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-details * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Overview layout (Figma "Upcoming Evaluation Details") */
+
+.project-details__overview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.project-details__card--chart {
+  border-top-color: #8a6cd1;
+}
+
+.project-details__card--tested {
+  border-top-color: #f5a524;
+  animation-delay: 0.04s;
+}
+
+.project-details__tested {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-details__tested li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #2c3333;
+}
+
+.project-details__tested li::before {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff4dc;
+  color: #8a5a00;
+  content: "✓";
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.project-details__subject {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 18px;
+  color: var(--color-accent-dark);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.project-details__subject:hover {
+  text-decoration: underline;
+}
+
+/* Topics chart */
+
+.topics-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+}
+
+.topics-chart figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.topics-chart figcaption strong {
+  font-family: "Courier New", monospace;
+  font-size: 2rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.topics-chart figcaption span {
+  color: var(--color-text-secondary);
+  font-family: "Courier New", monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topics-chart__svg {
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+}
+
+/* Slices pop in one after another, then their labels fade in. */
+.topics-chart__wedge {
+  transform-box: view-box;
+  transform-origin: 320px 220px;
+  animation: topics-chart-pop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation-delay: calc(var(--i) * 80ms);
+  transition: transform 0.25s ease;
+}
+
+.topics-chart__wedge path:first-child {
+  stroke: #111111;
+  stroke-width: 1.5;
+  transition: filter 0.2s ease;
+}
+
+.topics-chart__icon {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.topics-chart__caption {
+  animation: topics-chart-fade 0.4s ease both;
+  animation-delay: calc(0.35s + var(--i) * 80ms);
+}
+
+.topics-chart__caption line {
+  stroke: #111111;
+  stroke-width: 1.2;
+}
+
+/* On hover a slice slides out from the center. */
+.topics-chart__slice:hover .topics-chart__wedge {
+  transform: translate(var(--dx), var(--dy));
+}
+
+.topics-chart__slice:hover .topics-chart__wedge path:first-child {
+  filter: brightness(0.95);
+}
+
+.topics-chart__label {
+  fill: #111111;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.topics-chart__share {
+  fill: #4d5555;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+
+.topics-chart__outline {
+  fill: none;
+  stroke: #111111;
+  stroke-width: 2;
+}
+
+@keyframes topics-chart-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-12deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes topics-chart-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topics-chart__wedge,
+  .topics-chart__caption {
+    animation: none;
+    transition: none;
+  }
+
+  .topics-chart__slice:hover .topics-chart__wedge {
+    transform: none;
+  }
+}
+
+/* The list repeats the topics for screen readers only; the chart shows them visually. */
+.topics-chart__list {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
