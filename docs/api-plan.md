@@ -280,7 +280,7 @@ Decline goes back from `awaiting_confirmation`; release goes back from `awaiting
 | cancel | `POST …/{id}/cancel/` | `pending`, `awaiting_confirmation`, `confirmed` | `cancelled` | Own student, or override | Before `starts_at`; an override any time, unless a result is recorded |
 | expire | Celery job | `pending` (14 days old), `awaiting_confirmation` (`starts_at` passed) | `expired` | System | |
 
-Decline, release, cancel and expire clear `picked_by`, `starts_at` and `ends_at`.
+Decline, release and expire clear `picked_by`, `starts_at` and `ends_at`. Cancel keeps them, so a cancelled evaluation stays in the Hitchhiker's history too.
 
 **Rules:**
 
@@ -415,7 +415,7 @@ Returned by the admin user endpoints only. `Me` plus:
 | project | ProjectRef | |
 | note | string | Up to 500 chars. Empty string when none. |
 | status | `pending`, `awaiting_confirmation`, `confirmed`, `cancelled`, `expired` | |
-| picked_by | UserRef or null | Set only in `awaiting_confirmation` and `confirmed`. |
+| picked_by | UserRef or null | Set in `awaiting_confirmation` and `confirmed`, and kept on a `cancelled` request that had been picked. |
 | starts_at | datetime or null | Same as `picked_by`. |
 | ends_at | datetime or null | Same as `picked_by`. |
 | cancelled_by | UserRef or null | |
@@ -844,7 +844,7 @@ How the pages map: a student's Requests page is `scope=mine&history=false`; a Hi
 
 **Cancel.** `POST …/{id}/cancel/`. The student sends no body; an override sends `{"reason": "..."}`.
 
-- 200 with `status: "cancelled"`, `cancelled_by` and `cancelled_at` set. 409 `evaluation_already_started` for the student once `starts_at` has passed. An override can cancel at any time, except a request whose result is recorded (409 `invalid_state_transition`).
+- 200 with `status: "cancelled"`, `cancelled_by` and `cancelled_at` set; `picked_by`, `starts_at` and `ends_at` are kept. 409 `evaluation_already_started` for the student once `starts_at` has passed. An override can cancel at any time, except a request whose result is recorded (409 `invalid_state_transition`).
 - Notification and event `evaluation.cancelled`. Overrides also write audit `evaluation.cancelled_by_override`.
 
 ### 10.5 Notifications

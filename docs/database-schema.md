@@ -186,7 +186,7 @@ Check constraints (`Meta.constraints`, one `CheckConstraint` each):
 | Name | Rule |
 | --- | --- |
 | `eval_req_pick_consistent` | `picked_by_id`, `starts_at` and `ends_at` are all NULL or all NOT NULL. |
-| `eval_req_pick_matches_status` | Picked fields are NOT NULL exactly when `status` is `awaiting_confirmation` or `confirmed`. A cancelled or expired request keeps no pick. |
+| `eval_req_pick_matches_status` | Picked fields are NOT NULL when `status` is `awaiting_confirmation` or `confirmed`, and NULL when it is `pending` or `expired`. A `cancelled` request keeps its pick if it had one. |
 | `eval_req_slot_order` | `ends_at > starts_at` when both are set. |
 | `eval_req_cancel_consistent` | `cancelled_at` is NOT NULL exactly when `status = 'cancelled'`. |
 | `eval_req_expire_consistent` | `expired_at` is NOT NULL exactly when `status = 'expired'`. |
@@ -194,7 +194,7 @@ Check constraints (`Meta.constraints`, one `CheckConstraint` each):
 
 A student may have at most one active request per project (api-plan §7.1). MySQL cannot express this as an index, so the create endpoint enforces it in code: it locks the student's `user` row with `select_for_update()` and checks for an active request inside the same transaction.
 
-When a pick is cleared (decline, release, cancel, expire), `picked_by_id`, `starts_at` and `ends_at` are reset to NULL. The fact that a Hitchhiker once picked a request is recorded in the notification and audit trail, not on the row.
+Decline, release and expire clear the pick: `picked_by_id`, `starts_at` and `ends_at` are reset to NULL, because the request goes back to the queue or ends unpicked. Cancel keeps the pick, so a cancelled evaluation stays in the history of both the student and the Hitchhiker (`scope=picked`).
 
 Indexes:
 

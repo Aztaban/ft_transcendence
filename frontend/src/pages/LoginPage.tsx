@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 import logo42 from "../assets/figma/42.svg";
 import { ApiError } from "../api/client";
@@ -32,13 +32,21 @@ function getOAuthErrorMessage(code: string | null) {
   return OAUTH_ERROR_MESSAGES[code] ?? "42 login failed. Please try again.";
 }
 
+// Set by RegisterPage after a successful registration (#522).
+interface LoginLocationState {
+  registeredEmail?: string;
+}
+
 function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const registeredEmail = (location.state as LoginLocationState | null)?.registeredEmail;
   const [searchParams, setSearchParams] = useSearchParams();
   const { login } = useAuth();
 
   const [error, setError] = useState(() => getOAuthErrorMessage(searchParams.get("oauth")));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showRegistered, setShowRegistered] = useState(Boolean(registeredEmail));
 
   // Drop ?oauth= once the message is in state so a reload does not show it again.
   useEffect(() => {
@@ -57,6 +65,7 @@ function LoginPage() {
     const password = String(form.get("password") ?? "");
 
     setError("");
+    setShowRegistered(false);
     setIsSubmitting(true);
 
     try {
@@ -93,6 +102,7 @@ function LoginPage() {
             placeholder="Email"
             aria-label="Email"
             autoComplete="email"
+            defaultValue={registeredEmail}
             required
           />
 
@@ -105,6 +115,15 @@ function LoginPage() {
             autoComplete="current-password"
             required
           />
+
+          {showRegistered && (
+            <p
+              className="registration-form__message registration-form__message--success"
+              role="status"
+            >
+              Account created. You can log in now.
+            </p>
+          )}
 
           {error && (
             <p

@@ -21,6 +21,8 @@ FT_OAUTH_CLIENT_SECRET = os.getenv("FT_OAUTH_CLIENT_SECRET", "")
 FT_OAUTH_REDIRECT_URI = os.getenv("FT_OAUTH_REDIRECT_URI", "")
 
 INSTALLED_APPS = [
+    # Daphne's ASGI runserver must take precedence over staticfiles' command.
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -123,6 +125,18 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "apps.core.exceptions.envelope_exception_handler",
+    # Rate limits (api-plan §5.9). Anonymous callers of the default limit are
+    # counted per IP. Exceeding a limit gives 429 `throttled` with Retry-After.
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "user": "1000/hour",
+        "auth": "10/minute",
+    },
+    # Nginx is the one proxy in front of Django: the client IP is the last
+    # X-Forwarded-For entry, so a forged header cannot pick its own IP.
+    "NUM_PROXIES": 1,
 }
 
 SPECTACULAR_SETTINGS = {
@@ -131,6 +145,20 @@ SPECTACULAR_SETTINGS = {
 }
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [REDIS_URL]},
+    }
+}
+
+# Shared by every backend process, so rate limit counters are not per process.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+    }
+}
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True

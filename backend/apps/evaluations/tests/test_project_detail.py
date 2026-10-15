@@ -8,7 +8,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import Role
 from apps.evaluations.models import Project, TutorEligibility
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
 
 
 @pytest.fixture

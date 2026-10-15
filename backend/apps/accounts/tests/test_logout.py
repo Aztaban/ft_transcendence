@@ -1,11 +1,17 @@
 """CSRF-protected logout tests against the disposable MySQL test database."""
 
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
 from django.contrib.auth import SESSION_KEY, get_user_model
 from django.contrib.sessions.models import Session
+from django.db import transaction
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
+
+from apps.accounts.models import Role
 
 pytestmark = pytest.mark.django_db
 PASSWORD = "LogoutTestPassword123!"
@@ -139,3 +145,57 @@ def test_logout_is_post_only():
 
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
     assert client.get(reverse("api:session"), HTTP_HOST="localhost").status_code == 200
+
+
+@pytest.fixture
+def group_send(monkeypatch):
+    send = AsyncMock()
+    monkeypatch.setattr(
+        "apps.accounts.views.get_channel_layer", lambda: SimpleNamespace(group_send=send)
+    )
+    return send
+
+
+def test_logout_schedules_session_event_only_after_commit(
+    group_send, django_capture_on_commit_callbacks
+):
+    client = logged_in_client(create_user())
+    key = client.cookies["sessionid"].value
+    with django_capture_on_commit_callbacks() as callbacks:
+        assert post_logout(client).status_code == 204
+        group_send.assert_not_awaited()
+        assert not Session.objects.filter(session_key=key).exists()
+    assert len(callbacks) == 1
+    callbacks[0]()
+    group_send.assert_awaited_once_with(f"session_{key}", {"type": "session.ended", "data": {}})
+
+
+@pytest.mark.django_db(transaction=True)
+def test_rolled_back_logout_does_not_publish_event(group_send):
+    Role.objects.get_or_create(name=Role.Name.STUDENT)
+    client = logged_in_client(create_user())
+    key = client.cookies["sessionid"].value
+    with pytest.raises(RuntimeError, match="Roll back logout"):
+        with transaction.atomic():
+            assert post_logout(client).status_code == 204
+            assert not Session.objects.filter(session_key=key).exists()
+            group_send.assert_not_awaited()
+            raise RuntimeError("Roll back logout")
+    assert Session.objects.filter(session_key=key).exists()
+    group_send.assert_not_awaited()
+
+
+def test_anonymous_logout_does_not_schedule_event(group_send, django_capture_on_commit_callbacks):
+    client = csrf_client()
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        assert post_logout(client).status_code == 204
+    assert callbacks == []
+    group_send.assert_not_awaited()
+
+
+def test_csrf_rejection_does_not_schedule_event(group_send, django_capture_on_commit_callbacks):
+    client = logged_in_client(create_user())
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        assert post_logout(client, csrf=False).status_code == 403
+    assert callbacks == []
+    group_send.assert_not_awaited()

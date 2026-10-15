@@ -7,6 +7,8 @@ from urllib.parse import urlencode
 from urllib.request import Request as URLRequest
 from urllib.request import urlopen
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.db import IntegrityError, transaction
@@ -18,7 +20,12 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
@@ -41,6 +48,7 @@ from apps.accounts.serializers import (
     RoleAssignSerializer,
     TutorEligibleProjectSerializer,
 )
+from apps.core.throttling import AuthRateThrottle
 
 User = get_user_model()
 
@@ -104,6 +112,7 @@ def _has_unique_email_error(serializer):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def register(request):
     """Create a user account without authenticating the new user."""
     serializer = RegistrationSerializer(data=request.data)
@@ -138,6 +147,7 @@ class LoginView(APIView):
 
     authentication_classes = [SessionAuthentication]
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -195,7 +205,15 @@ class LogoutView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        logout(request)
+        with transaction.atomic():
+            session_key = request.session.session_key
+            logout(request)
+            if session_key:
+                transaction.on_commit(
+                    lambda: async_to_sync(get_channel_layer().group_send)(
+                        f"session_{session_key}", {"type": "session.ended", "data": {}}
+                    )
+                )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

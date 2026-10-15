@@ -4,7 +4,13 @@ import historyIcon from "../assets/figma/history.svg";
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import pendingIcon from "../assets/figma/pending.svg";
 import requestIcon from "../assets/figma/request.svg";
+import AwaitingConfirmation from "../features/hitchhiker/AwaitingConfirmation";
+import EvaluationHistory from "../features/hitchhiker/EvaluationHistory";
+import OpenRequestQueue from "../features/hitchhiker/OpenRequestQueue";
+import ScheduledEvaluations from "../features/hitchhiker/ScheduledEvaluations";
+import { useHitchhikerRequests } from "../features/hitchhiker/useHitchhikerRequests";
 import OpenRequests from "../features/student/OpenRequests";
+import { useStudentRequests } from "../features/student/useStudentRequests";
 import { useRole, type AppRole } from "../store/RoleContext";
 import "../styles/dashboard.css";
 
@@ -70,6 +76,46 @@ const studentDashboard: DashboardDefinition = {
   actionAriaLabel: "Create new request",
 };
 
+const hitchhikerDashboard: DashboardDefinition = {
+  greeting: "Welcome Back",
+  overview: [
+    {
+      value: "—",
+      label: "Open requests",
+      icon: requestIcon,
+      tone: "turquoise",
+    },
+    {
+      value: "—",
+      label: "Awaiting confirmation",
+      icon: pendingIcon,
+      tone: "blue",
+    },
+    {
+      value: "—",
+      label: "Evaluations done",
+      icon: historyIcon,
+      tone: "mint",
+    },
+    {
+      value: "Hitchhiker",
+      label: "Workspace",
+      icon: hitchhikersIcon,
+      tone: "yellow",
+    },
+  ],
+  emptyTitle: "Upcoming Evaluations",
+  emptyStateTitle: "Nothing scheduled yet",
+  emptyStateText: "Evaluations you pick and students confirm will appear here.",
+  historyTitle: "History",
+  ctaTitle: "READY TO EVALUATE?",
+  ctaText: "Browse open requests for your projects and pick a time slot.",
+  ctaLabel: "Open Requests",
+  ctaTo: "/requests",
+  actionSymbol: "→",
+  actionAriaLabel: "Browse open requests",
+};
+
 const councilDashboard: DashboardDefinition = {
   greeting: "Welcome Back",
   overview: [
@@ -112,9 +158,46 @@ const councilDashboard: DashboardDefinition = {
 
 const dashboards: Record<AppRole, DashboardDefinition> = {
   STUDENT: studentDashboard,
-  HITCHHIKER: studentDashboard,
+  HITCHHIKER: hitchhikerDashboard,
   COUNCIL: councilDashboard,
 };
+
+// The student's request boxes, filled from the API (#507).
+function StudentRequestSections() {
+  const { requests, hasError } = useStudentRequests();
+
+  return (
+    <>
+      {hasError && (
+        <p className="dashboard__load-error" role="alert">
+          Could not load your requests. Please try again later.
+        </p>
+      )}
+      <OpenRequests requests={requests} />
+      <ScheduledEvaluations requests={requests} viewer="student" />
+      <EvaluationHistory requests={requests} viewer="student" />
+    </>
+  );
+}
+
+// The Hitchhiker's boxes, filled from the API: the open queue and the picked requests (#61).
+function HitchhikerRequestSections() {
+  const { openRequests, pickedRequests, hasError } = useHitchhikerRequests();
+
+  return (
+    <>
+      {hasError && (
+        <p className="dashboard__load-error" role="alert">
+          Could not load your requests. Please try again later.
+        </p>
+      )}
+      <OpenRequestQueue requests={openRequests} />
+      <AwaitingConfirmation requests={pickedRequests} />
+      <ScheduledEvaluations requests={pickedRequests} viewer="hitchhiker" />
+      <EvaluationHistory requests={pickedRequests} viewer="hitchhiker" />
+    </>
+  );
+}
 
 function HomePage() {
   const { activeRole } = useRole();
@@ -149,9 +232,9 @@ function HomePage() {
       </section>
 
       <div className="dashboard__columns">
-        {activeRole === "STUDENT" ? (
-          <OpenRequests requests={[]} />
-        ) : (
+        {activeRole === "STUDENT" && <StudentRequestSections />}
+        {activeRole === "HITCHHIKER" && <HitchhikerRequestSections />}
+        {activeRole === "COUNCIL" && (
           <section className="dashboard__section">
             <h2>{dashboard.emptyTitle}</h2>
 
@@ -169,15 +252,17 @@ function HomePage() {
           </section>
         )}
 
-        <section className="dashboard__section">
-          <h2>{dashboard.historyTitle}</h2>
+        {activeRole === "COUNCIL" && (
+          <section className="dashboard__section">
+            <h2>{dashboard.historyTitle}</h2>
 
-          <div className="dashboard-empty">
-            <div className="dashboard-empty__history-mark">—</div>
-            <h3>No history yet</h3>
-            <p>Your recent activity will appear here.</p>
-          </div>
-        </section>
+            <div className="dashboard-empty">
+              <div className="dashboard-empty__history-mark">—</div>
+              <h3>No history yet</h3>
+              <p>Your recent activity will appear here.</p>
+            </div>
+          </section>
+        )}
       </div>
 
       <section className="dashboard-cta">
