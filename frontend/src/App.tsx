@@ -8,6 +8,7 @@ import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import PickSlotPage from "./pages/PickSlotPage";
 import ProfilePage from "./pages/ProfilePage";
+import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 import RegisterPage from "./pages/RegisterPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import { routePermissions } from "./utils/permissions";
@@ -42,6 +43,7 @@ function AuthenticatedApp() {
             </RoleGuard>
           }
         />
+        <Route path="/projects/:slug" element={<ProjectDetailsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BaseLayout>
