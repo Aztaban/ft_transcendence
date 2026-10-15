@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router";
 
 import { AuthProvider } from "./store/AuthContext";
+import { CurrentUserProvider } from "./store/CurrentUserContext";
 import App from "./App";
 import { RoleProvider } from "./store/RoleContext";
 import { LiveProvider } from "./websocket/LiveProvider";
@@ -15,9 +16,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <AuthProvider>
         <LiveProvider>
-          <RoleProvider>
-            <App />
-          </RoleProvider>
+          <CurrentUserProvider>
+            <RoleProvider>
+              <App />
+            </RoleProvider>
+          </CurrentUserProvider>
         </LiveProvider>
       </AuthProvider>
     </BrowserRouter>
