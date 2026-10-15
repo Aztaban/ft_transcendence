@@ -2,9 +2,8 @@
 
 from django.urls import path
 
-from apps.accounts.people_search import PeopleSearchView
-
 from . import views
+from .people_search import PeopleSearchView
 
 urlpatterns = [
     path("search/people/", PeopleSearchView.as_view(), name="search-people"),
