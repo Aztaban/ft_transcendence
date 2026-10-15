@@ -32,7 +32,10 @@ function EvaluationHistory({ requests, viewer }: EvaluationHistoryProps) {
   const history = requests.filter((request) => request.is_history);
 
   return (
-    <section className="dashboard__section" aria-labelledby="evaluation-history-title">
+    <section
+      className="dashboard__section dashboard__section--violet"
+      aria-labelledby="evaluation-history-title"
+    >
       <h2 id="evaluation-history-title">History</h2>
 
       {history.length === 0 ? (

@@ -7,6 +7,9 @@ import { RoleProvider, useRole, type AppRole } from "../store/RoleContext";
 import HomePage from "./HomePage";
 
 // The student boxes load data from the API; that is tested in OpenRequests and the hook itself.
+vi.mock("../features/hitchhiker/useHitchhikerRequests", () => ({
+  useHitchhikerRequests: () => ({ openRequests: [], pickedRequests: [], hasError: false }),
+}));
 vi.mock("../features/student/useStudentRequests", () => ({
   useStudentRequests: () => ({ requests: [], hasError: false, reload: vi.fn() }),
 }));
@@ -52,7 +55,24 @@ describe("HomePage", () => {
     expect(screen.getByText("Hitchhiker")).toBeTruthy();
     expect(screen.getByText("Open requests")).toBeTruthy();
     expect(screen.getByText("Awaiting confirmation")).toBeTruthy();
-    expect(screen.getByText("Open Requests").closest("a")?.getAttribute("href")).toBe("/requests");
+    expect(screen.getByText("Open Requests", { selector: "a" }).getAttribute("href")).toBe(
+      "/requests",
+    );
     expect(screen.queryByText("NEED AN EVALUATION?")).toBeNull();
+  });
+
+  it("shows the four Hitchhiker sections instead of the placeholders", () => {
+    renderHomeAs("HITCHHIKER");
+
+    for (const title of [
+      "Open Requests",
+      "Awaiting Confirmation",
+      "Upcoming Evaluations",
+      "History",
+    ]) {
+      expect(screen.getByRole("heading", { level: 2, name: title })).toBeTruthy();
+    }
+    expect(screen.queryByText("No history yet")).toBeTruthy();
+    expect(screen.queryByText("Your recent activity will appear here.")).toBeNull();
   });
 });
