@@ -10,7 +10,9 @@ export type EvaluationResult = "passed" | "failed";
 
 export interface EvaluationRequest {
   id: number;
-  student: UserRef;
+  // null for anyone except the student, the Hitchhiker in `picked_by`, Head Tutors and Admins:
+  // a `pending` request is anonymous to eligible Hitchhikers (R15).
+  student: UserRef | null;
   project: ProjectRef;
   note: string;
   status: EvaluationRequestStatus;
