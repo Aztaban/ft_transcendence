@@ -1,4 +1,3 @@
-import { ensureCsrfToken } from "./auth";
 import { apiRequest } from "./client";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
 import type { Paginated } from "../types/pagination";
@@ -47,14 +46,12 @@ export interface PickSlotPayload {
 }
 
 // POST /api/v1/evaluation-requests/{id}/pick-slot/ (api-plan §10.4); slot rules in §7.1.
-export async function pickSlot(id: number, payload: PickSlotPayload): Promise<EvaluationRequest> {
-  const csrfToken = await ensureCsrfToken();
-
+// apiRequest adds the CSRF header (§5.4).
+export function pickSlot(id: number, payload: PickSlotPayload): Promise<EvaluationRequest> {
   return apiRequest<EvaluationRequest>(`/api/v1/evaluation-requests/${id}/pick-slot/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-CSRFToken": csrfToken,
     },
     body: JSON.stringify(payload),
   });

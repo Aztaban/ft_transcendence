@@ -3,6 +3,8 @@ import { formatSlot } from "../../utils/dateTime";
 
 interface EvaluationHistoryProps {
   requests: EvaluationRequest[];
+  // Who is looking: a student sees the Hitchhiker, a Hitchhiker sees the student.
+  viewer: "student" | "hitchhiker";
 }
 
 // Results are entered manually by the team in the Django admin; until then `result` is null.
@@ -26,7 +28,7 @@ function outcomeLabel(request: EvaluationRequest) {
   return "Result pending";
 }
 
-function EvaluationHistory({ requests }: EvaluationHistoryProps) {
+function EvaluationHistory({ requests, viewer }: EvaluationHistoryProps) {
   const history = requests.filter((request) => request.is_history);
 
   return (
@@ -43,23 +45,27 @@ function EvaluationHistory({ requests }: EvaluationHistoryProps) {
         </div>
       ) : (
         <div className="dashboard-requests">
-          {history.map((request) => (
-            <article className="dashboard-request" key={request.id}>
-              <div>
-                <h3>{request.project.name}</h3>
-                <p>With {request.student.display_name}</p>
-                {request.starts_at && request.ends_at && (
-                  <p>
-                    <time dateTime={request.starts_at}>
-                      {formatSlot(request.starts_at, request.ends_at)}
-                    </time>
-                  </p>
-                )}
-              </div>
+          {history.map((request) => {
+            const otherPerson = viewer === "student" ? request.picked_by : request.student;
 
-              <span className="dashboard-request__status">{outcomeLabel(request)}</span>
-            </article>
-          ))}
+            return (
+              <article className="dashboard-request" key={request.id}>
+                <div>
+                  <h3>{request.project.name}</h3>
+                  {otherPerson && <p>With {otherPerson.display_name}</p>}
+                  {request.starts_at && request.ends_at && (
+                    <p>
+                      <time dateTime={request.starts_at}>
+                        {formatSlot(request.starts_at, request.ends_at)}
+                      </time>
+                    </p>
+                  )}
+                </div>
+
+                <span className="dashboard-request__status">{outcomeLabel(request)}</span>
+              </article>
+            );
+          })}
         </div>
       )}
     </section>

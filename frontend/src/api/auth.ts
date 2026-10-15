@@ -41,40 +41,11 @@ export interface LoginResponse extends AuthUser {
 export type SessionResponse =
   { authenticated: true; user: AuthUser } | { authenticated: false; user: null };
 
-function getCookie(name: string): string | null {
-  const prefix = `${name}=`;
-
-  for (const cookie of document.cookie.split(";")) {
-    const trimmed = cookie.trim();
-
-    if (trimmed.startsWith(prefix)) {
-      return decodeURIComponent(trimmed.slice(prefix.length));
-    }
-  }
-
-  return null;
-}
-
-export async function ensureCsrfToken(): Promise<string> {
-  await apiRequest<{ status: string; version: string }>("/api/v1/");
-
-  const csrfToken = getCookie("csrftoken");
-
-  if (!csrfToken) {
-    throw new Error("CSRF token is unavailable.");
-  }
-
-  return csrfToken;
-}
-
-export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
-  const csrfToken = await ensureCsrfToken();
-
+export function loginUser(payload: LoginPayload): Promise<LoginResponse> {
   return apiRequest<LoginResponse>("/api/v1/auth/login/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-CSRFToken": csrfToken,
     },
     body: JSON.stringify(payload),
   });
@@ -85,12 +56,7 @@ export function getSession(): Promise<SessionResponse> {
 }
 
 export async function logoutUser(): Promise<void> {
-  const csrfToken = await ensureCsrfToken();
-
   await apiRequest<void>("/api/v1/auth/logout/", {
     method: "POST",
-    headers: {
-      "X-CSRFToken": csrfToken,
-    },
   });
 }

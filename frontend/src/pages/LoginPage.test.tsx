@@ -21,7 +21,7 @@ function mockFetch() {
   return vi.spyOn(globalThis, "fetch");
 }
 
-function renderLoginPage(initialEntry = "/login") {
+function renderLoginPage(initialEntry: string | { pathname: string; state: unknown } = "/login") {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <AuthProvider>
@@ -215,5 +215,27 @@ describe("LoginPage", () => {
     expect(screen.getByRole("alert").textContent).toBe(
       "42 login was denied. Please authorize access to continue.",
     );
+  });
+
+  test("welcomes a newly registered user and fills in their email", async () => {
+    mockAnonymousSession(mockFetch());
+
+    renderLoginPage({ pathname: "/login", state: { registeredEmail: "diana@test.com" } });
+
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "Account created. You can log in now.",
+    );
+    expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("diana@test.com");
+  });
+
+  test("shows no welcome message when not coming from the registration", async () => {
+    mockAnonymousSession(mockFetch());
+
+    renderLoginPage();
+
+    await screen.findByRole("button", { name: "LOGIN" });
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("");
   });
 });
