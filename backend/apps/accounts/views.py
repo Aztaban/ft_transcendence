@@ -18,6 +18,8 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import (
@@ -38,6 +40,7 @@ from apps.accounts.models import Role
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
 from apps.accounts.serializers import (
     EligibilityRequestCreateSerializer,
+    EligibilityRequestPageSerializer,
     EligibilityRequestReviewSerializer,
     EligibilityRequestSerializer,
     LoginSerializer,
@@ -87,6 +90,10 @@ class MeView(APIView):
     authentication_classes = [SessionAuthentication]
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Return the authenticated user's profile",
+        responses={200: ProfileSerializer},
+    )
     def get(self, request: Request):
         """Return the authenticated user's profile (GET /api/v1/users/me/)."""
         if not request.user.is_authenticated:
@@ -94,6 +101,11 @@ class MeView(APIView):
 
         return Response(ProfileSerializer(request.user).data)
 
+    @extend_schema(
+        summary="Update the current user's display name or language",
+        request=ProfileUpdateSerializer,
+        responses={204: None},
+    )
     def patch(self, request: Request):
         """Update the current user's display name or language"""
         if not request.user.is_authenticated:
@@ -214,6 +226,7 @@ class LogoutView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(summary="Return a user's public profile", responses={200: PublicProfileSerializer})
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def user_detail(request, user_id):
@@ -223,15 +236,10 @@ def user_detail(request, user_id):
     return Response(PublicProfileSerializer(target).data)
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def project_list(request):
-    """Return active projects as ProjectRef[], sorted by name (api-plan §10.3)."""
-    _ = request
-    projects = Project.objects.filter(is_active=True).order_by("name")
-    return Response(TutorEligibleProjectSerializer(projects, many=True).data)
-
-
+@extend_schema(
+    summary="List projects a Hitchhiker is eligible to evaluate",
+    responses={200: TutorEligibleProjectSerializer(many=True)},
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def tutor_eligibility(request, user_id):
@@ -350,6 +358,46 @@ def _create_eligibility_request(request):
     )
 
 
+@extend_schema(
+    methods=["GET"],
+    summary="List eligibility requests",
+    parameters=[
+        OpenApiParameter(
+            name="status",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="Comma-separated statuses: pending, approved, declined.",
+        ),
+        OpenApiParameter(
+            name="ordering",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            enum=["created_at", "-created_at"],
+            description="Default is created_at.",
+        ),
+        OpenApiParameter(
+            name="page",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+        ),
+        OpenApiParameter(
+            name="page_size",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+        ),
+    ],
+    responses={200: EligibilityRequestPageSerializer},
+)
+@extend_schema(
+    methods=["POST"],
+    summary="Submit an eligibility request",
+    request=EligibilityRequestCreateSerializer,
+    responses={201: EligibilityRequestSerializer},
+)
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def tutor_eligibility_request_list(request):
@@ -359,6 +407,11 @@ def tutor_eligibility_request_list(request):
     return _list_eligibility_requests(request)
 
 
+@extend_schema(
+    summary="Approve or decline an eligibility request",
+    request=EligibilityRequestReviewSerializer,
+    responses={200: EligibilityRequestSerializer},
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def tutor_eligibility_request_review(request, request_id):
@@ -418,6 +471,11 @@ def tutor_eligibility_request_review(request, request_id):
     return Response(EligibilityRequestSerializer(eligibility_request).data)
 
 
+@extend_schema(
+    summary="Assign a role",
+    request=RoleAssignSerializer,
+    responses={200: RoleAssignmentResultSerializer},
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, CanAssignRoles])
 def assign_role(request, user_id):

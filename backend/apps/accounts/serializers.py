@@ -38,6 +38,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_avatar_url(self, obj):
         return None
 
@@ -105,6 +106,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
         fields = ("id", "display_name", "avatar_url", "roles")
         read_only_fields = fields
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_avatar_url(self, obj):
         return None
 
@@ -161,6 +163,15 @@ class EligibilityRequestSerializer(serializers.ModelSerializer):
     def get_projects(self, obj):
         projects = sorted(obj.projects.all(), key=lambda project: project.name)
         return TutorEligibleProjectSerializer(projects, many=True).data
+
+
+class EligibilityRequestPageSerializer(serializers.Serializer):
+    """Paginated eligibility-request list (api-plan §5.7 wrapping §8.9)."""
+
+    count = serializers.IntegerField()
+    next = serializers.CharField(allow_null=True)
+    previous = serializers.CharField(allow_null=True)
+    results = EligibilityRequestSerializer(many=True)
 
 
 class EligibilityRequestCreateSerializer(serializers.Serializer):

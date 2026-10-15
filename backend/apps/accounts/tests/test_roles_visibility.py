@@ -236,33 +236,6 @@ def test_head_tutor_cannot_revoke_role(api_client, make_user):
     assert target.has_role(Role.Name.TUTOR) is True
 
 
-def test_project_list_requires_authentication(api_client):
-    response = api_client.get(reverse("api:projects-list"))
-
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {
-        "error": {"code": "not_authenticated", "message": "Authentication required."}
-    }
-
-
-def test_project_list_returns_active_projects_sorted_by_name(api_client, make_user):
-    viewer = make_user("viewer@example.com", roles=(Role.Name.STUDENT,))
-    # Isolate from projects seeded by migration 0003_seed_projects.
-    Project.objects.filter(is_active=True).update(is_active=False)
-    zebra = Project.objects.create(slug="zebra_eval", name="Zebra")
-    libft = Project.objects.create(slug="libft", name="Libft")
-    Project.objects.create(slug="old_proj", name="Old", is_active=False)
-
-    api_client.force_authenticate(user=viewer)
-    response = api_client.get(reverse("api:projects-list"))
-
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == [
-        {"id": libft.id, "slug": "libft", "name": "Libft"},
-        {"id": zebra.id, "slug": "zebra_eval", "name": "Zebra"},
-    ]
-
-
 def test_tutor_eligibility_requires_authentication(api_client, make_user):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
 
