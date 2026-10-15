@@ -56,3 +56,20 @@ export function pickSlot(id: number, payload: PickSlotPayload): Promise<Evaluati
     body: JSON.stringify(payload),
   });
 }
+
+// Shared by the student's transitions, which take no body. apiRequest adds the CSRF header (§5.4).
+function postTransition(id: number, action: "confirm" | "decline"): Promise<EvaluationRequest> {
+  return apiRequest<EvaluationRequest>(`/api/v1/evaluation-requests/${id}/${action}/`, {
+    method: "POST",
+  });
+}
+
+// POST …/{id}/confirm/ (api-plan §10.4), no body: the student accepts the proposed slot.
+export function confirmEvaluationRequest(id: number): Promise<EvaluationRequest> {
+  return postTransition(id, "confirm");
+}
+
+// POST …/{id}/decline/ (api-plan §10.4), no body: back to `pending`, the pick is cleared.
+export function declineEvaluationRequest(id: number): Promise<EvaluationRequest> {
+  return postTransition(id, "decline");
+}

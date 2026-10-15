@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
 
@@ -56,6 +58,19 @@ function OpenRequests({ requests }: OpenRequestsProps) {
               <span className="dashboard-request__status">
                 {needsConfirmation(request) ? "Needs your confirmation" : "Pending"}
               </span>
+
+              {/* The student answers on /evaluations/{id}, the page the notification opens (§8.8). */}
+              {needsConfirmation(request) && (
+                <div className="dashboard-request__actions">
+                  <Link
+                    className="dashboard-request__review"
+                    to={`/evaluations/${request.id}`}
+                    aria-label={`Review the ${request.project.name} proposal`}
+                  >
+                    Review proposal <span aria-hidden="true">→</span>
+                  </Link>
+                </div>
+              )}
             </article>
           ))}
         </div>

@@ -1,10 +1,15 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { useEffect } from "react";
 import { MemoryRouter } from "react-router";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RoleProvider, useRole, type AppRole } from "../store/RoleContext";
 import HomePage from "./HomePage";
+
+// The student boxes load data from the API; that is tested in OpenRequests and the hook itself.
+vi.mock("../features/student/useStudentRequests", () => ({
+  useStudentRequests: () => ({ requests: [], hasError: false, reload: vi.fn() }),
+}));
 
 afterEach(() => {
   cleanup();
