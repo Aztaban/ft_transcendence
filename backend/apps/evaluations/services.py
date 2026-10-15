@@ -35,6 +35,12 @@ class CannotPickOwnRequest(APIException):
     default_detail = _("You cannot pick your own request.")
 
 
+class RequestNotPending(APIException):
+    status_code = 409
+    default_code = "request_not_pending"
+    default_detail = _("This request is no longer pending.")
+
+
 def history_filter(at):
     return Q(status__in=(EvaluationRequest.Status.CANCELLED, EvaluationRequest.Status.EXPIRED)) | Q(
         status=EvaluationRequest.Status.CONFIRMED, ends_at__lt=at
@@ -70,13 +76,12 @@ def edit_note(evaluation, validated_data):
 
 
 def pick_slot(evaluation, user, starts_at, ends_at):
-    """Accept a proposed slot from an eligible Hitchhiker (api-plan §7.1, §10.4).
+    """Claim a pending request for an eligible Hitchhiker (api-plan §7.1, §10.4).
 
-    A single winner (#192), the row locks (#193) and the move to
-    awaiting_confirmation (#194) are the next steps. Until they land, an
-    allowed call leaves the request unchanged.
+    The conditional update is the single winner (schema §4.2). A pending row
+    cannot store a pick, so the same statement moves it to awaiting_confirmation
+    (#194). Row locks around overlap checks are #193.
     """
-    _ = (starts_at, ends_at)
     is_hitchhiker = user.roles.filter(name__in=HITCHHIKER_ROLES).exists()
     if is_hitchhiker and evaluation.student_id == user.pk:
         raise CannotPickOwnRequest()
@@ -85,4 +90,18 @@ def pick_slot(evaluation, user, starts_at, ends_at):
     ).exists()
     if not is_hitchhiker or not eligible:
         raise NotEligible()
+    updated = EvaluationRequest.objects.filter(
+        pk=evaluation.pk,
+        status=EvaluationRequest.Status.PENDING,
+        picked_by__isnull=True,
+    ).update(
+        status=EvaluationRequest.Status.AWAITING_CONFIRMATION,
+        picked_by=user,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        updated_at=timezone.now(),
+    )
+    if updated != 1:
+        raise RequestNotPending()
+    evaluation.refresh_from_db()
     return evaluation

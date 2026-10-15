@@ -1,13 +1,16 @@
-"""POST /evaluation-requests/{id}/pick-slot/ (issues #190 and #191).
+"""POST /evaluation-requests/{id}/pick-slot/ (issues #190, #191 and #192).
 
-The route accepts a slot from an eligible Hitchhiker and returns the request.
-A single winner, the row locks and the move to awaiting_confirmation come next.
+An eligible Hitchhiker claims a pending request. Exactly one concurrent pick
+wins; the request moves to awaiting_confirmation with that pick stored.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from threading import Barrier
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.db import close_old_connections
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -18,6 +21,12 @@ pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_cata
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
 PASSWORD = "RequestPassword123!"
 SLOT = {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T15:45:00Z"}
+NOT_PENDING = {
+    "error": {
+        "code": "request_not_pending",
+        "message": "This request is no longer pending.",
+    }
+}
 
 
 def pick_url(pk=17):
@@ -75,6 +84,16 @@ def grant(user, role):
     user.roles.add(Role.objects.get(name=role))
 
 
+def claim(expected):
+    expected.update(
+        status="awaiting_confirmation",
+        picked_by={"id": 42, "display_name": "Bob", "avatar_url": None},
+        starts_at=SLOT["starts_at"],
+        ends_at=SLOT["ends_at"],
+    )
+    return expected
+
+
 @pytest.fixture
 def hitchhiker(project):
     user = get_user_model().objects.create_user(
@@ -117,13 +136,12 @@ def test_pick_slot_real_session(hitchhiker, evaluation, expected):
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
     )
     assert response.status_code == 200
-    expected["student"] = None
-    assert response.json() == expected
+    assert response.json() == claim(expected)
     evaluation.refresh_from_db()
-    assert evaluation.status == "pending"
-    assert evaluation.picked_by_id is None
-    assert evaluation.starts_at is None
-    assert evaluation.ends_at is None
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == hitchhiker.pk
+    assert evaluation.starts_at == datetime(2026, 10, 12, 15, tzinfo=timezone.utc)
+    assert evaluation.ends_at == datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc)
 
 
 def test_csrf_required(student, evaluation):
@@ -206,11 +224,10 @@ def test_eligible_hitchhiker_can_call_the_endpoint(hitchhiker, evaluation, expec
     client.force_authenticate(hitchhiker)
     response = client.post(pick_url(), SLOT, format="json")
     assert response.status_code == 200
-    expected["student"] = None
-    assert response.json() == expected
+    assert response.json() == claim(expected)
     evaluation.refresh_from_db()
-    assert evaluation.status == "pending"
-    assert evaluation.picked_by_id is None
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == hitchhiker.pk
 
 
 def test_student_is_not_eligible(student, evaluation):
@@ -277,3 +294,90 @@ def test_eligibility_for_another_project_hides_the_request(evaluation):
     assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
     evaluation.refresh_from_db()
     assert evaluation.status == "pending"
+
+
+def test_second_pick_is_rejected(hitchhiker, evaluation):
+    client = APIClient()
+    client.force_authenticate(hitchhiker)
+    assert client.post(pick_url(), SLOT, format="json").status_code == 200
+    response = client.post(
+        pick_url(),
+        {"starts_at": "2026-10-13T15:00:00Z", "ends_at": "2026-10-13T16:00:00Z"},
+        format="json",
+    )
+    assert response.status_code == 409
+    assert response.json() == NOT_PENDING
+    evaluation.refresh_from_db()
+    assert evaluation.picked_by_id == hitchhiker.pk
+    assert evaluation.starts_at == datetime(2026, 10, 12, 15, tzinfo=timezone.utc)
+
+
+def test_head_tutor_cannot_take_a_picked_request(hitchhiker, project, evaluation):
+    client = APIClient()
+    client.force_authenticate(hitchhiker)
+    assert client.post(pick_url(), SLOT, format="json").status_code == 200
+    head = get_user_model().objects.create_user(
+        id=43, email="dana@example.com", display_name="Dana", password=PASSWORD
+    )
+    grant(head, "head_tutor")
+    TutorEligibility.objects.create(tutor=head, project=project)
+    client.force_authenticate(head)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 409
+    assert response.json() == NOT_PENDING
+    evaluation.refresh_from_db()
+    assert evaluation.picked_by_id == hitchhiker.pk
+
+
+def test_other_hitchhiker_cannot_see_a_picked_request(hitchhiker, project, evaluation):
+    client = APIClient()
+    client.force_authenticate(hitchhiker)
+    assert client.post(pick_url(), SLOT, format="json").status_code == 200
+    other = get_user_model().objects.create_user(
+        id=46, email="fay@example.com", display_name="Fay", password=PASSWORD
+    )
+    grant(other, "tutor")
+    TutorEligibility.objects.create(tutor=other, project=project)
+    client.force_authenticate(other)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 404
+    assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
+    evaluation.refresh_from_db()
+    assert evaluation.picked_by_id == hitchhiker.pk
+
+
+@pytest.fixture
+def seeded_roles():
+    for name in ("student", "tutor"):
+        Role.objects.get_or_create(name=name)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_only_one_hitchhiker_wins(seeded_roles, student, project, evaluation):
+    contenders = []
+    for pk, email, name in ((42, "bob@example.com", "Bob"), (46, "fay@example.com", "Fay")):
+        user = get_user_model().objects.create_user(
+            id=pk, email=email, display_name=name, password=PASSWORD
+        )
+        grant(user, "tutor")
+        TutorEligibility.objects.create(tutor=user, project=project)
+        contenders.append(pk)
+    barrier = Barrier(2)
+
+    def submit(user_id):
+        close_old_connections()
+        try:
+            client = APIClient()
+            client.force_authenticate(get_user_model().objects.get(pk=user_id))
+            barrier.wait(timeout=10)
+            response = client.post(pick_url(), SLOT, format="json")
+            return response.status_code
+        finally:
+            close_old_connections()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(submit, contenders))
+    assert sorted(responses) == [200, 409]
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id in set(contenders)
