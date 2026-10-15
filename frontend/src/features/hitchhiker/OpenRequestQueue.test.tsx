@@ -30,6 +30,14 @@ describe("OpenRequestQueue", () => {
     expect(screen.getAllByText("Open")).toHaveLength(2);
   });
 
+  it("keeps the student anonymous while the request is pending (R15)", () => {
+    render(
+      <OpenRequestQueue requests={[{ ...makeRequest(1, "libft", "pending"), student: null }]} />,
+    );
+
+    expect(screen.getByText(/^Anonymous student · Requested /)).toBeTruthy();
+  });
+
   it("does not display requests that are no longer open", () => {
     const requests = [
       makeRequest(1, "awaiting-project", "awaiting_confirmation"),

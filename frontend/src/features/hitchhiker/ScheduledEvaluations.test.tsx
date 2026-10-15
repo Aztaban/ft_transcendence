@@ -33,6 +33,18 @@ describe("ScheduledEvaluations", () => {
     expect(screen.getByText("With Student")).toBeTruthy();
   });
 
+  it("shows no student to a Hitchhiker when the API hides it", () => {
+    render(
+      <ScheduledEvaluations
+        requests={[{ ...makeRequest(1, "minishell", "confirmed"), student: null }]}
+        viewer="hitchhiker"
+      />,
+    );
+
+    expect(screen.getByText("minishell")).toBeTruthy();
+    expect(screen.queryByText(/^With /)).toBeNull();
+  });
+
   it("does not display open, awaiting, cancelled, expired or past evaluations", () => {
     const requests = [
       makeRequest(1, "pending-project", "pending"),
