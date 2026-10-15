@@ -8,6 +8,8 @@ export interface ListEvaluationRequestsParams {
   scope?: EvaluationRequestScope;
   status?: EvaluationRequestStatus[];
   history?: boolean;
+  // 1-based page number (§5.7).
+  page?: number;
 }
 
 // GET /api/v1/evaluation-requests/ (api-plan §10.4), paginated (§5.7).
@@ -26,6 +28,10 @@ export function listEvaluationRequests(
 
   if (params.history !== undefined) {
     query.set("history", String(params.history));
+  }
+
+  if (params.page && params.page > 1) {
+    query.set("page", String(params.page));
   }
 
   const search = query.toString();
