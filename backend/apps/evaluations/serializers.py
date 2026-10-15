@@ -102,6 +102,13 @@ class EvaluationRequestNoteSerializer(serializers.Serializer):
     note = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
 
+class EvaluationRequestPickSlotSerializer(serializers.Serializer):
+    """Body of POST /evaluation-requests/{id}/pick-slot/ (api-plan §10.4)."""
+
+    starts_at = serializers.DateTimeField()
+    ends_at = serializers.DateTimeField()
+
+
 class EvaluationRequestQuerySerializer(serializers.Serializer):
     scope = serializers.ChoiceField(choices=("mine", "open", "picked", "all"), default="mine")
     status = serializers.CharField(required=False)

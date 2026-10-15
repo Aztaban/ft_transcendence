@@ -1,4 +1,4 @@
-"""Creation and note editing concurrency rules."""
+"""Creation, note editing and slot picking."""
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -53,4 +53,15 @@ def edit_note(evaluation, validated_data):
         raise InvalidStateTransition()
     evaluation.refresh_from_db()
     # evaluation.updated dispatch is deferred to the WebSocket infrastructure task.
+    return evaluation
+
+
+def pick_slot(evaluation, starts_at, ends_at):
+    """Accept a proposed slot for a request the caller is allowed to see.
+
+    Eligibility (#191), a single winner (#192), the row locks (#193) and the
+    move to awaiting_confirmation (#194) are the next steps. Until they land,
+    the request is left unchanged.
+    """
+    _ = (starts_at, ends_at)
     return evaluation
