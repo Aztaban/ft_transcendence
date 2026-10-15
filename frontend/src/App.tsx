@@ -6,6 +6,7 @@ import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import PickSlotPage from "./pages/PickSlotPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
@@ -25,6 +26,14 @@ function AuthenticatedApp() {
           }
         />
         <Route path="/evaluations/:id" element={<EvaluationPage />} />
+        <Route
+          path="/requests/:id"
+          element={
+            <RoleGuard allowedRoles={["HITCHHIKER"]} fallback={<UnauthorizedPage />}>
+              <PickSlotPage />
+            </RoleGuard>
+          }
+        />
         <Route
           path="/profile"
           element={

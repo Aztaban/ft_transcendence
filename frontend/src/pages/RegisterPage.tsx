@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router";
 
 import { registerUser } from "../api/auth";
 import { ApiError } from "../api/client";
@@ -14,9 +15,9 @@ import {
 import "../styles/registration.css";
 
 function RegisterPage() {
+  const navigate = useNavigate();
   const [errors, setErrors] = useState<RegistrationFieldErrors>({});
   const [formError, setFormError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -35,7 +36,6 @@ function RegisterPage() {
 
     setErrors(validationErrors);
     setFormError("");
-    setSuccessMessage("");
 
     if (Object.keys(validationErrors).length > 0) {
       return;
@@ -44,11 +44,10 @@ function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await registerUser(values);
+      await registerUser(values);
 
-      setErrors({});
-      setSuccessMessage(response.message);
-      form.reset();
+      // Registration does not start a session (api-plan §10.1), so the user logs in next (#522).
+      navigate("/login", { state: { registeredEmail: values.email } });
     } catch (error) {
       if (error instanceof ApiError) {
         const backendErrors: RegistrationFieldErrors = {
@@ -126,15 +125,6 @@ function RegisterPage() {
               role="alert"
             >
               {formError}
-            </p>
-          )}
-
-          {successMessage && (
-            <p
-              className="registration-form__message registration-form__message--success"
-              role="status"
-            >
-              {successMessage}
             </p>
           )}
 

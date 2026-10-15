@@ -5,6 +5,7 @@ import {
   declineEvaluationRequest,
   getEvaluationRequest,
   listEvaluationRequests,
+  pickSlot,
 } from "./evaluationRequests";
 
 afterEach(() => {
@@ -44,6 +45,34 @@ describe("listEvaluationRequests", () => {
     await listEvaluationRequests();
 
     expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/evaluation-requests/");
+  });
+});
+
+describe("pickSlot", () => {
+  afterEach(() => {
+    document.cookie = "csrftoken=; Max-Age=0; path=/";
+  });
+
+  test("posts the slot with the CSRF token", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    fetchMock.mockImplementationOnce(async () => {
+      document.cookie = "csrftoken=test-csrf-token; path=/";
+
+      return jsonResponse({ status: "ok", version: "v1" });
+    });
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 7, status: "awaiting_confirmation" }));
+
+    const slot = { starts_at: "2026-10-13T08:15:00.000Z", ends_at: "2026-10-13T09:00:00.000Z" };
+
+    await pickSlot(7, slot);
+
+    const [path, options] = fetchMock.mock.calls[1];
+
+    expect(path).toBe("/api/v1/evaluation-requests/7/pick-slot/");
+    expect(options?.method).toBe("POST");
+    expect(new Headers(options?.headers).get("X-CSRFToken")).toBe("test-csrf-token");
+    expect(options?.body).toBe(JSON.stringify(slot));
   });
 });
 

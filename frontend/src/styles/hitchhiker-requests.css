@@ -223,26 +223,30 @@
 }
 
 .hitchhiker-requests__review {
+  display: inline-grid;
   min-width: 120px;
   min-height: 42px;
   padding: 0 22px;
+  place-items: center;
   border: 1px solid #111111;
   border-radius: 8px;
   background: #ffffff;
   color: #111111;
-  cursor: pointer;
-  font: inherit;
+  font-size: 1rem;
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
-.hitchhiker-requests__review:disabled {
-  border-color: #c9cfcf;
-  color: #9aa1a1;
-  cursor: not-allowed;
+.hitchhiker-requests__review:hover {
+  background: #111111;
+  color: #ffffff;
 }
 
-.hitchhiker-requests__hint {
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
+.hitchhiker-requests__review:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.4);
+  outline-offset: 2px;
 }
 
 .hitchhiker-requests__chip:focus-visible,
