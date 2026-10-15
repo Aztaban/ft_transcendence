@@ -1,0 +1,78 @@
+.connection-status {
+  display: flex;
+  align-items: center;
+}
+
+.connection-status__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 18px;
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: connection-status-in 0.25s ease;
+}
+
+.connection-status__pill--lost {
+  border-color: #f5d27a;
+  background: #fff4dc;
+  color: #8a5a00;
+}
+
+.connection-status__pill--back {
+  border-color: #b9e6c9;
+  background: #e7f6ec;
+  color: #1c7c3c;
+}
+
+.connection-status__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(138, 90, 0, 0.25);
+  border-top-color: #8a5a00;
+  border-radius: 50%;
+  animation: connection-status-spin 0.8s linear infinite;
+}
+
+.connection-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+}
+
+@keyframes connection-status-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes connection-status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .connection-status__pill {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-status__pill,
+  .connection-status__spinner {
+    animation: none;
+  }
+}

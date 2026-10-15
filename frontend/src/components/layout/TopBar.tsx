@@ -2,6 +2,7 @@ import searchIcon from "../../assets/figma/search.svg";
 import bellIcon from "../../assets/figma/bell.svg";
 import avatarImage from "../../assets/figma/avatar.png";
 import userChevron from "../../assets/figma/user-chevron.svg";
+import ConnectionStatus from "./ConnectionStatus";
 
 function TopBar() {
   return (
@@ -13,6 +14,8 @@ function TopBar() {
       </label>
 
       <div className="topbar__user">
+        <ConnectionStatus />
+
         <button className="topbar__notification" type="button" aria-label="Notifications">
           <img src={bellIcon} alt="" aria-hidden="true" />
           <span className="topbar__notification-dot" />
