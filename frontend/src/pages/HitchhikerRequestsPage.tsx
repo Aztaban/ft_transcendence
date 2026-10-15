@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 
 import { listEvaluationRequests } from "../api/evaluationRequests";
 import type { EvaluationRequest } from "../types/evaluation";
@@ -199,19 +200,14 @@ function HitchhikerRequestsPage() {
                     {request.note || "No note from the student."}
                   </p>
 
-                  {/* TODO: opens the slot-picking flow once POST …/pick-slot/ exists (#32, #190). */}
                   <div className="hitchhiker-requests__action">
-                    <button
+                    <Link
                       className="hitchhiker-requests__review"
-                      type="button"
-                      disabled
-                      aria-describedby={`review-hint-${request.id}`}
+                      to={`/requests/${request.id}`}
+                      aria-label={`Review the ${request.project.name} request`}
                     >
                       Review
-                    </button>
-                    <span className="hitchhiker-requests__hint" id={`review-hint-${request.id}`}>
-                      Slot picking coming soon
-                    </span>
+                    </Link>
                   </div>
                 </li>
               ))}
