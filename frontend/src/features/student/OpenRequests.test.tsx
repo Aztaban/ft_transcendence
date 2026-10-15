@@ -1,4 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
 
 import OpenRequests from "./OpenRequests";
@@ -8,9 +10,13 @@ afterEach(() => {
   cleanup();
 });
 
+function renderWithRouter(element: ReactElement) {
+  return render(<MemoryRouter>{element}</MemoryRouter>);
+}
+
 describe("OpenRequests", () => {
   it("shows the empty state when there are no open requests", () => {
-    render(<OpenRequests requests={[]} />);
+    renderWithRouter(<OpenRequests requests={[]} />);
 
     expect(screen.getByText("No open requests")).toBeTruthy();
   });
@@ -21,7 +27,7 @@ describe("OpenRequests", () => {
       makeRequest(2, "webserv", "awaiting_confirmation"),
     ];
 
-    render(<OpenRequests requests={requests} />);
+    renderWithRouter(<OpenRequests requests={requests} />);
 
     expect(screen.getByText("ft_transcendence")).toBeTruthy();
     expect(screen.getByText("webserv")).toBeTruthy();
@@ -36,7 +42,7 @@ describe("OpenRequests", () => {
       makeRequest(3, "expired-project", "expired"),
     ];
 
-    render(<OpenRequests requests={requests} />);
+    renderWithRouter(<OpenRequests requests={requests} />);
 
     expect(screen.queryByText("confirmed-project")).toBeNull();
     expect(screen.queryByText("cancelled-project")).toBeNull();
@@ -50,7 +56,7 @@ describe("OpenRequests", () => {
       makeRequest(2, "webserv", "awaiting_confirmation"),
     ];
 
-    render(<OpenRequests requests={requests} />);
+    renderWithRouter(<OpenRequests requests={requests} />);
 
     const awaitingCard = screen.getByText("webserv").closest("article");
     const pendingCard = screen.getByText("ft_transcendence").closest("article");
@@ -69,10 +75,26 @@ describe("OpenRequests", () => {
       makeRequest(2, "webserv", "awaiting_confirmation"),
     ];
 
-    render(<OpenRequests requests={requests} />);
+    renderWithRouter(<OpenRequests requests={requests} />);
 
     const titles = screen.getAllByRole("heading", { level: 3 }).map((title) => title.textContent);
 
     expect(titles).toEqual(["webserv", "ft_transcendence"]);
+  });
+
+  it("links requests awaiting confirmation to the evaluation page", () => {
+    renderWithRouter(
+      <OpenRequests
+        requests={[
+          makeRequest(1, "libft", "pending"),
+          makeRequest(2, "webserv", "awaiting_confirmation"),
+        ]}
+      />,
+    );
+
+    const review = screen.getByRole("link", { name: "Review the webserv proposal" });
+
+    expect(review.getAttribute("href")).toBe("/evaluations/2");
+    expect(screen.queryByRole("link", { name: "Review the libft proposal" })).toBeNull();
   });
 });

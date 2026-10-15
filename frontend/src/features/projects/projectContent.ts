@@ -1,6 +1,7 @@
 // Descriptive content for the project page (Figma "Upcoming Evaluation Details").
 // It is not part of the API: `Project` only has id, slug, name and eligible_tutors (api-plan §8.6).
-// TODO: the team decides whether this moves to the backend; until then, add or fix projects here.
+// The team decided to keep it in the frontend, since topics almost never change (IT Architect,
+// 2026-10-14); add or fix projects here.
 // Projects without an entry show "Topics for this project haven't been added yet."
 
 export interface ProjectContent {

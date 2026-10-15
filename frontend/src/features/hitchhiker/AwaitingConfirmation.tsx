@@ -10,7 +10,10 @@ function AwaitingConfirmation({ requests }: AwaitingConfirmationProps) {
   const awaitingRequests = requests.filter((request) => request.status === "awaiting_confirmation");
 
   return (
-    <section className="dashboard__section" aria-labelledby="awaiting-confirmation-title">
+    <section
+      className="dashboard__section dashboard__section--amber"
+      aria-labelledby="awaiting-confirmation-title"
+    >
       <h2 id="awaiting-confirmation-title">Awaiting Confirmation</h2>
 
       {awaitingRequests.length === 0 ? (
