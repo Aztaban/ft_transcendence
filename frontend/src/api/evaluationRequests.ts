@@ -34,3 +34,25 @@ export function listEvaluationRequests(
     `/api/v1/evaluation-requests/${search ? `?${search}` : ""}`,
   );
 }
+
+// GET /api/v1/evaluation-requests/{id}/ (api-plan §10.4). 404 when the caller may not see it.
+export function getEvaluationRequest(id: number): Promise<EvaluationRequest> {
+  return apiRequest<EvaluationRequest>(`/api/v1/evaluation-requests/${id}/`);
+}
+
+export interface PickSlotPayload {
+  starts_at: string;
+  ends_at: string;
+}
+
+// POST /api/v1/evaluation-requests/{id}/pick-slot/ (api-plan §10.4); slot rules in §7.1.
+// apiRequest adds the CSRF header (§5.4).
+export function pickSlot(id: number, payload: PickSlotPayload): Promise<EvaluationRequest> {
+  return apiRequest<EvaluationRequest>(`/api/v1/evaluation-requests/${id}/pick-slot/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
