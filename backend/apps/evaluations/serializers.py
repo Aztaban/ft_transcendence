@@ -122,6 +122,12 @@ class EvaluationRequestPickSlotSerializer(serializers.Serializer):
     starts_at = TimezoneRequiredDateTimeField()
     ends_at = TimezoneRequiredDateTimeField()
 
+    def validate(self, attrs):
+        # schema §4.1 eval_req_slot_order: a stored slot must end after it starts.
+        if attrs["ends_at"] <= attrs["starts_at"]:
+            raise serializers.ValidationError({"ends_at": _("End time must be after start time.")})
+        return attrs
+
 
 class EvaluationRequestQuerySerializer(serializers.Serializer):
     scope = serializers.ChoiceField(choices=("mine", "open", "picked", "all"), default="mine")
