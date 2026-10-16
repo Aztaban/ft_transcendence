@@ -120,6 +120,19 @@ describe("HistoryPage", () => {
     expect(within(cardOf("Fly-In")).getByText(/^Requested on /)).toBeTruthy();
   });
 
+  it("shows no student to a Hitchhiker when the API hides it (R15)", async () => {
+    vi.mocked(listEvaluationRequests).mockResolvedValue(
+      page([{ ...makeRequest(5, "Fly-In", "expired"), student: null }]),
+    );
+
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "switch" }));
+    await screen.findByText("The evaluations you picked in the past.");
+
+    expect(within(cardOf("Fly-In")).queryByText(/^Student: /)).toBeNull();
+    expect(within(cardOf("Fly-In")).getByText("Expired")).toBeTruthy();
+  });
+
   it("filters by status and project, going back to page 1", async () => {
     vi.mocked(listEvaluationRequests).mockResolvedValue(page([past(1, "push_swap")]));
 

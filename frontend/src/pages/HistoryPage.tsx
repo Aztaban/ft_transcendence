@@ -59,7 +59,8 @@ function otherPerson(request: EvaluationRequest, viewer: Viewer) {
     return request.picked_by ? `Hitchhiker: ${request.picked_by.display_name}` : null;
   }
 
-  return `Student: ${request.student.display_name}`;
+  // `student` can be null when the API hides it (R15, api-plan §8.7).
+  return request.student ? `Student: ${request.student.display_name}` : null;
 }
 
 // What happened and when, e.g. "Cancelled by dkolarov on 12 Oct 2026".
