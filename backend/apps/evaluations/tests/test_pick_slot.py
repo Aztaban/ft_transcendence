@@ -153,6 +153,14 @@ def test_csrf_required(student, evaluation):
                 ]
             },
         ),
+        (
+            {"starts_at": "2026-10-12T15:00:00", "ends_at": "2026-10-12T15:45:00Z"},
+            {"starts_at": ["Datetime must include a timezone (Z or an offset)."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T15:45:00"},
+            {"ends_at": ["Datetime must include a timezone (Z or an offset)."]},
+        ),
     ],
 )
 def test_pick_slot_validation(student, evaluation, payload, fields):
