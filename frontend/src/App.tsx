@@ -1,7 +1,9 @@
 import { Route, Routes } from "react-router";
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
+import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
 import CreateRequestPage from "./pages/CreateRequestPage";
+import EligibilityRequestPage from "./pages/EligibilityRequestPage";
 import EvaluationPage from "./pages/EvaluationPage";
 import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
@@ -63,6 +65,17 @@ function AuthenticatedApp() {
           }
         />
         <Route
+          path="/eligibility-requests/new"
+          element={
+            <RoleGuard
+              allowedRoles={routePermissions.eligibilityRequest}
+              fallback={<UnauthorizedPage />}
+            >
+              <EligibilityRequestPage />
+            </RoleGuard>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <RoleGuard allowedRoles={routePermissions.profile} fallback={<UnauthorizedPage />}>
@@ -73,6 +86,7 @@ function AuthenticatedApp() {
         <Route path="/projects/:slug" element={<ProjectDetailsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      <HitchhikerOnboarding />
     </BaseLayout>
   );
 }

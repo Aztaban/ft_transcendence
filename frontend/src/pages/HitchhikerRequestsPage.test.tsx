@@ -245,6 +245,17 @@ describe("HitchhikerRequestsPage", () => {
     expect(screen.getByRole("button", { name: /^All/ }).getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("links to the eligibility request to add projects", async () => {
+    vi.mocked(listEvaluationRequests).mockResolvedValue(page([]));
+
+    renderPage();
+    await screen.findByText("No open requests");
+
+    expect(screen.getByRole("link", { name: "Request more projects" }).getAttribute("href")).toBe(
+      "/eligibility-requests/new",
+    );
+  });
+
   it("shows an error when the requests cannot be loaded", async () => {
     vi.mocked(listEvaluationRequests).mockRejectedValue(new Error("network"));
 
