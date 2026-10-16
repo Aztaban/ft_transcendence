@@ -28,6 +28,18 @@ class RequestNotPending(APIException):
     default_detail = _("This request is no longer pending.")
 
 
+class SlotOverlaps(APIException):
+    status_code = 409
+    default_code = "slot_overlaps"
+    default_detail = _("You already have an evaluation at that time.")
+
+
+class StudentUnavailable(APIException):
+    status_code = 409
+    default_code = "student_unavailable"
+    default_detail = _("The student already has an evaluation at that time.")
+
+
 def history_filter(at):
     return Q(status__in=(EvaluationRequest.Status.CANCELLED, EvaluationRequest.Status.EXPIRED)) | Q(
         status=EvaluationRequest.Status.CONFIRMED, ends_at__lt=at
@@ -62,26 +74,64 @@ def edit_note(evaluation, validated_data):
     return evaluation
 
 
+def lock_participants(hitchhiker_id, student_id):
+    """Lock both user rows in ascending id order (schema §4.2)."""
+    list(
+        get_user_model()
+        .objects.select_for_update()
+        .filter(pk__in=(hitchhiker_id, student_id))
+        .order_by("pk")
+    )
+
+
+def person_is_busy(person_id, starts_at, ends_at, request_id):
+    """True when this person already has another overlapping picked evaluation."""
+    return (
+        EvaluationRequest.objects.filter(
+            Q(student_id=person_id) | Q(picked_by_id=person_id),
+            status__in=EvaluationRequest.PICKED_STATUSES,
+            starts_at__lt=ends_at,
+            ends_at__gt=starts_at,
+        )
+        .exclude(pk=request_id)
+        .exists()
+    )
+
+
 def pick_slot(evaluation, user, starts_at, ends_at):
     """Claim a pending request the caller is already allowed to pick (§7.1, §10.4).
 
-    Eligibility is CanPickSlot on the view. The conditional update is the single
-    winner (schema §4.2). A pending row cannot store a pick, so the same
-    statement moves it to awaiting_confirmation. Row locks around overlap
-    checks are #193.
+    Eligibility is CanPickSlot on the view. Inside one transaction the Hitchhiker
+    and the student are locked, a request that is no longer pending is refused
+    before the overlap checks, and the conditional update names the single winner
+    (schema §4.2). A pending row cannot store a pick, so that update also moves
+    the request to awaiting_confirmation.
     """
-    updated = EvaluationRequest.objects.filter(
-        pk=evaluation.pk,
-        status=EvaluationRequest.Status.PENDING,
-        picked_by__isnull=True,
-    ).update(
-        status=EvaluationRequest.Status.AWAITING_CONFIRMATION,
-        picked_by=user,
-        starts_at=starts_at,
-        ends_at=ends_at,
-        updated_at=timezone.now(),
-    )
-    if updated != 1:
-        raise RequestNotPending()
-    evaluation.refresh_from_db()
+    with transaction.atomic():
+        lock_participants(user.pk, evaluation.student_id)
+        status = (
+            EvaluationRequest.objects.select_for_update()
+            .values_list("status", flat=True)
+            .get(pk=evaluation.pk)
+        )
+        if status != EvaluationRequest.Status.PENDING:
+            raise RequestNotPending()
+        if person_is_busy(user.pk, starts_at, ends_at, evaluation.pk):
+            raise SlotOverlaps()
+        if person_is_busy(evaluation.student_id, starts_at, ends_at, evaluation.pk):
+            raise StudentUnavailable()
+        updated = EvaluationRequest.objects.filter(
+            pk=evaluation.pk,
+            status=EvaluationRequest.Status.PENDING,
+            picked_by__isnull=True,
+        ).update(
+            status=EvaluationRequest.Status.AWAITING_CONFIRMATION,
+            picked_by=user,
+            starts_at=starts_at,
+            ends_at=ends_at,
+            updated_at=timezone.now(),
+        )
+        if updated != 1:
+            raise RequestNotPending()
+        evaluation.refresh_from_db()
     return evaluation
