@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from apps.accounts.models import Role
 
 from .models import EvaluationRequest, Project, TutorEligibility
-from .permissions import HITCHHIKER_ROLES, OVERRIDE_ROLES, EvaluationRequestPermission
+from .permissions import HITCHHIKER_ROLES, OVERRIDE_ROLES, CanPickSlot, EvaluationRequestPermission
 from .serializers import (
     EvaluationRequestCreateSerializer,
     EvaluationRequestNoteSerializer,
@@ -186,7 +186,7 @@ class EvaluationRequestDetailView(EvaluationRequestBaseView):
 class EvaluationRequestPickSlotView(EvaluationRequestBaseView):
     """POST /evaluation-requests/{id}/pick-slot/ (api-plan §10.4)."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanPickSlot]
 
     def get_queryset(self):
         return visible_evaluation_requests(self.request.user)

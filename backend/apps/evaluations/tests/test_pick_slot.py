@@ -1,7 +1,7 @@
-"""POST /evaluation-requests/{id}/pick-slot/ (issue #190).
+"""POST /evaluation-requests/{id}/pick-slot/ (issues #190 and #191).
 
-The route accepts a slot and returns the request the caller may see. Eligibility,
-a single winner, the row locks and the move to awaiting_confirmation are later issues.
+The route accepts a slot from an eligible Hitchhiker and returns the request.
+A single winner, the row locks and the move to awaiting_confirmation come next.
 """
 
 from datetime import datetime, timezone
@@ -75,6 +75,16 @@ def grant(user, role):
     user.roles.add(Role.objects.get(name=role))
 
 
+@pytest.fixture
+def hitchhiker(project):
+    user = get_user_model().objects.create_user(
+        id=42, email="bob@example.com", display_name="Bob", password=PASSWORD
+    )
+    grant(user, "tutor")
+    TutorEligibility.objects.create(tutor=user, project=project)
+    return user
+
+
 def logged_in_client(user):
     client = APIClient(enforce_csrf_checks=True)
     client.get(reverse("api:session"), HTTP_HOST="localhost")
@@ -97,8 +107,8 @@ def test_requires_authentication():
     }
 
 
-def test_pick_slot_real_session(student, evaluation, expected):
-    client = logged_in_client(student)
+def test_pick_slot_real_session(hitchhiker, evaluation, expected):
+    client = logged_in_client(hitchhiker)
     response = client.post(
         pick_url(),
         SLOT,
@@ -107,6 +117,7 @@ def test_pick_slot_real_session(student, evaluation, expected):
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
     )
     assert response.status_code == 200
+    expected["student"] = None
     assert response.json() == expected
     evaluation.refresh_from_db()
     assert evaluation.status == "pending"
@@ -163,9 +174,9 @@ def test_csrf_required(student, evaluation):
         ),
     ],
 )
-def test_pick_slot_validation(student, evaluation, payload, fields):
+def test_pick_slot_validation(hitchhiker, evaluation, payload, fields):
     client = APIClient()
-    client.force_authenticate(student)
+    client.force_authenticate(hitchhiker)
     response = client.post(pick_url(), payload, format="json")
     assert response.status_code == 400
     assert response.json() == {
@@ -198,15 +209,112 @@ def test_hidden_request_is_not_found(project, evaluation):
     assert evaluation.status == "pending"
 
 
-def test_eligible_hitchhiker_can_call_the_endpoint(project, evaluation, expected):
-    hitchhiker = get_user_model().objects.create_user(
-        id=42, email="bob@example.com", display_name="Bob", password=PASSWORD
-    )
-    grant(hitchhiker, "tutor")
-    TutorEligibility.objects.create(tutor=hitchhiker, project=project)
+def test_eligible_hitchhiker_can_call_the_endpoint(hitchhiker, evaluation, expected):
     client = APIClient()
     client.force_authenticate(hitchhiker)
     response = client.post(pick_url(), SLOT, format="json")
     assert response.status_code == 200
     expected["student"] = None
     assert response.json() == expected
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.picked_by_id is None
+
+
+def test_student_is_not_eligible(student, evaluation):
+    client = APIClient()
+    client.force_authenticate(student)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 403
+    assert response.json() == {
+        "error": {
+            "code": "not_eligible",
+            "message": "You are not eligible to evaluate this project.",
+        }
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+
+
+def test_hitchhiker_cannot_pick_own_request(student, project, evaluation):
+    grant(student, "tutor")
+    TutorEligibility.objects.create(tutor=student, project=project)
+    client = APIClient()
+    client.force_authenticate(student)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 403
+    assert response.json() == {
+        "error": {
+            "code": "cannot_pick_own_request",
+            "message": "You cannot pick your own request.",
+        }
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.picked_by_id is None
+
+
+@pytest.mark.parametrize("role", ["head_tutor", "admin"])
+def test_override_without_eligibility_is_refused(evaluation, role):
+    user = get_user_model().objects.create_user(
+        id=43, email="dana@example.com", display_name="Dana", password=PASSWORD
+    )
+    grant(user, role)
+    client = APIClient()
+    client.force_authenticate(user)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 403
+    assert response.json() == {
+        "error": {
+            "code": "not_eligible",
+            "message": "You are not eligible to evaluate this project.",
+        }
+    }
+
+
+def test_eligible_head_tutor_can_pick(project, evaluation, expected):
+    head_tutor = get_user_model().objects.create_user(
+        id=44, email="fran@example.com", display_name="Fran", password=PASSWORD
+    )
+    grant(head_tutor, "head_tutor")
+    TutorEligibility.objects.create(tutor=head_tutor, project=project)
+    client = APIClient()
+    client.force_authenticate(head_tutor)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 200
+    assert response.json() == expected
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.picked_by_id is None
+
+
+def test_retained_eligibility_without_hitchhiker_role_is_refused(student, project, evaluation):
+    TutorEligibility.objects.create(tutor=student, project=project)
+    client = APIClient()
+    client.force_authenticate(student)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 403
+    assert response.json() == {
+        "error": {
+            "code": "not_eligible",
+            "message": "You are not eligible to evaluate this project.",
+        }
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.picked_by_id is None
+
+
+def test_eligibility_for_another_project_hides_the_request(evaluation):
+    other_project = Project.objects.create(id=5, slug="ft_printf", name="ft_printf")
+    tutor = get_user_model().objects.create_user(
+        id=45, email="erin@example.com", display_name="Erin", password=PASSWORD
+    )
+    grant(tutor, "tutor")
+    TutorEligibility.objects.create(tutor=tutor, project=other_project)
+    client = APIClient()
+    client.force_authenticate(tutor)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 404
+    assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"

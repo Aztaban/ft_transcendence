@@ -57,11 +57,11 @@ def edit_note(evaluation, validated_data):
 
 
 def pick_slot(evaluation, starts_at, ends_at):
-    """Accept a proposed slot for a request the caller is allowed to see.
+    """Accept a proposed slot the caller is already allowed to pick (§7.1, §10.4).
 
-    Eligibility (#191), a single winner (#192), the row locks (#193) and the
-    move to awaiting_confirmation (#194) are the next steps. Until they land,
-    the request is left unchanged.
+    Eligibility is CanPickSlot on the view. A single winner (#192), the row
+    locks (#193) and the move to awaiting_confirmation (#194) come next. Until
+    they land, an allowed call leaves the request unchanged.
     """
     _ = (starts_at, ends_at)
     return evaluation
