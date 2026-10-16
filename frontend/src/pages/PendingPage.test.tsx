@@ -171,6 +171,21 @@ describe("PendingPage", () => {
     expect(cancelEvaluationRequest).not.toHaveBeenCalled();
   });
 
+  it("shows no student to a Hitchhiker when the API hides it (R15)", async () => {
+    vi.mocked(listEvaluationRequests).mockResolvedValue(
+      page([{ ...scheduled(1, "push_swap", 26, "awaiting_confirmation"), student: null }]),
+    );
+
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "switch" }));
+    const card = (await screen.findByRole("heading", { name: "push_swap" })).closest(
+      "li",
+    ) as HTMLElement;
+
+    expect(within(card).queryByText("Student")).toBeNull();
+    expect(within(card).getByText("Waiting for the student")).toBeTruthy();
+  });
+
   it("explains when the evaluation has already started", async () => {
     vi.mocked(listEvaluationRequests).mockResolvedValue(page([scheduled(1, "push_swap", 26)]));
     vi.mocked(cancelEvaluationRequest).mockRejectedValue(

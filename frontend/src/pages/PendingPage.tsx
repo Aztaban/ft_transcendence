@@ -46,7 +46,8 @@ function otherPerson(evaluation: EvaluationRequest, viewer: PendingViewer) {
       : null;
   }
 
-  return { label: "Student", name: evaluation.student.display_name };
+  // The picking Hitchhiker sees the student, but `student` can be null (R15, api-plan §8.7).
+  return evaluation.student ? { label: "Student", name: evaluation.student.display_name } : null;
 }
 
 function cancelErrorMessage(error: unknown) {
