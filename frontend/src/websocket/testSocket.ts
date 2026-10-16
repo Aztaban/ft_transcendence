@@ -1,3 +1,5 @@
+import { LiveSocket } from "./LiveSocket";
+
 // A fake WebSocket for tests: the test opens, sends messages and closes it like the server would.
 export class FakeSocket {
   static instances: FakeSocket[] = [];
@@ -41,4 +43,19 @@ export class FakeSocket {
 
 export function createFakeSocket(url: string) {
   return new FakeSocket(url) as unknown as WebSocket;
+}
+
+// A LiveSocket whose connection is already open, for pages under test. The test plays the
+// server through FakeSocket.latest() (serverSend, serverClose, serverOpen).
+export function openLiveSocket() {
+  const live = new LiveSocket({
+    url: "wss://localhost/ws/",
+    createSocket: createFakeSocket,
+    random: () => 1,
+  });
+
+  live.connect();
+  FakeSocket.latest().serverOpen();
+
+  return live;
 }

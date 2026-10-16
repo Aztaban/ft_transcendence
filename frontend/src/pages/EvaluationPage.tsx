@@ -10,6 +10,8 @@ import {
   getEvaluationRequest,
 } from "../api/evaluationRequests";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
+import { EVALUATION_EVENTS } from "../websocket/events";
+import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/evaluation.css";
 
 type LoadState = "loading" | "ready" | "error";
@@ -135,9 +137,26 @@ function EvaluationPage() {
   const [answerError, setAnswerError] = useState("");
   const [isAccepted, setIsAccepted] = useState(false);
   const [wasDeclined, setWasDeclined] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Set by a live refresh: a failure then keeps the request already shown.
+  const isLiveRefresh = useRef(false);
+
+  // This request was picked, confirmed, released, cancelled, expired or changed, or the
+  // connection is back (§9, #257). Events about other requests are ignored.
+  useLiveRefresh(EVALUATION_EVENTS, (message) => {
+    if (message && "id" in message.data && message.data.id !== Number(id)) {
+      return;
+    }
+
+    isLiveRefresh.current = true;
+    setReloadKey((key) => key + 1);
+  });
 
   useEffect(() => {
     let active = true;
+    const inBackground = isLiveRefresh.current;
+
+    isLiveRefresh.current = false;
 
     getEvaluationRequest(Number(id))
       .then((result) => {
@@ -148,14 +167,14 @@ function EvaluationPage() {
       })
       .catch(() => {
         if (active) {
-          setLoadState("error");
+          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
 
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
   async function answer(accept: boolean) {
     if (!request) {
