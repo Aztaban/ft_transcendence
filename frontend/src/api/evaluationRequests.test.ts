@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
+  cancelEvaluationRequest,
   confirmEvaluationRequest,
   createEvaluationRequest,
   declineEvaluationRequest,
   getEvaluationRequest,
   listEvaluationRequests,
   pickSlot,
+  releaseEvaluationRequest,
 } from "./evaluationRequests";
 
 afterEach(() => {
@@ -168,5 +170,46 @@ describe("listEvaluationRequests pages", () => {
       "/api/v1/evaluation-requests/?scope=mine&history=true&page=2",
     );
     expect(fetchMock.mock.calls[1][0]).toBe("/api/v1/evaluation-requests/?scope=mine&history=true");
+  });
+});
+
+describe("listEvaluationRequests ordering", () => {
+  test("sends the ordering parameter", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(emptyPage));
+
+    await listEvaluationRequests({ scope: "picked", history: false, ordering: "starts_at" });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/v1/evaluation-requests/?scope=picked&history=false&ordering=starts_at",
+    );
+  });
+});
+
+describe.each([
+  ["cancel", cancelEvaluationRequest],
+  ["release", releaseEvaluationRequest],
+] as const)("%s", (action, send) => {
+  afterEach(() => {
+    document.cookie = "csrftoken=; Max-Age=0; path=/";
+  });
+
+  test("posts without a body, with the CSRF token", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    fetchMock.mockImplementationOnce(async () => {
+      document.cookie = "csrftoken=test-csrf-token; path=/";
+
+      return jsonResponse({ status: "ok", version: "v1" });
+    });
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 5 }));
+
+    await send(5);
+
+    const [path, options] = fetchMock.mock.calls[1];
+
+    expect(path).toBe(`/api/v1/evaluation-requests/5/${action}/`);
+    expect(options?.method).toBe("POST");
+    expect(new Headers(options?.headers).get("X-CSRFToken")).toBe("test-csrf-token");
+    expect(options?.body).toBeUndefined();
   });
 });
