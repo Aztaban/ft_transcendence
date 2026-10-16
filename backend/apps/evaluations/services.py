@@ -7,8 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException
 
-from .models import EvaluationRequest, TutorEligibility
-from .permissions import HITCHHIKER_ROLES
+from .models import EvaluationRequest
 
 
 class ActiveRequestExists(APIException):
@@ -21,18 +20,6 @@ class InvalidStateTransition(APIException):
     status_code = 409
     default_code = "invalid_state_transition"
     default_detail = _("Only pending requests can be edited.")
-
-
-class NotEligible(APIException):
-    status_code = 403
-    default_code = "not_eligible"
-    default_detail = _("You are not eligible to evaluate this project.")
-
-
-class CannotPickOwnRequest(APIException):
-    status_code = 403
-    default_code = "cannot_pick_own_request"
-    default_detail = _("You cannot pick your own request.")
 
 
 def history_filter(at):
@@ -69,20 +56,12 @@ def edit_note(evaluation, validated_data):
     return evaluation
 
 
-def pick_slot(evaluation, user, starts_at, ends_at):
-    """Accept a proposed slot from an eligible Hitchhiker (api-plan §7.1, §10.4).
+def pick_slot(evaluation, starts_at, ends_at):
+    """Accept a proposed slot the caller is already allowed to pick (§7.1, §10.4).
 
-    A single winner (#192), the row locks (#193) and the move to
-    awaiting_confirmation (#194) are the next steps. Until they land, an
-    allowed call leaves the request unchanged.
+    Eligibility is CanPickSlot on the view. A single winner (#192), the row
+    locks (#193) and the move to awaiting_confirmation (#194) come next. Until
+    they land, an allowed call leaves the request unchanged.
     """
     _ = (starts_at, ends_at)
-    is_hitchhiker = user.roles.filter(name__in=HITCHHIKER_ROLES).exists()
-    if is_hitchhiker and evaluation.student_id == user.pk:
-        raise CannotPickOwnRequest()
-    eligible = TutorEligibility.objects.filter(
-        tutor=user, project_id=evaluation.project_id
-    ).exists()
-    if not is_hitchhiker or not eligible:
-        raise NotEligible()
     return evaluation

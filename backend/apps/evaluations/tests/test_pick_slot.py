@@ -263,6 +263,39 @@ def test_override_without_eligibility_is_refused(evaluation, role):
     }
 
 
+def test_eligible_head_tutor_can_pick(project, evaluation, expected):
+    head_tutor = get_user_model().objects.create_user(
+        id=44, email="fran@example.com", display_name="Fran", password=PASSWORD
+    )
+    grant(head_tutor, "head_tutor")
+    TutorEligibility.objects.create(tutor=head_tutor, project=project)
+    client = APIClient()
+    client.force_authenticate(head_tutor)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 200
+    assert response.json() == expected
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.picked_by_id is None
+
+
+def test_retained_eligibility_without_hitchhiker_role_is_refused(student, project, evaluation):
+    TutorEligibility.objects.create(tutor=student, project=project)
+    client = APIClient()
+    client.force_authenticate(student)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 403
+    assert response.json() == {
+        "error": {
+            "code": "not_eligible",
+            "message": "You are not eligible to evaluate this project.",
+        }
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.picked_by_id is None
+
+
 def test_eligibility_for_another_project_hides_the_request(evaluation):
     other_project = Project.objects.create(id=5, slug="ft_printf", name="ft_printf")
     tutor = get_user_model().objects.create_user(
