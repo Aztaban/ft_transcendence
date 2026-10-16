@@ -60,3 +60,25 @@ export function listEligibilityRequests(
     `/api/v1/tutor-eligibility-requests/${search ? `?${search}` : ""}`,
   );
 }
+
+export type EligibilityDecision = "approved" | "declined";
+
+export interface ReviewEligibilityRequestPayload {
+  decision: EligibilityDecision;
+  review_note?: string;
+}
+
+// POST /api/v1/tutor-eligibility-requests/{id}/review/ (api-plan §10.3): Head Tutor or Admin.
+// 403 `cannot_review_own_request`, 409 `eligibility_request_already_reviewed`.
+export function reviewEligibilityRequest(
+  id: number,
+  payload: ReviewEligibilityRequestPayload,
+): Promise<EligibilityRequest> {
+  return apiRequest<EligibilityRequest>(`/api/v1/tutor-eligibility-requests/${id}/review/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
