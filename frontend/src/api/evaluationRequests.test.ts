@@ -213,3 +213,19 @@ describe.each([
     expect(options?.body).toBeUndefined();
   });
 });
+
+describe("listEvaluationRequests history filters", () => {
+  test("sends project and page, but not page 1", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => jsonResponse(emptyPage));
+
+    await listEvaluationRequests({ history: true, project: "push_swap", page: 2 });
+    await listEvaluationRequests({ history: true, page: 1 });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/v1/evaluation-requests/?history=true&project=push_swap&page=2",
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe("/api/v1/evaluation-requests/?history=true");
+  });
+});

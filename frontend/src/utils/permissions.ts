@@ -4,6 +4,7 @@ export const routePermissions = {
   home: ["STUDENT", "HITCHHIKER", "COUNCIL"],
   requests: ["STUDENT", "HITCHHIKER"],
   pending: ["STUDENT", "HITCHHIKER"],
+  history: ["STUDENT", "HITCHHIKER"],
   hitchhikers: ["STUDENT", "COUNCIL"],
   profile: ["STUDENT", "HITCHHIKER"],
   council: ["STUDENT", "HITCHHIKER", "COUNCIL"],

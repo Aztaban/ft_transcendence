@@ -9,6 +9,8 @@ export interface ListEvaluationRequestsParams {
   status?: EvaluationRequestStatus[];
   history?: boolean;
   ordering?: "created_at" | "-created_at" | "starts_at" | "-starts_at";
+  // Project slug.
+  project?: string;
   // 1-based page number (§5.7).
   page?: number;
 }
@@ -33,6 +35,10 @@ export function listEvaluationRequests(
 
   if (params.ordering) {
     query.set("ordering", params.ordering);
+  }
+
+  if (params.project) {
+    query.set("project", params.project);
   }
 
   if (params.page && params.page > 1) {
