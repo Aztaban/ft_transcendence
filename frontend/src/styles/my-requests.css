@@ -1,0 +1,243 @@
+.my-requests {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px 32px;
+  border: 1px solid #e3e7e7;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  animation: my-requests-slide-in 0.45s ease;
+}
+
+.my-requests h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+.my-requests__group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.my-requests__group h3 {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.my-requests__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Row */
+
+.my-requests__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px solid #e3e7e7;
+  border-radius: 12px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.my-requests__row:hover {
+  border-color: #c9cfcf;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.my-requests__badge {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: #e6f8f8;
+  color: var(--color-accent-dark);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.my-requests__project h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.my-requests__project p,
+.my-requests__project time {
+  margin: 2px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+/* Status pill */
+
+.my-requests__status {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.my-requests__status--blue {
+  background: #eaf1fc;
+  color: #2f5ea8;
+}
+
+.my-requests__status--amber {
+  background: #fff4dc;
+  color: #9a6512;
+}
+
+.my-requests__status--teal {
+  background: #e6f8f8;
+  color: #00797b;
+}
+
+.my-requests__status--green {
+  background: #e7f6ec;
+  color: #1c7c3c;
+}
+
+.my-requests__status--red {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.my-requests__status--violet {
+  background: #f2eefb;
+  color: #6b4fb3;
+}
+
+.my-requests__status--grey {
+  background: #f0f2f2;
+  color: #5c6464;
+}
+
+/* States */
+
+.my-requests__skeleton {
+  min-height: 64px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #eceff0 25%, #f6f7f7 50%, #eceff0 75%);
+  background-size: 200% 100%;
+  animation: my-requests-shimmer 1.3s ease-in-out infinite;
+}
+
+.my-requests__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.my-requests__more {
+  align-self: flex-start;
+  padding: 7px 16px;
+  border: 1px solid #c9cfcf;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #00797b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.my-requests__more:hover:enabled {
+  border-color: var(--color-accent);
+  background: #f2fbfb;
+}
+
+.my-requests__more:disabled {
+  color: #9aa1a1;
+  cursor: wait;
+}
+
+.my-requests__more:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+.my-requests__error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 0.9rem;
+}
+
+.my-requests__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes my-requests-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes my-requests-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .my-requests {
+    padding: 20px;
+  }
+
+  .my-requests__row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .my-requests__status {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-requests,
+  .my-requests * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

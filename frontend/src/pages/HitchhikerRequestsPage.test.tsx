@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { listEvaluationRequests } from "../api/evaluationRequests";
@@ -12,6 +13,14 @@ function page(results: EvaluationRequest[]) {
   return { count: results.length, next: null, previous: null, results };
 }
 
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <HitchhikerRequestsPage />
+    </MemoryRouter>,
+  );
+}
+
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
@@ -21,7 +30,7 @@ describe("HitchhikerRequestsPage", () => {
   it("loads the open requests with scope=open", async () => {
     vi.mocked(listEvaluationRequests).mockResolvedValue(page([]));
 
-    render(<HitchhikerRequestsPage />);
+    renderPage();
 
     expect(screen.getByText("Loading requests…")).toBeTruthy();
     expect(await screen.findByText("No open requests")).toBeTruthy();
@@ -36,7 +45,7 @@ describe("HitchhikerRequestsPage", () => {
       ]),
     );
 
-    render(<HitchhikerRequestsPage />);
+    renderPage();
 
     expect(await screen.findByRole("heading", { name: "born2beroot" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "push_swap" })).toBeTruthy();
@@ -45,17 +54,16 @@ describe("HitchhikerRequestsPage", () => {
     expect(screen.getByText("No note from the student.")).toBeTruthy();
   });
 
-  it("keeps the Review button disabled until slot picking exists", async () => {
+  it("links Review to the request", async () => {
     vi.mocked(listEvaluationRequests).mockResolvedValue(
-      page([makeRequest(1, "minishell", "pending")]),
+      page([makeRequest(7, "minishell", "pending")]),
     );
 
-    render(<HitchhikerRequestsPage />);
+    renderPage();
 
-    const review = (await screen.findByRole("button", { name: "Review" })) as HTMLButtonElement;
+    const review = await screen.findByRole("link", { name: "Review the minishell request" });
 
-    expect(review.disabled).toBe(true);
-    expect(screen.getByText("Slot picking coming soon")).toBeTruthy();
+    expect(review.getAttribute("href")).toBe("/requests/7");
   });
 
   it("filters the cards by project", async () => {
@@ -63,7 +71,7 @@ describe("HitchhikerRequestsPage", () => {
       page([makeRequest(1, "born2beroot", "pending"), makeRequest(2, "push_swap", "pending")]),
     );
 
-    render(<HitchhikerRequestsPage />);
+    renderPage();
     await screen.findByRole("heading", { name: "born2beroot" });
 
     fireEvent.click(screen.getByRole("button", { name: "push_swap 1" }));
@@ -84,7 +92,7 @@ describe("HitchhikerRequestsPage", () => {
       ]),
     );
 
-    render(<HitchhikerRequestsPage />);
+    renderPage();
     await screen.findByRole("heading", { name: "older" });
 
     const titles = () =>
@@ -102,7 +110,7 @@ describe("HitchhikerRequestsPage", () => {
   it("shows an error when the requests cannot be loaded", async () => {
     vi.mocked(listEvaluationRequests).mockRejectedValue(new Error("network"));
 
-    render(<HitchhikerRequestsPage />);
+    renderPage();
 
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Could not load the requests. Please try again later.",

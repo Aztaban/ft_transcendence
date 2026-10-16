@@ -16,7 +16,7 @@ import intraLogo from "../../assets/figma/intra.png";
 import notionLogo from "../../assets/figma/notion.svg";
 import slackLogo from "../../assets/figma/slack.svg";
 import { useAuth } from "../../store/AuthContext";
-import { roles, useRole, type AppRole } from "../../store/RoleContext";
+import { useRole, type AppRole } from "../../store/RoleContext";
 
 interface NavigationItem {
   label: string;
@@ -29,6 +29,7 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
     { label: "Home", to: "/", icon: homeIcon },
     { label: "Request", to: "/requests", icon: requestIcon },
     { label: "Pending", to: "/pending", icon: pendingIcon },
+    { label: "History", to: "/history", icon: historyIcon },
     { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
     { label: "Profile", to: "/profile", icon: profileIcon },
     { label: "Student Council", to: "/council", icon: councilIcon },
@@ -38,6 +39,7 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
     { label: "Home", to: "/", icon: homeIcon },
     { label: "Requests", to: "/requests", icon: requestIcon },
     { label: "Pending", to: "/pending", icon: pendingIcon },
+    { label: "History", to: "/history", icon: historyIcon },
     { label: "Student Council", to: "/council", icon: councilIcon },
     { label: "Profile", to: "/profile", icon: profileIcon },
   ],
@@ -52,7 +54,7 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
 };
 
 function Sidebar() {
-  const { activeRole, setActiveRole } = useRole();
+  const { activeRole, setActiveRole, availableRoles } = useRole();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
@@ -146,7 +148,7 @@ function Sidebar() {
 
           {isRoleMenuOpen && (
             <div className="sidebar__role-menu" role="listbox" aria-label="Select role">
-              {roles.map((role) => (
+              {availableRoles.map((role) => (
                 <button
                   key={role}
                   className={[

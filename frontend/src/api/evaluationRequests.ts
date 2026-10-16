@@ -8,6 +8,11 @@ export interface ListEvaluationRequestsParams {
   scope?: EvaluationRequestScope;
   status?: EvaluationRequestStatus[];
   history?: boolean;
+  ordering?: "created_at" | "-created_at" | "starts_at" | "-starts_at";
+  // Project slug.
+  project?: string;
+  // 1-based page number (§5.7).
+  page?: number;
 }
 
 // GET /api/v1/evaluation-requests/ (api-plan §10.4), paginated (§5.7).
@@ -28,9 +33,95 @@ export function listEvaluationRequests(
     query.set("history", String(params.history));
   }
 
+  if (params.ordering) {
+    query.set("ordering", params.ordering);
+  }
+
+  if (params.project) {
+    query.set("project", params.project);
+  }
+
+  if (params.page && params.page > 1) {
+    query.set("page", String(params.page));
+  }
+
   const search = query.toString();
 
   return apiRequest<Paginated<EvaluationRequest>>(
     `/api/v1/evaluation-requests/${search ? `?${search}` : ""}`,
   );
+}
+
+// GET /api/v1/evaluation-requests/{id}/ (api-plan §10.4). 404 when the caller may not see it.
+export function getEvaluationRequest(id: number): Promise<EvaluationRequest> {
+  return apiRequest<EvaluationRequest>(`/api/v1/evaluation-requests/${id}/`);
+}
+
+export interface PickSlotPayload {
+  starts_at: string;
+  ends_at: string;
+}
+
+// POST /api/v1/evaluation-requests/{id}/pick-slot/ (api-plan §10.4); slot rules in §7.1.
+// apiRequest adds the CSRF header (§5.4).
+export function pickSlot(id: number, payload: PickSlotPayload): Promise<EvaluationRequest> {
+  return apiRequest<EvaluationRequest>(`/api/v1/evaluation-requests/${id}/pick-slot/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+// Shared by the transitions that take no body. apiRequest adds the CSRF header (§5.4).
+function postTransition(
+  id: number,
+  action: "confirm" | "decline" | "cancel" | "release",
+): Promise<EvaluationRequest> {
+  return apiRequest<EvaluationRequest>(`/api/v1/evaluation-requests/${id}/${action}/`, {
+    method: "POST",
+  });
+}
+
+// POST …/{id}/confirm/ (api-plan §10.4), no body: the student accepts the proposed slot.
+export function confirmEvaluationRequest(id: number): Promise<EvaluationRequest> {
+  return postTransition(id, "confirm");
+}
+
+// POST …/{id}/decline/ (api-plan §10.4), no body: back to `pending`, the pick is cleared.
+export function declineEvaluationRequest(id: number): Promise<EvaluationRequest> {
+  return postTransition(id, "decline");
+}
+
+export interface CreateEvaluationRequestPayload {
+  project_id: number;
+  note?: string;
+}
+
+// POST /api/v1/evaluation-requests/ (api-plan §10.4). Answers 201 with the new EvaluationRequest
+// (§8.7); the page only needs to know it succeeded, so the body is not typed here.
+// apiRequest adds the CSRF header (§5.4).
+export async function createEvaluationRequest(
+  payload: CreateEvaluationRequestPayload,
+): Promise<void> {
+  await apiRequest<unknown>("/api/v1/evaluation-requests/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+// POST …/{id}/cancel/ (api-plan §10.4): the student sends no body.
+// 200 `cancelled`; 409 `evaluation_already_started` once `starts_at` has passed.
+export function cancelEvaluationRequest(id: number): Promise<EvaluationRequest> {
+  return postTransition(id, "cancel");
+}
+
+// POST …/{id}/release/ (api-plan §10.4): the picking Hitchhiker sends no body.
+// 200 `pending` with the pick cleared; 409 `evaluation_already_started`.
+export function releaseEvaluationRequest(id: number): Promise<EvaluationRequest> {
+  return postTransition(id, "release");
 }

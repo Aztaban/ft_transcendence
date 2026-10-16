@@ -6,6 +6,7 @@ import avatar from "../assets/figma/avatar.png";
 import { Badge, Button, Input } from "../components/ui";
 import type { Language, UserProfile, UserRole } from "../types/user";
 import { DISPLAY_NAME_MAX_LENGTH } from "../utils/validation";
+import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/profile.css";
 
 const languageLabels: Record<Language, string> = {
@@ -74,6 +75,15 @@ function ProfilePage() {
       active = false;
     };
   }, []);
+
+  // §9.3 `role.changed`: re-fetch the roles shown here. The form fields being edited are kept.
+  useLiveRefresh(["role.changed"], () => {
+    getCurrentUser()
+      .then((data) => setProfile(data))
+      .catch(() => {
+        // The roles shown stay as they were; the next page load gets them.
+      });
+  });
 
   function startEditing() {
     if (!profile) return;

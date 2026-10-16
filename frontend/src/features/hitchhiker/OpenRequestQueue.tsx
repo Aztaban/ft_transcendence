@@ -10,7 +10,10 @@ function OpenRequestQueue({ requests }: OpenRequestQueueProps) {
   const openRequests = requests.filter((request) => request.status === "pending");
 
   return (
-    <section className="dashboard__section" aria-labelledby="open-request-queue-title">
+    <section
+      className="dashboard__section dashboard__section--teal"
+      aria-labelledby="open-request-queue-title"
+    >
       <h2 id="open-request-queue-title">Open Requests</h2>
 
       {openRequests.length === 0 ? (
@@ -28,7 +31,8 @@ function OpenRequestQueue({ requests }: OpenRequestQueueProps) {
               <div>
                 <h3>{request.project.name}</h3>
                 <p>
-                  {request.student.display_name} · Requested {formatTimeAgo(request.created_at)}
+                  {request.student?.display_name ?? "Anonymous student"} · Requested{" "}
+                  {formatTimeAgo(request.created_at)}
                 </p>
                 {request.note && <p>{request.note}</p>}
               </div>

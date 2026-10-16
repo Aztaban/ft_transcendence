@@ -55,6 +55,8 @@ Django ── MySQL (all state)
 | R12 | The GDPR module is out of scope: no data export, no self-service deletion, no email. | Team, Oct 2026 |
 | R13 | All errors use one envelope (§5.5). A missing or expired session is 401 everywhere except `GET /auth/session/`, which answers 200 with `authenticated: false` so loading the app never logs a failed request in the browser console (a mandatory subject rule). | Architect, Oct 2026 |
 | R14 | Backend messages (`message` and `fields`) are returned in the user's language, because the i18n module requires all user-facing text to be translatable (§5.5). | Architect, Oct 2026 |
+| R15 | A `pending` request is anonymous to Hitchhikers: they see the student only once they pick it (§8.7). | Team, Oct 2026 |
+| R16 | Students do not offer time slots. The Hitchhiker proposes one, and the student can say when they are free in the request's `note` (§7.1). | Team, Oct 2026 |
 
 ### 3.2 Open (not to be built until decided)
 
@@ -282,6 +284,7 @@ Decline, release and expire clear `picked_by`, `starts_at` and `ends_at`. Cancel
 
 **Rules:**
 
+- **Time slots:** the student does not offer slots; the Hitchhiker proposes one with pick-slot. The student can write when they are free in `note` (R16).
 - **Active request:** a request is active while it is `pending`, `awaiting_confirmation`, or `confirmed` with `ends_at` in the future. A student can have at most one active request per project (409 `active_request_exists`, enforced under a lock: schema §4.1).
 - **Slot rules for pick-slot** (400 `validation_error` on the field):
   - `starts_at` and `ends_at` fall on 15-minute boundaries (`:00`, `:15`, `:30`, `:45`, zero seconds)
@@ -408,7 +411,7 @@ Returned by the admin user endpoints only. `Me` plus:
 | Field | Type | Notes |
 |---|---|---|
 | id | integer | |
-| student | UserRef | |
+| student | UserRef or null | `null` for anyone except the student, the Hitchhiker in `picked_by`, Head Tutors and Admins. So eligible Hitchhikers do not see who asked while the request is `pending`, see the student once they pick it, and lose it again if it returns to `pending` (R15). |
 | project | ProjectRef | |
 | note | string | Up to 500 chars. Empty string when none. |
 | status | `pending`, `awaiting_confirmation`, `confirmed`, `cancelled`, `expired` | |
@@ -473,7 +476,7 @@ Every create, update or delete action that affects another user notifies that us
 
 | type | Recipients | payload | target_url |
 |---|---|---|---|
-| `evaluation.created` | Eligible Hitchhikers of the project (except the student) | `{request_id, project, student}` | `/evaluations/{id}` |
+| `evaluation.created` | Eligible Hitchhikers of the project (except the student) | `{request_id, project}` (no `student`: R15) | `/evaluations/{id}` |
 | `evaluation.slot_picked` | Student | `{request_id, project, tutor, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.confirmed` | Picking Hitchhiker | `{request_id, project, student, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.declined` | Picking Hitchhiker | `{request_id, project, student}` | `/evaluations/{id}` |
@@ -812,10 +815,11 @@ All transitions follow §7.1. Every response is the updated `EvaluationRequest`.
 | | `all` | Every request. Head Tutor and Admin only. |
 | `status` | comma-separated statuses | |
 | `history` | `true` / `false` | Only history / only active (§7.1). |
+| `result` | comma-separated: `passed`, `failed`, `none` | `none` means no result recorded yet. |
 | `project` | project slug | |
 | `ordering` | `created_at`, `-created_at` (default), `starts_at`, `-starts_at` | |
 
-How the pages map: a student's Requests page is `scope=mine&history=false`; a Hitchhiker's queue is `scope=open`; Pending Evaluations is `scope=picked&history=false` (Hitchhiker) or `scope=mine&status=confirmed&history=false` (student); History is `history=true` with `mine` or `picked`.
+How the pages map: a student's Requests page is `scope=mine&history=false`; a Hitchhiker's queue is `scope=open`; Pending Evaluations is `scope=picked&history=false` (Hitchhiker) or `scope=mine&status=confirmed&history=false` (student); History is `history=true` with `mine` or `picked`; its "Result pending" filter is `status=confirmed&result=none`.
 
 **Edit note.** `PATCH /evaluation-requests/{id}/` with `{"note": "..."}`. Only while `pending`. Event `evaluation.updated`.
 

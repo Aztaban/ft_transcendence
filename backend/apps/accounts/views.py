@@ -7,6 +7,8 @@ from urllib.parse import urlencode
 from urllib.request import Request as URLRequest
 from urllib.request import urlopen
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.db import IntegrityError, transaction
@@ -222,7 +224,15 @@ class LogoutView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        logout(request)
+        with transaction.atomic():
+            session_key = request.session.session_key
+            logout(request)
+            if session_key:
+                transaction.on_commit(
+                    lambda: async_to_sync(get_channel_layer().group_send)(
+                        f"session_{session_key}", {"type": "session.ended", "data": {}}
+                    )
+                )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
