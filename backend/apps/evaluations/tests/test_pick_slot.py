@@ -17,6 +17,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
+from apps.evaluations.views import pick_slot as claim_pending_request
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
@@ -183,6 +184,22 @@ def test_csrf_required(student, evaluation):
                 ]
             },
         ),
+        (
+            {"starts_at": "2026-10-12T15:00:00", "ends_at": "2026-10-12T15:45:00Z"},
+            {"starts_at": ["Datetime must include a timezone (Z or an offset)."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T15:45:00"},
+            {"ends_at": ["Datetime must include a timezone (Z or an offset)."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T15:00:00Z"},
+            {"ends_at": ["End time must be after start time."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:45:00Z", "ends_at": "2026-10-12T15:00:00Z"},
+            {"ends_at": ["End time must be after start time."]},
+        ),
     ],
 )
 def test_pick_slot_validation(hitchhiker, evaluation, payload, fields):
@@ -197,6 +214,10 @@ def test_pick_slot_validation(hitchhiker, evaluation, payload, fields):
             "fields": fields,
         }
     }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.starts_at is None
+    assert evaluation.ends_at is None
 
 
 def test_unknown_request_is_not_found(student):
@@ -281,6 +302,45 @@ def test_override_without_eligibility_is_refused(evaluation, role):
     }
 
 
+def test_eligible_head_tutor_can_pick(project, evaluation, expected):
+    head_tutor = get_user_model().objects.create_user(
+        id=44, email="fran@example.com", display_name="Fran", password=PASSWORD
+    )
+    grant(head_tutor, "head_tutor")
+    TutorEligibility.objects.create(tutor=head_tutor, project=project)
+    client = APIClient()
+    client.force_authenticate(head_tutor)
+    response = client.post(pick_url(), SLOT, format="json")
+    expected.update(
+        status="awaiting_confirmation",
+        picked_by={"id": 44, "display_name": "Fran", "avatar_url": None},
+        starts_at=SLOT["starts_at"],
+        ends_at=SLOT["ends_at"],
+    )
+    assert response.status_code == 200
+    assert response.json() == expected
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == head_tutor.pk
+
+
+def test_retained_eligibility_without_hitchhiker_role_is_refused(student, project, evaluation):
+    TutorEligibility.objects.create(tutor=student, project=project)
+    client = APIClient()
+    client.force_authenticate(student)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 403
+    assert response.json() == {
+        "error": {
+            "code": "not_eligible",
+            "message": "You are not eligible to evaluate this project.",
+        }
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.picked_by_id is None
+
+
 def test_eligibility_for_another_project_hides_the_request(evaluation):
     other_project = Project.objects.create(id=5, slug="ft_printf", name="ft_printf")
     tutor = get_user_model().objects.create_user(
@@ -354,7 +414,7 @@ def seeded_roles():
 
 
 @pytest.mark.django_db(transaction=True)
-def test_only_one_hitchhiker_wins(seeded_roles, student, project, evaluation):
+def test_only_one_hitchhiker_wins(seeded_roles, student, project, evaluation, monkeypatch):
     contenders = []
     for pk, email, name in ((42, "bob@example.com", "Bob"), (46, "fay@example.com", "Fay")):
         user = get_user_model().objects.create_user(
@@ -363,14 +423,21 @@ def test_only_one_hitchhiker_wins(seeded_roles, student, project, evaluation):
         grant(user, "tutor")
         TutorEligibility.objects.create(tutor=user, project=project)
         contenders.append(pk)
+    # Both callers pass visibility lookup, then wait, then compete on the update.
+    # Waiting before the request lets the winner hide the row and the loser sees 404.
     barrier = Barrier(2)
+
+    def claim_after_lookup(evaluation, user, starts_at, ends_at):
+        barrier.wait(timeout=10)
+        return claim_pending_request(evaluation, user, starts_at, ends_at)
+
+    monkeypatch.setattr("apps.evaluations.views.pick_slot", claim_after_lookup)
 
     def submit(user_id):
         close_old_connections()
         try:
             client = APIClient()
             client.force_authenticate(get_user_model().objects.get(pk=user_id))
-            barrier.wait(timeout=10)
             response = client.post(pick_url(), SLOT, format="json")
             return response.status_code
         finally:
@@ -609,6 +676,34 @@ def test_closed_request_cannot_be_picked(project, evaluation, status, stamp):
     )
     grant(head, "head_tutor")
     TutorEligibility.objects.create(tutor=head, project=project)
+    EvaluationRequest.objects.filter(pk=evaluation.pk).update(status=status, **{stamp: NOW})
+    client = APIClient()
+    client.force_authenticate(head)
+    response = client.post(pick_url(), SLOT, format="json")
+    assert response.status_code == 409
+    assert response.json() == NOT_PENDING
+    evaluation.refresh_from_db()
+    assert evaluation.status == status
+    assert evaluation.picked_by_id is None
+
+
+@pytest.mark.parametrize("status,stamp", [("cancelled", "cancelled_at"), ("expired", "expired_at")])
+def test_closed_request_with_overlapping_booking_is_not_pending(project, evaluation, status, stamp):
+    head = get_user_model().objects.create_user(
+        id=43, email="dana@example.com", display_name="Dana", password=PASSWORD
+    )
+    fay = get_user_model().objects.create_user(
+        id=46, email="fay@example.com", display_name="Fay", password=PASSWORD
+    )
+    grant(head, "head_tutor")
+    TutorEligibility.objects.create(tutor=head, project=project)
+    book(
+        evaluation.student,
+        other_project(),
+        fay,
+        datetime(2026, 10, 12, 15, tzinfo=timezone.utc),
+        datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc),
+    )
     EvaluationRequest.objects.filter(pk=evaluation.pk).update(status=status, **{stamp: NOW})
     client = APIClient()
     client.force_authenticate(head)

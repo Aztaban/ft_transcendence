@@ -7,8 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException
 
-from .models import EvaluationRequest, TutorEligibility
-from .permissions import HITCHHIKER_ROLES
+from .models import EvaluationRequest
 
 
 class ActiveRequestExists(APIException):
@@ -21,18 +20,6 @@ class InvalidStateTransition(APIException):
     status_code = 409
     default_code = "invalid_state_transition"
     default_detail = _("Only pending requests can be edited.")
-
-
-class NotEligible(APIException):
-    status_code = 403
-    default_code = "not_eligible"
-    default_detail = _("You are not eligible to evaluate this project.")
-
-
-class CannotPickOwnRequest(APIException):
-    status_code = 403
-    default_code = "cannot_pick_own_request"
-    default_detail = _("You cannot pick your own request.")
 
 
 class RequestNotPending(APIException):
@@ -112,23 +99,23 @@ def person_is_busy(person_id, starts_at, ends_at, request_id):
 
 
 def pick_slot(evaluation, user, starts_at, ends_at):
-    """Claim a pending request for an eligible Hitchhiker (api-plan §7.1, §10.4).
+    """Claim a pending request the caller is already allowed to pick (§7.1, §10.4).
 
-    Inside one transaction the Hitchhiker and the student are locked, overlap
-    is checked, and the conditional update names the single winner (schema §4.2).
-    A pending row cannot store a pick, so that update also moves the request to
-    awaiting_confirmation.
+    Eligibility is CanPickSlot on the view. Inside one transaction the Hitchhiker
+    and the student are locked, a request that is no longer pending is refused
+    before the overlap checks, and the conditional update names the single winner
+    (schema §4.2). A pending row cannot store a pick, so that update also moves
+    the request to awaiting_confirmation.
     """
-    is_hitchhiker = user.roles.filter(name__in=HITCHHIKER_ROLES).exists()
-    if is_hitchhiker and evaluation.student_id == user.pk:
-        raise CannotPickOwnRequest()
-    eligible = TutorEligibility.objects.filter(
-        tutor=user, project_id=evaluation.project_id
-    ).exists()
-    if not is_hitchhiker or not eligible:
-        raise NotEligible()
     with transaction.atomic():
         lock_participants(user.pk, evaluation.student_id)
+        status = (
+            EvaluationRequest.objects.select_for_update()
+            .values_list("status", flat=True)
+            .get(pk=evaluation.pk)
+        )
+        if status != EvaluationRequest.Status.PENDING:
+            raise RequestNotPending()
         if person_is_busy(user.pk, starts_at, ends_at, evaluation.pk):
             raise SlotOverlaps()
         if person_is_busy(evaluation.student_id, starts_at, ends_at, evaluation.pk):

@@ -1,6 +1,7 @@
 """Evaluation request inputs and representations."""
 
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -102,11 +103,30 @@ class EvaluationRequestNoteSerializer(serializers.Serializer):
     note = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
 
+class TimezoneRequiredDateTimeField(serializers.DateTimeField):
+    """ISO 8601 datetime that must include Z or an offset (api-plan §5.2)."""
+
+    default_error_messages = {
+        "naive": _("Datetime must include a timezone (Z or an offset)."),
+    }
+
+    def enforce_timezone(self, value):
+        if timezone.is_naive(value):
+            self.fail("naive")
+        return super().enforce_timezone(value)
+
+
 class EvaluationRequestPickSlotSerializer(serializers.Serializer):
     """Body of POST /evaluation-requests/{id}/pick-slot/ (api-plan §10.4)."""
 
-    starts_at = serializers.DateTimeField()
-    ends_at = serializers.DateTimeField()
+    starts_at = TimezoneRequiredDateTimeField()
+    ends_at = TimezoneRequiredDateTimeField()
+
+    def validate(self, attrs):
+        # schema §4.1 eval_req_slot_order: a stored slot must end after it starts.
+        if attrs["ends_at"] <= attrs["starts_at"]:
+            raise serializers.ValidationError({"ends_at": _("End time must be after start time.")})
+        return attrs
 
 
 class EvaluationRequestQuerySerializer(serializers.Serializer):
