@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { createEligibilityRequest } from "./eligibility";
+import { createEligibilityRequest, listEligibilityRequests } from "./eligibility";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -34,5 +34,22 @@ describe("createEligibilityRequest", () => {
     expect(options?.method).toBe("POST");
     expect(headers.get("X-CSRFToken")).toBe("test-csrf-token");
     expect(options?.body).toBe(JSON.stringify({ project_ids: [4, 7] }));
+  });
+});
+
+describe("listEligibilityRequests", () => {
+  test("sends status, ordering and page, but not page 1", async () => {
+    const emptyPage = { count: 0, next: null, previous: null, results: [] };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => jsonResponse(emptyPage));
+
+    await listEligibilityRequests("pending", { page: 1 });
+    await listEligibilityRequests("approved", { ordering: "-created_at", page: 3 });
+
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      "/api/v1/tutor-eligibility-requests/?status=pending",
+      "/api/v1/tutor-eligibility-requests/?status=approved&ordering=-created_at&page=3",
+    ]);
   });
 });

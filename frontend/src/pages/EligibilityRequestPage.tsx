@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { ApiError } from "../api/client";
@@ -22,6 +22,45 @@ const howItWorks = [
   { title: "Start evaluating", text: "Once approved, pick open requests for these projects." },
 ];
 
+// The chosen projects are kept for this browser tab, so opening a project's "Details" and
+// coming back with Back does not lose them. Storage can be unavailable (private mode, blocked
+// site data), so every access is guarded and the page works without it.
+const DRAFT_KEY = "eligibility-request-draft";
+
+function isProjectRef(value: unknown): value is ProjectRef {
+  const project = value as ProjectRef | null;
+
+  return (
+    typeof project === "object" &&
+    project !== null &&
+    typeof project.id === "number" &&
+    typeof project.slug === "string" &&
+    typeof project.name === "string"
+  );
+}
+
+function readDraft(): ProjectRef[] {
+  try {
+    const saved: unknown = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "[]");
+
+    return Array.isArray(saved) ? saved.filter(isProjectRef) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDraft(projects: ProjectRef[] | null) {
+  try {
+    if (projects && projects.length > 0) {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(projects));
+    } else {
+      sessionStorage.removeItem(DRAFT_KEY);
+    }
+  } catch {
+    // The draft is a convenience only.
+  }
+}
+
 function submitErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.code === "eligibility_request_pending") {
@@ -44,11 +83,10 @@ function submitErrorMessage(error: unknown) {
 
 // Hitchhiker eligibility request (#170, #171, #172): one request for every chosen project,
 // reviewed as a whole by a Head Tutor (api-plan §7.2, §10.3).
-// TODO: open this page automatically on the first switch to the Hitchhiker workspace (#169).
 function EligibilityRequestPage() {
   const navigate = useNavigate();
   const [stepId, setStepId] = useState<StepId>("projects");
-  const [projects, setProjects] = useState<ProjectRef[]>([]);
+  const [projects, setProjects] = useState<ProjectRef[]>(readDraft);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isSent, setIsSent] = useState(false);
@@ -56,12 +94,26 @@ function EligibilityRequestPage() {
   const stepIndex = steps.findIndex((step) => step.id === stepId);
   const step = steps[stepIndex];
 
+  useEffect(() => {
+    if (!isSent) {
+      writeDraft(projects);
+    }
+  }, [projects, isSent]);
+
+  // Going back to change the request clears the last submit error, so it never shows up
+  // under other projects.
+  function goToStep(nextStepId: StepId) {
+    setSubmitError("");
+    setStepId(nextStepId);
+  }
+
   async function handleSubmit() {
     setSubmitError("");
     setIsSubmitting(true);
 
     try {
       await createEligibilityRequest({ project_ids: projects.map((project) => project.id) });
+      writeDraft(null);
       setIsSent(true);
     } catch (error) {
       setSubmitError(submitErrorMessage(error));
@@ -78,7 +130,8 @@ function EligibilityRequestPage() {
             className="eligibility-request__back"
             type="button"
             aria-label="Back to the previous step"
-            onClick={() => setStepId(steps[stepIndex - 1].id)}
+            disabled={isSubmitting}
+            onClick={() => goToStep(steps[stepIndex - 1].id)}
           >
             ‹
           </button>
@@ -139,7 +192,8 @@ function EligibilityRequestPage() {
                 <button
                   className="eligibility-request__edit"
                   type="button"
-                  onClick={() => setStepId("projects")}
+                  disabled={isSubmitting}
+                  onClick={() => goToStep("projects")}
                 >
                   Edit
                 </button>

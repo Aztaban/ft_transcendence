@@ -34,6 +34,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  sessionStorage.clear();
 });
 
 function renderPage() {
@@ -152,5 +153,76 @@ describe("EligibilityRequestPage", () => {
     expect((await screen.findByRole("alert")).textContent).toBe(
       "You are already eligible for push_swap.",
     );
+  });
+
+  it("disables Edit and Back while the request is being sent", async () => {
+    vi.mocked(createEligibilityRequest).mockReturnValue(new Promise(() => {}));
+    renderPage();
+    await chooseProjects("push_swap");
+    fireEvent.click(getButton("Next"));
+
+    fireEvent.click(getButton("Submit"));
+
+    expect(getButton("Sending…").disabled).toBe(true);
+    expect(getButton("Edit").disabled).toBe(true);
+    expect(getButton("Back to the previous step").disabled).toBe(true);
+  });
+
+  it("does not show the last error after going back to change the projects", async () => {
+    vi.mocked(createEligibilityRequest).mockRejectedValue(
+      new ApiError(409, "Conflict", "eligibility_request_pending"),
+    );
+    renderPage();
+    await chooseProjects("push_swap");
+    fireEvent.click(getButton("Next"));
+    fireEvent.click(getButton("Submit"));
+    await screen.findByRole("alert");
+
+    fireEvent.click(getButton("Edit"));
+    await chooseProjects("born2beroot");
+    fireEvent.click(getButton("Next"));
+
+    expect(screen.getByRole("heading", { name: "2 projects selected" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps the chosen projects after leaving the page and coming back", async () => {
+    renderPage();
+    await chooseProjects("push_swap", "born2beroot");
+
+    // Opening "Details" leaves the page; Back mounts it again.
+    cleanup();
+    renderPage();
+
+    const pushSwap = (await screen.findByRole("checkbox", {
+      name: "push_swap",
+    })) as HTMLInputElement;
+
+    expect(pushSwap.checked).toBe(true);
+    expect(
+      (screen.getByRole("checkbox", { name: "born2beroot" }) as HTMLInputElement).checked,
+    ).toBe(true);
+    expect((screen.getByRole("checkbox", { name: "minishell" }) as HTMLInputElement).checked).toBe(
+      false,
+    );
+    expect(getButton("Next").disabled).toBe(false);
+  });
+
+  it("forgets the chosen projects once the request is sent", async () => {
+    vi.mocked(createEligibilityRequest).mockResolvedValue(sentRequest);
+    renderPage();
+    await chooseProjects("push_swap");
+    fireEvent.click(getButton("Next"));
+    fireEvent.click(getButton("Submit"));
+    await screen.findByRole("dialog");
+
+    cleanup();
+    renderPage();
+
+    const pushSwap = (await screen.findByRole("checkbox", {
+      name: "push_swap",
+    })) as HTMLInputElement;
+
+    expect(pushSwap.checked).toBe(false);
   });
 });

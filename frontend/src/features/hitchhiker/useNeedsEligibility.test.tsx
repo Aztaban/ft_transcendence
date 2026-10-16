@@ -1,4 +1,4 @@
-import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getTutorEligibility, listEligibilityRequests } from "../../api/eligibility";
@@ -60,7 +60,7 @@ describe("useNeedsEligibility", () => {
 
     await waitFor(() => expect(result.current.needsEligibility).toBe(true));
     expect(getTutorEligibility).toHaveBeenCalledWith(2);
-    expect(listEligibilityRequests).toHaveBeenCalledWith("pending");
+    expect(listEligibilityRequests).toHaveBeenCalledWith("pending", { page: 1 });
   });
 
   it("does not check anything outside the Hitchhiker workspace", () => {
@@ -123,6 +123,58 @@ describe("useNeedsEligibility", () => {
     const { result } = renderHook(() => useNeedsEligibility(true));
 
     await waitFor(() => expect(listEligibilityRequests).toHaveBeenCalled());
+    expect(result.current.needsEligibility).toBe(false);
+  });
+
+  describe("for a Head Tutor, who gets everyone's pending requests", () => {
+    const someoneElses = {
+      ...pendingRequest,
+      id: 3,
+      requester: { id: 8, display_name: "lformank", avatar_url: null },
+    };
+
+    function pages(second: (typeof pendingRequest)[]) {
+      vi.mocked(listEligibilityRequests).mockImplementation(async (_status, { page } = {}) =>
+        page === 2
+          ? { count: 21, next: null, previous: "page 1", results: second }
+          : { count: 21, next: "page 2", previous: null, results: [someoneElses] },
+      );
+    }
+
+    it("is true when only other people have pending requests", async () => {
+      logIn(["tutor", "head_tutor"]);
+      vi.mocked(getTutorEligibility).mockResolvedValue([]);
+      pages([someoneElses]);
+
+      const { result } = renderHook(() => useNeedsEligibility(true));
+
+      await waitFor(() => expect(result.current.needsEligibility).toBe(true));
+      expect(listEligibilityRequests).toHaveBeenCalledWith("pending", { page: 2 });
+    });
+
+    it("is false when their own request is on a later page", async () => {
+      logIn(["tutor", "head_tutor"]);
+      vi.mocked(getTutorEligibility).mockResolvedValue([]);
+      pages([pendingRequest]);
+
+      const { result } = renderHook(() => useNeedsEligibility(true));
+
+      await waitFor(() => expect(listEligibilityRequests).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(result.current.needsEligibility).toBe(false);
+    });
+  });
+
+  it("stays closed once dismissed", async () => {
+    logIn(["tutor"]);
+    vi.mocked(getTutorEligibility).mockResolvedValue([]);
+    vi.mocked(listEligibilityRequests).mockResolvedValue(noRequests);
+
+    const { result } = renderHook(() => useNeedsEligibility(true));
+
+    await waitFor(() => expect(result.current.needsEligibility).toBe(true));
+    act(() => result.current.dismiss());
+
     expect(result.current.needsEligibility).toBe(false);
   });
 });
