@@ -7,8 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException
 
-from .models import EvaluationRequest, TutorEligibility
-from .permissions import HITCHHIKER_ROLES
+from .models import EvaluationRequest
 
 
 class ActiveRequestExists(APIException):
@@ -21,18 +20,6 @@ class InvalidStateTransition(APIException):
     status_code = 409
     default_code = "invalid_state_transition"
     default_detail = _("Only pending requests can be edited.")
-
-
-class NotEligible(APIException):
-    status_code = 403
-    default_code = "not_eligible"
-    default_detail = _("You are not eligible to evaluate this project.")
-
-
-class CannotPickOwnRequest(APIException):
-    status_code = 403
-    default_code = "cannot_pick_own_request"
-    default_detail = _("You cannot pick your own request.")
 
 
 class RequestNotPending(APIException):
@@ -76,20 +63,13 @@ def edit_note(evaluation, validated_data):
 
 
 def pick_slot(evaluation, user, starts_at, ends_at):
-    """Claim a pending request for an eligible Hitchhiker (api-plan §7.1, §10.4).
+    """Claim a pending request the caller is already allowed to pick (§7.1, §10.4).
 
-    The conditional update is the single winner (schema §4.2). A pending row
-    cannot store a pick, so the same statement moves it to awaiting_confirmation
-    (#194). Row locks around overlap checks are #193.
+    Eligibility is CanPickSlot on the view. The conditional update is the single
+    winner (schema §4.2). A pending row cannot store a pick, so the same
+    statement moves it to awaiting_confirmation. Row locks around overlap
+    checks are #193.
     """
-    is_hitchhiker = user.roles.filter(name__in=HITCHHIKER_ROLES).exists()
-    if is_hitchhiker and evaluation.student_id == user.pk:
-        raise CannotPickOwnRequest()
-    eligible = TutorEligibility.objects.filter(
-        tutor=user, project_id=evaluation.project_id
-    ).exists()
-    if not is_hitchhiker or not eligible:
-        raise NotEligible()
     updated = EvaluationRequest.objects.filter(
         pk=evaluation.pk,
         status=EvaluationRequest.Status.PENDING,
