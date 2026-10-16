@@ -63,10 +63,30 @@
   }
 }
 
-@media (max-width: 640px) {
+.connection-status__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Small screens: the icon only, so the bell and the avatar stay on screen. The text is still
+   read by screen readers. */
+@media (max-width: 900px) {
   .connection-status__pill {
-    padding: 4px 10px;
-    font-size: 0.75rem;
+    margin-right: 12px;
+    padding: 7px;
+  }
+
+  .connection-status__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }
 
