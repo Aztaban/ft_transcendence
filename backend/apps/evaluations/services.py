@@ -22,6 +22,12 @@ class InvalidStateTransition(APIException):
     default_detail = _("Only pending requests can be edited.")
 
 
+class RequestNotPending(APIException):
+    status_code = 409
+    default_code = "request_not_pending"
+    default_detail = _("This request is no longer pending.")
+
+
 def history_filter(at):
     return Q(status__in=(EvaluationRequest.Status.CANCELLED, EvaluationRequest.Status.EXPIRED)) | Q(
         status=EvaluationRequest.Status.CONFIRMED, ends_at__lt=at
@@ -56,12 +62,26 @@ def edit_note(evaluation, validated_data):
     return evaluation
 
 
-def pick_slot(evaluation, starts_at, ends_at):
-    """Accept a proposed slot the caller is already allowed to pick (§7.1, §10.4).
+def pick_slot(evaluation, user, starts_at, ends_at):
+    """Claim a pending request the caller is already allowed to pick (§7.1, §10.4).
 
-    Eligibility is CanPickSlot on the view. A single winner (#192), the row
-    locks (#193) and the move to awaiting_confirmation (#194) come next. Until
-    they land, an allowed call leaves the request unchanged.
+    Eligibility is CanPickSlot on the view. The conditional update is the single
+    winner (schema §4.2). A pending row cannot store a pick, so the same
+    statement moves it to awaiting_confirmation. Row locks around overlap
+    checks are #193.
     """
-    _ = (starts_at, ends_at)
+    updated = EvaluationRequest.objects.filter(
+        pk=evaluation.pk,
+        status=EvaluationRequest.Status.PENDING,
+        picked_by__isnull=True,
+    ).update(
+        status=EvaluationRequest.Status.AWAITING_CONFIRMATION,
+        picked_by=user,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        updated_at=timezone.now(),
+    )
+    if updated != 1:
+        raise RequestNotPending()
+    evaluation.refresh_from_db()
     return evaluation
