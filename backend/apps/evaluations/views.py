@@ -1,4 +1,4 @@
-"""Create, list, retrieve and edit evaluation requests."""
+"""Create, list, retrieve, edit and pick evaluation requests."""
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -20,12 +20,13 @@ from .permissions import HITCHHIKER_ROLES, OVERRIDE_ROLES, EvaluationRequestPerm
 from .serializers import (
     EvaluationRequestCreateSerializer,
     EvaluationRequestNoteSerializer,
+    EvaluationRequestPickSlotSerializer,
     EvaluationRequestQuerySerializer,
     EvaluationRequestSerializer,
     ProjectRefSerializer,
     ProjectSerializer,
 )
-from .services import create_request, edit_note, history_filter
+from .services import create_request, edit_note, history_filter, pick_slot
 
 
 class ProjectListView(ListAPIView):
@@ -147,19 +148,25 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
         return Response(self.get_serializer(evaluation).data, status=status.HTTP_201_CREATED)
 
 
+def visible_evaluation_requests(user):
+    """Requests this user may see (api-plan §8.7). Anyone else gets 404."""
+    queryset = EvaluationRequest.objects.select_related(
+        "student", "project", "picked_by", "cancelled_by"
+    )
+    if user.roles.filter(name__in=OVERRIDE_ROLES).exists():
+        return queryset
+    visible = Q(student=user) | Q(picked_by=user)
+    if user.roles.filter(name__in=HITCHHIKER_ROLES).exists():
+        visible |= Q(
+            status=EvaluationRequest.Status.PENDING,
+            project_id__in=TutorEligibility.objects.filter(tutor=user).values("project_id"),
+        )
+    return queryset.filter(visible)
+
+
 class EvaluationRequestDetailView(EvaluationRequestBaseView):
     def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
-        if user.roles.filter(name__in=OVERRIDE_ROLES).exists():
-            return queryset
-        visible = Q(student=user) | Q(picked_by=user)
-        if user.roles.filter(name__in=HITCHHIKER_ROLES).exists():
-            visible |= Q(
-                status=EvaluationRequest.Status.PENDING,
-                project_id__in=TutorEligibility.objects.filter(tutor=user).values("project_id"),
-            )
-        return queryset.filter(visible)
+        return visible_evaluation_requests(self.request.user)
 
     @extend_schema(responses={200: EvaluationRequestSerializer})
     def get(self, request, pk):
@@ -173,4 +180,27 @@ class EvaluationRequestDetailView(EvaluationRequestBaseView):
         serializer = EvaluationRequestNoteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         evaluation = edit_note(evaluation, serializer.validated_data)
+        return Response(self.get_serializer(evaluation).data)
+
+
+class EvaluationRequestPickSlotView(EvaluationRequestBaseView):
+    """POST /evaluation-requests/{id}/pick-slot/ (api-plan §10.4)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return visible_evaluation_requests(self.request.user)
+
+    @extend_schema(
+        request=EvaluationRequestPickSlotSerializer, responses={200: EvaluationRequestSerializer}
+    )
+    def post(self, request, pk):
+        evaluation = self.get_object()
+        serializer = EvaluationRequestPickSlotSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        evaluation = pick_slot(
+            evaluation,
+            serializer.validated_data["starts_at"],
+            serializer.validated_data["ends_at"],
+        )
         return Response(self.get_serializer(evaluation).data)
