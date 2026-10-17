@@ -5,6 +5,7 @@ from channels.layers import get_channel_layer
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError, transaction
 from django.views.decorators.csrf import ensure_csrf_cookie
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import (
@@ -18,8 +19,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.authentication import CsrfEnforcedSessionAuthentication
-from apps.accounts.serializers.authentication import LoginSerializer, RegistrationSerializer
+from apps.accounts.serializers.authentication import (
+    AuthenticationResultSerializer,
+    LoginSerializer,
+    RegistrationSerializer,
+    SessionStatusSerializer,
+)
 from apps.core.exceptions import error_response, validation_error_response
+from apps.core.schema import CSRF_HEADER, error_responses
 from apps.core.throttling import AuthRateThrottle
 
 
@@ -37,6 +44,24 @@ def _has_unique_email_error(serializer):
     )
 
 
+@extend_schema(
+    summary="Register an account",
+    description="Creates a student account without logging in.",
+    auth=[],
+    parameters=[CSRF_HEADER],
+    request=RegistrationSerializer,
+    responses={
+        201: AuthenticationResultSerializer,
+        **error_responses(
+            {
+                400: ("validation_error",),
+                403: ("csrf_failed",),
+                409: ("email_already_exists",),
+                415: ("unsupported_media_type",),
+            }
+        ),
+    },
+)
 @api_view(["POST"])
 @authentication_classes([CsrfEnforcedSessionAuthentication])
 @permission_classes([AllowAny])
@@ -76,6 +101,34 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [AuthRateThrottle]
 
+    @extend_schema(
+        summary="Log in with email and password",
+        description="Starts a session. Suspended/deleted accounts return invalid_credentials.",
+        auth=[],
+        parameters=[
+            CSRF_HEADER,
+            OpenApiParameter(
+                "Set-Cookie",
+                location=OpenApiParameter.HEADER,
+                response=[200],
+                description=(
+                    "Sets sessionid and rotates csrftoken; use the new CSRF token after " "login."
+                ),
+            ),
+        ],
+        request=LoginSerializer,
+        responses={
+            200: AuthenticationResultSerializer,
+            **error_responses(
+                {
+                    400: ("validation_error",),
+                    401: ("invalid_credentials",),
+                    403: ("csrf_failed",),
+                    415: ("unsupported_media_type",),
+                }
+            ),
+        },
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
@@ -101,6 +154,35 @@ class LoginView(APIView):
         )
 
 
+@extend_schema(
+    summary="Check the current session and initialize CSRF",
+    description="Returns a user summary or user=null; a missing session returns 200.",
+    auth=[],
+    parameters=[
+        OpenApiParameter(
+            "Set-Cookie",
+            location=OpenApiParameter.HEADER,
+            response=[200],
+            description="Sets the csrftoken cookie.",
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            SessionStatusSerializer,
+            examples=[
+                OpenApiExample("Anonymous session", value={"authenticated": False, "user": None}),
+                OpenApiExample(
+                    "Authenticated session",
+                    value={
+                        "authenticated": True,
+                        "user": {"id": 7, "email": "alice@example.com", "display_name": "Alice"},
+                    },
+                ),
+            ],
+        ),
+        **error_responses(),
+    },
+)
 @ensure_csrf_cookie
 @api_view(["GET"])
 @authentication_classes([SessionAuthentication])
@@ -130,6 +212,25 @@ class LogoutView(APIView):
     authentication_classes = [CsrfEnforcedSessionAuthentication]
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Log out of the current session",
+        description="With valid CSRF, returns 204 even when already logged out.",
+        auth=[],
+        parameters=[
+            CSRF_HEADER,
+            OpenApiParameter(
+                "Set-Cookie",
+                location=OpenApiParameter.HEADER,
+                response=[204],
+                description="Expires an incoming sessionid cookie when present.",
+            ),
+        ],
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Session ended or already absent."),
+            **error_responses({403: ("csrf_failed",)}),
+        },
+    )
     def post(self, request):
         with transaction.atomic():
             session_key = request.session.session_key
