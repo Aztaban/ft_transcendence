@@ -1,0 +1,359 @@
+.welcome-dialog {
+  position: fixed;
+  z-index: 100;
+  display: grid;
+  inset: 0;
+  place-items: center;
+  padding: 16px;
+  background: rgba(17, 17, 17, 0.45);
+  backdrop-filter: blur(3px);
+  animation: welcome-dialog-fade-in 0.2s ease;
+}
+
+.welcome-dialog__card {
+  display: flex;
+  width: min(100%, 600px);
+  max-height: calc(100vh - 32px);
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  overflow-y: auto;
+  padding: 36px 48px 28px;
+  border-top: 6px solid var(--color-accent);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  animation: welcome-dialog-pop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.welcome-dialog__card:focus {
+  outline: none;
+}
+
+.welcome-dialog__logo {
+  width: 64px;
+  height: 64px;
+  padding: 12px;
+  border-radius: 50%;
+  background: #e6f8f8;
+  animation: welcome-dialog-float 2.4s ease-in-out infinite;
+}
+
+.welcome-dialog__card h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.welcome-dialog__card h2#welcome-title {
+  color: #111111;
+}
+
+.welcome-dialog__subtitle {
+  margin: -6px 0 0;
+  color: #4d5555;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+/* Project checkboxes */
+
+.welcome-dialog__projects {
+  display: flex;
+  width: min(100%, 380px);
+  min-height: 120px;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #e3e7e7;
+  border-radius: 14px;
+  background: #fafcfc;
+}
+
+.welcome-dialog__project {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.welcome-dialog__project:hover {
+  background: #ffffff;
+  border-color: #d5d9d9;
+  transform: translateX(3px);
+}
+
+.welcome-dialog__project--selected,
+.welcome-dialog__project--selected:hover {
+  border-color: var(--color-accent);
+  background: #f2fbfb;
+}
+
+.welcome-dialog__badge {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.welcome-dialog__badge--teal {
+  background: #e6f8f8;
+  color: #00797b;
+}
+
+.welcome-dialog__badge--amber {
+  background: #fff4dc;
+  color: #9a6512;
+}
+
+.welcome-dialog__badge--blue {
+  background: #eaf1fc;
+  color: #2f5ea8;
+}
+
+.welcome-dialog__badge--violet {
+  background: #f2eefb;
+  color: #6b4fb3;
+}
+
+.welcome-dialog__name {
+  overflow-wrap: anywhere;
+}
+
+.welcome-dialog__count {
+  margin-right: auto;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #e6f8f8;
+  color: #00797b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.welcome-dialog__project input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* Buttons */
+
+.welcome-dialog__actions {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.welcome-dialog__later {
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.welcome-dialog__later:hover {
+  color: #111111;
+  text-decoration: underline;
+}
+
+.welcome-dialog__submit {
+  min-width: 136px;
+  padding: 8px 24px;
+  border: 1px solid #111111;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 3px 0 #111111;
+  color: #111111;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.2s ease;
+}
+
+.welcome-dialog__submit:enabled {
+  border-color: #00797b;
+  background: var(--color-accent);
+  box-shadow: 0 3px 0 #00797b;
+  color: #ffffff;
+}
+
+.welcome-dialog__submit:hover:enabled {
+  background: var(--color-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 #00797b;
+}
+
+.welcome-dialog__submit:active:enabled {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #00797b;
+}
+
+.welcome-dialog__submit:disabled {
+  border-color: #c9cfcf;
+  box-shadow: 0 3px 0 #c9cfcf;
+  color: #9aa1a1;
+  cursor: not-allowed;
+}
+
+.welcome-dialog__later:focus-visible,
+.welcome-dialog__submit:focus-visible,
+.welcome-dialog__project:focus-within {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+.welcome-dialog__error {
+  width: 100%;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+/* "Form sent!" */
+
+.welcome-dialog__card--sent {
+  display: grid;
+  width: min(100%, 680px);
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 8px 24px;
+  padding: 36px 40px 22px;
+}
+
+.welcome-dialog__done {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 12px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e7f6ec;
+  color: #16a34a;
+  font-weight: 700;
+  animation: welcome-dialog-pop-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.welcome-dialog__card--sent {
+  border-top-color: #16a34a;
+}
+
+.welcome-dialog__card--sent h2 {
+  margin-bottom: 18px;
+  color: #1c7c3c;
+  font-size: 1.3rem;
+  text-align: left;
+}
+
+.welcome-dialog__card--sent p {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.welcome-dialog__image {
+  width: 72px;
+  animation: welcome-dialog-float 2.4s ease-in-out infinite;
+}
+
+.welcome-dialog__hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem !important;
+  text-align: center;
+}
+
+.welcome-dialog__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes welcome-dialog-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes welcome-dialog-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes welcome-dialog-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (max-width: 640px) {
+  .welcome-dialog__card {
+    padding: 28px 20px 20px;
+  }
+
+  .welcome-dialog__card--sent {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-dialog__image {
+    justify-self: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-dialog,
+  .welcome-dialog * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
