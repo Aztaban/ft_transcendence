@@ -29,7 +29,8 @@ def assert_validation_error(response, field):
 
 
 def test_register_creates_active_user_without_logging_in():
-    client = APIClient()
+    client = APIClient(enforce_csrf_checks=True)
+    client.get(reverse("api:session"), HTTP_HOST="localhost")
     response = client.post(
         reverse("api:register"),
         {
@@ -39,6 +40,7 @@ def test_register_creates_active_user_without_logging_in():
         },
         format="json",
         HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
     )
 
     assert response.status_code == status.HTTP_201_CREATED
@@ -56,6 +58,75 @@ def test_register_creates_active_user_without_logging_in():
     assert user.intra_login is None
     assert "password" not in response.json()
     assert SESSION_KEY not in client.session
+
+
+@pytest.mark.parametrize(
+    "csrf_case",
+    ["no_cookie", "header_without_cookie", "no_header", "malformed_header", "wrong_header"],
+)
+def test_anonymous_registration_requires_valid_csrf(csrf_case):
+    client = APIClient(enforce_csrf_checks=True)
+    headers = {"HTTP_HOST": "localhost"}
+    if csrf_case not in ("no_cookie", "header_without_cookie"):
+        client.get(reverse("api:session"), HTTP_HOST="localhost")
+    if csrf_case == "header_without_cookie":
+        headers["HTTP_X_CSRFTOKEN"] = "a" * 32
+    elif csrf_case == "malformed_header":
+        headers["HTTP_X_CSRFTOKEN"] = "invalid"
+    elif csrf_case == "wrong_header":
+        token = client.cookies["csrftoken"].value
+        headers["HTTP_X_CSRFTOKEN"] = ("a" if token[0] != "a" else "b") + token[1:]
+
+    response = client.post(
+        reverse("api:register"), registration_payload(), format="json", **headers
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {
+        "error": {
+            "code": "csrf_failed",
+            "message": "CSRF verification failed. Reload the page and try again.",
+        }
+    }
+    assert get_user_model().objects.count() == 0
+    assert SESSION_KEY not in client.session
+
+
+def test_registration_with_csrf_preserves_existing_login_session():
+    existing_user = get_user_model().objects.create_user(
+        email="existing@example.com",
+        display_name="existing-user",
+        password="ExistingPassword123!",
+    )
+    client = APIClient(enforce_csrf_checks=True)
+    client.get(reverse("api:session"), HTTP_HOST="localhost")
+    login_response = client.post(
+        reverse("api:login"),
+        {"email": "existing@example.com", "password": "ExistingPassword123!"},
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
+    assert login_response.status_code == status.HTTP_200_OK
+
+    response = client.post(
+        reverse("api:register"),
+        registration_payload(),
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
+
+    created_user = get_user_model().objects.get(email="student@example.com")
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json() == {
+        "id": created_user.pk,
+        "email": "student@example.com",
+        "display_name": "student",
+        "message": "Account created successfully.",
+    }
+    assert list(created_user.roles.values_list("name", flat=True)) == ["student"]
+    assert client.session[SESSION_KEY] == str(existing_user.pk)
 
 
 def test_register_hashes_password_with_argon2():

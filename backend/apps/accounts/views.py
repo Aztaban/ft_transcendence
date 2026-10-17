@@ -37,6 +37,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.authentication import CsrfEnforcedSessionAuthentication
 from apps.accounts.eligibility import list_approved_projects_for_tutor
 from apps.accounts.models import Role
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
@@ -130,6 +131,7 @@ def _has_unique_email_error(serializer):
 
 
 @api_view(["POST"])
+@authentication_classes([CsrfEnforcedSessionAuthentication])
 @permission_classes([AllowAny])
 @throttle_classes([AuthRateThrottle])
 def register(request):
