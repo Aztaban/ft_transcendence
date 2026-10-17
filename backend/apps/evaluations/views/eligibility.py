@@ -1,4 +1,4 @@
-"""Account eligibility views."""
+"""Tutor eligibility endpoints (api-plan §10.3)."""
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -11,22 +11,21 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.eligibility import list_approved_projects_for_tutor
 from apps.accounts.models import Role
-from apps.accounts.serializers.eligibility import (
+from apps.core.exceptions import error_response
+from apps.core.pagination import APIPageNumberPagination
+from apps.evaluations.eligibility import list_approved_projects_for_tutor
+from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
+from apps.evaluations.references import ProjectRefSerializer
+from apps.evaluations.serializers.eligibility import (
     EligibilityRequestCreateSerializer,
     EligibilityRequestPageSerializer,
     EligibilityRequestReviewSerializer,
     EligibilityRequestSerializer,
 )
-from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
-from apps.evaluations.references import ProjectRefSerializer
-
-from ._responses import _error_response
 
 User = get_user_model()
 
@@ -52,14 +51,6 @@ _ELIGIBILITY_REQUEST_STATUSES = frozenset(TutorEligibilityRequest.Status.values)
 _ELIGIBILITY_REQUEST_SEE_ALL = frozenset({Role.Name.HEAD_TUTOR, Role.Name.ADMIN})
 
 _HITCHHIKER_ROLES = frozenset({Role.Name.TUTOR, Role.Name.HEAD_TUTOR})
-
-
-class EligibilityRequestPagination(PageNumberPagination):
-    """Same limits as api-plan §5.7 (and RequestPagination in evaluations PR #498)."""
-
-    page_size = 20
-    page_size_query_param = "page_size"
-    max_page_size = 100
 
 
 def _list_eligibility_requests(request):
@@ -92,7 +83,7 @@ def _list_eligibility_requests(request):
         )
     qs = qs.order_by(ordering)
 
-    paginator = EligibilityRequestPagination()
+    paginator = APIPageNumberPagination()
     page = paginator.paginate_queryset(qs, request)
     serializer = EligibilityRequestSerializer(page, many=True)
     return paginator.get_paginated_response(serializer.data)
@@ -141,7 +132,7 @@ def _create_eligibility_request(request):
             requester=request.user,
             status=TutorEligibilityRequest.Status.PENDING,
         ).exists():
-            return _error_response(
+            return error_response(
                 "eligibility_request_pending",
                 _("You already have a pending eligibility request."),
                 status.HTTP_409_CONFLICT,
@@ -244,7 +235,7 @@ def tutor_eligibility_request_review(request, request_id):
             review_note=review_note,
         )
         if updated != 1:
-            return _error_response(
+            return error_response(
                 "eligibility_request_already_reviewed",
                 _("This eligibility request has already been reviewed."),
                 status.HTTP_409_CONFLICT,

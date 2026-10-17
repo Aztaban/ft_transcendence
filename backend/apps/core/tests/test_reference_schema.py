@@ -3,9 +3,10 @@
 from django.urls import path
 from drf_spectacular.generators import SchemaGenerator
 
-from apps.accounts.views.eligibility import tutor_eligibility_request_list
 from apps.accounts.views.profiles import MeView, user_detail
-from apps.evaluations.views import EvaluationRequestDetailView, ProjectDetailView
+from apps.evaluations.views.eligibility import tutor_eligibility_request_list
+from apps.evaluations.views.projects import ProjectDetailView
+from apps.evaluations.views.requests import EvaluationRequestDetailView
 
 
 def test_reference_components_are_shared_and_avatar_urls_are_nullable_strings(capsys):

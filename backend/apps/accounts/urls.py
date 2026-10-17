@@ -2,7 +2,7 @@
 
 from django.urls import path
 
-from .views import authentication, eligibility, oauth, profiles, roles
+from .views import authentication, oauth, profiles, roles
 
 urlpatterns = [
     path("auth/register/", authentication.register, name="register"),
@@ -18,20 +18,5 @@ urlpatterns = [
         "users/<int:user_id>/roles/<int:role_id>/",
         roles.revoke_role,
         name="users-revoke-role",
-    ),
-    path(
-        "tutors/<int:user_id>/eligibility/",
-        eligibility.tutor_eligibility,
-        name="tutors-eligibility",
-    ),
-    path(
-        "tutor-eligibility-requests/",
-        eligibility.tutor_eligibility_request_list,
-        name="tutor-eligibility-requests-list",
-    ),
-    path(
-        "tutor-eligibility-requests/<int:request_id>/review/",
-        eligibility.tutor_eligibility_request_review,
-        name="tutor-eligibility-requests-review",
     ),
 ]

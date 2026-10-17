@@ -18,7 +18,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
-from apps.evaluations.views import pick_slot as claim_pending_request
+from apps.evaluations.views.requests import pick_slot as claim_pending_request
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
@@ -607,7 +607,7 @@ def test_only_one_hitchhiker_wins(seeded_roles, student, project, evaluation, mo
         barrier.wait(timeout=10)
         return claim_pending_request(evaluation, user, starts_at, ends_at)
 
-    monkeypatch.setattr("apps.evaluations.views.pick_slot", claim_after_lookup)
+    monkeypatch.setattr("apps.evaluations.views.requests.pick_slot", claim_after_lookup)
 
     def submit(user_id):
         close_old_connections()
