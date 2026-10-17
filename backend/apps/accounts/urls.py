@@ -2,36 +2,36 @@
 
 from django.urls import path
 
-from . import views
+from .views import authentication, eligibility, oauth, profiles, roles
 
 urlpatterns = [
-    path("auth/register/", views.register, name="register"),
-    path("auth/login/", views.LoginView.as_view(), name="login"),
-    path("auth/logout/", views.LogoutView.as_view(), name="logout"),
-    path("auth/session/", views.session_status, name="session"),
-    path("auth/42/redirect/", views.oauth_42_redirect, name="oauth_42_redirect"),
-    path("auth/42/callback/", views.oauth_42_callback, name="oauth_42_callback"),
-    path("users/me/", views.MeView.as_view(), name="me"),
-    path("users/<int:user_id>/", views.user_detail, name="users-detail"),
-    path("users/<int:user_id>/roles/", views.assign_role, name="users-assign-role"),
+    path("auth/register/", authentication.register, name="register"),
+    path("auth/login/", authentication.LoginView.as_view(), name="login"),
+    path("auth/logout/", authentication.LogoutView.as_view(), name="logout"),
+    path("auth/session/", authentication.session_status, name="session"),
+    path("auth/42/redirect/", oauth.oauth_42_redirect, name="oauth_42_redirect"),
+    path("auth/42/callback/", oauth.oauth_42_callback, name="oauth_42_callback"),
+    path("users/me/", profiles.MeView.as_view(), name="me"),
+    path("users/<int:user_id>/", profiles.user_detail, name="users-detail"),
+    path("users/<int:user_id>/roles/", roles.assign_role, name="users-assign-role"),
     path(
         "users/<int:user_id>/roles/<int:role_id>/",
-        views.revoke_role,
+        roles.revoke_role,
         name="users-revoke-role",
     ),
     path(
         "tutors/<int:user_id>/eligibility/",
-        views.tutor_eligibility,
+        eligibility.tutor_eligibility,
         name="tutors-eligibility",
     ),
     path(
         "tutor-eligibility-requests/",
-        views.tutor_eligibility_request_list,
+        eligibility.tutor_eligibility_request_list,
         name="tutor-eligibility-requests-list",
     ),
     path(
         "tutor-eligibility-requests/<int:request_id>/review/",
-        views.tutor_eligibility_request_review,
+        eligibility.tutor_eligibility_request_review,
         name="tutor-eligibility-requests-review",
     ),
 ]

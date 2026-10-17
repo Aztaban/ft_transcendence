@@ -4,12 +4,13 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.contrib.auth import SESSION_KEY, get_user_model
+from django.db import IntegrityError
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.accounts.views import (
+from apps.accounts.views.oauth import (
     OAUTH_42_ERROR_PATH,
     OAUTH_42_STATE_SESSION_KEY,
     OAUTH_42_SUCCESS_PATH,
@@ -43,11 +44,11 @@ def client_with_state(client=None, state="known-state"):
 
 def mock_verified_42_identity(monkeypatch, account=None):
     monkeypatch.setattr(
-        "apps.accounts.views._exchange_42_code_for_access_token",
+        "apps.accounts.services.oauth.exchange_42_code_for_access_token",
         lambda code: "secret-provider-token",
     )
     monkeypatch.setattr(
-        "apps.accounts.views._retrieve_42_account_information",
+        "apps.accounts.services.oauth.retrieve_42_account_information",
         lambda token: account or account_information(),
     )
 
@@ -202,3 +203,54 @@ def test_suspended_oauth_user_cannot_login(monkeypatch):
 
     assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_account_suspended")
     assert SESSION_KEY not in client.session
+
+
+@override_settings(**OAUTH_SETTINGS)
+@pytest.mark.parametrize("returning", [False, True])
+def test_conflicting_intra_login_returns_existing_oauth_error(monkeypatch, returning):
+    user_model = get_user_model()
+    user_model.objects.create_user(
+        email="other@example.com",
+        password=None,
+        display_name="Other User",
+        intra_id=1234,
+        intra_login="oauth-user",
+    )
+    if returning:
+        user_model.objects.create_user(
+            email="oauth-user@student.42.fr",
+            password=None,
+            display_name="Returning User",
+            intra_id=4242,
+            intra_login="previous-login",
+        )
+    mock_verified_42_identity(monkeypatch)
+    client = client_with_state()
+
+    response = callback(client)
+
+    error = "oauth_identity_conflict" if returning else "oauth_account_conflict"
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, error)
+    assert SESSION_KEY not in client.session
+    assert user_model.objects.count() == (2 if returning else 1)
+    if returning:
+        assert user_model.objects.get(intra_id=4242).intra_login == "previous-login"
+
+
+@override_settings(**OAUTH_SETTINGS)
+def test_account_creation_integrity_error_returns_conflict_without_login(monkeypatch):
+    mock_verified_42_identity(monkeypatch)
+
+    def conflicting_save(self):
+        raise IntegrityError("Concurrent identity creation")
+
+    monkeypatch.setattr(
+        "apps.accounts.services.oauth.OAuth42UserCreationSerializer.save", conflicting_save
+    )
+    client = client_with_state()
+
+    response = callback(client)
+
+    assert_frontend_redirect(response, OAUTH_42_ERROR_PATH, "oauth_account_conflict")
+    assert SESSION_KEY not in client.session
+    assert get_user_model().objects.count() == 0

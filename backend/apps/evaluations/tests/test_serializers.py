@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 
 from apps.evaluations.models import Project
-from apps.evaluations.serializers import ProjectRefSerializer, ProjectSerializer
+from apps.evaluations.references import ProjectRefSerializer
+from apps.evaluations.serializers import ProjectSerializer
 
 
 def test_project_ref_has_exact_public_fields():
