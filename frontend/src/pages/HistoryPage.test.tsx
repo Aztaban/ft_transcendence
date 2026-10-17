@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,6 +7,8 @@ import { listProjects } from "../api/projects";
 import { makeRequest } from "../features/student/testUtils";
 import { RoleProvider, useRole } from "../store/RoleContext";
 import type { EvaluationRequest } from "../types/evaluation";
+import { LiveContext } from "../websocket/LiveProvider";
+import { FakeSocket, openLiveSocket } from "../websocket/testSocket";
 import HistoryPage from "./HistoryPage";
 
 vi.mock("../api/evaluationRequests", () => ({ listEvaluationRequests: vi.fn() }));
@@ -194,5 +196,47 @@ describe("HistoryPage", () => {
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Could not load your history. Please try again later.",
     );
+  });
+});
+
+describe("HistoryPage live", () => {
+  afterEach(() => {
+    FakeSocket.reset();
+  });
+
+  it("re-fetches the same page in the background when an evaluation changes", async () => {
+    vi.mocked(listEvaluationRequests)
+      .mockResolvedValueOnce(page([past(1, "push_swap")]))
+      .mockResolvedValueOnce(page([past(2, "minishell"), past(1, "push_swap")]));
+
+    render(
+      <MemoryRouter>
+        <LiveContext.Provider value={openLiveSocket()}>
+          <RoleProvider>
+            <HistoryPage />
+          </RoleProvider>
+        </LiveContext.Provider>
+      </MemoryRouter>,
+    );
+    await screen.findByRole("heading", { name: "push_swap" });
+
+    // minishell's evaluation got its result.
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.updated",
+        data: { id: 2, status: "confirmed" },
+      }),
+    );
+
+    expect(screen.queryByText("Loading history…")).toBeNull();
+    expect(await screen.findByRole("heading", { name: "minishell" })).toBeTruthy();
+    expect(listEvaluationRequests).toHaveBeenCalledTimes(2);
+    expect(listEvaluationRequests).toHaveBeenLastCalledWith({
+      scope: "mine",
+      history: true,
+      status: undefined,
+      project: undefined,
+      page: 1,
+    });
   });
 });

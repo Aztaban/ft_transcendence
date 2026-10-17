@@ -10,7 +10,7 @@ import {
 import { useNavigate } from "react-router";
 
 import { useAuth } from "../store/AuthContext";
-import type { LiveEventName } from "./events";
+import type { LiveEventName, LiveMessage } from "./events";
 import { LiveSocket, type ConnectionStatus } from "./LiveSocket";
 
 // Exported for tests, which provide their own LiveSocket.
@@ -69,9 +69,13 @@ export function LiveProvider({ children, createSocket }: LiveProviderProps) {
 }
 
 // Calls `refetch` when one of `events` arrives, and after every reconnect, since missed events
-// are not replayed (§9.2, §9.4). Pages re-fetch over REST and never build state from the event.
+// are not replayed (§9.2, §9.4). Pages re-fetch over REST and never build state from the event;
+// `refetch` gets the event only to tell which object changed (nothing after a reconnect).
 // Without a LiveProvider (e.g. in tests) it does nothing.
-export function useLiveRefresh(events: readonly LiveEventName[], refetch: () => void) {
+export function useLiveRefresh(
+  events: readonly LiveEventName[],
+  refetch: (message?: LiveMessage) => void,
+) {
   const socket = useContext(LiveContext);
   const refetchRef = useRef(refetch);
   const eventsKey = events.join(",");
@@ -88,7 +92,7 @@ export function useLiveRefresh(events: readonly LiveEventName[], refetch: () => 
     const names = new Set(eventsKey.split(","));
     const unsubscribe = socket.subscribe((message) => {
       if (names.has(message.event)) {
-        refetchRef.current();
+        refetchRef.current(message);
       }
     });
     const stopReconnect = socket.onReconnect(() => refetchRef.current());

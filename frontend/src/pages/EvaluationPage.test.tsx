@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,8 @@ import {
   getEvaluationRequest,
 } from "../api/evaluationRequests";
 import { makeRequest } from "../features/student/testUtils";
+import { LiveContext } from "../websocket/LiveProvider";
+import { FakeSocket, openLiveSocket } from "../websocket/testSocket";
 import EvaluationPage from "./EvaluationPage";
 
 vi.mock("../api/evaluationRequests", () => ({
@@ -126,5 +128,75 @@ describe("EvaluationPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Waiting for a Hitchhiker" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+  });
+});
+
+describe("EvaluationPage live", () => {
+  function renderLive() {
+    return render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MemoryRouter initialEntries={["/evaluations/7"]}>
+          <Routes>
+            <Route path="/evaluations/:id" element={<EvaluationPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LiveContext.Provider>,
+    );
+  }
+
+  afterEach(() => {
+    FakeSocket.reset();
+    vi.useRealTimers();
+  });
+
+  it("re-fetches when this request changes and ignores other requests", async () => {
+    vi.mocked(getEvaluationRequest)
+      .mockResolvedValueOnce(awaiting)
+      .mockResolvedValueOnce(makeRequest(7, "push_swap", "pending"));
+
+    renderLive();
+    await screen.findByText("Needs your answer");
+
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.slot_picked",
+        data: { id: 8, status: "awaiting_confirmation" },
+      }),
+    );
+
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(1);
+
+    // The Hitchhiker released the slot: the request is back in the queue.
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.released",
+        data: { id: 7, status: "pending" },
+      }),
+    );
+
+    expect(await screen.findByText("In the queue")).toBeTruthy();
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Needs your answer")).toBeNull();
+  });
+
+  it("re-fetches after a reconnect and keeps the request if that fails", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(getEvaluationRequest)
+      .mockResolvedValueOnce(awaiting)
+      .mockRejectedValueOnce(new Error("network"));
+
+    renderLive();
+    await screen.findByText("Needs your answer");
+
+    act(() => {
+      FakeSocket.latest().serverClose(1006);
+      vi.advanceTimersByTime(1000);
+      FakeSocket.latest().serverOpen();
+    });
+
+    await vi.waitFor(() => expect(getEvaluationRequest).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+    expect(screen.getByText("Needs your answer")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

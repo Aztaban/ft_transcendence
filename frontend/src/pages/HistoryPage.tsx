@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { listEvaluationRequests } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
@@ -7,6 +7,8 @@ import { useRole } from "../store/RoleContext";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
 import type { ProjectRef } from "../types/project";
 import { formatSlot } from "../utils/dateTime";
+import { EVALUATION_EVENTS } from "../websocket/events";
+import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/history.css";
 
 type LoadState = "loading" | "ready" | "error";
@@ -96,6 +98,17 @@ function HistoryPage() {
   const [total, setTotal] = useState(0);
   const [hasNext, setHasNext] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [reloadKey, setReloadKey] = useState(0);
+  // Set by a live refresh: that load runs in the background (no skeleton, and a failure keeps
+  // the history already shown).
+  const isLiveRefresh = useRef(false);
+
+  // An evaluation ended, was cancelled or expired, or got its result, or the connection is back
+  // (§9, #255). The same filters and page are loaded again.
+  useLiveRefresh(EVALUATION_EVENTS, () => {
+    isLiveRefresh.current = true;
+    setReloadKey((key) => key + 1);
+  });
 
   useEffect(() => {
     let active = true;
@@ -117,8 +130,14 @@ function HistoryPage() {
 
   useEffect(() => {
     let active = true;
+    const inBackground = isLiveRefresh.current;
 
-    setLoadState("loading");
+    isLiveRefresh.current = false;
+
+    if (!inBackground) {
+      setLoadState("loading");
+    }
+
     listEvaluationRequests({
       scope: viewer === "student" ? "mine" : "picked",
       history: true,
@@ -136,14 +155,14 @@ function HistoryPage() {
       })
       .catch(() => {
         if (active) {
-          setLoadState("error");
+          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
 
     return () => {
       active = false;
     };
-  }, [viewer, status, project, page]);
+  }, [viewer, status, project, page, reloadKey]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const isFiltered = status !== null || project !== "";

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { ApiError } from "../api/client";
@@ -7,6 +7,8 @@ import SlotPicker, { type ChosenSlot } from "../features/hitchhiker/SlotPicker";
 import SuccessDialog from "../features/hitchhiker/SuccessDialog";
 import type { EvaluationRequest } from "../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../utils/dateTime";
+import { EVALUATION_EVENTS } from "../websocket/events";
+import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/pick-slot.css";
 
 type LoadState = "loading" | "ready" | "error";
@@ -38,9 +40,27 @@ function PickSlotPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isPicked, setIsPicked] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Set by a live refresh: a failure then keeps the request already shown.
+  const isLiveRefresh = useRef(false);
+
+  // Another Hitchhiker picked this request, or the student cancelled it, or the connection is
+  // back (§9, #257): the page shows that it is no longer open. Events about other requests, and
+  // the Hitchhiker's own pick (the popup is open), are ignored.
+  useLiveRefresh(EVALUATION_EVENTS, (message) => {
+    if (isPicked || (message && "id" in message.data && message.data.id !== Number(id))) {
+      return;
+    }
+
+    isLiveRefresh.current = true;
+    setReloadKey((key) => key + 1);
+  });
 
   useEffect(() => {
     let active = true;
+    const inBackground = isLiveRefresh.current;
+
+    isLiveRefresh.current = false;
 
     getEvaluationRequest(Number(id))
       .then((result) => {
@@ -51,14 +71,14 @@ function PickSlotPage() {
       })
       .catch(() => {
         if (active) {
-          setLoadState("error");
+          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
 
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
   async function handleSubmit() {
     if (!request || !slot) {
