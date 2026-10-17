@@ -1,8 +1,8 @@
-"""POST /evaluation-requests/{id}/pick-slot/ (issues #190 through #193).
+"""POST /evaluation-requests/{id}/pick-slot/ (issues #190 through #193 and #557).
 
 An eligible Hitchhiker claims a pending request inside a transaction that locks
 both people and rejects an overlapping evaluation. Exactly one concurrent pick
-of the same request wins.
+of the same request wins. The proposed slot must match the §7.1 timing rules.
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -12,6 +12,7 @@ from threading import Barrier
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import close_old_connections
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -200,12 +201,187 @@ def test_csrf_required(student, evaluation):
             {"starts_at": "2026-10-12T15:45:00Z", "ends_at": "2026-10-12T15:00:00Z"},
             {"ends_at": ["End time must be after start time."]},
         ),
+        (
+            {"starts_at": "2026-10-10T08:00:00Z", "ends_at": "2026-10-10T08:15:00Z"},
+            {"starts_at": ["Start time must be at least 30 minutes from now."]},
+        ),
+        (
+            {"starts_at": "2026-10-10T09:15:00Z", "ends_at": "2026-10-10T09:30:00Z"},
+            {"starts_at": ["Start time must be at least 30 minutes from now."]},
+        ),
+        (
+            {"starts_at": "2026-10-24T09:15:00Z", "ends_at": "2026-10-24T09:30:00Z"},
+            {"starts_at": ["Start time must be at most 14 days from now."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:07:00Z", "ends_at": "2026-10-12T15:45:00Z"},
+            {"starts_at": ["Time must be on a 15-minute boundary, with zero seconds."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:00:01Z", "ends_at": "2026-10-12T15:45:00Z"},
+            {"starts_at": ["Time must be on a 15-minute boundary, with zero seconds."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:00:00.000001Z", "ends_at": "2026-10-12T15:45:00Z"},
+            {"starts_at": ["Time must be on a 15-minute boundary, with zero seconds."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T15:46:00Z"},
+            {"ends_at": ["Time must be on a 15-minute boundary, with zero seconds."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T15:45:01Z"},
+            {"ends_at": ["Time must be on a 15-minute boundary, with zero seconds."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T15:45:00.000001Z"},
+            {"ends_at": ["Time must be on a 15-minute boundary, with zero seconds."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T17:15:00Z"},
+            {"ends_at": ["Duration must be between 15 and 120 minutes."]},
+        ),
+        (
+            {"starts_at": "2026-10-12T17:07:00+02:00", "ends_at": "2026-10-12T17:45:00+02:00"},
+            {"starts_at": ["Time must be on a 15-minute boundary, with zero seconds."]},
+        ),
+        (
+            {"starts_at": "2026-10-10T11:15:00+02:00", "ends_at": "2026-10-10T11:30:00+02:00"},
+            {"starts_at": ["Start time must be at least 30 minutes from now."]},
+        ),
     ],
 )
 def test_pick_slot_validation(hitchhiker, evaluation, payload, fields):
     client = APIClient()
     client.force_authenticate(hitchhiker)
     response = client.post(pick_url(), payload, format="json")
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the highlighted fields.",
+            "fields": fields,
+        }
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.starts_at is None
+    assert evaluation.ends_at is None
+
+
+@override_settings(EVALUATION_SLOT_GRID_MINUTES=5)
+def test_duration_below_minimum_is_rejected(hitchhiker, evaluation):
+    # Ten minutes sits on a 5-minute grid, so only the duration rule fails.
+    client = APIClient()
+    client.force_authenticate(hitchhiker)
+    response = client.post(
+        pick_url(),
+        {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T15:10:00Z"},
+        format="json",
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the highlighted fields.",
+            "fields": {"ends_at": ["Duration must be between 15 and 120 minutes."]},
+        }
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.starts_at is None
+    assert evaluation.ends_at is None
+
+
+@pytest.mark.parametrize(
+    "payload,starts_at,ends_at,stored_start,stored_end",
+    [
+        (
+            {"starts_at": "2026-10-10T09:30:00Z", "ends_at": "2026-10-10T09:45:00Z"},
+            "2026-10-10T09:30:00Z",
+            "2026-10-10T09:45:00Z",
+            datetime(2026, 10, 10, 9, 30, tzinfo=timezone.utc),
+            datetime(2026, 10, 10, 9, 45, tzinfo=timezone.utc),
+        ),
+        (
+            {"starts_at": "2026-10-24T09:00:00Z", "ends_at": "2026-10-24T09:15:00Z"},
+            "2026-10-24T09:00:00Z",
+            "2026-10-24T09:15:00Z",
+            datetime(2026, 10, 24, 9, tzinfo=timezone.utc),
+            datetime(2026, 10, 24, 9, 15, tzinfo=timezone.utc),
+        ),
+        (
+            {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T17:00:00Z"},
+            "2026-10-12T15:00:00Z",
+            "2026-10-12T17:00:00Z",
+            datetime(2026, 10, 12, 15, tzinfo=timezone.utc),
+            datetime(2026, 10, 12, 17, tzinfo=timezone.utc),
+        ),
+        (
+            {"starts_at": "2026-10-12T17:00:00+02:00", "ends_at": "2026-10-12T17:45:00+02:00"},
+            "2026-10-12T15:00:00Z",
+            "2026-10-12T15:45:00Z",
+            datetime(2026, 10, 12, 15, tzinfo=timezone.utc),
+            datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc),
+        ),
+    ],
+)
+def test_exact_slot_boundaries_are_accepted(
+    hitchhiker, evaluation, expected, payload, starts_at, ends_at, stored_start, stored_end
+):
+    client = APIClient()
+    client.force_authenticate(hitchhiker)
+    response = client.post(pick_url(), payload, format="json")
+    expected.update(
+        status="awaiting_confirmation",
+        picked_by={"id": 42, "display_name": "Bob", "avatar_url": None},
+        starts_at=starts_at,
+        ends_at=ends_at,
+    )
+    assert response.status_code == 200
+    assert response.json() == expected
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == hitchhiker.pk
+    assert evaluation.starts_at == stored_start
+    assert evaluation.ends_at == stored_end
+
+
+@pytest.mark.parametrize(
+    "overrides,payload,fields",
+    [
+        (
+            {"EVALUATION_SLOT_MAX_DURATION_MINUTES": 30},
+            SLOT,
+            {"ends_at": ["Duration must be between 15 and 30 minutes."]},
+        ),
+        (
+            {"EVALUATION_SLOT_MIN_DURATION_MINUTES": 60},
+            SLOT,
+            {"ends_at": ["Duration must be between 60 and 120 minutes."]},
+        ),
+        (
+            {"EVALUATION_SLOT_MIN_LEAD_MINUTES": 45},
+            {"starts_at": "2026-10-10T09:30:00Z", "ends_at": "2026-10-10T09:45:00Z"},
+            {"starts_at": ["Start time must be at least 45 minutes from now."]},
+        ),
+        (
+            {"EVALUATION_SLOT_MAX_LEAD_DAYS": 2},
+            SLOT,
+            {"starts_at": ["Start time must be at most 2 days from now."]},
+        ),
+        (
+            {"EVALUATION_SLOT_GRID_MINUTES": 30},
+            SLOT,
+            {"ends_at": ["Time must be on a 30-minute boundary, with zero seconds."]},
+        ),
+    ],
+)
+def test_slot_rules_use_configured_settings(hitchhiker, evaluation, overrides, payload, fields):
+    client = APIClient()
+    client.force_authenticate(hitchhiker)
+    with override_settings(**overrides):
+        response = client.post(pick_url(), payload, format="json")
     assert response.status_code == 400
     assert response.json() == {
         "error": {
