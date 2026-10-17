@@ -150,18 +150,48 @@ def test_create_rejects_invalid_project_ids_shape(api_client, make_user, project
     assert TutorEligibilityRequest.objects.count() == 0
 
 
-def test_create_rejects_malformed_project_id(api_client, make_user):
+@pytest.mark.parametrize(
+    "project_ids,messages",
+    [
+        (["abc"], ["A valid integer is required."]),
+        ([None], ["This field may not be null."]),
+        (
+            ["abc", 0],
+            ["A valid integer is required.", "Ensure this value is greater than or equal to 1."],
+        ),
+    ],
+)
+def test_create_rejects_malformed_project_ids(make_user, project_ids, messages):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     Project.objects.create(slug="libft", name="Libft")
-
-    api_client.force_authenticate(user=tutor)
-    response = api_client.post(reverse(LIST), {"project_ids": ["abc"]}, format="json")
+    client = APIClient(enforce_csrf_checks=True)
+    client.get(reverse("api:session"), HTTP_HOST="localhost")
+    login = client.post(
+        reverse("api:login"),
+        {"email": tutor.email, "password": "secret"},
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
+    assert login.status_code == status.HTTP_200_OK
+    response = client.post(
+        reverse(LIST),
+        {"project_ids": project_ids},
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json() == _validation_error(
-        {"project_ids": {"0": ["A valid integer is required."]}}
-    )
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the highlighted fields.",
+            "fields": {"project_ids": messages},
+        }
+    }
     assert TutorEligibilityRequest.objects.count() == 0
+    assert TutorEligibility.objects.count() == 0
 
 
 def test_create_rejects_unknown_or_inactive_project(api_client, make_user):
