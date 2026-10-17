@@ -2,7 +2,8 @@
 
 from django.db.models import Q
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -39,7 +40,27 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
     pagination_class = APIPageNumberPagination
 
     @extend_schema(
-        parameters=[EvaluationRequestQuerySerializer],
+        parameters=[
+            EvaluationRequestQuerySerializer,
+            OpenApiParameter(
+                "status",
+                type=OpenApiTypes.STR,
+                many=True,
+                enum=EvaluationRequest.Status.values,
+                style="form",
+                explode=False,
+                description="Comma-separated statuses, e.g. pending,awaiting_confirmation.",
+            ),
+            OpenApiParameter(
+                "result",
+                type=OpenApiTypes.STR,
+                many=True,
+                enum=[*EvaluationRequest.Result.values, "none"],
+                style="form",
+                explode=False,
+                description="Comma-separated results; none matches requests without a result.",
+            ),
+        ],
         responses={
             200: EvaluationRequestSerializer(many=True),
             **error_responses(

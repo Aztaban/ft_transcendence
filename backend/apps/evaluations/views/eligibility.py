@@ -158,6 +158,10 @@ def _create_eligibility_request(request):
         OpenApiParameter(
             name="status",
             type=OpenApiTypes.STR,
+            many=True,
+            enum=TutorEligibilityRequest.Status.values,
+            style="form",
+            explode=False,
             location=OpenApiParameter.QUERY,
             required=False,
             description="Comma-separated statuses: pending, approved, declined.",

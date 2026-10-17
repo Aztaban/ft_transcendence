@@ -28,6 +28,7 @@ class MeView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        auth=[{"cookieAuth": []}],
         summary="Return the authenticated user's profile",
         responses={200: ProfileSerializer, **error_responses({401: ("not_authenticated",)})},
     )
@@ -39,6 +40,7 @@ class MeView(APIView):
         return Response(ProfileSerializer(request.user).data)
 
     @extend_schema(
+        auth=[{"cookieAuth": []}],
         parameters=[CSRF_HEADER],
         summary="Update the current user's display name or language",
         request=ProfileUpdateSerializer,

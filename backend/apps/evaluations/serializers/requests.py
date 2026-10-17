@@ -134,8 +134,24 @@ def _max_lead_message():
 class EvaluationRequestPickSlotSerializer(serializers.Serializer):
     """Body of POST /evaluation-requests/{id}/pick-slot/ (api-plan §10.4)."""
 
-    starts_at = TimezoneRequiredDateTimeField()
-    ends_at = TimezoneRequiredDateTimeField()
+    starts_at = TimezoneRequiredDateTimeField(
+        help_text=(
+            "Timezone required (Z or offset). After conversion to UTC, use a "
+            f"{settings.EVALUATION_SLOT_GRID_MINUTES}-minute boundary with zero seconds and "
+            "microseconds. Start between "
+            f"{settings.EVALUATION_SLOT_MIN_LEAD_MINUTES} minutes and "
+            f"{settings.EVALUATION_SLOT_MAX_LEAD_DAYS} days from now, inclusive."
+        )
+    )
+    ends_at = TimezoneRequiredDateTimeField(
+        help_text=(
+            "Timezone required (Z or offset). After conversion to UTC, use a "
+            f"{settings.EVALUATION_SLOT_GRID_MINUTES}-minute boundary with zero seconds and "
+            "microseconds. Must be after starts_at, with a duration between "
+            f"{settings.EVALUATION_SLOT_MIN_DURATION_MINUTES} and "
+            f"{settings.EVALUATION_SLOT_MAX_DURATION_MINUTES} minutes, inclusive."
+        )
+    )
 
     def validate(self, attrs):
         # Times are already UTC. Rules are api-plan §7.1; limits are EVALUATION_SLOT_*.

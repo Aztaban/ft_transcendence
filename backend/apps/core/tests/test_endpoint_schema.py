@@ -254,3 +254,62 @@ def test_remaining_implemented_operations_document_relevant_errors(schema, path,
         header = next(p for p in operation["parameters"] if p["name"] == "X-CSRFToken")
         assert header["required"] is True
         assert header["in"] == "header"
+
+
+def test_own_profile_requires_a_session_in_schema(schema):
+    for method in ("get", "patch"):
+        operation = schema["paths"]["/api/v1/users/me/"][method]
+        assert operation["security"] == [{"cookieAuth": []}]
+
+
+@pytest.mark.parametrize("path", ["evaluation-requests/", "tutor-eligibility-requests/"])
+def test_pagination_keys_are_required_even_when_links_are_null(schema, path):
+    response = schema["paths"][f"/api/v1/{path}"]["get"]["responses"]["200"]
+    reference = response["content"]["application/json"]["schema"]["$ref"]
+    page = schema["components"]["schemas"][reference.rsplit("/", 1)[1]]
+    assert set(page["required"]) == {"count", "next", "previous", "results"}
+    assert set(page["properties"]) == {"count", "next", "previous", "results"}
+    for link in ("next", "previous"):
+        assert page["properties"][link]["type"] == "string"
+        assert page["properties"][link]["nullable"] is True
+
+
+@pytest.mark.parametrize(
+    "path,name,values",
+    [
+        (
+            "evaluation-requests/",
+            "status",
+            ["pending", "awaiting_confirmation", "confirmed", "cancelled", "expired"],
+        ),
+        ("evaluation-requests/", "result", ["passed", "failed", "none"]),
+        ("tutor-eligibility-requests/", "status", ["pending", "approved", "declined"]),
+    ],
+)
+def test_multi_value_filters_use_comma_separated_query_encoding(schema, path, name, values):
+    operation = schema["paths"][f"/api/v1/{path}"]["get"]
+    parameter = next(p for p in operation["parameters"] if p["name"] == name)
+    assert parameter["in"] == "query"
+    assert parameter["style"] == "form"
+    assert parameter["explode"] is False
+    assert parameter["schema"] == {
+        "type": "array",
+        "items": {"type": "string", "enum": sorted(values)},
+    }
+
+
+def test_pick_slot_schema_describes_timezone_grid_order_and_timing_limits(schema):
+    slot = schema["components"]["schemas"]["EvaluationRequestPickSlot"]
+    assert set(slot["required"]) == {"starts_at", "ends_at"}
+    for field in ("starts_at", "ends_at"):
+        assert slot["properties"][field]["type"] == "string"
+        assert slot["properties"][field]["format"] == "date-time"
+        description = slot["properties"][field]["description"]
+        assert "Timezone required (Z or offset)" in description
+        assert "UTC" in description
+        assert "15-minute boundary with zero seconds and microseconds" in description
+    start = slot["properties"]["starts_at"]["description"]
+    end = slot["properties"]["ends_at"]["description"]
+    assert "between 30 minutes and 14 days from now, inclusive" in start
+    assert "after starts_at" in end
+    assert "between 15 and 120 minutes, inclusive" in end
