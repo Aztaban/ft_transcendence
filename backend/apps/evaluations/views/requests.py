@@ -5,10 +5,10 @@ from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.core.pagination import APIPageNumberPagination
 from apps.evaluations.models import EvaluationRequest, TutorEligibility
 from apps.evaluations.permissions import (
     HITCHHIKER_ROLES,
@@ -26,12 +26,6 @@ from apps.evaluations.serializers.requests import (
 from apps.evaluations.services import create_request, edit_note, history_filter, pick_slot
 
 
-class RequestPagination(PageNumberPagination):
-    page_size = 20
-    page_size_query_param = "page_size"
-    max_page_size = 100
-
-
 class EvaluationRequestBaseView(GenericAPIView):
     permission_classes = [IsAuthenticated, EvaluationRequestPermission]
     serializer_class = EvaluationRequestSerializer
@@ -41,7 +35,7 @@ class EvaluationRequestBaseView(GenericAPIView):
 
 
 class EvaluationRequestListCreateView(EvaluationRequestBaseView):
-    pagination_class = RequestPagination
+    pagination_class = APIPageNumberPagination
 
     @extend_schema(
         parameters=[EvaluationRequestQuerySerializer],

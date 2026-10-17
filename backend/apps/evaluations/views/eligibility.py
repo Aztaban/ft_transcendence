@@ -11,12 +11,12 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.accounts.models import Role
 from apps.core.exceptions import error_response
+from apps.core.pagination import APIPageNumberPagination
 from apps.evaluations.eligibility import list_approved_projects_for_tutor
 from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
 from apps.evaluations.references import ProjectRefSerializer
@@ -53,14 +53,6 @@ _ELIGIBILITY_REQUEST_SEE_ALL = frozenset({Role.Name.HEAD_TUTOR, Role.Name.ADMIN}
 _HITCHHIKER_ROLES = frozenset({Role.Name.TUTOR, Role.Name.HEAD_TUTOR})
 
 
-class EligibilityRequestPagination(PageNumberPagination):
-    """Same limits as api-plan §5.7 (and RequestPagination in evaluations PR #498)."""
-
-    page_size = 20
-    page_size_query_param = "page_size"
-    max_page_size = 100
-
-
 def _list_eligibility_requests(request):
     projects = Prefetch("projects", queryset=Project.objects.order_by("name"))
     qs = TutorEligibilityRequest.objects.select_related(
@@ -91,7 +83,7 @@ def _list_eligibility_requests(request):
         )
     qs = qs.order_by(ordering)
 
-    paginator = EligibilityRequestPagination()
+    paginator = APIPageNumberPagination()
     page = paginator.paginate_queryset(qs, request)
     serializer = EligibilityRequestSerializer(page, many=True)
     return paginator.get_paginated_response(serializer.data)

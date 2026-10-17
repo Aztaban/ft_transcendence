@@ -19,13 +19,12 @@ from rest_framework.views import APIView
 
 from apps.accounts.authentication import CsrfEnforcedSessionAuthentication
 from apps.accounts.serializers.authentication import LoginSerializer, RegistrationSerializer
+from apps.core.exceptions import error_response, validation_error_response
 from apps.core.throttling import AuthRateThrottle
-
-from ._responses import _error_response, _validation_error_response
 
 
 def _email_conflict_response():
-    return _error_response(
+    return error_response(
         "email_already_exists",
         "An account with this email already exists.",
         status.HTTP_409_CONFLICT,
@@ -49,7 +48,7 @@ def register(request):
         if _has_unique_email_error(serializer):
             return _email_conflict_response()
 
-        return _validation_error_response(
+        return validation_error_response(
             serializer.errors, "Please correct the registration fields."
         )
 
@@ -80,13 +79,13 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
-            return _validation_error_response(serializer.errors, "Please correct the login fields.")
+            return validation_error_response(serializer.errors, "Please correct the login fields.")
 
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
         user = authenticate(request, email=email, password=password)
         if user is None:
-            return _error_response(
+            return error_response(
                 "invalid_credentials", "Invalid email or password.", status.HTTP_401_UNAUTHORIZED
             )
 

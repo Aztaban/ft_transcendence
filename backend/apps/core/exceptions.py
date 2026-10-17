@@ -70,6 +70,11 @@ def error_response(code, message, http_status, fields=None):
     return Response({"error": error}, status=http_status)
 
 
+def validation_error_response(errors, message):
+    """Preserve an endpoint's validation message using the shared field normalization."""
+    return error_response("validation_error", message, status.HTTP_400_BAD_REQUEST, errors)
+
+
 def _describe(exc):
     """Return the contract code, message and field errors for a DRF exception."""
     if isinstance(exc, exceptions.ValidationError):
