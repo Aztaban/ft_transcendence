@@ -46,7 +46,7 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
 
   COUNCIL: [
     { label: "Home", to: "/", icon: homeIcon },
-    { label: "Messages", to: "/council/messages", icon: councilIcon },
+    { label: "Messages", to: "/council/inbox", icon: councilIcon },
     { label: "History", to: "/council/history", icon: historyIcon },
     { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
     { label: "Council Profile", to: "/council", icon: profileIcon },
@@ -107,7 +107,12 @@ function Sidebar() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === "/"}
+              // An item with another item below its path (e.g. /council and /council/inbox)
+              // is active only on its own page, so one item is highlighted at a time.
+              end={
+                item.to === "/" ||
+                visibleNavigation.some((other) => other.to.startsWith(`${item.to}/`))
+              }
               className={({ isActive }) =>
                 ["sidebar__nav-link", isActive ? "sidebar__nav-link--active" : ""]
                   .filter(Boolean)

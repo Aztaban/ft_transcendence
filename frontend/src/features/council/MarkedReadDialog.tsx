@@ -1,0 +1,50 @@
+import { useEffect, useRef } from "react";
+
+import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
+
+interface MarkedReadDialogProps {
+  onClose: () => void;
+}
+
+// Figma "marks as read". Closes on a click outside the card or on Escape.
+function MarkedReadDialog({ onClose }: MarkedReadDialogProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    cardRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="message-sent" data-testid="marked-read-backdrop" onClick={onClose}>
+      <div
+        ref={cardRef}
+        className="message-sent__card marked-read__card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="marked-read-title"
+        tabIndex={-1}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <p id="marked-read-title" className="marked-read__title">
+          Done. You can now find the message in the <strong>History</strong> list!
+        </p>
+        <img className="marked-read__image" src={hitchhikersIcon} alt="" aria-hidden="true" />
+        <p className="message-sent__hint">Click anywhere to close</p>
+      </div>
+    </div>
+  );
+}
+
+export default MarkedReadDialog;

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDayHeading, formatDuration, formatStartsIn, formatTimeAgo } from "./dateTime";
+import {
+  formatDate,
+  formatDayHeading,
+  formatDuration,
+  formatStartsIn,
+  formatTimeAgo,
+} from "./dateTime";
 
 describe("formatTimeAgo", () => {
   const now = new Date("2026-10-09T12:00:00Z");
@@ -57,5 +63,11 @@ describe("formatStartsIn", () => {
 describe("formatDuration", () => {
   it("gives the slot length in minutes", () => {
     expect(formatDuration("2026-10-13T09:00:00Z", "2026-10-13T09:45:00Z")).toBe("45 min");
+  });
+});
+
+describe("formatDate", () => {
+  it("writes the day, month and year", () => {
+    expect(formatDate("2026-07-04T10:00:00Z")).toBe("July 4, 2026");
   });
 });

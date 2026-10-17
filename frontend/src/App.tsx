@@ -2,6 +2,8 @@ import { Route, Routes } from "react-router";
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
+import CouncilInboxMessagePage from "./pages/CouncilInboxMessagePage";
+import CouncilInboxPage from "./pages/CouncilInboxPage";
 import CouncilMessagePage from "./pages/CouncilMessagePage";
 import CouncilPage from "./pages/CouncilPage";
 import CreateRequestPage from "./pages/CreateRequestPage";
@@ -98,6 +100,28 @@ function AuthenticatedApp() {
           element={
             <RoleGuard allowedRoles={routePermissions.council} fallback={<UnauthorizedPage />}>
               <CouncilMessagePage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/council/inbox"
+          element={
+            <RoleGuard
+              allowedRoles={routePermissions.councilMessages}
+              fallback={<UnauthorizedPage />}
+            >
+              <CouncilInboxPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/council/inbox/:id"
+          element={
+            <RoleGuard
+              allowedRoles={routePermissions.councilMessages}
+              fallback={<UnauthorizedPage />}
+            >
+              <CouncilInboxMessagePage />
             </RoleGuard>
           }
         />
