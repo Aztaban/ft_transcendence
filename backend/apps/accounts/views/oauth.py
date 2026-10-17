@@ -7,10 +7,12 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.http import HttpResponseRedirect
 from django.views.decorators.cache import never_cache
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 
 from apps.accounts.services import oauth as oauth_service
+from apps.core.schema import error_responses
 
 OAUTH_42_STATE_SESSION_KEY = "oauth_42_state"
 
@@ -39,6 +41,33 @@ def _oauth_42_frontend_redirect(error_code=None):
     return HttpResponseRedirect(OAUTH_42_SUCCESS_PATH)
 
 
+@extend_schema(
+    summary="Start 42 OAuth login",
+    description="Browser navigation: stores session state, then redirects to 42.",
+    auth=[],
+    parameters=[
+        OpenApiParameter(
+            "Location",
+            location=OpenApiParameter.HEADER,
+            required=True,
+            response=[302],
+            description=(
+                "42 authorization URL containing client_id, redirect_uri, response_type=code "
+                "and state; or /login?oauth=oauth_not_configured."
+            ),
+        ),
+        OpenApiParameter(
+            "Set-Cookie",
+            location=OpenApiParameter.HEADER,
+            response=[302],
+            description="Stores OAuth state in the browser session.",
+        ),
+    ],
+    responses={
+        302: OpenApiResponse(description="Browser redirect; no response body."),
+        **error_responses(),
+    },
+)
 @never_cache
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -61,6 +90,53 @@ def oauth_42_redirect(request):
     return HttpResponseRedirect(f"{OAUTH_42_AUTHORIZE_URL}?{authorization_query}")
 
 
+@extend_schema(
+    summary="Complete 42 OAuth login",
+    description=(
+        "Consumes session state and logs in by verified 42 identity; never links by email. "
+        "Failure codes: oauth_invalid_state, oauth_access_denied, oauth_provider_error, "
+        "oauth_missing_code, oauth_not_configured, oauth_token_exchange_failed, "
+        "oauth_profile_retrieval_failed, oauth_account_suspended, oauth_account_exists, "
+        "oauth_identity_conflict, oauth_account_conflict. Provider tokens stay server-side."
+    ),
+    auth=[],
+    parameters=[
+        OpenApiParameter(
+            "state",
+            description="Must match session state; otherwise redirects with oauth_invalid_state.",
+        ),
+        OpenApiParameter(
+            "code",
+            description="42 authorization code; required for success, absent on denial.",
+        ),
+        OpenApiParameter(
+            "error",
+            description=(
+                "access_denied maps to oauth_access_denied; other values to "
+                "oauth_provider_error."
+            ),
+        ),
+        OpenApiParameter(
+            "Location",
+            location=OpenApiParameter.HEADER,
+            required=True,
+            response=[302],
+            description="/ on success; /login?oauth=<code> on failure.",
+        ),
+        OpenApiParameter(
+            "Set-Cookie",
+            location=OpenApiParameter.HEADER,
+            response=[302],
+            description="Updates the sessionid cookie and rotates csrftoken on successful login.",
+        ),
+    ],
+    responses={
+        302: OpenApiResponse(
+            description="Browser redirect; failures use the Location query.",
+        ),
+        **error_responses(),
+    },
+)
 @never_cache
 @api_view(["GET"])
 @permission_classes([AllowAny])
