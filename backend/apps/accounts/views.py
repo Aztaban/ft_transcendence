@@ -55,10 +55,10 @@ from apps.accounts.serializers import (
     RegistrationSerializer,
     RoleAssignmentResultSerializer,
     RoleAssignSerializer,
-    TutorEligibleProjectSerializer,
 )
 from apps.core.throttling import AuthRateThrottle
 from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
+from apps.evaluations.references import ProjectRefSerializer
 
 User = get_user_model()
 
@@ -247,7 +247,7 @@ def user_detail(request, user_id):
 
 @extend_schema(
     summary="List projects a Hitchhiker is eligible to evaluate",
-    responses={200: TutorEligibleProjectSerializer(many=True)},
+    responses={200: ProjectRefSerializer(many=True)},
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -256,7 +256,7 @@ def tutor_eligibility(request, user_id):
     _ = request
     tutor = get_object_or_404(User, pk=user_id)
     projects = list_approved_projects_for_tutor(tutor)
-    return Response(TutorEligibleProjectSerializer(projects, many=True).data)
+    return Response(ProjectRefSerializer(projects, many=True).data)
 
 
 _ELIGIBILITY_REQUEST_ORDERINGS = frozenset({"created_at", "-created_at"})

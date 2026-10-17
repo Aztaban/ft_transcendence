@@ -8,7 +8,9 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.models import Role
+from apps.accounts.references import UserRefSerializer
 from apps.evaluations.models import TutorEligibilityRequest
+from apps.evaluations.references import ProjectRefSerializer
 
 User = get_user_model()
 
@@ -115,29 +117,6 @@ class RoleAssignmentResultSerializer(PublicProfileSerializer):
     """Limited payload after role assign — same visibility as public profile."""
 
 
-class TutorEligibleProjectSerializer(serializers.Serializer):
-    """Public project listing item for tutor eligibility (api-plan ProjectRef)."""
-
-    id = serializers.IntegerField()
-    slug = serializers.CharField()
-    name = serializers.CharField()
-
-
-class UserRefSerializer(serializers.ModelSerializer):
-    """Short user reference (api-plan §8.1)."""
-
-    avatar_url = serializers.SerializerMethodField()
-
-    class Meta:
-        model = User
-        fields = ("id", "display_name", "avatar_url")
-        read_only_fields = fields
-
-    @extend_schema_field(serializers.CharField(allow_null=True))
-    def get_avatar_url(self, obj):
-        return None
-
-
 class EligibilityRequestSerializer(serializers.ModelSerializer):
     """Eligibility request representation (api-plan §8.9)."""
 
@@ -159,10 +138,10 @@ class EligibilityRequestSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
-    @extend_schema_field(TutorEligibleProjectSerializer(many=True))
+    @extend_schema_field(ProjectRefSerializer(many=True))
     def get_projects(self, obj):
         projects = sorted(obj.projects.all(), key=lambda project: project.name)
-        return TutorEligibleProjectSerializer(projects, many=True).data
+        return ProjectRefSerializer(projects, many=True).data
 
 
 class EligibilityRequestPageSerializer(serializers.Serializer):

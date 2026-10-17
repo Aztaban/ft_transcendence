@@ -8,22 +8,11 @@ from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.accounts.references import UserRefSerializer
+
 from .models import EvaluationRequest, Project
 from .permissions import OVERRIDE_ROLES
-
-
-class UserRefSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    display_name = serializers.CharField(read_only=True)
-    # Avatar storage is not implemented yet; users without an avatar return null.
-    avatar_url = serializers.URLField(read_only=True, allow_null=True, default=None)
-
-
-class ProjectRefSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Project
-        fields = ("id", "slug", "name")
-        read_only_fields = fields
+from .references import ProjectRefSerializer
 
 
 class ProjectSerializer(ProjectRefSerializer):

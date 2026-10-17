@@ -67,6 +67,7 @@ Python is formatted by black and isort, line length 100: fix with `black . && is
 - No session: 401 `not_authenticated`. Logged in but not allowed: 403. Asking for a private object you may not see: 404 (§5.5).
 - Enforce permissions on the server with DRF permission classes. Role names are `student`, `tutor`, `head_tutor`, `sc_member` and `admin`; "Hitchhiker" means `tutor` or `head_tutor`.
 - Serializers list their fields explicitly; never `fields = "__all__"`. Annotate every `SerializerMethodField` with `@extend_schema_field` so the OpenAPI schema stays exact.
+- Reuse `UserRefSerializer` from `apps.accounts.references` and `ProjectRefSerializer` from `apps.evaluations.references`. Keep reference modules independent of workflow serializers and views to avoid circular imports and duplicate OpenAPI components.
 - Change the state of shared rows (evaluation requests, eligibility reviews, council notes) with an atomic conditional update: `filter(pk=..., status=expected).update(...)`, then check the row count. Never read, modify, then `save()` (schema §4.2).
 - Create notifications and WebSocket events exactly as listed in api-plan §8.8 and §9.3. Push events with `transaction.on_commit`.
 - Wrap user-facing strings in `gettext`; responses are translated into the user's language (§5.5).
