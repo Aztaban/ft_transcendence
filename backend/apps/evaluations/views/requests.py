@@ -1,4 +1,4 @@
-"""Evaluation request endpoints, including the owning student's cancellation."""
+"""Evaluation request endpoints and participant actions."""
 
 from django.db.models import Q
 from django.utils import timezone
@@ -16,6 +16,7 @@ from apps.evaluations.permissions import (
     HITCHHIKER_ROLES,
     OVERRIDE_ROLES,
     CanPickSlot,
+    CanReleaseSlot,
     EvaluationRequestPermission,
 )
 from apps.evaluations.serializers.requests import (
@@ -33,6 +34,7 @@ from apps.evaluations.services import (
     edit_note,
     history_filter,
     pick_slot,
+    release_slot,
 )
 
 
@@ -276,6 +278,35 @@ class EvaluationRequestCancelView(EvaluationRequestBaseView):
     )
     def post(self, request, pk):
         evaluation = cancel_request(self.get_object())
+        return Response(self.get_serializer(evaluation).data)
+
+
+class EvaluationRequestReleaseView(EvaluationRequestBaseView):
+    """The picking Hitchhiker's POST /evaluation-requests/{id}/release/."""
+
+    permission_classes = [IsAuthenticated, CanReleaseSlot]
+
+    def get_queryset(self):
+        return visible_evaluation_requests(self.request.user)
+
+    @extend_schema(
+        description="Release a slot you picked before it starts, returning the request to pending.",
+        parameters=[CSRF_HEADER],
+        request=None,
+        responses={
+            200: EvaluationRequestSerializer,
+            **error_responses(
+                {
+                    401: ("not_authenticated",),
+                    403: ("permission_denied", "csrf_failed"),
+                    404: ("not_found",),
+                    409: ("invalid_state_transition", "evaluation_already_started"),
+                }
+            ),
+        },
+    )
+    def post(self, request, pk):
+        evaluation = release_slot(self.get_object(), request.user)
         return Response(self.get_serializer(evaluation).data)
 
 
