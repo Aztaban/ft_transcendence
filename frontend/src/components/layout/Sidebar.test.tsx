@@ -106,3 +106,32 @@ describe("Sidebar role switcher", () => {
     ]);
   });
 });
+
+describe("Sidebar eligibility link", () => {
+  function switchToHitchhiker() {
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+    fireEvent.click(screen.getByRole("option", { name: "HITCHHIKER" }));
+  }
+
+  test("shows Eligibility to a Head Tutor in the Hitchhiker workspace", () => {
+    currentUser.roles = ["tutor", "head_tutor"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    switchToHitchhiker();
+
+    expect(screen.getByRole("link", { name: "Eligibility" }).getAttribute("href")).toBe(
+      "/eligibility-requests",
+    );
+  });
+
+  test("hides Eligibility from a Hitchhiker who is not a Head Tutor", () => {
+    currentUser.roles = ["tutor"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    switchToHitchhiker();
+
+    expect(screen.queryByRole("link", { name: "Eligibility" })).toBeNull();
+  });
+});
