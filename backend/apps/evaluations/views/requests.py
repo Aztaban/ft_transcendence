@@ -1,4 +1,4 @@
-"""Create, list, retrieve, edit, pick and confirm evaluation requests."""
+"""Create, list, retrieve, edit, pick, confirm and decline evaluation requests."""
 
 from django.db.models import Q
 from django.utils import timezone
@@ -28,6 +28,7 @@ from apps.evaluations.serializers.requests import (
 from apps.evaluations.services import (
     confirm_request,
     create_request,
+    decline_request,
     edit_note,
     history_filter,
     pick_slot,
@@ -145,7 +146,7 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
 
 
 def visible_evaluation_requests(user):
-    """Requests this user may see (api-plan §8.7). Anyone else gets 404."""
+    """Requests this user may see. Anyone else gets 404."""
     queryset = EvaluationRequest.objects.select_related(
         "student", "project", "picked_by", "cancelled_by"
     )
@@ -224,8 +225,34 @@ class EvaluationRequestConfirmView(EvaluationRequestBaseView):
         return Response(self.get_serializer(evaluation).data)
 
 
+class EvaluationRequestDeclineView(EvaluationRequestBaseView):
+    """POST /evaluation-requests/{id}/decline/."""
+
+    def get_queryset(self):
+        return visible_evaluation_requests(self.request.user)
+
+    @extend_schema(
+        parameters=[CSRF_HEADER],
+        request=None,
+        responses={
+            200: EvaluationRequestSerializer,
+            **error_responses(
+                {
+                    401: ("not_authenticated",),
+                    403: ("permission_denied", "csrf_failed"),
+                    404: ("not_found",),
+                    409: ("invalid_state_transition",),
+                }
+            ),
+        },
+    )
+    def post(self, request, pk):
+        evaluation = decline_request(self.get_object())
+        return Response(self.get_serializer(evaluation).data)
+
+
 class EvaluationRequestPickSlotView(EvaluationRequestBaseView):
-    """POST /evaluation-requests/{id}/pick-slot/ (api-plan §10.4)."""
+    """POST /evaluation-requests/{id}/pick-slot/."""
 
     permission_classes = [IsAuthenticated, CanPickSlot]
 
