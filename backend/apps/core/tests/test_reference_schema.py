@@ -3,7 +3,8 @@
 from django.urls import path
 from drf_spectacular.generators import SchemaGenerator
 
-from apps.accounts.views import MeView, tutor_eligibility_request_list, user_detail
+from apps.accounts.views.eligibility import tutor_eligibility_request_list
+from apps.accounts.views.profiles import MeView, user_detail
 from apps.evaluations.views import EvaluationRequestDetailView, ProjectDetailView
 
 

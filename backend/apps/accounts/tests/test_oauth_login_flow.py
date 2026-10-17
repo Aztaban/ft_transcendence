@@ -10,7 +10,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.accounts.views import (
+from apps.accounts.views.oauth import (
     OAUTH_42_AUTHORIZE_URL,
     OAUTH_42_ERROR_PATH,
     OAUTH_42_STATE_SESSION_KEY,
@@ -97,9 +97,9 @@ def test_callback_exchanges_code_without_exposing_secrets(monkeypatch):
         captured["timeout"] = timeout
         return FakeTokenResponse({"access_token": "secret-provider-token"})
 
-    monkeypatch.setattr("apps.accounts.views.urlopen", fake_urlopen)
+    monkeypatch.setattr("apps.accounts.views.oauth.urlopen", fake_urlopen)
     monkeypatch.setattr(
-        "apps.accounts.views._retrieve_42_account_information",
+        "apps.accounts.views.oauth._retrieve_42_account_information",
         lambda token: {
             "intra_id": 4242,
             "intra_login": "oauth-user",
@@ -145,7 +145,7 @@ def test_callback_handles_token_exchange_failure(monkeypatch, provider_failure):
     def failing_urlopen(request, timeout):
         raise provider_failure
 
-    monkeypatch.setattr("apps.accounts.views.urlopen", failing_urlopen)
+    monkeypatch.setattr("apps.accounts.views.oauth.urlopen", failing_urlopen)
     client = client_with_state()
 
     response = client.get(
@@ -163,7 +163,7 @@ def test_callback_handles_token_exchange_failure(monkeypatch, provider_failure):
 @override_settings(**OAUTH_SETTINGS)
 def test_callback_rejects_token_response_without_access_token(monkeypatch, payload):
     monkeypatch.setattr(
-        "apps.accounts.views.urlopen",
+        "apps.accounts.views.oauth.urlopen",
         lambda request, timeout: FakeTokenResponse(payload),
     )
     client = client_with_state()

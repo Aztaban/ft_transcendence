@@ -203,7 +203,8 @@ def test_logout_is_post_only():
 def group_send(monkeypatch):
     send = AsyncMock()
     monkeypatch.setattr(
-        "apps.accounts.views.get_channel_layer", lambda: SimpleNamespace(group_send=send)
+        "apps.accounts.views.authentication.get_channel_layer",
+        lambda: SimpleNamespace(group_send=send),
     )
     return send
 

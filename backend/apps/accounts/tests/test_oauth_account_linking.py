@@ -9,7 +9,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.accounts.views import (
+from apps.accounts.views.oauth import (
     OAUTH_42_ERROR_PATH,
     OAUTH_42_STATE_SESSION_KEY,
     OAUTH_42_SUCCESS_PATH,
@@ -43,11 +43,11 @@ def client_with_state(client=None, state="known-state"):
 
 def mock_verified_42_identity(monkeypatch, account=None):
     monkeypatch.setattr(
-        "apps.accounts.views._exchange_42_code_for_access_token",
+        "apps.accounts.views.oauth._exchange_42_code_for_access_token",
         lambda code: "secret-provider-token",
     )
     monkeypatch.setattr(
-        "apps.accounts.views._retrieve_42_account_information",
+        "apps.accounts.views.oauth._retrieve_42_account_information",
         lambda token: account or account_information(),
     )
 
