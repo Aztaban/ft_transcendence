@@ -126,6 +126,43 @@ def decline_request(evaluation):
     return evaluation
 
 
+@transaction.atomic
+def cancel_request(evaluation):
+    """Cancel the owning student's request before its slot starts."""
+    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    cancellable = (
+        EvaluationRequest.Status.PENDING,
+        EvaluationRequest.Status.AWAITING_CONFIRMATION,
+        EvaluationRequest.Status.CONFIRMED,
+    )
+    if current.status not in cancellable or current.result is not None:
+        raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
+    at = timezone.now()
+    if current.starts_at is not None and current.starts_at <= at:
+        raise EvaluationAlreadyStarted()
+    updated = (
+        EvaluationRequest.objects.filter(
+            pk=current.pk,
+            student_id=evaluation.student_id,
+            status=current.status,
+            result__isnull=True,
+        )
+        .filter(Q(starts_at__isnull=True) | Q(starts_at__gt=at))
+        .update(
+            status=EvaluationRequest.Status.CANCELLED,
+            cancelled_by_id=current.student_id,
+            cancelled_at=at,
+            updated_at=at,
+        )
+    )
+    if updated != 1:
+        raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
+    evaluation.refresh_from_db()
+    # TODO(notifications): evaluation.cancelled to picked_by, if present (§8.8);
+    # dispatch the §9.3 event via on_commit once notification/event dispatch exists.
+    return evaluation
+
+
 def lock_participants(hitchhiker_id, student_id):
     """Lock both user rows in ascending id order (schema §4.2)."""
     list(

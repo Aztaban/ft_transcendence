@@ -211,6 +211,15 @@ def test_root_and_shared_error_component_shapes(schema):
         ),
         ("evaluation-requests/{id}/", "get", {404: "not_found"}),
         (
+            "evaluation-requests/{id}/cancel/",
+            "post",
+            {
+                403: "permission_denied csrf_failed",
+                404: "not_found",
+                409: "invalid_state_transition evaluation_already_started",
+            },
+        ),
+        (
             "evaluation-requests/{id}/decline/",
             "post",
             {
@@ -265,8 +274,9 @@ def test_remaining_implemented_operations_document_relevant_errors(schema, path,
         assert header["in"] == "header"
 
 
-def test_decline_schema_takes_no_body_and_returns_evaluation_request(schema):
-    operation = schema["paths"]["/api/v1/evaluation-requests/{id}/decline/"]["post"]
+@pytest.mark.parametrize("action", ["decline", "cancel"])
+def test_student_transition_schema_takes_no_body_and_returns_evaluation_request(schema, action):
+    operation = schema["paths"][f"/api/v1/evaluation-requests/{{id}}/{action}/"]["post"]
     assert "requestBody" not in operation
     assert operation["security"] == [{"cookieAuth": []}]
     assert operation["responses"]["200"]["content"]["application/json"]["schema"] == {
