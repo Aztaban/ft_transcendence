@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.core.pagination import APIPageNumberPagination
+from apps.core.schema import CSRF_HEADER, error_responses
 from apps.evaluations.models import EvaluationRequest, TutorEligibility
 from apps.evaluations.permissions import (
     HITCHHIKER_ROLES,
@@ -39,7 +40,17 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
 
     @extend_schema(
         parameters=[EvaluationRequestQuerySerializer],
-        responses={200: EvaluationRequestSerializer(many=True)},
+        responses={
+            200: EvaluationRequestSerializer(many=True),
+            **error_responses(
+                {
+                    400: ("validation_error",),
+                    401: ("not_authenticated",),
+                    404: ("not_found",),
+                    403: ("permission_denied",),
+                }
+            ),
+        },
     )
     def get(self, request):
         query = EvaluationRequestQuerySerializer(data=request.query_params)
@@ -80,7 +91,20 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
         return self.get_paginated_response(self.get_serializer(page, many=True).data)
 
     @extend_schema(
-        request=EvaluationRequestCreateSerializer, responses={201: EvaluationRequestSerializer}
+        parameters=[CSRF_HEADER],
+        request=EvaluationRequestCreateSerializer,
+        responses={
+            201: EvaluationRequestSerializer,
+            **error_responses(
+                {
+                    400: ("validation_error",),
+                    401: ("not_authenticated",),
+                    403: ("csrf_failed",),
+                    415: ("unsupported_media_type",),
+                    409: ("active_request_exists",),
+                }
+            ),
+        },
     )
     def post(self, request):
         serializer = EvaluationRequestCreateSerializer(data=request.data)
@@ -113,12 +137,31 @@ class EvaluationRequestDetailView(EvaluationRequestBaseView):
     def get_queryset(self):
         return visible_evaluation_requests(self.request.user)
 
-    @extend_schema(responses={200: EvaluationRequestSerializer})
+    @extend_schema(
+        responses={
+            200: EvaluationRequestSerializer,
+            **error_responses({401: ("not_authenticated",), 404: ("not_found",)}),
+        }
+    )
     def get(self, request, pk):
         return Response(self.get_serializer(self.get_object()).data)
 
     @extend_schema(
-        request=EvaluationRequestNoteSerializer, responses={200: EvaluationRequestSerializer}
+        parameters=[CSRF_HEADER],
+        request=EvaluationRequestNoteSerializer,
+        responses={
+            200: EvaluationRequestSerializer,
+            **error_responses(
+                {
+                    400: ("validation_error",),
+                    401: ("not_authenticated",),
+                    403: ("permission_denied", "csrf_failed"),
+                    415: ("unsupported_media_type",),
+                    404: ("not_found",),
+                    409: ("invalid_state_transition",),
+                }
+            ),
+        },
     )
     def patch(self, request, pk):
         evaluation = self.get_object()
@@ -137,7 +180,21 @@ class EvaluationRequestPickSlotView(EvaluationRequestBaseView):
         return visible_evaluation_requests(self.request.user)
 
     @extend_schema(
-        request=EvaluationRequestPickSlotSerializer, responses={200: EvaluationRequestSerializer}
+        parameters=[CSRF_HEADER],
+        request=EvaluationRequestPickSlotSerializer,
+        responses={
+            200: EvaluationRequestSerializer,
+            **error_responses(
+                {
+                    400: ("validation_error",),
+                    401: ("not_authenticated",),
+                    403: ("not_eligible", "cannot_pick_own_request", "csrf_failed"),
+                    415: ("unsupported_media_type",),
+                    404: ("not_found",),
+                    409: ("request_not_pending", "slot_overlaps", "student_unavailable"),
+                }
+            ),
+        },
     )
     def post(self, request, pk):
         evaluation = self.get_object()

@@ -1,5 +1,7 @@
 """Previously undocumented endpoints expose their actual OpenAPI contracts (BE-7)."""
 
+import re
+
 import pytest
 from drf_spectacular.generators import SchemaGenerator
 from drf_spectacular.validation import validate_schema
@@ -141,3 +143,114 @@ def test_root_and_shared_error_component_shapes(schema):
         "type": "array",
         "items": {"type": "string"},
     }
+
+
+@pytest.mark.parametrize(
+    "path,method,errors",
+    [
+        ("users/me/", "get", {}),
+        (
+            "users/me/",
+            "patch",
+            {400: "validation_error", 403: "csrf_failed", 415: "unsupported_media_type"},
+        ),
+        ("users/{user_id}/", "get", {404: "not_found"}),
+        (
+            "users/{user_id}/roles/",
+            "post",
+            {
+                400: "validation_error",
+                403: "permission_denied role_not_assignable csrf_failed",
+                404: "not_found",
+                415: "unsupported_media_type",
+            },
+        ),
+        ("projects/", "get", {}),
+        ("projects/{slug}/", "get", {404: "not_found"}),
+        ("tutors/{user_id}/eligibility/", "get", {404: "not_found"}),
+        (
+            "tutor-eligibility-requests/",
+            "get",
+            {400: "validation_error", 404: "not_found"},
+        ),
+        (
+            "tutor-eligibility-requests/",
+            "post",
+            {
+                400: "validation_error",
+                403: "permission_denied csrf_failed",
+                409: "eligibility_request_pending",
+                415: "unsupported_media_type",
+            },
+        ),
+        (
+            "tutor-eligibility-requests/{request_id}/review/",
+            "post",
+            {
+                400: "validation_error",
+                403: "permission_denied cannot_review_own_request csrf_failed",
+                404: "not_found",
+                409: "eligibility_request_already_reviewed",
+                415: "unsupported_media_type",
+            },
+        ),
+        (
+            "evaluation-requests/",
+            "get",
+            {400: "validation_error", 403: "permission_denied", 404: "not_found"},
+        ),
+        (
+            "evaluation-requests/",
+            "post",
+            {
+                400: "validation_error",
+                403: "csrf_failed",
+                409: "active_request_exists",
+                415: "unsupported_media_type",
+            },
+        ),
+        ("evaluation-requests/{id}/", "get", {404: "not_found"}),
+        (
+            "evaluation-requests/{id}/",
+            "patch",
+            {
+                400: "validation_error",
+                403: "permission_denied csrf_failed",
+                404: "not_found",
+                409: "invalid_state_transition",
+                415: "unsupported_media_type",
+            },
+        ),
+        (
+            "evaluation-requests/{id}/pick-slot/",
+            "post",
+            {
+                400: "validation_error",
+                403: "not_eligible cannot_pick_own_request csrf_failed",
+                404: "not_found",
+                409: "request_not_pending slot_overlaps student_unavailable",
+                415: "unsupported_media_type",
+            },
+        ),
+    ],
+)
+def test_remaining_implemented_operations_document_relevant_errors(schema, path, method, errors):
+    operation = schema["paths"][f"/api/v1/{path}"][method]
+    expected = {
+        401: "not_authenticated",
+        406: "not_acceptable",
+        429: "throttled",
+        500: "server_error",
+        **errors,
+    }
+    assert {int(code) for code in operation["responses"] if int(code) >= 400} == set(expected)
+    for status, codes in expected.items():
+        response = operation["responses"][str(status)]
+        assert set(re.findall(r"`([^`]+)`", response["description"])) == set(codes.split())
+        assert response["content"]["application/json"]["schema"] == {
+            "$ref": "#/components/schemas/ErrorResponse"
+        }
+    if method in {"post", "patch"}:
+        header = next(p for p in operation["parameters"] if p["name"] == "X-CSRFToken")
+        assert header["required"] is True
+        assert header["in"] == "header"

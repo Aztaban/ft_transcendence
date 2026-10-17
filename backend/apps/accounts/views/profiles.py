@@ -18,6 +18,7 @@ from apps.accounts.serializers.profiles import (
     PublicProfileSerializer,
 )
 from apps.core.exceptions import validation_error_response
+from apps.core.schema import CSRF_HEADER, error_responses
 
 User = get_user_model()
 
@@ -28,7 +29,7 @@ class MeView(APIView):
 
     @extend_schema(
         summary="Return the authenticated user's profile",
-        responses={200: ProfileSerializer},
+        responses={200: ProfileSerializer, **error_responses({401: ("not_authenticated",)})},
     )
     def get(self, request: Request):
         """Return the authenticated user's profile (GET /api/v1/users/me/)."""
@@ -38,9 +39,20 @@ class MeView(APIView):
         return Response(ProfileSerializer(request.user).data)
 
     @extend_schema(
+        parameters=[CSRF_HEADER],
         summary="Update the current user's display name or language",
         request=ProfileUpdateSerializer,
-        responses={204: None},
+        responses={
+            204: None,
+            **error_responses(
+                {
+                    400: ("validation_error",),
+                    401: ("not_authenticated",),
+                    403: ("csrf_failed",),
+                    415: ("unsupported_media_type",),
+                }
+            ),
+        },
     )
     def patch(self, request: Request):
         """Update the current user's display name or language"""
@@ -57,7 +69,13 @@ class MeView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@extend_schema(summary="Return a user's public profile", responses={200: PublicProfileSerializer})
+@extend_schema(
+    summary="Return a user's public profile",
+    responses={
+        200: PublicProfileSerializer,
+        **error_responses({401: ("not_authenticated",), 404: ("not_found",)}),
+    },
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def user_detail(request, user_id):

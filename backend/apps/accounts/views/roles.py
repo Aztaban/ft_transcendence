@@ -21,9 +21,21 @@ User = get_user_model()
 
 
 @extend_schema(
+    parameters=[CSRF_HEADER],
     summary="Assign a role",
     request=RoleAssignSerializer,
-    responses={200: RoleAssignmentResultSerializer},
+    responses={
+        200: RoleAssignmentResultSerializer,
+        **error_responses(
+            {
+                400: ("validation_error",),
+                401: ("not_authenticated",),
+                403: ("permission_denied", "role_not_assignable", "csrf_failed"),
+                415: ("unsupported_media_type",),
+                404: ("not_found",),
+            }
+        ),
+    },
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, CanAssignRoles])
