@@ -1,5 +1,8 @@
 """Evaluation request inputs and representations."""
 
+from datetime import timedelta
+
+from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema_field
@@ -116,6 +119,40 @@ class TimezoneRequiredDateTimeField(serializers.DateTimeField):
         return super().enforce_timezone(value)
 
 
+def _on_slot_grid(value):
+    """True when the UTC instant sits on the configured minute grid with no seconds."""
+    return (
+        value.second == 0
+        and value.microsecond == 0
+        and value.minute % settings.EVALUATION_SLOT_GRID_MINUTES == 0
+    )
+
+
+def _grid_message():
+    return _("Time must be on a %(minutes)s-minute boundary, with zero seconds.") % {
+        "minutes": settings.EVALUATION_SLOT_GRID_MINUTES
+    }
+
+
+def _duration_message():
+    return _("Duration must be between %(minimum)s and %(maximum)s minutes.") % {
+        "minimum": settings.EVALUATION_SLOT_MIN_DURATION_MINUTES,
+        "maximum": settings.EVALUATION_SLOT_MAX_DURATION_MINUTES,
+    }
+
+
+def _min_lead_message():
+    return _("Start time must be at least %(minutes)s minutes from now.") % {
+        "minutes": settings.EVALUATION_SLOT_MIN_LEAD_MINUTES
+    }
+
+
+def _max_lead_message():
+    return _("Start time must be at most %(days)s days from now.") % {
+        "days": settings.EVALUATION_SLOT_MAX_LEAD_DAYS
+    }
+
+
 class EvaluationRequestPickSlotSerializer(serializers.Serializer):
     """Body of POST /evaluation-requests/{id}/pick-slot/ (api-plan §10.4)."""
 
@@ -123,9 +160,36 @@ class EvaluationRequestPickSlotSerializer(serializers.Serializer):
     ends_at = TimezoneRequiredDateTimeField()
 
     def validate(self, attrs):
+        # Times are already UTC. Rules are api-plan §7.1; limits are EVALUATION_SLOT_*.
+        starts_at = attrs["starts_at"]
+        ends_at = attrs["ends_at"]
+        errors = {}
+
+        if not _on_slot_grid(starts_at):
+            errors["starts_at"] = [_grid_message()]
+        if not _on_slot_grid(ends_at):
+            errors["ends_at"] = [_grid_message()]
+
         # schema §4.1 eval_req_slot_order: a stored slot must end after it starts.
-        if attrs["ends_at"] <= attrs["starts_at"]:
-            raise serializers.ValidationError({"ends_at": _("End time must be after start time.")})
+        if ends_at <= starts_at:
+            errors.setdefault("ends_at", []).append(_("End time must be after start time."))
+        else:
+            duration = ends_at - starts_at
+            minimum = timedelta(minutes=settings.EVALUATION_SLOT_MIN_DURATION_MINUTES)
+            maximum = timedelta(minutes=settings.EVALUATION_SLOT_MAX_DURATION_MINUTES)
+            if not minimum <= duration <= maximum:
+                errors.setdefault("ends_at", []).append(_duration_message())
+
+        now = timezone.now()
+        earliest = now + timedelta(minutes=settings.EVALUATION_SLOT_MIN_LEAD_MINUTES)
+        latest = now + timedelta(days=settings.EVALUATION_SLOT_MAX_LEAD_DAYS)
+        if starts_at < earliest:
+            errors.setdefault("starts_at", []).append(_min_lead_message())
+        elif starts_at > latest:
+            errors.setdefault("starts_at", []).append(_max_lead_message())
+
+        if errors:
+            raise serializers.ValidationError(errors)
         return attrs
 
 
