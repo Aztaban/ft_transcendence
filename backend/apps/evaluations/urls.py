@@ -23,6 +23,11 @@ urlpatterns = [
         name="evaluation-request-confirm",
     ),
     path(
+        "evaluation-requests/<int:pk>/decline/",
+        requests.EvaluationRequestDeclineView.as_view(),
+        name="evaluation-request-decline",
+    ),
+    path(
         "evaluation-requests/<int:pk>/pick-slot/",
         requests.EvaluationRequestPickSlotView.as_view(),
         name="evaluation-request-pick-slot",
