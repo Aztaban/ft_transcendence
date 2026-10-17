@@ -4,7 +4,11 @@ Projects are maintained here (there is no API for them), and the team enters
 evaluation results here after an evaluation (api-plan §7.1).
 """
 
+from django import forms
 from django.contrib import admin
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from .models import EvaluationRequest, Project, TutorEligibility, TutorEligibilityRequest
 
@@ -37,8 +41,31 @@ class TutorEligibilityAdmin(admin.ModelAdmin):
     search_fields = ("tutor__email", "tutor__display_name", "project__name")
 
 
+class EvaluationRequestAdminForm(forms.ModelForm):
+    class Meta:
+        model = EvaluationRequest
+        fields = ("result", "feedback", "completed_at")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        populated_fields = [
+            field for field in self.Meta.fields if cleaned_data.get(field) not in (None, "")
+        ]
+        if populated_fields and (
+            self.instance.status != EvaluationRequest.Status.CONFIRMED
+            or self.instance.ends_at is None
+            or self.instance.ends_at >= timezone.now()
+        ):
+            message = _(
+                "Results can only be entered for confirmed evaluations whose end time has passed."
+            )
+            raise ValidationError({field: message for field in populated_fields})
+        return cleaned_data
+
+
 @admin.register(EvaluationRequest)
 class EvaluationRequestAdmin(admin.ModelAdmin):
+    form = EvaluationRequestAdminForm
     list_display = ("id", "student", "project", "status", "picked_by", "starts_at", "result")
     list_filter = ("status", "result", "project")
     search_fields = ("student__email", "picked_by__email", "project__name")
