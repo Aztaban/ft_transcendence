@@ -11,13 +11,15 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.accounts.views.oauth import (
-    OAUTH_42_ERROR_PATH,
+from apps.accounts.services.oauth import (
     OAUTH_42_HTTP_TIMEOUT_SECONDS,
     OAUTH_42_ME_URL,
+    retrieve_42_account_information,
+)
+from apps.accounts.views.oauth import (
+    OAUTH_42_ERROR_PATH,
     OAUTH_42_STATE_SESSION_KEY,
     OAUTH_42_SUCCESS_PATH,
-    _retrieve_42_account_information,
 )
 
 pytestmark = pytest.mark.django_db
@@ -70,9 +72,9 @@ def test_retrieve_42_account_information_uses_bearer_token_and_validates_payload
         captured["timeout"] = timeout
         return FakeProfileResponse(valid_profile())
 
-    monkeypatch.setattr("apps.accounts.views.oauth.urlopen", fake_urlopen)
+    monkeypatch.setattr("apps.accounts.services.oauth.urlopen", fake_urlopen)
 
-    account = _retrieve_42_account_information("secret-provider-token")
+    account = retrieve_42_account_information("secret-provider-token")
 
     assert account == {
         "intra_id": 4242,
@@ -99,11 +101,11 @@ def test_retrieve_42_account_information_uses_bearer_token_and_validates_payload
 )
 def test_retrieve_42_account_information_rejects_invalid_profile(monkeypatch, payload):
     monkeypatch.setattr(
-        "apps.accounts.views.oauth.urlopen",
+        "apps.accounts.services.oauth.urlopen",
         lambda request, timeout: FakeProfileResponse(payload),
     )
 
-    assert _retrieve_42_account_information("secret-provider-token") is None
+    assert retrieve_42_account_information("secret-provider-token") is None
 
 
 @pytest.mark.parametrize(
@@ -118,9 +120,9 @@ def test_retrieve_42_account_information_handles_provider_failure(monkeypatch, p
     def failing_urlopen(request, timeout):
         raise provider_failure
 
-    monkeypatch.setattr("apps.accounts.views.oauth.urlopen", failing_urlopen)
+    monkeypatch.setattr("apps.accounts.services.oauth.urlopen", failing_urlopen)
 
-    assert _retrieve_42_account_information("secret-provider-token") is None
+    assert retrieve_42_account_information("secret-provider-token") is None
 
 
 def test_retrieve_42_account_information_rejects_malformed_json(monkeypatch):
@@ -129,21 +131,21 @@ def test_retrieve_42_account_information_rejects_malformed_json(monkeypatch):
             return b"not-json"
 
     monkeypatch.setattr(
-        "apps.accounts.views.oauth.urlopen",
+        "apps.accounts.services.oauth.urlopen",
         lambda request, timeout: InvalidJsonResponse({}),
     )
 
-    assert _retrieve_42_account_information("secret-provider-token") is None
+    assert retrieve_42_account_information("secret-provider-token") is None
 
 
 @override_settings(**OAUTH_SETTINGS)
 def test_callback_retrieves_profile_and_creates_user(monkeypatch):
     monkeypatch.setattr(
-        "apps.accounts.views.oauth._exchange_42_code_for_access_token",
+        "apps.accounts.services.oauth.exchange_42_code_for_access_token",
         lambda code: "secret-provider-token",
     )
     monkeypatch.setattr(
-        "apps.accounts.views.oauth._retrieve_42_account_information",
+        "apps.accounts.services.oauth.retrieve_42_account_information",
         lambda token: {
             "intra_id": 4242,
             "intra_login": "oauth-user",
@@ -168,11 +170,11 @@ def test_callback_retrieves_profile_and_creates_user(monkeypatch):
 @override_settings(**OAUTH_SETTINGS)
 def test_callback_returns_bad_gateway_when_profile_retrieval_fails(monkeypatch):
     monkeypatch.setattr(
-        "apps.accounts.views.oauth._exchange_42_code_for_access_token",
+        "apps.accounts.services.oauth.exchange_42_code_for_access_token",
         lambda code: "secret-provider-token",
     )
     monkeypatch.setattr(
-        "apps.accounts.views.oauth._retrieve_42_account_information",
+        "apps.accounts.services.oauth.retrieve_42_account_information",
         lambda token: None,
     )
     client = client_with_state()

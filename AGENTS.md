@@ -38,6 +38,7 @@ backend/
   apps/<app>/        one Django app per domain: models, serializers, views, permissions, tests/
   apps/accounts/views/       authentication, OAuth, profiles, roles and eligibility modules
   apps/accounts/serializers/ serializers grouped by the same responsibilities
+  apps/accounts/services/   OAuth provider calls and local account resolution
   apps/core/         shared base model (TimeStampedModel) and cross-app helpers
 frontend/src/
   api/               client.ts (apiRequest) and one module per backend area
@@ -71,6 +72,7 @@ Python is formatted by black and isort, line length 100: fix with `black . && is
 - Serializers list their fields explicitly; never `fields = "__all__"`. Annotate every `SerializerMethodField` with `@extend_schema_field` so the OpenAPI schema stays exact.
 - Reuse `UserRefSerializer` from `apps.accounts.references` and `ProjectRefSerializer` from `apps.evaluations.references`. Keep reference modules independent of workflow serializers and views to avoid circular imports and duplicate OpenAPI components.
 - Import account views and serializers from their concrete responsibility modules (for example, `apps.accounts.views.authentication` and `apps.accounts.serializers.profiles`); keep package `__init__.py` files free of eager re-exports. DRF authentication classes remain in `apps.accounts.authentication`.
+- Keep OAuth provider calls and local account resolution in `apps.accounts.services.oauth`; views own session state validation, redirects and Django session login.
 - Change the state of shared rows (evaluation requests, eligibility reviews, council notes) with an atomic conditional update: `filter(pk=..., status=expected).update(...)`, then check the row count. Never read, modify, then `save()` (schema §4.2).
 - Create notifications and WebSocket events exactly as listed in api-plan §8.8 and §9.3. Push events with `transaction.on_commit`.
 - Wrap user-facing strings in `gettext`; responses are translated into the user's language (§5.5).
