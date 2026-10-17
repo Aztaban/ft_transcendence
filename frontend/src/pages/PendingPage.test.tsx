@@ -65,6 +65,8 @@ function renderPage() {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  // The active workspace is kept for the tab; each test starts as a student.
+  sessionStorage.clear();
 });
 
 describe("PendingPage", () => {
