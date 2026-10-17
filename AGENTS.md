@@ -32,6 +32,7 @@ Before writing code, read the sections of these documents that your task touches
 
 ```
 backend/
+  config/urls.py      /api/v1/ prefix and non-versioned HTTP routes
   config/settings/   base.py, dev.py, prod.py, test.py
   api/urls.py        API root and app URL includes, URL namespace "api"
   apps/<app>/        one Django app per domain: models, serializers, views, permissions, tests/
