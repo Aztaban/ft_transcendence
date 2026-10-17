@@ -1,4 +1,4 @@
-"""Account eligibility views."""
+"""Tutor eligibility endpoints (api-plan §10.3)."""
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -15,18 +15,17 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.eligibility import list_approved_projects_for_tutor
 from apps.accounts.models import Role
-from apps.accounts.serializers.eligibility import (
+from apps.core.exceptions import error_response
+from apps.evaluations.eligibility import list_approved_projects_for_tutor
+from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
+from apps.evaluations.references import ProjectRefSerializer
+from apps.evaluations.serializers.eligibility import (
     EligibilityRequestCreateSerializer,
     EligibilityRequestPageSerializer,
     EligibilityRequestReviewSerializer,
     EligibilityRequestSerializer,
 )
-from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
-from apps.evaluations.references import ProjectRefSerializer
-
-from ._responses import _error_response
 
 User = get_user_model()
 
@@ -141,7 +140,7 @@ def _create_eligibility_request(request):
             requester=request.user,
             status=TutorEligibilityRequest.Status.PENDING,
         ).exists():
-            return _error_response(
+            return error_response(
                 "eligibility_request_pending",
                 _("You already have a pending eligibility request."),
                 status.HTTP_409_CONFLICT,
@@ -244,7 +243,7 @@ def tutor_eligibility_request_review(request, request_id):
             review_note=review_note,
         )
         if updated != 1:
-            return _error_response(
+            return error_response(
                 "eligibility_request_already_reviewed",
                 _("This eligibility request has already been reviewed."),
                 status.HTTP_409_CONFLICT,
