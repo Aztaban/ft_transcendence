@@ -17,4 +17,14 @@ urlpatterns = [
         views.tutor_eligibility,
         name="tutors-eligibility",
     ),
+    path(
+        "tutor-eligibility-requests/",
+        views.tutor_eligibility_request_list,
+        name="tutor-eligibility-requests-list",
+    ),
+    path(
+        "tutor-eligibility-requests/<int:request_id>/review/",
+        views.tutor_eligibility_request_review,
+        name="tutor-eligibility-requests-review",
+    ),
 ]

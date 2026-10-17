@@ -1,10 +1,10 @@
-import type { Project } from "../../types/project";
+import type { ProjectRef } from "../../types/project";
 import { projectContent } from "./projectContent";
 import TopicsChart from "./TopicsChart";
 import "../../styles/project-details.css";
 
 interface ProjectOverviewProps {
-  project: Project;
+  project: ProjectRef;
 }
 
 // "minishell" → "MI", "RAG against the machine" → "RA"

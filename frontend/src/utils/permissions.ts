@@ -3,7 +3,9 @@ import type { AppRole } from "../store/RoleContext";
 export const routePermissions = {
   home: ["STUDENT", "HITCHHIKER", "COUNCIL"],
   requests: ["STUDENT", "HITCHHIKER"],
+  eligibilityRequest: ["HITCHHIKER"],
   pending: ["STUDENT", "HITCHHIKER"],
+  history: ["STUDENT", "HITCHHIKER"],
   hitchhikers: ["STUDENT", "COUNCIL"],
   profile: ["STUDENT", "HITCHHIKER"],
   council: ["STUDENT", "HITCHHIKER", "COUNCIL"],

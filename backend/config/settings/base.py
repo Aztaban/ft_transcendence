@@ -151,6 +151,9 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
 }
 
+# Eligibility request submit (api-plan §10.3): max projects in one request.
+ELIGIBILITY_REQUEST_MAX_PROJECTS = 50
+
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 CHANNEL_LAYERS = {
     "default": {

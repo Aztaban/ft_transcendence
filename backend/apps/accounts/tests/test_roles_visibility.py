@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
+from apps.evaluations.models import Project, TutorEligibility
 
 pytestmark = pytest.mark.django_db
 
@@ -255,6 +256,55 @@ def test_tutor_eligibility_returns_empty_list_when_no_data(api_client, make_user
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
+
+
+def test_tutor_eligibility_returns_active_projects_sorted_by_name(api_client, make_user):
+    viewer = make_user("viewer@example.com", roles=(Role.Name.STUDENT,))
+    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+    # Slugs must not collide with projects seeded by migration 0003_seed_projects.
+    zebra = Project.objects.create(slug="zebra_eval", name="Zebra")
+    libft = Project.objects.create(slug="libft", name="Libft")
+    inactive = Project.objects.create(slug="old_proj", name="Old", is_active=False)
+    TutorEligibility.objects.create(tutor=tutor, project=zebra)
+    TutorEligibility.objects.create(tutor=tutor, project=libft)
+    TutorEligibility.objects.create(tutor=tutor, project=inactive)
+
+    api_client.force_authenticate(user=viewer)
+    response = api_client.get(reverse("api:tutors-eligibility", kwargs={"user_id": tutor.id}))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == [
+        {"id": libft.id, "slug": "libft", "name": "Libft"},
+        {"id": zebra.id, "slug": "zebra_eval", "name": "Zebra"},
+    ]
+
+
+def test_tutor_eligibility_empty_for_non_hitchhiker_even_with_rows(api_client, make_user):
+    viewer = make_user("viewer@example.com", roles=(Role.Name.STUDENT,))
+    former_tutor = make_user("former@example.com", roles=(Role.Name.STUDENT,))
+    project = Project.objects.create(slug="libft", name="Libft")
+    TutorEligibility.objects.create(tutor=former_tutor, project=project)
+
+    api_client.force_authenticate(user=viewer)
+    response = api_client.get(
+        reverse("api:tutors-eligibility", kwargs={"user_id": former_tutor.id})
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+
+
+def test_tutor_eligibility_works_for_head_tutor(api_client, make_user):
+    viewer = make_user("viewer@example.com", roles=(Role.Name.STUDENT,))
+    head = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
+    project = Project.objects.create(slug="libft", name="Libft")
+    TutorEligibility.objects.create(tutor=head, project=project)
+
+    api_client.force_authenticate(user=viewer)
+    response = api_client.get(reverse("api:tutors-eligibility", kwargs={"user_id": head.id}))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == [{"id": project.id, "slug": "libft", "name": "Libft"}]
 
 
 def test_tutor_eligibility_unknown_user_returns_404(api_client, make_user):

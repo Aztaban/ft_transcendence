@@ -28,6 +28,16 @@ describe("AwaitingConfirmation", () => {
     expect(document.querySelector("time")?.getAttribute("datetime")).toBe("2026-10-12T15:00:00Z");
   });
 
+  it("does not break when the student is hidden", () => {
+    render(
+      <AwaitingConfirmation
+        requests={[{ ...makeRequest(1, "push_swap", "awaiting_confirmation"), student: null }]}
+      />,
+    );
+
+    expect(screen.getByText("Proposed to the student")).toBeTruthy();
+  });
+
   it("does not display requests in other states", () => {
     const requests = [
       makeRequest(1, "pending-project", "pending"),

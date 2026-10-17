@@ -1,0 +1,590 @@
+.pending-page {
+  display: flex;
+  max-width: 920px;
+  flex-direction: column;
+  gap: 22px;
+  margin: 0 auto;
+  padding: 32px 16px 56px;
+}
+
+.pending-page__header h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.pending-page__header p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 1.05rem;
+}
+
+/* Yellow notice */
+
+.pending-page__notice {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 22px;
+  border-right: 6px solid #e0b100;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ffe066, #ffd43b);
+  box-shadow: 0 8px 22px rgba(224, 177, 0, 0.2);
+  color: #2b2400;
+  animation: pending-slide-in 0.4s ease;
+}
+
+.pending-page__notice span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 2px solid #2b2400;
+  border-radius: 50%;
+  font-family: Georgia, serif;
+  font-weight: 700;
+}
+
+.pending-page__notice p {
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+/* Day groups */
+
+.pending-page__day {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: pending-slide-in 0.4s ease;
+}
+
+.pending-page__day h2 {
+  margin: 8px 0 0;
+  color: #2f5ea8;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pending-page__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Card */
+
+.pending-card {
+  --tone: var(--color-accent);
+  --tone-ink: #00797b;
+  --tone-soft: #e6f8f8;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 22px;
+  border: 1px solid #e3e7e7;
+  border-left: 5px solid var(--tone);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.pending-card:hover {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.pending-card--awaiting_confirmation {
+  --tone: #e0a526;
+  --tone-ink: #9a6512;
+  --tone-soft: #fff4dc;
+}
+
+.pending-card__badge {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--tone-soft);
+  color: var(--tone-ink);
+  font-weight: 600;
+}
+
+.pending-card__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.pending-card__title h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.pending-card__status {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--tone-soft);
+  color: var(--tone-ink);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.pending-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  margin: 10px 0 0;
+}
+
+.pending-card__facts div {
+  display: flex;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.pending-card__facts dt {
+  color: var(--color-text-secondary);
+}
+
+.pending-card__facts dt::after {
+  content: ":";
+}
+
+.pending-card__facts dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.pending-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pending-card__preview,
+.pending-card__cancel {
+  min-width: 110px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition:
+    background-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.pending-card__preview {
+  border: 1px solid var(--color-accent);
+  color: #00797b;
+}
+
+.pending-card__preview:hover {
+  background: #f2fbfb;
+  transform: translateY(-1px);
+}
+
+.pending-card__cancel {
+  border: 1px solid #f3b8b2;
+  color: #b42318;
+}
+
+.pending-card__cancel:hover:enabled {
+  background: #fef3f2;
+  transform: translateY(-1px);
+}
+
+.pending-card__cancel:disabled {
+  border-color: #d5d9d9;
+  color: #9aa1a1;
+  cursor: not-allowed;
+}
+
+.pending-card__preview:focus-visible,
+.pending-card__cancel:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+/* States */
+
+.pending-page__skeleton {
+  min-height: 110px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #eceff0 25%, #f6f7f7 50%, #eceff0 75%);
+  background-size: 200% 100%;
+  animation: pending-shimmer 1.3s ease-in-out infinite;
+}
+
+.pending-page__empty {
+  padding: 40px 20px;
+  border: 1px dashed #c9cfcf;
+  border-radius: 14px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.pending-page__empty h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.pending-page__empty p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+}
+
+.pending-page__error,
+.pending-dialog__error {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.pending-page__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Dialogs */
+
+.pending-dialog {
+  position: fixed;
+  z-index: 100;
+  display: grid;
+  inset: 0;
+  place-items: center;
+  padding: 16px;
+  background: rgba(17, 17, 17, 0.45);
+  backdrop-filter: blur(3px);
+  animation: pending-fade-in 0.2s ease;
+}
+
+.pending-dialog__card {
+  display: flex;
+  width: min(100%, 520px);
+  max-height: calc(100vh - 32px);
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 30px 32px 24px;
+  border-top: 6px solid var(--color-accent);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  animation: pending-pop-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.pending-dialog__card:focus {
+  outline: none;
+}
+
+.pending-dialog__card h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 500;
+}
+
+.pending-dialog__close {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid #d5d9d9;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.pending-dialog__close:hover {
+  border-color: var(--color-accent);
+}
+
+/* Preview */
+
+.pending-dialog__card--preview {
+  width: min(100%, 920px);
+  background: #f7f9f9;
+}
+
+.pending-preview__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pending-preview__eyebrow {
+  margin: 0 0 4px;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pending-dialog__card--preview h2 {
+  font-size: 1.8rem;
+}
+
+.pending-preview__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.pending-preview__facts div {
+  padding: 12px 16px;
+  border: 1px solid #e3e7e7;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.pending-preview__facts dt {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pending-preview__facts dd {
+  margin: 4px 0 0;
+  font-weight: 500;
+}
+
+.pending-preview__countdown {
+  border-color: #b9e6e7 !important;
+  background: #e6f8f8 !important;
+}
+
+.pending-preview__countdown dd {
+  color: #00797b;
+  font-size: 1.1rem;
+}
+
+/* Cancel */
+
+.pending-dialog__card--cancel {
+  border-top-color: #d92d20;
+}
+
+.pending-cancel__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-left: 4px solid #d92d20;
+  border-radius: 0 10px 10px 0;
+  background: #fff6f5;
+}
+
+.pending-cancel__summary time {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.pending-cancel__text {
+  margin: 0;
+  color: #4d5555;
+  line-height: 1.5;
+}
+
+.pending-cancel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.pending-cancel__keep,
+.pending-cancel__confirm {
+  padding: 9px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pending-cancel__keep {
+  border: 1px solid #111111;
+  background: #ffffff;
+}
+
+.pending-cancel__confirm {
+  border: 1px solid #d92d20;
+  background: #d92d20;
+  color: #ffffff;
+}
+
+.pending-cancel__confirm:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.pending-cancel__keep:focus-visible,
+.pending-cancel__confirm:focus-visible,
+.pending-dialog__close:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+/* Slot released */
+
+.pending-dialog__card--done {
+  display: grid;
+  width: min(100%, 620px);
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 24px;
+  border-top-color: #16a34a;
+}
+
+.pending-dialog__card--done strong {
+  display: block;
+  margin-top: 4px;
+  color: #1c7c3c;
+}
+
+.pending-dialog__card--done p {
+  margin: 10px 0 0;
+  color: #4d5555;
+  line-height: 1.5;
+}
+
+.pending-dialog__image {
+  width: 72px;
+  animation: pending-float 2.4s ease-in-out infinite;
+}
+
+.pending-dialog__hint {
+  grid-column: 1 / -1;
+  margin: 0 !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+@keyframes pending-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pending-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pending-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pending-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pending-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 680px) {
+  .pending-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .pending-card__actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+  }
+
+  .pending-card__actions button {
+    flex: 1;
+  }
+
+  .pending-dialog__card {
+    padding: 22px 18px 18px;
+  }
+
+  .pending-dialog__card--done {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .pending-dialog__image {
+    justify-self: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pending-page *,
+  .pending-dialog,
+  .pending-dialog * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -3,6 +3,12 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { RoleProvider } from "../../store/RoleContext";
+
+const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
+
+vi.mock("../../store/CurrentUserContext", () => ({
+  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+}));
 import Sidebar from "./Sidebar";
 
 const logoutMock = vi.fn();
@@ -22,6 +28,8 @@ vi.mock("../../store/AuthContext", () => ({
 }));
 
 afterEach(() => {
+  currentUser.roles = [];
+  currentUser.isLoaded = false;
   cleanup();
   vi.clearAllMocks();
   vi.useRealTimers();
@@ -81,5 +89,20 @@ describe("Sidebar logout", () => {
     await vi.advanceTimersByTimeAsync(3500);
 
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("Sidebar role switcher", () => {
+  test("lists only the workspaces of the user's real roles", () => {
+    currentUser.roles = ["student", "sc_member"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "STUDENT",
+      "COUNCIL",
+    ]);
   });
 });

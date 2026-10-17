@@ -288,6 +288,39 @@
   background: #fffaf0;
 }
 
+.hitchhiker-requests__panel--projects {
+  border-color: #b9e6e7;
+  background: #f4fcfc;
+}
+
+.hitchhiker-requests__projects-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--color-accent-dark);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.hitchhiker-requests__projects-link span {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.hitchhiker-requests__projects-link:hover {
+  text-decoration: underline;
+}
+
+.hitchhiker-requests__projects-link:hover span {
+  transform: translateX(3px);
+}
+
+.hitchhiker-requests__projects-link:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
 .hitchhiker-requests__steps {
   display: flex;
   flex-direction: column;

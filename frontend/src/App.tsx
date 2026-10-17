@@ -1,12 +1,16 @@
 import { Route, Routes } from "react-router";
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
+import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
 import CreateRequestPage from "./pages/CreateRequestPage";
+import EligibilityRequestPage from "./pages/EligibilityRequestPage";
 import EvaluationPage from "./pages/EvaluationPage";
+import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import PendingPage from "./pages/PendingPage";
 import PickSlotPage from "./pages/PickSlotPage";
 import ProfilePage from "./pages/ProfilePage";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
@@ -45,6 +49,33 @@ function AuthenticatedApp() {
           }
         />
         <Route
+          path="/pending"
+          element={
+            <RoleGuard allowedRoles={routePermissions.pending} fallback={<UnauthorizedPage />}>
+              <PendingPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <RoleGuard allowedRoles={routePermissions.history} fallback={<UnauthorizedPage />}>
+              <HistoryPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/eligibility-requests/new"
+          element={
+            <RoleGuard
+              allowedRoles={routePermissions.eligibilityRequest}
+              fallback={<UnauthorizedPage />}
+            >
+              <EligibilityRequestPage />
+            </RoleGuard>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <RoleGuard allowedRoles={routePermissions.profile} fallback={<UnauthorizedPage />}>
@@ -55,6 +86,7 @@ function AuthenticatedApp() {
         <Route path="/projects/:slug" element={<ProjectDetailsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      <HitchhikerOnboarding />
     </BaseLayout>
   );
 }
