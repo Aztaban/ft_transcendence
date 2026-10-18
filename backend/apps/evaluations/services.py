@@ -135,11 +135,13 @@ def cancel_request(evaluation):
         EvaluationRequest.Status.AWAITING_CONFIRMATION,
         EvaluationRequest.Status.CONFIRMED,
     )
-    if current.status not in cancellable or current.result is not None:
+    if current.status not in cancellable:
         raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
     at = timezone.now()
     if current.starts_at is not None and current.starts_at <= at:
         raise EvaluationAlreadyStarted()
+    if current.result is not None:
+        raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
     updated = (
         EvaluationRequest.objects.filter(
             pk=current.pk,
@@ -167,13 +169,15 @@ def cancel_request(evaluation):
 def release_slot(evaluation, user):
     """Return the picking Hitchhiker's slot to the queue before its start (§10.4)."""
     current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
-    if current.status not in EvaluationRequest.PICKED_STATUSES or current.result is not None:
+    if current.status not in EvaluationRequest.PICKED_STATUSES:
         raise InvalidStateTransition(_("Only picked requests without a result can be released."))
     if current.picked_by_id != user.pk:
         raise PermissionDenied()
     at = timezone.now()
     if current.starts_at <= at:
         raise EvaluationAlreadyStarted()
+    if current.result is not None:
+        raise InvalidStateTransition(_("Only picked requests without a result can be released."))
     updated = EvaluationRequest.objects.filter(
         pk=current.pk,
         status=current.status,
