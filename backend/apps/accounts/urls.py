@@ -5,6 +5,13 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("auth/register/", views.register, name="register"),
+    path("auth/login/", views.LoginView.as_view(), name="login"),
+    path("auth/logout/", views.LogoutView.as_view(), name="logout"),
+    path("auth/session/", views.session_status, name="session"),
+    path("auth/42/redirect/", views.oauth_42_redirect, name="oauth_42_redirect"),
+    path("auth/42/callback/", views.oauth_42_callback, name="oauth_42_callback"),
+    path("users/me/", views.MeView.as_view(), name="me"),
     path("users/<int:user_id>/", views.user_detail, name="users-detail"),
     path("users/<int:user_id>/roles/", views.assign_role, name="users-assign-role"),
     path(

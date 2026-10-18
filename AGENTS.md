@@ -32,8 +32,9 @@ Before writing code, read the sections of these documents that your task touches
 
 ```
 backend/
+  config/urls.py      /api/v1/ prefix and non-versioned HTTP routes
   config/settings/   base.py, dev.py, prod.py, test.py
-  api/urls.py        every /api/v1/ route, URL namespace "api"
+  api/urls.py        API root and app URL includes, URL namespace "api"
   apps/<app>/        one Django app per domain: models, serializers, views, permissions, tests/
   apps/core/         shared base model (TimeStampedModel) and cross-app helpers
 frontend/src/
@@ -61,7 +62,7 @@ Python is formatted by black and isort, line length 100: fix with `black . && is
 
 ## Backend rules
 
-- Register routes in `backend/api/urls.py` under the `api` namespace; tests use `reverse("api:<name>")`. Every path ends with `/`.
+- Declare domain routes in `backend/apps/<app>/urls.py` and include those modules from `backend/api/urls.py` under the shared `api` namespace. Keep the API root in `backend/api/urls.py`. Do not add child namespaces: tests use `reverse("api:<name>")`. Every path ends with `/`.
 - Every error response is the envelope `{"error": {"code", "message", "fields"}}` with a code from api-plan §5.6. Never return DRF's `{"detail": ...}` or a bare field dict.
 - No session: 401 `not_authenticated`. Logged in but not allowed: 403. Asking for a private object you may not see: 404 (§5.5).
 - Enforce permissions on the server with DRF permission classes. Role names are `student`, `tutor`, `head_tutor`, `sc_member` and `admin`; "Hitchhiker" means `tutor` or `head_tutor`.
