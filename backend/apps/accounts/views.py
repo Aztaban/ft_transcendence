@@ -16,10 +16,9 @@ from django.db.models import Prefetch
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -37,6 +36,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.authentication import CsrfEnforcedSessionAuthentication
 from apps.accounts.eligibility import list_approved_projects_for_tutor
 from apps.accounts.models import Role
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
@@ -130,6 +130,7 @@ def _has_unique_email_error(serializer):
 
 
 @api_view(["POST"])
+@authentication_classes([CsrfEnforcedSessionAuthentication])
 @permission_classes([AllowAny])
 @throttle_classes([AuthRateThrottle])
 def register(request):
@@ -160,11 +161,10 @@ def register(request):
     )
 
 
-@method_decorator(csrf_protect, name="dispatch")
 class LoginView(APIView):
     """CSRF-protected session login, including for anonymous requests."""
 
-    authentication_classes = [SessionAuthentication]
+    authentication_classes = [CsrfEnforcedSessionAuthentication]
     permission_classes = [AllowAny]
     throttle_classes = [AuthRateThrottle]
 
@@ -216,11 +216,10 @@ def session_status(request):
     )
 
 
-@method_decorator(csrf_protect, name="dispatch")
 class LogoutView(APIView):
     """Invalidate the current Django session, including on repeated logout."""
 
-    authentication_classes = [SessionAuthentication]
+    authentication_classes = [CsrfEnforcedSessionAuthentication]
     permission_classes = [AllowAny]
 
     def post(self, request):

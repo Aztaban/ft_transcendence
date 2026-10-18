@@ -66,7 +66,42 @@ def test_login_rejects_post_without_csrf_even_for_anonymous_user():
     response = post_login(client, csrf=False)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {
+        "error": {
+            "code": "csrf_failed",
+            "message": "CSRF verification failed. Reload the page and try again.",
+        }
+    }
     assert SESSION_KEY not in client.session
+
+
+@pytest.mark.parametrize("csrf_case", ["no_header", "malformed_header", "wrong_header"])
+def test_login_rejects_missing_or_invalid_csrf_header(csrf_case):
+    create_user()
+    client = csrf_client()
+    headers = {"HTTP_HOST": "localhost"}
+    if csrf_case == "malformed_header":
+        headers["HTTP_X_CSRFTOKEN"] = "invalid"
+    elif csrf_case == "wrong_header":
+        token = client.cookies["csrftoken"].value
+        headers["HTTP_X_CSRFTOKEN"] = ("a" if token[0] != "a" else "b") + token[1:]
+
+    response = client.post(
+        reverse("api:login"),
+        {"email": "login@example.com", "password": PASSWORD},
+        format="json",
+        **headers,
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {
+        "error": {
+            "code": "csrf_failed",
+            "message": "CSRF verification failed. Reload the page and try again.",
+        }
+    }
+    assert SESSION_KEY not in client.session
+    assert get_user_model().objects.get().last_login is None
 
 
 @pytest.mark.parametrize(

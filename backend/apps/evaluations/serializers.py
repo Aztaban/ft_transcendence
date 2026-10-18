@@ -207,6 +207,12 @@ class EvaluationRequestQuerySerializer(serializers.Serializer):
         field = serializers.ChoiceField(choices=EvaluationRequest.Status.choices)
         return [field.run_validation(item) for item in value.split(",")]
 
+    def validate_project(self, value):
+        # Inactive projects remain valid filters for existing requests (schema §3.1).
+        if not Project.objects.filter(slug=value).exists():
+            raise serializers.ValidationError(_("Unknown project slug."))
+        return value
+
     def validate_result(self, value):
         # `none` is requests without a result (api-plan 10.4)
         field = serializers.ChoiceField(choices=(*EvaluationRequest.Result.values, "none"))
