@@ -1,4 +1,4 @@
-"""Creation, note editing, slot picking and student confirmation."""
+"""Creation, note editing, slot picking and student responses."""
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -100,6 +100,29 @@ def confirm_request(evaluation):
     evaluation.refresh_from_db()
     # TODO(notifications): evaluation.confirmed to picked_by (§8.8); send the
     # §9.3 event to student and picked_by via on_commit once dispatch exists.
+    return evaluation
+
+
+@transaction.atomic
+def decline_request(evaluation):
+    """Return an unanswered pick to pending."""
+    updated = EvaluationRequest.objects.filter(
+        pk=evaluation.pk,
+        student_id=evaluation.student_id,
+        status=EvaluationRequest.Status.AWAITING_CONFIRMATION,
+    ).update(
+        status=EvaluationRequest.Status.PENDING,
+        picked_by=None,
+        starts_at=None,
+        ends_at=None,
+        updated_at=timezone.now(),
+    )
+    if updated != 1:
+        raise InvalidStateTransition(_("Only requests awaiting confirmation can be declined."))
+    evaluation.refresh_from_db()
+    # TODO(notifications): evaluation.declined to the previous picked_by (§8.8);
+    # send the §9.3 event to student, previous picked_by and eligible Hitchhikers
+    # via on_commit once dispatch exists.
     return evaluation
 
 

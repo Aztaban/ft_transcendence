@@ -211,6 +211,15 @@ def test_root_and_shared_error_component_shapes(schema):
         ),
         ("evaluation-requests/{id}/", "get", {404: "not_found"}),
         (
+            "evaluation-requests/{id}/decline/",
+            "post",
+            {
+                403: "permission_denied csrf_failed",
+                404: "not_found",
+                409: "invalid_state_transition",
+            },
+        ),
+        (
             "evaluation-requests/{id}/",
             "patch",
             {
@@ -254,6 +263,15 @@ def test_remaining_implemented_operations_document_relevant_errors(schema, path,
         header = next(p for p in operation["parameters"] if p["name"] == "X-CSRFToken")
         assert header["required"] is True
         assert header["in"] == "header"
+
+
+def test_decline_schema_takes_no_body_and_returns_evaluation_request(schema):
+    operation = schema["paths"]["/api/v1/evaluation-requests/{id}/decline/"]["post"]
+    assert "requestBody" not in operation
+    assert operation["security"] == [{"cookieAuth": []}]
+    assert operation["responses"]["200"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/EvaluationRequest"
+    }
 
 
 def test_own_profile_requires_a_session_in_schema(schema):
