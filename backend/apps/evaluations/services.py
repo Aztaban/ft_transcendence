@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException, PermissionDenied
 
+from .events import publish_slot_picked_event
 from .models import EvaluationRequest
 
 
@@ -261,4 +262,5 @@ def pick_slot(evaluation, user, starts_at, ends_at):
         if updated != 1:
             raise RequestNotPending()
         evaluation.refresh_from_db()
+        publish_slot_picked_event(evaluation)
     return evaluation

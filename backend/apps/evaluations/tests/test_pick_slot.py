@@ -8,16 +8,19 @@ of the same request wins. The proposed slot must match the §7.1 timing rules.
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from threading import Barrier
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, call
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.db import close_old_connections
+from django.db import close_old_connections, transaction
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
+from apps.evaluations.services import RequestNotPending
 from apps.evaluations.views.requests import pick_slot as claim_pending_request
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
@@ -129,22 +132,131 @@ def test_requires_authentication():
     }
 
 
-def test_pick_slot_real_session(hitchhiker, evaluation, expected):
-    client = logged_in_client(hitchhiker)
-    response = client.post(
-        pick_url(),
-        SLOT,
-        format="json",
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+@pytest.fixture
+def event_sender(monkeypatch):
+    sender = AsyncMock()
+    monkeypatch.setattr(
+        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
     )
+    return sender
+
+
+def test_pick_slot_real_session(
+    hitchhiker, evaluation, expected, event_sender, django_capture_on_commit_callbacks
+):
+    client = logged_in_client(hitchhiker)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(
+            pick_url(),
+            SLOT,
+            format="json",
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+        )
+        event_sender.assert_not_awaited()
     assert response.status_code == 200
     assert response.json() == claim(expected)
+    assert len(callbacks) == 1
+    assert event_sender.await_args_list == [
+        call(
+            "user_7",
+            {
+                "type": "user.event",
+                "event": "evaluation.slot_picked",
+                "data": {"id": 17, "status": "awaiting_confirmation"},
+            },
+        ),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "evaluation.slot_picked",
+                "data": {"id": 17, "status": "awaiting_confirmation"},
+            },
+        ),
+    ]
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
     assert evaluation.picked_by_id == hitchhiker.pk
     assert evaluation.starts_at == datetime(2026, 10, 12, 15, tzinfo=timezone.utc)
     assert evaluation.ends_at == datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc)
+
+
+def test_slot_picked_targets_only_participants_and_active_eligible_hitchhikers(
+    hitchhiker, evaluation, project, event_sender, django_capture_on_commit_callbacks
+):
+    elsewhere = Project.objects.create(slug="elsewhere", name="Elsewhere")
+    for pk, roles, state, eligible_project in (
+        (43, ("head_tutor", "tutor"), "active", project),
+        (44, ("tutor",), "active", project),
+        (45, ("student",), "active", project),
+        (46, ("admin",), "active", project),
+        (47, ("tutor",), "suspended", project),
+        (48, ("tutor",), "deleted", project),
+        (49, ("tutor",), "active", elsewhere),
+        (50, ("tutor",), "active", None),
+    ):
+        user = get_user_model().objects.create_user(
+            id=pk, email=f"recipient-{pk}@example.com", status=state
+        )
+        for role in roles:
+            grant(user, role)
+        if eligible_project is not None:
+            TutorEligibility.objects.create(tutor=user, project=eligible_project)
+    # A participant who is also eligible must still receive only one event.
+    grant(evaluation.student, "tutor")
+    TutorEligibility.objects.create(tutor=evaluation.student, project=project)
+    with django_capture_on_commit_callbacks(execute=True):
+        claim_pending_request(
+            evaluation,
+            hitchhiker,
+            datetime(2026, 10, 12, 15, tzinfo=timezone.utc),
+            datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc),
+        )
+    message = {
+        "type": "user.event",
+        "event": "evaluation.slot_picked",
+        "data": {"id": 17, "status": "awaiting_confirmation"},
+    }
+    assert event_sender.await_args_list == [
+        call("user_7", message),
+        call("user_42", message),
+        call("user_43", message),
+        call("user_44", message),
+    ]
+
+
+def test_rolled_back_pick_sends_no_event(
+    hitchhiker, evaluation, event_sender, django_capture_on_commit_callbacks
+):
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(RuntimeError, match="rollback"):
+            with transaction.atomic():
+                claim_pending_request(
+                    evaluation,
+                    hitchhiker,
+                    datetime(2026, 10, 12, 15, tzinfo=timezone.utc),
+                    datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc),
+                )
+                raise RuntimeError("rollback")
+    assert callbacks == []
+    event_sender.assert_not_awaited()
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.picked_by_id is None
+
+
+def test_repeated_pick_does_not_schedule_another_event(
+    hitchhiker, evaluation, event_sender, django_capture_on_commit_callbacks
+):
+    starts_at = datetime(2026, 10, 12, 15, tzinfo=timezone.utc)
+    ends_at = datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        claim_pending_request(evaluation, hitchhiker, starts_at, ends_at)
+        with pytest.raises(RequestNotPending):
+            claim_pending_request(evaluation, hitchhiker, starts_at, ends_at)
+    assert len(callbacks) == 1
+    assert event_sender.await_count == 2
 
 
 def test_csrf_required(student, evaluation):
@@ -590,7 +702,9 @@ def seeded_roles():
 
 
 @pytest.mark.django_db(transaction=True)
-def test_only_one_hitchhiker_wins(seeded_roles, student, project, evaluation, monkeypatch):
+def test_only_one_hitchhiker_wins(
+    seeded_roles, student, project, evaluation, monkeypatch, event_sender
+):
     contenders = []
     for pk, email, name in ((42, "bob@example.com", "Bob"), (46, "fay@example.com", "Fay")):
         user = get_user_model().objects.create_user(
@@ -625,6 +739,16 @@ def test_only_one_hitchhiker_wins(seeded_roles, student, project, evaluation, mo
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
     assert evaluation.picked_by_id in set(contenders)
+    message = {
+        "type": "user.event",
+        "event": "evaluation.slot_picked",
+        "data": {"id": 17, "status": "awaiting_confirmation"},
+    }
+    assert event_sender.await_args_list == [
+        call("user_7", message),
+        call("user_42", message),
+        call("user_46", message),
+    ]
 
 
 SLOT_OVERLAPS = {
