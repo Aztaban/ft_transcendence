@@ -1,4 +1,4 @@
-"""Student confirmation (#196): permissions, timing, sessions and concurrent updates."""
+"""Student confirmation (#196) and Pending Evaluations visibility (#198)."""
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -139,6 +139,127 @@ def test_authentication_required():
     assert response.json() == {
         "error": {"code": "not_authenticated", "message": "Authentication required."}
     }
+
+
+def test_confirmation_updates_both_participants_pending_lists(student, tutor, evaluation, expected):
+    student_client = session_client(student)
+    tutor_client = APIClient()
+    tutor_client.force_authenticate(tutor)
+    list_url = reverse("api:evaluation-request-list")
+    student_query = {
+        "scope": "mine",
+        "status": "confirmed",
+        "history": "false",
+        "ordering": "starts_at",
+    }
+    tutor_query = {"scope": "picked", "history": "false", "ordering": "starts_at"}
+
+    # These are the exact queries issued by PendingPage for its two workspaces.
+    response = student_client.get(list_url, student_query, HTTP_HOST="localhost")
+    assert response.status_code == 200
+    assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+    awaiting = {**expected, "status": "awaiting_confirmation"}
+    response = tutor_client.get(list_url, tutor_query)
+    assert response.status_code == 200
+    assert response.json() == {"count": 1, "next": None, "previous": None, "results": [awaiting]}
+
+    response = student_client.post(
+        confirm_url(),
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=student_client.cookies["csrftoken"].value,
+    )
+    assert response.status_code == 200
+    assert response.json() == expected
+    for client, query in ((student_client, student_query), (tutor_client, tutor_query)):
+        response = client.get(list_url, query, HTTP_HOST="localhost")
+        assert response.status_code == 200
+        assert response.json() == {
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "results": [expected],
+        }
+        response = client.get(
+            reverse("api:evaluation-request-detail", kwargs={"pk": 17}), HTTP_HOST="localhost"
+        )
+        assert response.status_code == 200
+        assert response.json() == expected
+
+    # It no longer belongs to either participant's awaiting-confirmation list.
+    for client, scope in ((student_client, "mine"), (tutor_client, "picked")):
+        response = client.get(
+            list_url,
+            {"scope": scope, "status": "awaiting_confirmation", "history": "false"},
+            HTTP_HOST="localhost",
+        )
+        assert response.status_code == 200
+        assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+
+
+@pytest.mark.parametrize("scope", ["mine", "picked"])
+def test_confirmed_evaluation_is_hidden_from_other_participants_lists(
+    student, evaluation, expected, scope
+):
+    owner_client = APIClient()
+    owner_client.force_authenticate(student)
+    response = owner_client.post(confirm_url())
+    assert response.status_code == 200
+    assert response.json() == expected
+
+    stranger = get_user_model().objects.create_user(email="stranger@example.com")
+    stranger.roles.add(Role.objects.get(name="tutor"))
+    client = APIClient()
+    client.force_authenticate(stranger)
+    query = {"scope": scope, "history": "false", "ordering": "starts_at"}
+    if scope == "mine":
+        query["status"] = "confirmed"
+    response = client.get(reverse("api:evaluation-request-list"), query)
+    assert response.status_code == 200
+    assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+    response = client.get(reverse("api:evaluation-request-detail", kwargs={"pk": 17}))
+    assert response.status_code == 404
+    assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
+
+
+@pytest.mark.parametrize("scope", ["mine", "picked"])
+@pytest.mark.parametrize(
+    "at,is_history",
+    [
+        (START, False),
+        (START + timedelta(minutes=45), False),
+        (START + timedelta(minutes=45, microseconds=1), True),
+    ],
+)
+def test_confirmed_slot_stays_pending_until_its_end_passes(
+    student, tutor, evaluation, expected, monkeypatch, scope, at, is_history
+):
+    client = APIClient()
+    client.force_authenticate(student)
+    response = client.post(confirm_url())
+    assert response.status_code == 200
+    assert response.json() == expected
+
+    monkeypatch.setattr("django.utils.timezone.now", lambda: at)
+    client.force_authenticate(student if scope == "mine" else tutor)
+    expected["is_history"] = is_history
+    for history in ("false", "true"):
+        query = {"scope": scope, "history": history, "ordering": "starts_at"}
+        if scope == "mine":
+            query["status"] = "confirmed"
+        response = client.get(reverse("api:evaluation-request-list"), query)
+        assert response.status_code == 200
+        if (history == "true") == is_history:
+            assert response.json() == {
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [expected],
+            }
+        else:
+            assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+    evaluation.refresh_from_db()
+    assert evaluation.status == "confirmed"
+    assert evaluation.result is None
 
 
 def test_csrf_required(student, evaluation):
