@@ -14,8 +14,7 @@ from apps.accounts.models import Role
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
 from apps.accounts.serializers.profiles import RoleAssignmentResultSerializer
 from apps.accounts.serializers.roles import RoleAssignSerializer
-
-from ._responses import _error_response
+from apps.core.exceptions import error_response
 
 User = get_user_model()
 
@@ -50,11 +49,11 @@ def revoke_role(request, user_id, role_id):
     target = get_object_or_404(User, pk=user_id)
     role = get_object_or_404(Role, pk=role_id)
     if role.name in NOT_REVOCABLE:
-        return _error_response(
+        return error_response(
             "role_not_revocable", _("This role cannot be revoked."), status.HTTP_409_CONFLICT
         )
     if target.pk == request.user.pk:
-        return _error_response(
+        return error_response(
             "cannot_modify_self", _("You cannot change your own roles."), status.HTTP_409_CONFLICT
         )
     target.roles.remove(role)

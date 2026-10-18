@@ -9,20 +9,9 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.references import UserRefSerializer
-
-from .models import EvaluationRequest, Project
-from .permissions import OVERRIDE_ROLES
-from .references import ProjectRefSerializer
-
-
-class ProjectSerializer(ProjectRefSerializer):
-    """The detail view supplies eligible_tutors, filtered and sorted."""
-
-    eligible_tutors = UserRefSerializer(many=True, read_only=True)
-
-    class Meta(ProjectRefSerializer.Meta):
-        fields = (*ProjectRefSerializer.Meta.fields, "eligible_tutors")
-        read_only_fields = fields
+from apps.evaluations.models import EvaluationRequest, Project
+from apps.evaluations.permissions import OVERRIDE_ROLES
+from apps.evaluations.references import ProjectRefSerializer
 
 
 class EvaluationRequestSerializer(serializers.ModelSerializer):
