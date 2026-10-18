@@ -7,7 +7,12 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException, PermissionDenied
 
-from .events import EvaluationEvent, publish_evaluation_event, publish_slot_picked_event
+from .events import (
+    EvaluationEvent,
+    publish_declined_event,
+    publish_evaluation_event,
+    publish_slot_picked_event,
+)
 from .models import EvaluationRequest
 
 
@@ -111,6 +116,8 @@ def confirm_request(evaluation):
 @transaction.atomic
 def decline_request(evaluation):
     """Return an unanswered pick to pending."""
+    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    previous_picker_id = current.picked_by_id
     updated = EvaluationRequest.objects.filter(
         pk=evaluation.pk,
         student_id=evaluation.student_id,
@@ -125,9 +132,8 @@ def decline_request(evaluation):
     if updated != 1:
         raise InvalidStateTransition(_("Only requests awaiting confirmation can be declined."))
     evaluation.refresh_from_db()
-    # TODO(notifications): evaluation.declined to the previous picked_by (§8.8);
-    # send the §9.3 event to student, previous picked_by and eligible Hitchhikers
-    # via on_commit once dispatch exists.
+    publish_declined_event(evaluation, previous_picker_id=previous_picker_id)
+    # TODO(notifications): evaluation.declined to previous_picker_id (§8.8) once dispatch exists.
     return evaluation
 
 

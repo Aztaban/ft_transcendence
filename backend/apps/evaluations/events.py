@@ -30,19 +30,36 @@ def publish_evaluation_event(
     )
 
 
-def publish_slot_picked_event(evaluation: EvaluationRequest) -> None:
-    """Refresh both participants and eligible Hitchhikers' queues.
-
-    Eligibility rows survive role revocation, so only active users who still
-    have a Hitchhiker role are queue recipients.
-    """
-    eligible_ids = TutorEligibility.objects.filter(
-        project_id=evaluation.project_id,
+def _eligible_hitchhiker_ids(project_id: int):
+    """Eligibility rows are inert without an active account and Hitchhiker role."""
+    return TutorEligibility.objects.filter(
+        project_id=project_id,
         tutor__status="active",
         tutor__roles__name__in=(Role.Name.TUTOR, Role.Name.HEAD_TUTOR),
     ).values_list("tutor_id", flat=True)
+
+
+def publish_slot_picked_event(evaluation: EvaluationRequest) -> None:
+    """Refresh both participants and eligible Hitchhikers' queues."""
     publish_evaluation_event(
         EvaluationEvent.SLOT_PICKED,
         evaluation,
-        user_ids=[evaluation.student_id, evaluation.picked_by_id, *eligible_ids],
+        user_ids=[
+            evaluation.student_id,
+            evaluation.picked_by_id,
+            *_eligible_hitchhiker_ids(evaluation.project_id),
+        ],
+    )
+
+
+def publish_declined_event(evaluation: EvaluationRequest, *, previous_picker_id: int) -> None:
+    """Notify the former picker even though the pending request has no pick (§9.3)."""
+    publish_evaluation_event(
+        EvaluationEvent.DECLINED,
+        evaluation,
+        user_ids=[
+            evaluation.student_id,
+            previous_picker_id,
+            *_eligible_hitchhiker_ids(evaluation.project_id),
+        ],
     )
