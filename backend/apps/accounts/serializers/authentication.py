@@ -42,3 +42,22 @@ class RegistrationSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254)
     password = serializers.CharField(trim_whitespace=False)
+
+
+class SessionUserSerializer(serializers.Serializer):
+    """Private user summary returned by session and authentication endpoints (§10.1)."""
+
+    id = serializers.IntegerField(read_only=True)
+    email = serializers.EmailField(read_only=True)
+    display_name = serializers.CharField(read_only=True)
+
+
+class AuthenticationResultSerializer(SessionUserSerializer):
+    """Registration/login response, including the endpoint's success message."""
+
+    message = serializers.CharField(read_only=True)
+
+
+class SessionStatusSerializer(serializers.Serializer):
+    authenticated = serializers.BooleanField(read_only=True)
+    user = SessionUserSerializer(read_only=True, allow_null=True)
