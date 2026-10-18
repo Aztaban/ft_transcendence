@@ -151,6 +151,7 @@ Every error response has this body:
 | 403 | `role_not_assignable` | The caller may not assign this role, or the role is never assigned through the API (`student`, `admin`). Rules in §5.8. |
 | 404 | `not_found` | The object does not exist or is hidden from the caller. |
 | 405 | `method_not_allowed` | The endpoint does not support this HTTP method. |
+| 406 | `not_acceptable` | The request's `Accept` header excludes every response format the endpoint supports. |
 | 409 | `email_already_exists` | Registration or admin edit with an email already in use. |
 | 409 | `active_request_exists` | The student already has an active request for this project. |
 | 409 | `request_not_pending` | Pick on a request that is no longer `pending` (someone else was faster). |
@@ -164,8 +165,11 @@ Every error response has this body:
 | 409 | `cannot_modify_self` | An admin suspending, deleting or revoking a role from themselves. |
 | 409 | `edit_conflict` | Someone else saved the same text since you loaded it (§10.6). Re-fetch and try again. |
 | 409 | `invalid_user_status` | Admin action not allowed in the user's current status (e.g. suspending a suspended user, editing a deleted one). |
+| 415 | `unsupported_media_type` | The request body's `Content-Type` is unsupported by the endpoint. |
 | 429 | `throttled` | Rate limit hit (§5.9). The `Retry-After` header gives the wait in seconds. |
 | 500 | `server_error` | Unexpected failure. The message never contains internal details. |
+
+The 406 and 415 responses use the normal error envelope without `fields`. Malformed JSON sent with a supported `Content-Type` remains 400 `validation_error`, with the parse error in `fields.non_field_errors`.
 
 New codes are added to this table before they are used.
 
