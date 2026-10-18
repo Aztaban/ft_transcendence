@@ -146,7 +146,7 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
 
 
 def visible_evaluation_requests(user):
-    """Requests this user may see. Anyone else gets 404."""
+    """Requests this user may see (api-plan §8.7). Anyone else gets 404."""
     queryset = EvaluationRequest.objects.select_related(
         "student", "project", "picked_by", "cancelled_by"
     )
@@ -252,7 +252,7 @@ class EvaluationRequestDeclineView(EvaluationRequestBaseView):
 
 
 class EvaluationRequestPickSlotView(EvaluationRequestBaseView):
-    """POST /evaluation-requests/{id}/pick-slot/."""
+    """POST /evaluation-requests/{id}/pick-slot/ (api-plan §10.4)."""
 
     permission_classes = [IsAuthenticated, CanPickSlot]
 
