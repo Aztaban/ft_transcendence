@@ -6,6 +6,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import NotAuthenticated
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -16,16 +17,9 @@ from apps.accounts.serializers.profiles import (
     ProfileUpdateSerializer,
     PublicProfileSerializer,
 )
-
-from ._responses import _error_response, _validation_error_response
+from apps.core.exceptions import validation_error_response
 
 User = get_user_model()
-
-
-def _not_authenticated_response():
-    return _error_response(
-        "not_authenticated", "Authentication required.", status.HTTP_401_UNAUTHORIZED
-    )
 
 
 class MeView(APIView):
@@ -39,7 +33,7 @@ class MeView(APIView):
     def get(self, request: Request):
         """Return the authenticated user's profile (GET /api/v1/users/me/)."""
         if not request.user.is_authenticated:
-            return _not_authenticated_response()
+            raise NotAuthenticated()
 
         return Response(ProfileSerializer(request.user).data)
 
@@ -51,11 +45,11 @@ class MeView(APIView):
     def patch(self, request: Request):
         """Update the current user's display name or language"""
         if not request.user.is_authenticated:
-            return _not_authenticated_response()
+            raise NotAuthenticated()
 
         serializer = ProfileUpdateSerializer(instance=request.user, data=request.data, partial=True)
         if not serializer.is_valid():
-            return _validation_error_response(
+            return validation_error_response(
                 serializer.errors, "Please correct the profile fields."
             )
 

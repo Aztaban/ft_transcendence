@@ -36,9 +36,12 @@ backend/
   config/settings/   base.py, dev.py, prod.py, test.py
   api/urls.py        API root and app URL includes, URL namespace "api"
   apps/<app>/        one Django app per domain: models, serializers, views, permissions, tests/
-  apps/accounts/views/       authentication, OAuth, profiles, roles and eligibility modules
+  apps/accounts/views/       authentication, OAuth, profiles and roles modules
   apps/accounts/serializers/ serializers grouped by the same responsibilities
   apps/accounts/services/   OAuth provider calls and local account resolution
+  apps/evaluations/views/       project, request and eligibility endpoints
+  apps/evaluations/serializers/ project, request and eligibility serializers
+  apps/evaluations/eligibility.py  approved-project lookup helper
   apps/core/         shared base model (TimeStampedModel) and cross-app helpers
 frontend/src/
   api/               client.ts (apiRequest) and one module per backend area
@@ -67,12 +70,16 @@ Python is formatted by black and isort, line length 100: fix with `black . && is
 
 - Declare domain routes in `backend/apps/<app>/urls.py` and include those modules from `backend/api/urls.py` under the shared `api` namespace. Keep the API root in `backend/api/urls.py`. Do not add child namespaces: tests use `reverse("api:<name>")`. Every path ends with `/`.
 - Every error response is the envelope `{"error": {"code", "message", "fields"}}` with a code from api-plan §5.6. Never return DRF's `{"detail": ...}` or a bare field dict.
+- Reuse `error_response` and `validation_error_response` from `apps.core.exceptions` for explicit errors; raised DRF exceptions use the configured envelope handler. Keep endpoint-specific messages and codes at their call sites.
+- Use `apps.core.pagination.APIPageNumberPagination` for paginated lists following api-plan §5.7 (default 20, maximum 100). Keep explicitly unpaginated endpoints unpaginated.
 - No session: 401 `not_authenticated`. Logged in but not allowed: 403. Asking for a private object you may not see: 404 (§5.5).
 - Enforce permissions on the server with DRF permission classes. Role names are `student`, `tutor`, `head_tutor`, `sc_member` and `admin`; "Hitchhiker" means `tutor` or `head_tutor`.
 - Serializers list their fields explicitly; never `fields = "__all__"`. Annotate every `SerializerMethodField` with `@extend_schema_field` so the OpenAPI schema stays exact.
 - Reuse `UserRefSerializer` from `apps.accounts.references` and `ProjectRefSerializer` from `apps.evaluations.references`. Keep reference modules independent of workflow serializers and views to avoid circular imports and duplicate OpenAPI components.
 - Import account views and serializers from their concrete responsibility modules (for example, `apps.accounts.views.authentication` and `apps.accounts.serializers.profiles`); keep package `__init__.py` files free of eager re-exports. DRF authentication classes remain in `apps.accounts.authentication`.
 - Keep OAuth provider calls and local account resolution in `apps.accounts.services.oauth`; views own session state validation, redirects and Django session login.
+- Import evaluation views and serializers from their concrete `projects`, `requests` or `eligibility` modules; keep package `__init__.py` files free of eager re-exports, as in accounts.
+- Keep tutor eligibility endpoints in `apps.evaluations.views.eligibility`, serializers in `apps.evaluations.serializers.eligibility` and lookup queries in `apps.evaluations.eligibility`. Their routes, tests, models and migrations belong to evaluations; use account models and shared references without importing account views or workflow serializers.
 - Change the state of shared rows (evaluation requests, eligibility reviews, council notes) with an atomic conditional update: `filter(pk=..., status=expected).update(...)`, then check the row count. Never read, modify, then `save()` (schema §4.2).
 - Create notifications and WebSocket events exactly as listed in api-plan §8.8 and §9.3. Push events with `transaction.on_commit`.
 - Wrap user-facing strings in `gettext`; responses are translated into the user's language (§5.5).
