@@ -33,6 +33,11 @@ urlpatterns = [
         name="evaluation-request-cancel",
     ),
     path(
+        "evaluation-requests/<int:pk>/release/",
+        requests.EvaluationRequestReleaseView.as_view(),
+        name="evaluation-request-release",
+    ),
+    path(
         "evaluation-requests/<int:pk>/pick-slot/",
         requests.EvaluationRequestPickSlotView.as_view(),
         name="evaluation-request-pick-slot",
