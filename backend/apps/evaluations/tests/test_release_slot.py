@@ -168,7 +168,7 @@ def test_csrf_required(tutor, evaluation):
     assert evaluation.picked_by_id == 42
 
 
-@pytest.mark.parametrize("role", ["student", "tutor", "head_tutor", "admin"])
+@pytest.mark.parametrize("role", ["student", "tutor", "head_tutor", "sc_member", "admin"])
 def test_visible_non_picker_cannot_release(student, evaluation, role):
     student.roles.add(Role.objects.get(name=role))
     client = APIClient()
@@ -183,6 +183,50 @@ def test_visible_non_picker_cannot_release(student, evaluation, role):
     }
     evaluation.refresh_from_db()
     assert evaluation.picked_by_id == 42
+
+
+@pytest.mark.parametrize("state", ["awaiting_confirmation", "confirmed"])
+@pytest.mark.parametrize("role", ["student", "tutor", "head_tutor", "sc_member", "admin"])
+def test_unrelated_users_cannot_release_with_real_session(evaluation, expected, state, role):
+    EvaluationRequest.objects.filter(pk=17).update(status=state)
+    outsider = get_user_model().objects.create_user(
+        id=43, email="outsider@example.com", display_name="Outsider", password=PASSWORD
+    )
+    outsider.roles.add(Role.objects.get(name=role))
+    if role == "tutor":
+        # Eligibility for future picks does not grant access to an existing pick.
+        TutorEligibility.objects.create(tutor=outsider, project=evaluation.project)
+    client = session_client(outsider)
+    response = client.post(
+        release_url(),
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
+    if role in ("head_tutor", "admin"):
+        assert response.status_code == 403
+        assert response.json() == {
+            "error": {
+                "code": "permission_denied",
+                "message": "You do not have permission to perform this action.",
+            }
+        }
+    else:
+        assert response.status_code == 404
+        assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
+
+    # Inspect through the legitimate picker after each denied attempt.
+    picker_client = APIClient()
+    picker_client.force_authenticate(evaluation.picked_by)
+    response = picker_client.get(reverse("api:evaluation-request-detail", kwargs={"pk": 17}))
+    assert response.status_code == 200
+    assert response.json() == {
+        **expected,
+        "student": {"id": 7, "display_name": "Alice", "avatar_url": None},
+        "status": state,
+        "picked_by": {"id": 42, "display_name": "Bob", "avatar_url": None},
+        "starts_at": "2026-10-12T15:00:00Z",
+        "ends_at": "2026-10-12T15:45:00Z",
+    }
 
 
 @pytest.mark.parametrize("pk", [17, 999])
@@ -205,10 +249,13 @@ def test_lost_eligibility_does_not_prevent_releasing_existing_pick(tutor, evalua
 
 
 def test_picker_must_still_hold_hitchhiker_role(tutor, evaluation):
+    client = session_client(tutor)
     tutor.roles.remove(Role.objects.get(name="tutor"))
-    client = APIClient()
-    client.force_authenticate(tutor)
-    response = client.post(release_url())
+    response = client.post(
+        release_url(),
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
     assert response.status_code == 403
     assert response.json() == {
         "error": {
@@ -216,6 +263,11 @@ def test_picker_must_still_hold_hitchhiker_role(tutor, evaluation):
             "message": "You do not have permission to perform this action.",
         }
     }
+
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == 42
+    assert evaluation.starts_at == START
 
 
 def test_head_tutor_can_release_own_pick(tutor, evaluation, expected):
@@ -273,16 +325,31 @@ def test_cancelled_pick_cannot_be_released(student, tutor, evaluation):
     assert evaluation.picked_by_id == 42
 
 
-def test_recorded_result_cannot_be_released(tutor, evaluation):
-    EvaluationRequest.objects.filter(pk=17).update(status="confirmed", result="passed")
+@pytest.mark.parametrize("result", ["passed", "failed"])
+@pytest.mark.parametrize("at", [NOW, START + timedelta(hours=1)])
+def test_recorded_result_cannot_be_released(tutor, evaluation, monkeypatch, result, at):
+    EvaluationRequest.objects.filter(pk=17).update(status="confirmed", result=result)
+    monkeypatch.setattr("django.utils.timezone.now", lambda: at)
     client = APIClient()
     client.force_authenticate(tutor)
     response = client.post(release_url())
     assert response.status_code == 409
-    assert response.json() == INVALID_STATE
+    if at == NOW:
+        assert response.json() == INVALID_STATE
+    else:
+        assert response.json() == {
+            "error": {
+                "code": "evaluation_already_started",
+                "message": "This evaluation has already started.",
+            }
+        }
     evaluation.refresh_from_db()
-    assert evaluation.result == "passed"
+    assert evaluation.result == result
     assert evaluation.status == "confirmed"
+    assert evaluation.picked_by_id == 42
+    assert evaluation.starts_at == START
+    assert evaluation.ends_at == START + timedelta(minutes=45)
+    assert evaluation.updated_at == NOW
 
 
 @pytest.mark.parametrize("state", ["pending", "expired"])
