@@ -17,13 +17,13 @@ from apps.accounts.models import Role
 
 from .models import EvaluationRequest, Project, TutorEligibility
 from .permissions import HITCHHIKER_ROLES, OVERRIDE_ROLES, CanPickSlot, EvaluationRequestPermission
+from .references import ProjectRefSerializer
 from .serializers import (
     EvaluationRequestCreateSerializer,
     EvaluationRequestNoteSerializer,
     EvaluationRequestPickSlotSerializer,
     EvaluationRequestQuerySerializer,
     EvaluationRequestSerializer,
-    ProjectRefSerializer,
     ProjectSerializer,
 )
 from .services import create_request, edit_note, history_filter, pick_slot
