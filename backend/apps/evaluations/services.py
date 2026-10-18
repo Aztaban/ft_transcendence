@@ -9,6 +9,7 @@ from rest_framework.exceptions import APIException, PermissionDenied
 
 from .events import (
     EvaluationEvent,
+    publish_cancelled_event,
     publish_declined_event,
     publish_evaluation_event,
     publish_slot_picked_event,
@@ -171,8 +172,8 @@ def cancel_request(evaluation):
     if updated != 1:
         raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
     evaluation.refresh_from_db()
-    # TODO(notifications): evaluation.cancelled to picked_by, if present (§8.8);
-    # dispatch the §9.3 event via on_commit once notification/event dispatch exists.
+    publish_cancelled_event(evaluation, previous_status=current.status)
+    # TODO(notifications): evaluation.cancelled to picked_by, if present (§8.8).
     return evaluation
 
 
