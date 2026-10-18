@@ -1,4 +1,4 @@
-"""Student decline: permissions, sessions and competing state changes."""
+"""Student decline (#197) and returning requests to the open queue (#199)."""
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -11,7 +11,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
-from apps.evaluations.models import EvaluationRequest, Project
+from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
 from apps.evaluations.services import InvalidStateTransition, decline_request
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
@@ -128,6 +128,121 @@ def test_decline_with_real_session_and_no_body(student, evaluation, expected, mo
     assert evaluation.created_at == NOW
     assert evaluation.updated_at == at
     assert evaluation.note == "Parsing."
+
+
+@pytest.mark.parametrize("picker_id", [42, 43])
+def test_declined_request_returns_anonymously_to_queue_and_can_be_picked_again(
+    student, tutor, evaluation, expected, picker_id
+):
+    other_tutor = get_user_model().objects.create_user(
+        id=43, email="cara@example.com", display_name="Cara"
+    )
+    other_tutor.roles.add(Role.objects.get(name="tutor"))
+    clients = {}
+    for user in (tutor, other_tutor):
+        TutorEligibility.objects.create(tutor=user, project=evaluation.project)
+        clients[user.pk] = APIClient()
+        clients[user.pk].force_authenticate(user)
+    list_url = reverse("api:evaluation-request-list")
+    detail_url = reverse("api:evaluation-request-detail", kwargs={"pk": 17})
+    for client in clients.values():
+        response = client.get(list_url, {"scope": "open"})
+        assert response.status_code == 200
+        assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+
+    owner_client = session_client(student)
+    response = owner_client.post(
+        decline_url(),
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=owner_client.cookies["csrftoken"].value,
+    )
+    assert response.status_code == 200
+    assert response.json() == expected
+    response = owner_client.get(
+        list_url, {"scope": "mine", "history": "false"}, HTTP_HOST="localhost"
+    )
+    assert response.status_code == 200
+    assert response.json() == {"count": 1, "next": None, "previous": None, "results": [expected]}
+    response = clients[42].get(list_url, {"scope": "picked", "history": "false"})
+    assert response.status_code == 200
+    assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+
+    anonymous = {**expected, "student": None}
+    for client in clients.values():
+        response = client.get(list_url, {"scope": "open"})
+        assert response.status_code == 200
+        assert response.json() == {
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "results": [anonymous],
+        }
+        response = client.get(detail_url)
+        assert response.status_code == 200
+        assert response.json() == anonymous
+
+    # Both the former picker and a different eligible tutor can propose a new time.
+    response = clients[picker_id].post(
+        reverse("api:evaluation-request-pick-slot", kwargs={"pk": 17}),
+        {"starts_at": "2026-10-13T16:00:00Z", "ends_at": "2026-10-13T16:30:00Z"},
+        format="json",
+    )
+    picked = {
+        **expected,
+        "status": "awaiting_confirmation",
+        "picked_by": {
+            "id": picker_id,
+            "display_name": "Bob" if picker_id == 42 else "Cara",
+            "avatar_url": None,
+        },
+        "starts_at": "2026-10-13T16:00:00Z",
+        "ends_at": "2026-10-13T16:30:00Z",
+    }
+    assert response.status_code == 200
+    assert response.json() == picked
+    response = owner_client.get(detail_url, HTTP_HOST="localhost")
+    assert response.status_code == 200
+    assert response.json() == picked
+    for client in clients.values():
+        response = client.get(list_url, {"scope": "open"})
+        assert response.status_code == 200
+        assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+    response = clients[picker_id].get(list_url, {"scope": "picked", "history": "false"})
+    assert response.status_code == 200
+    assert response.json() == {"count": 1, "next": None, "previous": None, "results": [picked]}
+    evaluation.refresh_from_db()
+    assert evaluation.pk == 17
+    assert evaluation.picked_by_id == picker_id
+    assert evaluation.starts_at == datetime(2026, 10, 13, 16, tzinfo=timezone.utc)
+    assert evaluation.ends_at == datetime(2026, 10, 13, 16, 30, tzinfo=timezone.utc)
+
+
+def test_former_picker_without_eligibility_loses_access_after_decline(
+    student, tutor, evaluation, expected
+):
+    tutor_client = APIClient()
+    tutor_client.force_authenticate(tutor)
+    detail_url = reverse("api:evaluation-request-detail", kwargs={"pk": 17})
+    response = tutor_client.get(detail_url)
+    assert response.status_code == 200
+    assert response.json() == {
+        **expected,
+        "status": "awaiting_confirmation",
+        "picked_by": {"id": 42, "display_name": "Bob", "avatar_url": None},
+        "starts_at": "2026-10-12T15:00:00Z",
+        "ends_at": "2026-10-12T15:45:00Z",
+    }
+    client = APIClient()
+    client.force_authenticate(student)
+    response = client.post(decline_url())
+    assert response.status_code == 200
+    assert response.json() == expected
+    response = tutor_client.get(detail_url)
+    assert response.status_code == 404
+    assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
+    response = tutor_client.get(reverse("api:evaluation-request-list"), {"scope": "open"})
+    assert response.status_code == 200
+    assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
 
 
 def test_authentication_required():
