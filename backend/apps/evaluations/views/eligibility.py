@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from apps.accounts.models import Role
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
+from apps.core.schema import CSRF_HEADER, error_responses
 from apps.evaluations.eligibility import list_approved_projects_for_tutor
 from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
 from apps.evaluations.references import ProjectRefSerializer
@@ -32,7 +33,10 @@ User = get_user_model()
 
 @extend_schema(
     summary="List projects a Hitchhiker is eligible to evaluate",
-    responses={200: ProjectRefSerializer(many=True)},
+    responses={
+        200: ProjectRefSerializer(many=True),
+        **error_responses({401: ("not_authenticated",), 404: ("not_found",)}),
+    },
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -154,6 +158,10 @@ def _create_eligibility_request(request):
         OpenApiParameter(
             name="status",
             type=OpenApiTypes.STR,
+            many=True,
+            enum=TutorEligibilityRequest.Status.values,
+            style="form",
+            explode=False,
             location=OpenApiParameter.QUERY,
             required=False,
             description="Comma-separated statuses: pending, approved, declined.",
@@ -179,13 +187,30 @@ def _create_eligibility_request(request):
             required=False,
         ),
     ],
-    responses={200: EligibilityRequestPageSerializer},
+    responses={
+        200: EligibilityRequestPageSerializer,
+        **error_responses(
+            {400: ("validation_error",), 401: ("not_authenticated",), 404: ("not_found",)}
+        ),
+    },
 )
 @extend_schema(
+    parameters=[CSRF_HEADER],
     methods=["POST"],
     summary="Submit an eligibility request",
     request=EligibilityRequestCreateSerializer,
-    responses={201: EligibilityRequestSerializer},
+    responses={
+        201: EligibilityRequestSerializer,
+        **error_responses(
+            {
+                400: ("validation_error",),
+                401: ("not_authenticated",),
+                403: ("permission_denied", "csrf_failed"),
+                415: ("unsupported_media_type",),
+                409: ("eligibility_request_pending",),
+            }
+        ),
+    },
 )
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
@@ -197,9 +222,22 @@ def tutor_eligibility_request_list(request):
 
 
 @extend_schema(
+    parameters=[CSRF_HEADER],
     summary="Approve or decline an eligibility request",
     request=EligibilityRequestReviewSerializer,
-    responses={200: EligibilityRequestSerializer},
+    responses={
+        200: EligibilityRequestSerializer,
+        **error_responses(
+            {
+                400: ("validation_error",),
+                401: ("not_authenticated",),
+                403: ("permission_denied", "cannot_review_own_request", "csrf_failed"),
+                415: ("unsupported_media_type",),
+                404: ("not_found",),
+                409: ("eligibility_request_already_reviewed",),
+            }
+        ),
+    },
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

@@ -3,7 +3,7 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
@@ -15,14 +15,27 @@ from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole
 from apps.accounts.serializers.profiles import RoleAssignmentResultSerializer
 from apps.accounts.serializers.roles import RoleAssignSerializer
 from apps.core.exceptions import error_response
+from apps.core.schema import CSRF_HEADER, error_responses
 
 User = get_user_model()
 
 
 @extend_schema(
+    parameters=[CSRF_HEADER],
     summary="Assign a role",
     request=RoleAssignSerializer,
-    responses={200: RoleAssignmentResultSerializer},
+    responses={
+        200: RoleAssignmentResultSerializer,
+        **error_responses(
+            {
+                400: ("validation_error",),
+                401: ("not_authenticated",),
+                403: ("permission_denied", "role_not_assignable", "csrf_failed"),
+                415: ("unsupported_media_type",),
+                404: ("not_found",),
+            }
+        ),
+    },
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, CanAssignRoles])
@@ -42,6 +55,26 @@ def assign_role(request, user_id):
     )
 
 
+@extend_schema(
+    summary="Revoke a user's role",
+    description=(
+        "Admin only; idempotent. Cannot revoke student/admin or modify your own roles. "
+        "Existing eligibility and picked evaluations are preserved."
+    ),
+    parameters=[CSRF_HEADER],
+    request=None,
+    responses={
+        204: OpenApiResponse(description="Role removed or already absent; no response body."),
+        **error_responses(
+            {
+                401: ("not_authenticated",),
+                403: ("permission_denied", "csrf_failed"),
+                404: ("not_found",),
+                409: ("role_not_revocable", "cannot_modify_self"),
+            }
+        ),
+    },
+)
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def revoke_role(request, user_id, role_id):
