@@ -3,15 +3,17 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from threading import Barrier
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, call
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.db import close_old_connections
+from django.db import close_old_connections, transaction
 from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
-from apps.evaluations.models import EvaluationRequest, Project
+from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
 from apps.evaluations.services import InvalidStateTransition, confirm_request
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
@@ -33,6 +35,15 @@ def confirm_url(pk=17):
 @pytest.fixture(autouse=True)
 def fixed_time(monkeypatch):
     monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
+
+
+@pytest.fixture(autouse=True)
+def event_sender(monkeypatch):
+    sender = AsyncMock()
+    monkeypatch.setattr(
+        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
+    )
+    return sender
 
 
 @pytest.fixture
@@ -108,15 +119,41 @@ def session_client(student):
     return client
 
 
-def test_confirm_with_real_session_and_no_body(student, evaluation, expected):
+def test_confirm_with_real_session_and_no_body(
+    student, evaluation, expected, event_sender, django_capture_on_commit_callbacks
+):
+    other = get_user_model().objects.create_user(id=43, email="other-tutor@example.com")
+    other.roles.add(Role.objects.get(name="head_tutor"))
+    TutorEligibility.objects.create(tutor=other, project=evaluation.project)
     client = session_client(student)
-    response = client.post(
-        confirm_url(),
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(
+            confirm_url(),
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+        )
+        event_sender.assert_not_awaited()
     assert response.status_code == 200
     assert response.json() == expected
+    assert len(callbacks) == 1
+    assert event_sender.await_args_list == [
+        call(
+            "user_7",
+            {
+                "type": "user.event",
+                "event": "evaluation.confirmed",
+                "data": {"id": 17, "status": "confirmed"},
+            },
+        ),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "evaluation.confirmed",
+                "data": {"id": 17, "status": "confirmed"},
+            },
+        ),
+    ]
     evaluation.refresh_from_db()
     assert evaluation.status == "confirmed"
     assert evaluation.picked_by_id == 42
@@ -276,11 +313,16 @@ def test_csrf_required(student, evaluation):
 
 
 @pytest.mark.parametrize("role", ["tutor", "head_tutor", "admin"])
-def test_visible_non_owner_cannot_confirm(tutor, evaluation, role):
+def test_visible_non_owner_cannot_confirm(
+    tutor, evaluation, role, event_sender, django_capture_on_commit_callbacks
+):
     tutor.roles.add(Role.objects.get(name=role))
     client = APIClient()
     client.force_authenticate(tutor)
-    response = client.post(confirm_url())
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(confirm_url())
+    assert callbacks == []
+    event_sender.assert_not_awaited()
     assert response.status_code == 403
     assert response.json() == {
         "error": {
@@ -303,7 +345,9 @@ def test_hidden_or_missing_request_returns_404(evaluation, pk):
 
 
 @pytest.mark.parametrize("status", ["pending", "confirmed", "cancelled", "expired"])
-def test_other_states_rejected(student, evaluation, status):
+def test_other_states_rejected(
+    student, evaluation, status, event_sender, django_capture_on_commit_callbacks
+):
     changes = {"status": status}
     if status in ("pending", "expired"):
         changes.update(picked_by=None, starts_at=None, ends_at=None)
@@ -314,7 +358,10 @@ def test_other_states_rejected(student, evaluation, status):
     EvaluationRequest.objects.filter(pk=evaluation.pk).update(**changes)
     client = APIClient()
     client.force_authenticate(student)
-    response = client.post(confirm_url())
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(confirm_url())
+    assert callbacks == []
+    event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == INVALID_STATE
     evaluation.refresh_from_db()
@@ -322,11 +369,16 @@ def test_other_states_rejected(student, evaluation, status):
 
 
 @pytest.mark.parametrize("offset", [timedelta(0), timedelta(microseconds=1)])
-def test_start_boundary_rejected(student, evaluation, monkeypatch, offset):
+def test_start_boundary_rejected(
+    student, evaluation, monkeypatch, offset, event_sender, django_capture_on_commit_callbacks
+):
     monkeypatch.setattr("django.utils.timezone.now", lambda: START + offset)
     client = APIClient()
     client.force_authenticate(student)
-    response = client.post(confirm_url())
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(confirm_url())
+    assert callbacks == []
+    event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == {
         "error": {
@@ -359,7 +411,7 @@ def test_stale_instance_cannot_confirm_released_pick(evaluation):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_confirmation_has_one_winner(student, evaluation, expected):
+def test_concurrent_confirmation_has_one_winner(student, evaluation, expected, event_sender):
     barrier = Barrier(2)
 
     def submit(_):
@@ -378,3 +430,64 @@ def test_concurrent_confirmation_has_one_winner(student, evaluation, expected):
     assert responses == [(200, expected), (409, INVALID_STATE)]
     evaluation.refresh_from_db()
     assert evaluation.status == "confirmed"
+    assert event_sender.await_args_list == [
+        call(
+            "user_7",
+            {
+                "type": "user.event",
+                "event": "evaluation.confirmed",
+                "data": {"id": 17, "status": "confirmed"},
+            },
+        ),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "evaluation.confirmed",
+                "data": {"id": 17, "status": "confirmed"},
+            },
+        ),
+    ]
+
+
+def test_rolled_back_confirmation_sends_no_event(
+    evaluation, event_sender, django_capture_on_commit_callbacks
+):
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(RuntimeError, match="rollback"):
+            with transaction.atomic():
+                confirm_request(evaluation)
+                raise RuntimeError("rollback")
+    assert callbacks == []
+    event_sender.assert_not_awaited()
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+
+
+def test_confirmation_event_waits_for_outer_transaction(
+    evaluation, event_sender, django_capture_on_commit_callbacks
+):
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with transaction.atomic():
+            confirm_request(evaluation)
+            event_sender.assert_not_awaited()
+        event_sender.assert_not_awaited()
+    assert len(callbacks) == 1
+    assert event_sender.await_args_list == [
+        call(
+            "user_7",
+            {
+                "type": "user.event",
+                "event": "evaluation.confirmed",
+                "data": {"id": 17, "status": "confirmed"},
+            },
+        ),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "evaluation.confirmed",
+                "data": {"id": 17, "status": "confirmed"},
+            },
+        ),
+    ]
