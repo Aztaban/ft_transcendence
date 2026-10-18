@@ -39,6 +39,16 @@ class EvaluationRequestPermission(BasePermission):
         return request.method == "GET" or obj.student_id == request.user.pk
 
 
+class CanReleaseSlot(BasePermission):
+    """Only the picking Hitchhiker may use the ordinary release action."""
+
+    def has_object_permission(self, request, view, obj):
+        return (
+            obj.picked_by_id == request.user.pk
+            and request.user.roles.filter(name__in=HITCHHIKER_ROLES).exists()
+        )
+
+
 class CanPickSlot(BasePermission):
     """An eligible Hitchhiker may pick a slot, never on their own request (§7.1, §10.4)."""
 

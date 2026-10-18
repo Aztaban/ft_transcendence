@@ -1,11 +1,11 @@
-"""Creation, note editing, slot picking and student responses."""
+"""Evaluation request creation, editing and participant transitions."""
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, PermissionDenied
 
 from .models import EvaluationRequest
 
@@ -160,6 +160,40 @@ def cancel_request(evaluation):
     evaluation.refresh_from_db()
     # TODO(notifications): evaluation.cancelled to picked_by, if present (§8.8);
     # dispatch the §9.3 event via on_commit once notification/event dispatch exists.
+    return evaluation
+
+
+@transaction.atomic
+def release_slot(evaluation, user):
+    """Return the picking Hitchhiker's slot to the queue before its start (§10.4)."""
+    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    if current.status not in EvaluationRequest.PICKED_STATUSES or current.result is not None:
+        raise InvalidStateTransition(_("Only picked requests without a result can be released."))
+    if current.picked_by_id != user.pk:
+        raise PermissionDenied()
+    at = timezone.now()
+    if current.starts_at <= at:
+        raise EvaluationAlreadyStarted()
+    updated = EvaluationRequest.objects.filter(
+        pk=current.pk,
+        status=current.status,
+        picked_by_id=user.pk,
+        starts_at__gt=at,
+        result__isnull=True,
+    ).update(
+        status=EvaluationRequest.Status.PENDING,
+        picked_by=None,
+        starts_at=None,
+        ends_at=None,
+        updated_at=at,
+    )
+    if updated != 1:
+        raise InvalidStateTransition(_("Only picked requests without a result can be released."))
+    evaluation.refresh_from_db()
+    # TODO(notifications): evaluation.released to student, payload
+    # {request_id, project, tutor} (§8.8). Future milestone: on_commit dispatch
+    # evaluation.released {id, status} to student, releasing tutor and eligible
+    # Hitchhikers (§9.3); notifications also emit notification.created.
     return evaluation
 
 
