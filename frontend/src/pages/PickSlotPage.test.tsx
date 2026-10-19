@@ -194,4 +194,41 @@ describe("PickSlotPage live", () => {
     expect(getEvaluationRequest).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alert")).toBeNull();
   });
+
+  it("ignores its own pick's event when it arrives before the server's answer", async () => {
+    let answerPick: (value: ReturnType<typeof makeRequest>) => void = () => {};
+
+    vi.mocked(pickSlot).mockReturnValue(
+      new Promise((resolve) => {
+        answerPick = resolve;
+      }),
+    );
+    render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MemoryRouter initialEntries={["/requests/7"]}>
+          <Routes>
+            <Route path="/requests/:id" element={<PickSlotPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LiveContext.Provider>,
+    );
+    await chooseTomorrowAt1015();
+    fireEvent.click(getButton("Submit"));
+
+    // §9.3: the event is sent on commit, usually before the POST response arrives.
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.slot_picked",
+        data: { id: 7, status: "awaiting_confirmation" },
+      }),
+    );
+
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(1);
+
+    await act(async () => answerPick(makeRequest(7, "push_swap", "awaiting_confirmation")));
+
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("This request is no longer open.")).toBeNull();
+  });
 });

@@ -45,10 +45,15 @@ function PickSlotPage() {
   const isLiveRefresh = useRef(false);
 
   // Another Hitchhiker picked this request, or the student cancelled it, or the connection is
-  // back (§9, #257): the page shows that it is no longer open. Events about other requests, and
-  // the Hitchhiker's own pick (the popup is open), are ignored.
+  // back (§9, #257): the page shows that it is no longer open. Events about other requests are
+  // ignored, and so is the Hitchhiker's own pick: its event is sent on commit and usually arrives
+  // while the pick is still being sent, before the popup opens.
   useLiveRefresh(EVALUATION_EVENTS, (message) => {
-    if (isPicked || (message && "id" in message.data && message.data.id !== Number(id))) {
+    if (
+      isSubmitting ||
+      isPicked ||
+      (message && "id" in message.data && message.data.id !== Number(id))
+    ) {
       return;
     }
 
