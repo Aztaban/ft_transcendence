@@ -4,6 +4,7 @@ import BaseLayout from "./components/layout/BaseLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
 import CreateRequestPage from "./pages/CreateRequestPage";
 import EligibilityRequestPage from "./pages/EligibilityRequestPage";
+import EligibilityReviewPage from "./pages/EligibilityReviewPage";
 import EvaluationPage from "./pages/EvaluationPage";
 import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
@@ -72,6 +73,17 @@ function AuthenticatedApp() {
               fallback={<UnauthorizedPage />}
             >
               <EligibilityRequestPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/eligibility-requests"
+          element={
+            <RoleGuard
+              allowedRoles={routePermissions.eligibilityReview}
+              fallback={<UnauthorizedPage />}
+            >
+              <EligibilityReviewPage />
             </RoleGuard>
           }
         />

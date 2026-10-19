@@ -16,7 +16,9 @@ import intraLogo from "../../assets/figma/intra.png";
 import notionLogo from "../../assets/figma/notion.svg";
 import slackLogo from "../../assets/figma/slack.svg";
 import { useAuth } from "../../store/AuthContext";
+import { useCurrentUser } from "../../store/CurrentUserContext";
 import { useRole, type AppRole } from "../../store/RoleContext";
+import { canReviewEligibility } from "../../utils/permissions";
 
 interface NavigationItem {
   label: string;
@@ -53,6 +55,12 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
   ],
 };
 
+const eligibilityItem: NavigationItem = {
+  label: "Eligibility",
+  to: "/eligibility-requests",
+  icon: hitchhikersIcon,
+};
+
 function Sidebar() {
   const { activeRole, setActiveRole, availableRoles } = useRole();
   const { logout } = useAuth();
@@ -61,7 +69,12 @@ function Sidebar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
 
-  const visibleNavigation = navigationByRole[activeRole];
+  // Head Tutors and Admins also review eligibility requests in the Hitchhiker workspace.
+  const { roles: userRoles } = useCurrentUser();
+  const visibleNavigation =
+    activeRole === "HITCHHIKER" && canReviewEligibility(userRoles)
+      ? [...navigationByRole.HITCHHIKER, eligibilityItem]
+      : navigationByRole[activeRole];
 
   useEffect(() => {
     if (!logoutError) {
