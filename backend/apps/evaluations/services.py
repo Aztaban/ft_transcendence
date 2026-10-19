@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException, PermissionDenied
 
-from .events import publish_slot_picked_event
+from .events import EvaluationEvent, publish_evaluation_event, publish_slot_picked_event
 from .models import EvaluationRequest
 
 
@@ -99,8 +99,12 @@ def confirm_request(evaluation):
     if updated != 1:
         raise InvalidStateTransition(_("Only requests awaiting confirmation can be confirmed."))
     evaluation.refresh_from_db()
-    # TODO(notifications): evaluation.confirmed to picked_by (§8.8); send the
-    # §9.3 event to student and picked_by via on_commit once dispatch exists.
+    publish_evaluation_event(
+        EvaluationEvent.CONFIRMED,
+        evaluation,
+        user_ids=(evaluation.student_id, evaluation.picked_by_id),
+    )
+    # TODO(notifications): evaluation.confirmed to picked_by (§8.8) once dispatch exists.
     return evaluation
 
 
