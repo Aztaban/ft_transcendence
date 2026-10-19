@@ -13,8 +13,9 @@ import Sidebar from "./Sidebar";
 
 const logoutMock = vi.fn();
 
-vi.mock("../../store/AuthContext", () => ({
-  useAuth: () => ({
+vi.mock("../../store/AuthContext", () => {
+  // Built on each call: mocks are hoisted above `logoutMock`.
+  const session = () => ({
     user: {
       id: 1,
       email: "login@example.com",
@@ -24,12 +25,16 @@ vi.mock("../../store/AuthContext", () => ({
     isLoading: false,
     login: vi.fn(),
     logout: logoutMock,
-  }),
-}));
+  });
+
+  return { useAuth: session, useOptionalAuth: session };
+});
 
 afterEach(() => {
   currentUser.roles = [];
   currentUser.isLoaded = false;
+  // The active workspace is kept for the tab; each test starts as a student.
+  sessionStorage.clear();
   cleanup();
   vi.clearAllMocks();
   vi.useRealTimers();

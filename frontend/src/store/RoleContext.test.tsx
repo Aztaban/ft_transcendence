@@ -4,6 +4,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { RoleProvider, useRole, workspacesFor } from "./RoleContext";
 
 const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
+// The session check; `undefined` stands for "no AuthProvider".
+const session = vi.hoisted(() => ({
+  value: { isLoading: false, isAuthenticated: true } as
+    { isLoading: boolean; isAuthenticated: boolean } | undefined,
+}));
+
+vi.mock("./AuthContext", () => ({ useOptionalAuth: () => session.value }));
 
 vi.mock("./CurrentUserContext", () => ({
   useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
@@ -37,6 +44,7 @@ afterEach(() => {
   currentUser.isLoaded = false;
   sessionStorage.clear();
   vi.restoreAllMocks();
+  session.value = { isLoading: false, isAuthenticated: true };
 });
 
 describe("workspacesFor", () => {
@@ -158,7 +166,8 @@ describe("RoleProvider after a reload", () => {
     act(() => screen.getByRole("button", { name: "switch" }).click());
     expect(sessionStorage.getItem("active-role")).toBe("HITCHHIKER");
 
-    // Logout: the current user is dropped.
+    // Logout: the session check says nobody is logged in, and the profile is dropped.
+    session.value = { isLoading: false, isAuthenticated: false };
     currentUser.roles = [];
     currentUser.isLoaded = false;
     view.rerender(
@@ -169,6 +178,35 @@ describe("RoleProvider after a reload", () => {
 
     expect(screen.getByText("active: STUDENT")).toBeTruthy();
     expect(sessionStorage.getItem("active-role")).toBeNull();
+  });
+
+  it("starts as a student after a reload with an expired session", () => {
+    sessionStorage.setItem("active-role", "HITCHHIKER");
+    session.value = { isLoading: true, isAuthenticated: false };
+
+    const view = renderProvider();
+
+    // While the session check runs, the saved workspace is kept.
+    expect(screen.getByText("active: HITCHHIKER")).toBeTruthy();
+
+    // /users/me/ is never loaded: the session check alone says nobody is logged in.
+    session.value = { isLoading: false, isAuthenticated: false };
+    view.rerender(
+      <RoleProvider>
+        <Probe />
+      </RoleProvider>,
+    );
+
+    expect(screen.getByText("active: STUDENT")).toBeTruthy();
+    expect(sessionStorage.getItem("active-role")).toBeNull();
+  });
+
+  it("keeps the saved workspace without an AuthProvider", () => {
+    sessionStorage.setItem("active-role", "HITCHHIKER");
+    session.value = undefined;
+    renderProvider();
+
+    expect(screen.getByText("active: HITCHHIKER")).toBeTruthy();
   });
 
   it("still switches when storage is unavailable", () => {

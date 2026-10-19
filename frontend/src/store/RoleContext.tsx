@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
+import { useOptionalAuth } from "./AuthContext";
 import { useCurrentUser } from "./CurrentUserContext";
 
 export const roles = ["STUDENT", "HITCHHIKER", "COUNCIL"] as const;
@@ -61,11 +62,15 @@ interface RoleProviderProps {
 
 // The active workspace is UI state only. It follows the user's real roles: when a role is
 // removed (WebSocket `role.changed`, §9.3) its workspace disappears and the user goes back to
-// the student workspace. After a logout the next user in the tab starts there too.
+// the student workspace. Without a session (logout, an expired session, or one the server
+// ended) the tab goes back there too, so the next user starts as a student.
 export function RoleProvider({ children }: RoleProviderProps) {
+  const auth = useOptionalAuth();
   const { roles: userRoles, isLoaded } = useCurrentUser();
   const [activeRole, setActiveRole] = useState<AppRole>(readStoredRole);
-  const wasLoaded = useRef(isLoaded);
+
+  // The session check has answered, and nobody is logged in.
+  const isLoggedOut = auth !== undefined && !auth.isLoading && !auth.isAuthenticated;
 
   // Until /users/me/ has answered, nothing is known about the roles, so nothing is hidden.
   const availableRoles = isLoaded ? workspacesFor(userRoles) : roles;
@@ -77,14 +82,11 @@ export function RoleProvider({ children }: RoleProviderProps) {
     }
   }, [isActiveAvailable]);
 
-  // The user's profile is dropped when they log out or the server ends the session.
   useEffect(() => {
-    if (wasLoaded.current && !isLoaded) {
+    if (isLoggedOut) {
       setActiveRole("STUDENT");
     }
-
-    wasLoaded.current = isLoaded;
-  }, [isLoaded]);
+  }, [isLoggedOut]);
 
   useEffect(() => {
     storeRole(activeRole);
