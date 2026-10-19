@@ -70,6 +70,9 @@ function EligibilityReviewPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // "Show more" failed: the next click loads the same page again.
+  const [moreFailed, setMoreFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [openReview, setOpenReview] = useState<OpenReview | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,7 +92,8 @@ function EligibilityReviewPage() {
       setLoadState("loading");
     }
 
-    // Pending: oldest first, the review order. Reviewed tabs: newest decisions first (§10.3).
+    // Pending: oldest first, the review order. Reviewed tabs: newest requests first (§10.3 has
+    // no ordering by decision time).
     listEligibilityRequests(status, {
       ordering: status === "pending" ? undefined : "-created_at",
       page,
@@ -103,8 +107,12 @@ function EligibilityReviewPage() {
         }
       })
       .catch(() => {
-        if (active && page === 1) {
-          setLoadState("error");
+        if (active) {
+          if (page === 1) {
+            setLoadState("error");
+          } else {
+            setMoreFailed(true);
+          }
         }
       })
       .finally(() => {
@@ -116,12 +124,24 @@ function EligibilityReviewPage() {
     return () => {
       active = false;
     };
-  }, [allowed, status, page, reloadKey]);
+  }, [allowed, status, page, reloadKey, retryKey]);
 
   // Reloads the list from its first page, e.g. after a decision.
   function reload() {
     setPage(1);
+    setMoreFailed(false);
     setReloadKey((key) => key + 1);
+  }
+
+  function showMore() {
+    setIsLoadingMore(true);
+
+    if (moreFailed) {
+      setMoreFailed(false);
+      setRetryKey((key) => key + 1);
+    } else {
+      setPage((current) => current + 1);
+    }
   }
 
   const closeReview = useCallback(() => {
@@ -202,6 +222,7 @@ function EligibilityReviewPage() {
             onClick={() => {
               setStatus(tab.status);
               setPage(1);
+              setMoreFailed(false);
               setMessage("");
               setPageError("");
             }}
@@ -328,15 +349,18 @@ function EligibilityReviewPage() {
         </table>
       )}
 
-      {loadState === "ready" && hasMore && (
+      {loadState === "ready" && moreFailed && (
+        <p className="eligibility-review__notice" role="alert">
+          Could not load more requests. Please try again.
+        </p>
+      )}
+
+      {loadState === "ready" && (hasMore || moreFailed) && (
         <button
           className="eligibility-review__more"
           type="button"
           disabled={isLoadingMore}
-          onClick={() => {
-            setIsLoadingMore(true);
-            setPage((current) => current + 1);
-          }}
+          onClick={showMore}
         >
           {isLoadingMore ? "Loading…" : `Show more (${total - requests.length} left)`}
         </button>

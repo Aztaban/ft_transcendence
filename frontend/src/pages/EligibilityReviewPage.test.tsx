@@ -250,4 +250,47 @@ describe("EligibilityReviewPage", () => {
     });
     expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
   });
+
+  it("retries the same page when Show more fails", async () => {
+    const first = Array.from({ length: 20 }, (_, index) =>
+      request(100 + index, `tutor${index}`, { status: "declined" }),
+    );
+    let failNextPage = true;
+
+    vi.mocked(listEligibilityRequests).mockImplementation(async (status, options = {}) => {
+      if (status === "pending") {
+        return page([]);
+      }
+
+      if (options.page === 2) {
+        if (failNextPage) {
+          failNextPage = false;
+          throw new Error("network");
+        }
+
+        return page([request(1, "oldest", { status: "declined" })], 21);
+      }
+
+      return page(first, 21, "https://localhost/api/v1/tutor-eligibility-requests/?page=2");
+    });
+
+    renderPage();
+    await screen.findByText("No pending requests");
+    fireEvent.click(screen.getByRole("tab", { name: "Declined" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Show more (1 left)" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Could not load more requests. Please try again.",
+    );
+    expect(screen.getByText("tutor0")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show more (1 left)" }));
+
+    expect(await screen.findByText("oldest")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      vi.mocked(listEligibilityRequests).mock.calls.filter(([, options]) => options?.page === 2),
+    ).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
+  });
 });
