@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router";
 
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import { ApiError } from "../api/client";
 import {
+  cancelEvaluationRequest,
   confirmEvaluationRequest,
   declineEvaluationRequest,
   getEvaluationRequest,
 } from "../api/evaluationRequests";
+import CancelRequestDialog from "../features/student/CancelRequestDialog";
+import { canCancel, cancelErrorMessage } from "../features/student/cancelRequest";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
 import "../styles/evaluation.css";
 
@@ -135,6 +138,10 @@ function EvaluationPage() {
   const [answerError, setAnswerError] = useState("");
   const [isAccepted, setIsAccepted] = useState(false);
   const [wasDeclined, setWasDeclined] = useState(false);
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState("");
+  const [wasCancelled, setWasCancelled] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -185,6 +192,31 @@ function EvaluationPage() {
     }
   }
 
+  // The student ends the request for good (#595, api-plan §7.1).
+  async function cancelRequest() {
+    if (!request) {
+      return;
+    }
+
+    setCancelError("");
+    setIsCancelling(true);
+
+    try {
+      setRequest(await cancelEvaluationRequest(request.id));
+      setIsCancelOpen(false);
+      setWasCancelled(true);
+    } catch (error) {
+      setCancelError(cancelErrorMessage(error));
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
+  const closeCancel = useCallback(() => {
+    setIsCancelOpen(false);
+    setCancelError("");
+  }, []);
+
   const status = request ? statusInfo[request.status] : null;
 
   return (
@@ -231,6 +263,12 @@ function EvaluationPage() {
             <p className="evaluation__notice" role="status">
               You declined that time. Your request is back in the queue, so another Hitchhiker can
               propose a new slot.
+            </p>
+          )}
+
+          {wasCancelled && request.status === "cancelled" && (
+            <p className="evaluation__notice" role="status">
+              Your request has been cancelled. You can create a new one anytime.
             </p>
           )}
 
@@ -334,7 +372,30 @@ function EvaluationPage() {
               )}
             </div>
           )}
+
+          {canCancel(request) && !isAccepted && (
+            <div className="evaluation__cancel">
+              <button
+                className="evaluation__cancel-button"
+                type="button"
+                disabled={isBusy}
+                onClick={() => setIsCancelOpen(true)}
+              >
+                Cancel request
+              </button>
+            </div>
+          )}
         </article>
+      )}
+
+      {isCancelOpen && request && (
+        <CancelRequestDialog
+          request={request}
+          isSubmitting={isCancelling}
+          error={cancelError}
+          onConfirm={cancelRequest}
+          onClose={closeCancel}
+        />
       )}
 
       {isAccepted && request && (

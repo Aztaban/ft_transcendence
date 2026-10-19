@@ -1,9 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
 import {
+  cancelEvaluationRequest,
   confirmEvaluationRequest,
   declineEvaluationRequest,
   getEvaluationRequest,
@@ -12,6 +13,7 @@ import { makeRequest } from "../features/student/testUtils";
 import EvaluationPage from "./EvaluationPage";
 
 vi.mock("../api/evaluationRequests", () => ({
+  cancelEvaluationRequest: vi.fn(),
   getEvaluationRequest: vi.fn(),
   confirmEvaluationRequest: vi.fn(),
   declineEvaluationRequest: vi.fn(),
@@ -126,5 +128,51 @@ describe("EvaluationPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Waiting for a Hitchhiker" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+  });
+});
+
+describe("EvaluationPage cancel (#595)", () => {
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  it("cancels a pending request after asking", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "pending"));
+    vi.mocked(cancelEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "cancelled"));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel request" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Cancel this request?" });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel request" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "This request is no longer active" }),
+    ).toBeTruthy();
+    expect(cancelEvaluationRequest).toHaveBeenCalledWith(7);
+    expect(screen.getByRole("status").textContent).toBe(
+      "Your request has been cancelled. You can create a new one anytime.",
+    );
+    expect(screen.queryByRole("button", { name: "Cancel request" })).toBeNull();
+  });
+
+  it("also offers it for a proposed slot that has not started", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue({
+      ...awaiting,
+      starts_at: tomorrow,
+      ends_at: tomorrow,
+    });
+    renderPage();
+
+    expect(await screen.findByRole("button", { name: "Cancel request" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Accept/ })).toBeTruthy();
+  });
+
+  it("does not offer it once the request has ended or the slot has started", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "cancelled"));
+    renderPage();
+
+    await screen.findByRole("heading", { name: "This request is no longer active" });
+
+    expect(screen.queryByRole("button", { name: "Cancel request" })).toBeNull();
   });
 });

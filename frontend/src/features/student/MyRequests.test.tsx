@@ -1,7 +1,9 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "../../api/client";
 import {
+  cancelEvaluationRequest,
   listEvaluationRequests,
   type ListEvaluationRequestsParams,
 } from "../../api/evaluationRequests";
@@ -9,7 +11,17 @@ import type { EvaluationRequest } from "../../types/evaluation";
 import MyRequests from "./MyRequests";
 import { makeRequest } from "./testUtils";
 
-vi.mock("../../api/evaluationRequests", () => ({ listEvaluationRequests: vi.fn() }));
+vi.mock("../../api/evaluationRequests", () => ({
+  listEvaluationRequests: vi.fn(),
+  cancelEvaluationRequest: vi.fn(),
+}));
+
+// A slot that has not started yet, so the request can still be cancelled.
+function upcoming(request: EvaluationRequest): EvaluationRequest {
+  const start = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  return { ...request, starts_at: start, ends_at: start };
+}
 
 afterEach(() => {
   cleanup();
@@ -47,7 +59,7 @@ function rowStatuses(groupName: string) {
     .getAllByRole("listitem")
     .map((row) => [
       within(row).getByRole("heading").textContent,
-      row.lastElementChild?.textContent,
+      row.querySelector(".my-requests__status")?.textContent,
     ]);
 }
 
@@ -159,5 +171,96 @@ describe("MyRequests", () => {
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Could not load your requests. Please try again later.",
     );
+  });
+});
+
+describe("MyRequests cancel (#595)", () => {
+  it("offers Cancel only on active requests whose slot has not started", async () => {
+    mockLists(
+      page([
+        makeRequest(1, "push_swap", "pending"),
+        upcoming(makeRequest(2, "minishell", "awaiting_confirmation")),
+        upcoming(makeRequest(3, "cpp09", "confirmed")),
+        makeRequest(4, "Fly-In", "confirmed"),
+      ]),
+      page([makeRequest(5, "born2beroot", "cancelled")]),
+    );
+
+    render(<MyRequests />);
+    await screen.findByRole("heading", { name: "Active" });
+
+    expect(
+      screen.getAllByRole("button", { name: /^Cancel the/ }).map((button) => button.textContent),
+    ).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "Cancel the push_swap request" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cancel the Fly-In request" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancel the born2beroot request" })).toBeNull();
+  });
+
+  it("cancels after asking and moves the request to the past list", async () => {
+    let cancelled = false;
+
+    vi.mocked(listEvaluationRequests).mockImplementation(
+      async (params: ListEvaluationRequestsParams = {}) => {
+        if (!params.history) {
+          return page(cancelled ? [] : [makeRequest(1, "push_swap", "pending")]);
+        }
+
+        return page(cancelled ? [makeRequest(1, "push_swap", "cancelled")] : []);
+      },
+    );
+    vi.mocked(cancelEvaluationRequest).mockImplementation(async () => {
+      cancelled = true;
+
+      return makeRequest(1, "push_swap", "cancelled");
+    });
+
+    render(<MyRequests />);
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel the push_swap request" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Cancel this request?" });
+
+    expect(
+      within(dialog).getByText("Hitchhikers won't see the request anymore.", { exact: false }),
+    ).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel request" }));
+
+    expect((await screen.findByRole("status")).textContent).toBe(
+      "Your push_swap request was cancelled.",
+    );
+    expect(cancelEvaluationRequest).toHaveBeenCalledWith(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await screen.findByText("No active requests.")).toBeTruthy();
+    expect(rowStatuses("Past")).toEqual([["push_swap", "Cancelled"]]);
+  });
+
+  it("keeps the request when the student changes their mind", async () => {
+    mockLists(page([makeRequest(1, "push_swap", "pending")]), page([]));
+
+    render(<MyRequests />);
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel the push_swap request" }));
+    fireEvent.click(screen.getByRole("button", { name: "Keep request" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(cancelEvaluationRequest).not.toHaveBeenCalled();
+  });
+
+  it("explains in the dialog when the evaluation has already started", async () => {
+    mockLists(page([upcoming(makeRequest(3, "cpp09", "confirmed"))]), page([]));
+    vi.mocked(cancelEvaluationRequest).mockRejectedValue(
+      new ApiError(409, "Conflict", "evaluation_already_started"),
+    );
+
+    render(<MyRequests />);
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel the cpp09 request" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel request" }),
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This evaluation has already started, so it can't be cancelled.",
+    );
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });
