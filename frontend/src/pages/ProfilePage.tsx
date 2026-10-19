@@ -4,7 +4,7 @@ import { getCurrentUser, updateCurrentUser } from "../api/users";
 import { ApiError } from "../api/client";
 import avatar from "../assets/figma/avatar.png";
 import { Badge, Button, Input } from "../components/ui";
-import type { Language, UserProfile, UserRole } from "../types/user";
+import type { Language, RoleName, UserProfile, UserRole } from "../types/user";
 import { DISPLAY_NAME_MAX_LENGTH } from "../utils/validation";
 import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/profile.css";
@@ -15,22 +15,16 @@ const languageLabels: Record<Language, string> = {
   es: "Spanish",
 };
 
-function getRoleName(role: UserRole | string) {
-  return typeof role === "string" ? role : role.name;
-}
+const roleLabels: Record<RoleName, string> = {
+  student: "STUDENT",
+  tutor: "HITCHHIKER",
+  head_tutor: "HEAD TUTOR",
+  sc_member: "STUDENT COUNCIL",
+  admin: "ADMIN",
+};
 
-function formatRole(role: UserRole | string) {
-  const name = getRoleName(role);
-
-  const labels: Record<string, string> = {
-    student: "STUDENT",
-    tutor: "HITCHHIKER",
-    head_tutor: "HEAD TUTOR",
-    sc_member: "STUDENT COUNCIL",
-    admin: "ADMIN",
-  };
-
-  return labels[name] ?? name.split("_").join(" ").toUpperCase();
+function formatRole(role: UserRole) {
+  return roleLabels[role.name];
 }
 
 function ProfilePage() {
@@ -232,8 +226,8 @@ function ProfilePage() {
                 <h2>{profile.display_name}</h2>
 
                 <div className="profile-card__roles">
-                  {profile.roles.map((role, index) => (
-                    <Badge key={`${getRoleName(role)}-${index}`} variant="accent">
+                  {profile.roles.map((role) => (
+                    <Badge key={role.id} variant="accent">
                       {formatRole(role)}
                     </Badge>
                   ))}
