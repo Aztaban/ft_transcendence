@@ -63,3 +63,13 @@ def publish_declined_event(evaluation: EvaluationRequest, *, previous_picker_id:
             *_eligible_hitchhiker_ids(evaluation.project_id),
         ],
     )
+
+
+def publish_cancelled_event(evaluation: EvaluationRequest, *, previous_status: str) -> None:
+    """Refresh the open queue only when cancellation removed a pending request."""
+    recipients = [evaluation.student_id]
+    if evaluation.picked_by_id is not None:
+        recipients.append(evaluation.picked_by_id)
+    if previous_status == EvaluationRequest.Status.PENDING:
+        recipients.extend(_eligible_hitchhiker_ids(evaluation.project_id))
+    publish_evaluation_event(EvaluationEvent.CANCELLED, evaluation, user_ids=recipients)
