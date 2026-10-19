@@ -1,12 +1,20 @@
 import { apiRequest } from "./client";
-import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
+import type {
+  EvaluationRequest,
+  EvaluationRequestStatus,
+  EvaluationResult,
+} from "../types/evaluation";
 import type { Paginated } from "../types/pagination";
 
 export type EvaluationRequestScope = "mine" | "open" | "picked" | "all";
 
+// The `result` filter (api-plan §10.4); `none` means no result recorded yet.
+export type EvaluationResultFilter = EvaluationResult | "none";
+
 export interface ListEvaluationRequestsParams {
   scope?: EvaluationRequestScope;
   status?: EvaluationRequestStatus[];
+  result?: EvaluationResultFilter[];
   history?: boolean;
   ordering?: "created_at" | "-created_at" | "starts_at" | "-starts_at";
   // Project slug.
@@ -27,6 +35,10 @@ export function listEvaluationRequests(
 
   if (params.status?.length) {
     query.set("status", params.status.join(","));
+  }
+
+  if (params.result?.length) {
+    query.set("result", params.result.join(","));
   }
 
   if (params.history !== undefined) {
