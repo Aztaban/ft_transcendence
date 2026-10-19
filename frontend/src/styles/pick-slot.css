@@ -156,6 +156,17 @@
 
 /* Selected slot summary */
 
+.slot-picker__group--error {
+  padding-left: 12px;
+  border-left: 3px solid #d92d20;
+}
+
+.slot-picker__error {
+  margin: 10px 0 0;
+  color: #b42318;
+  font-size: 0.9rem;
+}
+
 .pick-slot__summary {
   display: flex;
   align-items: center;

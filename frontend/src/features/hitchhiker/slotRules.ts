@@ -10,14 +10,21 @@ export const SLOT_HOURS = Array.from({ length: 13 }, (_, index) => 8 + index); /
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
 
-// Today and the following days, at local midnight, as long as a slot can still start in them.
+// Today through the day of the last allowed start (now + 14 days of elapsed time), at local
+// midnight: usually 15 days. On the last day only starts up to that moment are allowed.
 export function upcomingDays(now: Date): Date[] {
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const last = new Date(now.getTime() + MAX_DAYS_AHEAD * DAY);
+  const days: Date[] = [];
 
-  return Array.from(
-    { length: MAX_DAYS_AHEAD },
-    (_, index) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + index),
-  );
+  for (
+    let day = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    day <= last;
+    day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)
+  ) {
+    days.push(day);
+  }
+
+  return days;
 }
 
 export function slotStart(day: Date, hour: number, minute: number): Date {

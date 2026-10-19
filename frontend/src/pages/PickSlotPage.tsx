@@ -3,13 +3,21 @@ import { Link, useNavigate, useParams } from "react-router";
 
 import { ApiError } from "../api/client";
 import { getEvaluationRequest, pickSlot } from "../api/evaluationRequests";
-import SlotPicker, { type ChosenSlot } from "../features/hitchhiker/SlotPicker";
+import SlotPicker, {
+  type ChosenSlot,
+  type SlotFieldErrors,
+} from "../features/hitchhiker/SlotPicker";
+import { isStartAllowed, MIN_LEAD_MINUTES } from "../features/hitchhiker/slotRules";
 import SuccessDialog from "../features/hitchhiker/SuccessDialog";
 import type { EvaluationRequest } from "../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../utils/dateTime";
 import "../styles/pick-slot.css";
 
 type LoadState = "loading" | "ready" | "error";
+
+// How often "now" is refreshed while the page stays open, so a chosen start cannot silently
+// become too soon.
+const NOW_REFRESH_MS = 30_000;
 
 const pickErrorMessages: Record<string, string> = {
   slot_overlaps: "You already have an evaluation at that time. Choose another slot.",
@@ -31,13 +39,20 @@ function pickErrorMessage(error: unknown) {
 function PickSlotPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [now] = useState(() => new Date());
+  const [now, setNow] = useState(() => new Date());
   const [request, setRequest] = useState<EvaluationRequest | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [slot, setSlot] = useState<ChosenSlot | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<SlotFieldErrors>({});
   const [isPicked, setIsPicked] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), NOW_REFRESH_MS);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -60,12 +75,28 @@ function PickSlotPage() {
     };
   }, [id]);
 
+  // A new choice clears the messages about the previous one.
+  function chooseSlot(next: ChosenSlot | null) {
+    setSlot(next);
+    setSubmitError("");
+    setFieldErrors({});
+  }
+
   async function handleSubmit() {
     if (!request || !slot) {
       return;
     }
 
+    // Time has passed since the slot was chosen: check the start again before sending it.
+    const current = new Date();
+
+    if (!isStartAllowed(slot.start, current)) {
+      setNow(current);
+      return;
+    }
+
     setSubmitError("");
+    setFieldErrors({});
     setIsSubmitting(true);
 
     try {
@@ -75,11 +106,20 @@ function PickSlotPage() {
       });
       setIsPicked(true);
     } catch (error) {
+      if (error instanceof ApiError && error.code === "validation_error") {
+        setFieldErrors({
+          start: error.fields?.starts_at?.[0],
+          duration: error.fields?.ends_at?.[0],
+        });
+      }
+
       setSubmitError(pickErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  const isTooSoon = slot !== null && !isStartAllowed(slot.start, now);
 
   return (
     <section className="pick-slot">
@@ -113,7 +153,7 @@ function PickSlotPage() {
                 <>
                   <section className="pick-slot__card">
                     <h2>Your slot</h2>
-                    <SlotPicker now={now} onChange={setSlot} />
+                    <SlotPicker now={now} onChange={chooseSlot} errors={fieldErrors} />
                   </section>
 
                   <div className="pick-slot__summary" aria-live="polite">
@@ -130,6 +170,13 @@ function PickSlotPage() {
                     </div>
                   </div>
 
+                  {isTooSoon && (
+                    <p className="pick-slot__error" role="alert">
+                      The chosen start is now less than {MIN_LEAD_MINUTES} minutes away. Please
+                      choose a later time.
+                    </p>
+                  )}
+
                   {submitError && (
                     <p className="pick-slot__error" role="alert">
                       {submitError}
@@ -140,7 +187,7 @@ function PickSlotPage() {
                     <button
                       className="pick-slot__submit"
                       type="button"
-                      disabled={!slot || isSubmitting}
+                      disabled={!slot || isTooSoon || isSubmitting}
                       onClick={handleSubmit}
                     >
                       {isSubmitting ? "Sending…" : "Submit"}
