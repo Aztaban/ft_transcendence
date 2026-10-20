@@ -244,6 +244,14 @@ function HitchhikerRequestsPage() {
             <h2>Tip</h2>
             <p>Requests marked “Waiting a while” have been open for more than a day.</p>
           </section>
+
+          <section className="hitchhiker-requests__panel hitchhiker-requests__panel--projects">
+            <h2>Your projects</h2>
+            <p>You only see requests for projects you are approved to evaluate.</p>
+            <Link className="hitchhiker-requests__projects-link" to="/eligibility-requests/new">
+              Request more projects <span aria-hidden="true">→</span>
+            </Link>
+          </section>
         </aside>
       </div>
     </section>

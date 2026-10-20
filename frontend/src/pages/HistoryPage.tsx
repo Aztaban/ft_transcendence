@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { listEvaluationRequests } from "../api/evaluationRequests";
+import { listEvaluationRequests, type EvaluationResultFilter } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
 import { projectInitials } from "../features/projects/ProjectOverview";
 import { useRole } from "../store/RoleContext";
@@ -18,15 +18,23 @@ type Tone = "green" | "red" | "violet" | "grey";
 // api-plan §5.7: default page size.
 const PAGE_SIZE = 20;
 
-// Status filters the API supports for history (§7.1, §10.4). "Completed" is a confirmed request
-// whose slot has ended.
-// TODO(contract): there is no filter on `result`, so Passed / Failed can't be filtered without
-// breaking the pagination. Each card shows its result instead.
-const statusFilters: { value: EvaluationRequestStatus | null; label: string }[] = [
-  { value: null, label: "All" },
-  { value: "confirmed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
-  { value: "expired", label: "Expired" },
+type HistoryFilter = "all" | "passed" | "failed" | "pending" | "cancelled" | "expired";
+
+// One chip per outcome shown on the cards, with the API filters behind it (api-plan §10.4).
+// A finished evaluation is `confirmed`; "Result pending" is one without a recorded result yet
+// (`status=confirmed&result=none`).
+const historyFilters: {
+  value: HistoryFilter;
+  label: string;
+  status?: EvaluationRequestStatus[];
+  result?: EvaluationResultFilter[];
+}[] = [
+  { value: "all", label: "All" },
+  { value: "passed", label: "Passed", status: ["confirmed"], result: ["passed"] },
+  { value: "failed", label: "Failed", status: ["confirmed"], result: ["failed"] },
+  { value: "pending", label: "Result pending", status: ["confirmed"], result: ["none"] },
+  { value: "cancelled", label: "Cancelled", status: ["cancelled"] },
+  { value: "expired", label: "Expired", status: ["expired"] },
 ];
 
 const dateFormat: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" };
@@ -86,11 +94,13 @@ function endNote(request: EvaluationRequest) {
 
 // Sidebar "History" (#218, #219, #220, #221, #222): past evaluations from
 // GET /evaluation-requests/?history=true (§10.4), the student's own (`mine`) or the ones the
-// Hitchhiker picked (`picked`), with status and project filters and pages of 20.
+// Hitchhiker picked (`picked`), with outcome and project filters and pages of 20.
 function HistoryPage() {
   const { activeRole } = useRole();
   const viewer: Viewer = activeRole === "HITCHHIKER" ? "hitchhiker" : "student";
-  const [status, setStatus] = useState<EvaluationRequestStatus | null>(null);
+  const [filter, setFilter] = useState<HistoryFilter>("all");
+  const chosenFilter =
+    historyFilters.find((option) => option.value === filter) ?? historyFilters[0];
   const [project, setProject] = useState("");
   const [page, setPage] = useState(1);
   const [projects, setProjects] = useState<ProjectRef[]>([]);
@@ -141,7 +151,8 @@ function HistoryPage() {
     listEvaluationRequests({
       scope: viewer === "student" ? "mine" : "picked",
       history: true,
-      status: status ? [status] : undefined,
+      status: chosenFilter.status,
+      result: chosenFilter.result,
       project: project || undefined,
       page,
     })
@@ -162,10 +173,10 @@ function HistoryPage() {
     return () => {
       active = false;
     };
-  }, [viewer, status, project, page, reloadKey]);
+  }, [viewer, filter, project, page, reloadKey]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const isFiltered = status !== null || project !== "";
+  const isFiltered = filter !== "all" || project !== "";
 
   return (
     <section className="history-page">
@@ -179,23 +190,23 @@ function HistoryPage() {
       </header>
 
       <div className="history-page__filters">
-        <div className="history-page__chips" role="group" aria-label="Filter by status">
-          {statusFilters.map((filter) => (
+        <div className="history-page__chips" role="group" aria-label="Filter by outcome">
+          {historyFilters.map((option) => (
             <button
-              key={filter.label}
+              key={option.value}
               className={
-                filter.value === status
+                option.value === filter
                   ? "history-page__chip history-page__chip--active"
                   : "history-page__chip"
               }
               type="button"
-              aria-pressed={filter.value === status}
+              aria-pressed={option.value === filter}
               onClick={() => {
-                setStatus(filter.value);
+                setFilter(option.value);
                 setPage(1);
               }}
             >
-              {filter.label}
+              {option.label}
             </button>
           ))}
         </div>
@@ -239,7 +250,7 @@ function HistoryPage() {
           <h2>{isFiltered ? "Nothing matches these filters" : "No history yet"}</h2>
           <p>
             {isFiltered
-              ? "Try another status or project."
+              ? "Try another outcome or project."
               : "Your past evaluations will appear here."}
           </p>
         </div>

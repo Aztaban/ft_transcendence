@@ -160,6 +160,52 @@ describe("HistoryPage", () => {
     );
   });
 
+  it("filters by result: passed, failed and result pending", async () => {
+    vi.mocked(listEvaluationRequests).mockResolvedValue(page([past(1, "push_swap")]));
+
+    renderPage();
+    await screen.findByRole("heading", { name: "push_swap" });
+
+    expect(
+      within(screen.getByRole("group", { name: "Filter by outcome" }))
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["All", "Passed", "Failed", "Result pending", "Cancelled", "Expired"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Passed" }));
+
+    await vi.waitFor(() =>
+      expect(listEvaluationRequests).toHaveBeenLastCalledWith({
+        scope: "mine",
+        history: true,
+        status: ["confirmed"],
+        result: ["passed"],
+        project: undefined,
+        page: 1,
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Failed" }));
+
+    await vi.waitFor(() =>
+      expect(listEvaluationRequests).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: ["confirmed"], result: ["failed"] }),
+      ),
+    );
+
+    // §10.4: "Result pending" is a finished evaluation without a recorded result.
+    fireEvent.click(screen.getByRole("button", { name: "Result pending" }));
+
+    await vi.waitFor(() =>
+      expect(listEvaluationRequests).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: ["confirmed"], result: ["none"] }),
+      ),
+    );
+    expect(
+      screen.getByRole("button", { name: "Result pending" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
   it("says when the filters match nothing", async () => {
     vi.mocked(listEvaluationRequests).mockResolvedValue(page([]));
 

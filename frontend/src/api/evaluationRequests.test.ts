@@ -42,6 +42,16 @@ describe("listEvaluationRequests", () => {
     );
   });
 
+  test("sends the result filter as a comma-separated list", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(emptyPage));
+
+    await listEvaluationRequests({ status: ["confirmed"], result: ["passed", "none"] });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/v1/evaluation-requests/?status=confirmed&result=passed%2Cnone",
+    );
+  });
+
   test("calls the list without parameters", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(emptyPage));
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { isStartAllowed, slotEnd, slotStart, upcomingDays } from "./slotRules";
 
@@ -6,12 +6,12 @@ import { isStartAllowed, slotEnd, slotStart, upcomingDays } from "./slotRules";
 const now = new Date(2026, 9, 12, 10, 0);
 
 describe("slotRules", () => {
-  it("lists 14 days starting today at midnight", () => {
+  it("lists today through the day of the last allowed start, at midnight", () => {
     const days = upcomingDays(now);
 
-    expect(days).toHaveLength(14);
+    expect(days).toHaveLength(15);
     expect(days[0]).toEqual(new Date(2026, 9, 12));
-    expect(days[13]).toEqual(new Date(2026, 9, 25));
+    expect(days[14]).toEqual(new Date(2026, 9, 26));
   });
 
   it("builds the start and end of a slot", () => {
@@ -34,5 +34,27 @@ describe("slotRules", () => {
     expect(isStartAllowed(new Date(now.getTime() + fourteenDays + 15 * 60 * 1000), now)).toBe(
       false,
     );
+  });
+});
+
+// The 14 days are elapsed time (as on the backend), not calendar days. Prague switches to winter
+// time on Sun 25 Oct 2026, so 14 × 24 hours after 10:00 summer time is 09:00 on the clock.
+describe("slotRules across a daylight-saving change", () => {
+  beforeAll(() => {
+    vi.stubEnv("TZ", "Europe/Prague");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("ends the window 14 × 24 hours after now", () => {
+    const opened = new Date(2026, 9, 12, 10, 0);
+    const days = upcomingDays(opened);
+
+    expect(days).toHaveLength(15);
+    expect(days[14]).toEqual(new Date(2026, 9, 26));
+    expect(isStartAllowed(new Date(2026, 9, 26, 9, 0), opened)).toBe(true);
+    expect(isStartAllowed(new Date(2026, 9, 26, 9, 15), opened)).toBe(false);
   });
 });

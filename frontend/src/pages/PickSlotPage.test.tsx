@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -302,5 +302,68 @@ describe("PickSlotPage live", () => {
     await act(async () => {});
     expect(screen.getByRole("button", { name: "Submit" })).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("PickSlotPage timing and field errors (#563)", () => {
+  it("shows the backend's field errors under the start time and the duration", async () => {
+    vi.mocked(pickSlot).mockRejectedValue(
+      new ApiError(400, "Please correct the highlighted fields.", "validation_error", {
+        starts_at: ["Start must be on a 15-minute boundary."],
+        ends_at: ["Duration must be between 15 and 120 minutes."],
+      }),
+    );
+    renderPage();
+    await chooseTomorrowAt1015();
+
+    fireEvent.click(getButton("Submit"));
+
+    expect(await screen.findByText("Start must be on a 15-minute boundary.")).toBeTruthy();
+    expect(screen.getByText("Duration must be between 15 and 120 minutes.")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Start time" }).getAttribute("aria-describedby")).toBe(
+      "slot-start-error",
+    );
+    expect(screen.getByRole("group", { name: "Duration" }).getAttribute("aria-describedby")).toBe(
+      "slot-duration-error",
+    );
+    expect(screen.getByRole("alert").textContent).toBe("Please correct the highlighted fields.");
+
+    // Choosing again clears the messages about the previous choice.
+    fireEvent.click(getButton("10:30"));
+
+    expect(screen.queryByText("Start must be on a 15-minute boundary.")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("asks for a later time when the chosen start became too soon before submitting", async () => {
+    renderPage();
+    await screen.findByRole("heading", { name: "Choose a slot for push_swap" });
+
+    // Opened at 08:00: 08:30 is exactly 30 minutes ahead, so it can be chosen.
+    fireEvent.click(getButton("08:00"));
+    fireEvent.click(getButton("08:30"));
+
+    expect(getButton("Submit").disabled).toBe(false);
+
+    // A minute later the same start is too soon.
+    vi.setSystemTime(new Date(2026, 9, 12, 8, 1));
+    fireEvent.click(getButton("Submit"));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "The chosen start is now less than 30 minutes away. Please choose a later time.",
+    );
+    expect(getButton("Submit").disabled).toBe(true);
+    expect(pickSlot).not.toHaveBeenCalled();
+  });
+
+  it("offers every day up to the end of the 14-day window", async () => {
+    renderPage();
+    await screen.findByRole("heading", { name: "Choose a slot for push_swap" });
+
+    const days = within(screen.getByRole("group", { name: "Day" })).getAllByRole("button");
+
+    // Mon 12 Oct 08:00 + 14 days ends on Mon 26 Oct: today and the next 14 days.
+    expect(days).toHaveLength(15);
+    expect(days[0].textContent).toBe("Today");
   });
 });

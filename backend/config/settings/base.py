@@ -109,6 +109,13 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+# Pick-slot timing (api-plan §7.1). The frontend copies these defaults.
+EVALUATION_SLOT_GRID_MINUTES = 15
+EVALUATION_SLOT_MIN_DURATION_MINUTES = 15
+EVALUATION_SLOT_MAX_DURATION_MINUTES = 120
+EVALUATION_SLOT_MIN_LEAD_MINUTES = 30
+EVALUATION_SLOT_MAX_LEAD_DAYS = 14
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 STATIC_URL = "static/"

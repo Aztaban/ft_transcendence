@@ -15,4 +15,9 @@ urlpatterns = [
         views.EvaluationRequestDetailView.as_view(),
         name="evaluation-request-detail",
     ),
+    path(
+        "evaluation-requests/<int:pk>/pick-slot/",
+        views.EvaluationRequestPickSlotView.as_view(),
+        name="evaluation-request-pick-slot",
+    ),
 ]
