@@ -2,7 +2,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getCurrentUser } from "../api/users";
-import type { UserProfile } from "../types/user";
+import type { RoleName, UserProfile } from "../types/user";
 import { LiveContext } from "../websocket/LiveProvider";
 import { LiveSocket } from "../websocket/LiveSocket";
 import { createFakeSocket, FakeSocket } from "../websocket/testSocket";
@@ -16,8 +16,16 @@ vi.mock("./AuthContext", () => ({
   useAuth: () => ({ isAuthenticated: session.isAuthenticated }),
 }));
 
-function me(roles: UserProfile["roles"]): UserProfile {
-  return { id: 2, email: "dkolarov@42.cz", display_name: "dkolarov", language: "en", roles };
+function me(roles: RoleName[]): UserProfile {
+  return {
+    id: 2,
+    email: "dkolarov@42.cz",
+    display_name: "dkolarov",
+    avatar_url: null,
+    language: "en",
+    roles: roles.map((name, index) => ({ id: index + 1, name })),
+    intra_login: "dkolarov",
+  };
 }
 
 function Probe() {
@@ -57,7 +65,7 @@ afterEach(() => {
 
 describe("CurrentUserProvider", () => {
   it("loads the user's roles once logged in, with string or object roles", async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue(me(["student", { id: 2, name: "tutor" }]));
+    vi.mocked(getCurrentUser).mockResolvedValue(me(["student", "tutor"]));
 
     renderWithSocket();
 
