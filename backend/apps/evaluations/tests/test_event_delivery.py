@@ -140,6 +140,22 @@ def socket(client):
             False,
         ),
         (
+            "release",
+            "awaiting_confirmation",
+            {"event": "evaluation.released", "data": {"id": 17, "status": "pending"}},
+            (7, 42, 43),
+            False,
+            False,
+        ),
+        (
+            "release",
+            "confirmed",
+            {"event": "evaluation.released", "data": {"id": 17, "status": "pending"}},
+            (7, 42, 43),
+            True,
+            False,
+        ),
+        (
             "cancel",
             "pending",
             {"event": "evaluation.cancelled", "data": {"id": 17, "status": "cancelled"}},
@@ -177,6 +193,8 @@ def socket(client):
         "confirm",
         "decline",
         "decline-revoked-eligibility",
+        "release-revoked-eligibility",
+        "release-confirmed",
         "cancel-pending",
         "cancel-awaiting",
         "cancel-confirmed",
@@ -205,7 +223,11 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
     )
     expected_response = {
         "id": 17,
-        "student": {"id": 7, "display_name": "Student", "avatar_url": None},
+        "student": (
+            None
+            if action == "release"
+            else {"id": 7, "display_name": "Student", "avatar_url": None}
+        ),
         "project": {"id": 4, "slug": "libft", "name": "Libft"},
         "note": "Private student note",
         "status": expected_event["data"]["status"],
@@ -228,7 +250,7 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
     }
 
     def perform_action():
-        actor = clients[42] if action == "pick-slot" else clients[7]
+        actor = clients[42] if action in ("pick-slot", "release") else clients[7]
         data = (
             {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T15:45:00Z"}
             if action == "pick-slot"

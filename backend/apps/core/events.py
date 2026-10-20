@@ -24,4 +24,6 @@ def publish_user_event(*, event: str, data: dict, user_ids: Iterable[int]) -> No
         for user_id in recipients:
             send(f"user_{user_id}", message)
 
-    transaction.on_commit(dispatch)
+    # Django logs failures from robust callbacks without failing the already
+    # committed HTTP action or preventing later commit callbacks from running.
+    transaction.on_commit(dispatch, robust=True)

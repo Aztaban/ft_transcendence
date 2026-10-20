@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from .events import publish_updated_event
 from .models import EvaluationRequest, Project, TutorEligibility, TutorEligibilityRequest
 
 
@@ -86,3 +87,8 @@ class EvaluationRequestAdmin(admin.ModelAdmin):
         "updated_at",
     )
     fields = readonly_fields[:-2] + ("result", "feedback", "completed_at") + readonly_fields[-2:]
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if change and form.changed_data:
+            publish_updated_event(obj)

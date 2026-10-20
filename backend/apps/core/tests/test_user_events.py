@@ -74,7 +74,10 @@ def test_shared_delivery_snapshots_payload(monkeypatch):
         "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=send)
     )
     callbacks = []
-    monkeypatch.setattr("apps.core.events.transaction.on_commit", callbacks.append)
+    monkeypatch.setattr(
+        "apps.core.events.transaction.on_commit",
+        lambda callback, **kwargs: callbacks.append(callback),
+    )
     data = {"id": 17}
     publish_user_event(event="notification.created", data=data, user_ids=[7])
     data["id"] = 99
@@ -84,3 +87,20 @@ def test_shared_delivery_snapshots_payload(monkeypatch):
     send.assert_awaited_once_with(
         "user_7", {"type": "user.event", "event": "notification.created", "data": {"id": 17}}
     )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_failed_event_delivery_does_not_skip_later_commit_callbacks(monkeypatch, caplog):
+    from django.db import transaction
+
+    send = AsyncMock(side_effect=ConnectionError("Redis unavailable"))
+    monkeypatch.setattr(
+        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=send)
+    )
+    completed = []
+    with transaction.atomic():
+        publish_user_event(event="evaluation.confirmed", data={"id": 17}, user_ids=[7])
+        transaction.on_commit(lambda: completed.append(True))
+        send.assert_not_awaited()
+    assert completed == [True]
+    assert "Redis unavailable" in caplog.text

@@ -32,11 +32,47 @@ def publish_evaluation_event(
 
 def _eligible_hitchhiker_ids(project_id: int):
     """Eligibility rows are inert without an active account and Hitchhiker role."""
-    return TutorEligibility.objects.filter(
-        project_id=project_id,
-        tutor__status="active",
-        tutor__roles__name__in=(Role.Name.TUTOR, Role.Name.HEAD_TUTOR),
-    ).values_list("tutor_id", flat=True)
+    return (
+        TutorEligibility.objects.filter(
+            project_id=project_id,
+            tutor__status="active",
+            tutor__roles__name__in=(Role.Name.TUTOR, Role.Name.HEAD_TUTOR),
+        )
+        .values_list("tutor_id", flat=True)
+        .distinct()
+    )
+
+
+def publish_created_event(evaluation: EvaluationRequest) -> None:
+    """Refresh eligible Hitchhikers' queues when a request appears."""
+    publish_evaluation_event(
+        EvaluationEvent.CREATED,
+        evaluation,
+        user_ids=_eligible_hitchhiker_ids(evaluation.project_id),
+    )
+
+
+def publish_updated_event(evaluation: EvaluationRequest) -> None:
+    """Refresh participants and, while pending, eligible Hitchhikers (§9.3)."""
+    recipients = [evaluation.student_id]
+    if evaluation.picked_by_id is not None:
+        recipients.append(evaluation.picked_by_id)
+    if evaluation.status == EvaluationRequest.Status.PENDING:
+        recipients.extend(_eligible_hitchhiker_ids(evaluation.project_id))
+    publish_evaluation_event(EvaluationEvent.UPDATED, evaluation, user_ids=recipients)
+
+
+def publish_released_event(evaluation: EvaluationRequest, *, previous_picker_id: int) -> None:
+    """Keep the releasing Hitchhiker among recipients after clearing the pick."""
+    publish_evaluation_event(
+        EvaluationEvent.RELEASED,
+        evaluation,
+        user_ids=[
+            evaluation.student_id,
+            previous_picker_id,
+            *_eligible_hitchhiker_ids(evaluation.project_id),
+        ],
+    )
 
 
 def publish_slot_picked_event(evaluation: EvaluationRequest) -> None:

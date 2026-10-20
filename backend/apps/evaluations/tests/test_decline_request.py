@@ -506,3 +506,23 @@ def test_rolled_back_decline_sends_no_event(
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
     assert evaluation.picked_by_id == 42
+
+
+@pytest.mark.django_db(transaction=True)
+def test_decline_succeeds_and_logs_when_event_delivery_fails(
+    student, evaluation, expected, event_sender, caplog
+):
+    event_sender.side_effect = ConnectionError("Redis unavailable")
+    client = session_client(student)
+    response = client.post(
+        decline_url(),
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
+    assert response.status_code == 200
+    assert response.json() == expected
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.picked_by_id is None
+    assert "Redis unavailable" in caplog.text
+    assert any(record.exc_info for record in caplog.records)
