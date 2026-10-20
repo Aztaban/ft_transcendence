@@ -206,3 +206,31 @@ def test_admin_can_correct_or_clear_existing_results(browser, evaluation):
     assert cleared.status_code == 302
     evaluation.refresh_from_db()
     assert (evaluation.result, evaluation.feedback, evaluation.completed_at) == (None, "", None)
+
+
+def test_admin_result_update_publishes_after_commit(
+    browser, evaluation, monkeypatch, django_capture_on_commit_callbacks
+):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, call
+
+    sender = AsyncMock()
+    monkeypatch.setattr(
+        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
+    )
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = submit(browser, evaluation, result="passed")
+        assert response.status_code == 302
+        sender.assert_not_awaited()
+    assert len(callbacks) == 1
+    assert sender.await_args_list == [
+        call(
+            f"user_{user_id}",
+            {
+                "type": "user.event",
+                "event": "evaluation.updated",
+                "data": {"id": evaluation.pk, "status": "confirmed"},
+            },
+        )
+        for user_id in sorted((evaluation.student_id, evaluation.picked_by_id))
+    ]

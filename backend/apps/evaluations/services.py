@@ -7,6 +7,16 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException, PermissionDenied
 
+from .events import (
+    EvaluationEvent,
+    publish_cancelled_event,
+    publish_created_event,
+    publish_declined_event,
+    publish_evaluation_event,
+    publish_released_event,
+    publish_slot_picked_event,
+    publish_updated_event,
+)
 from .models import EvaluationRequest
 
 
@@ -64,7 +74,8 @@ def create_request(student, project, note):
     if EvaluationRequest.objects.filter(active, student=student, project=project).exists():
         raise ActiveRequestExists()
     evaluation = EvaluationRequest.objects.create(student=student, project=project, note=note)
-    # Notifications (§8.8) and on_commit WebSocket events (§9.3) are deferred by
+    publish_created_event(evaluation)
+    # TODO(notifications): evaluation.created to eligible Hitchhikers (§8.8).
     return evaluation
 
 
@@ -76,7 +87,7 @@ def edit_note(evaluation, validated_data):
     if updated != 1:
         raise InvalidStateTransition()
     evaluation.refresh_from_db()
-    # evaluation.updated dispatch is deferred to the WebSocket infrastructure task.
+    publish_updated_event(evaluation)
     return evaluation
 
 
@@ -98,14 +109,20 @@ def confirm_request(evaluation):
     if updated != 1:
         raise InvalidStateTransition(_("Only requests awaiting confirmation can be confirmed."))
     evaluation.refresh_from_db()
-    # TODO(notifications): evaluation.confirmed to picked_by (§8.8); send the
-    # §9.3 event to student and picked_by via on_commit once dispatch exists.
+    publish_evaluation_event(
+        EvaluationEvent.CONFIRMED,
+        evaluation,
+        user_ids=(evaluation.student_id, evaluation.picked_by_id),
+    )
+    # TODO(notifications): evaluation.confirmed to picked_by (§8.8) once dispatch exists.
     return evaluation
 
 
 @transaction.atomic
 def decline_request(evaluation):
     """Return an unanswered pick to pending."""
+    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    previous_picker_id = current.picked_by_id
     updated = EvaluationRequest.objects.filter(
         pk=evaluation.pk,
         student_id=evaluation.student_id,
@@ -120,9 +137,8 @@ def decline_request(evaluation):
     if updated != 1:
         raise InvalidStateTransition(_("Only requests awaiting confirmation can be declined."))
     evaluation.refresh_from_db()
-    # TODO(notifications): evaluation.declined to the previous picked_by (§8.8);
-    # send the §9.3 event to student, previous picked_by and eligible Hitchhikers
-    # via on_commit once dispatch exists.
+    publish_declined_event(evaluation, previous_picker_id=previous_picker_id)
+    # TODO(notifications): evaluation.declined to previous_picker_id (§8.8) once dispatch exists.
     return evaluation
 
 
@@ -160,8 +176,8 @@ def cancel_request(evaluation):
     if updated != 1:
         raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
     evaluation.refresh_from_db()
-    # TODO(notifications): evaluation.cancelled to picked_by, if present (§8.8);
-    # dispatch the §9.3 event via on_commit once notification/event dispatch exists.
+    publish_cancelled_event(evaluation, previous_status=current.status)
+    # TODO(notifications): evaluation.cancelled to picked_by, if present (§8.8).
     return evaluation
 
 
@@ -194,10 +210,9 @@ def release_slot(evaluation, user):
     if updated != 1:
         raise InvalidStateTransition(_("Only picked requests without a result can be released."))
     evaluation.refresh_from_db()
+    publish_released_event(evaluation, previous_picker_id=current.picked_by_id)
     # TODO(notifications): evaluation.released to student, payload
-    # {request_id, project, tutor} (§8.8). Future milestone: on_commit dispatch
-    # evaluation.released {id, status} to student, releasing tutor and eligible
-    # Hitchhikers (§9.3); notifications also emit notification.created.
+    # {request_id, project, tutor} (§8.8); also emit notification.created.
     return evaluation
 
 
@@ -261,4 +276,5 @@ def pick_slot(evaluation, user, starts_at, ends_at):
         if updated != 1:
             raise RequestNotPending()
         evaluation.refresh_from_db()
+        publish_slot_picked_event(evaluation)
     return evaluation

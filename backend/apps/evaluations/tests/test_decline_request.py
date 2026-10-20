@@ -3,10 +3,12 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from threading import Barrier
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, call
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.db import close_old_connections
+from django.db import close_old_connections, transaction
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -33,6 +35,15 @@ def decline_url(pk=17):
 @pytest.fixture(autouse=True)
 def fixed_time(monkeypatch):
     monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
+
+
+@pytest.fixture(autouse=True)
+def event_sender(monkeypatch):
+    sender = AsyncMock()
+    monkeypatch.setattr(
+        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
+    )
+    return sender
 
 
 @pytest.fixture
@@ -108,18 +119,41 @@ def session_client(student):
     return client
 
 
-def test_decline_with_real_session_and_no_body(student, evaluation, expected, monkeypatch):
+def test_decline_with_real_session_and_no_body(
+    student, evaluation, expected, monkeypatch, event_sender, django_capture_on_commit_callbacks
+):
     at = NOW + timedelta(minutes=1)
     monkeypatch.setattr("django.utils.timezone.now", lambda: at)
     client = session_client(student)
-    response = client.post(
-        decline_url(),
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(
+            decline_url(),
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+        )
+        event_sender.assert_not_awaited()
     expected["updated_at"] = "2026-10-10T09:01:00Z"
     assert response.status_code == 200
     assert response.json() == expected
+    assert len(callbacks) == 1
+    assert event_sender.await_args_list == [
+        call(
+            "user_7",
+            {
+                "type": "user.event",
+                "event": "evaluation.declined",
+                "data": {"id": 17, "status": "pending"},
+            },
+        ),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "evaluation.declined",
+                "data": {"id": 17, "status": "pending"},
+            },
+        ),
+    ]
     evaluation.refresh_from_db()
     assert evaluation.status == "pending"
     assert evaluation.picked_by_id is None
@@ -296,7 +330,9 @@ def test_hidden_or_missing_request_returns_404(evaluation, pk):
 
 
 @pytest.mark.parametrize("status", ["pending", "confirmed", "cancelled", "expired"])
-def test_other_states_rejected(student, evaluation, status):
+def test_other_states_rejected(
+    student, evaluation, status, event_sender, django_capture_on_commit_callbacks
+):
     changes = {"status": status}
     if status in ("pending", "expired"):
         changes.update(picked_by=None, starts_at=None, ends_at=None)
@@ -307,7 +343,10 @@ def test_other_states_rejected(student, evaluation, status):
     EvaluationRequest.objects.filter(pk=evaluation.pk).update(**changes)
     client = APIClient()
     client.force_authenticate(student)
-    response = client.post(decline_url())
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(decline_url())
+    assert callbacks == []
+    event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == INVALID_STATE
     evaluation.refresh_from_db()
@@ -340,7 +379,9 @@ def test_stale_instance_cannot_decline_confirmed_pick(evaluation):
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("competing_action", ["decline", "confirm"])
-def test_competing_transitions_have_one_winner(student, evaluation, expected, competing_action):
+def test_competing_transitions_have_one_winner(
+    student, evaluation, expected, competing_action, event_sender
+):
     barrier = Barrier(2)
 
     def submit(action):
@@ -380,3 +421,108 @@ def test_competing_transitions_have_one_winner(student, evaluation, expected, co
     }
     evaluation.refresh_from_db()
     assert evaluation.status == expected["status"]
+    if winner == "confirm":
+        message = {
+            "type": "user.event",
+            "event": "evaluation.confirmed",
+            "data": {"id": 17, "status": "confirmed"},
+        }
+    else:
+        message = {
+            "type": "user.event",
+            "event": "evaluation.declined",
+            "data": {"id": 17, "status": "pending"},
+        }
+    assert event_sender.await_args_list == [call("user_7", message), call("user_42", message)]
+
+
+def test_decline_event_refreshes_only_active_eligible_queues(
+    student, tutor, evaluation, event_sender, django_capture_on_commit_callbacks
+):
+    other_project = Project.objects.create(slug="other", name="Other")
+    for pk, roles, status, project in (
+        (43, ("head_tutor",), "active", evaluation.project),
+        (44, ("tutor", "head_tutor"), "active", evaluation.project),
+        (45, ("student",), "active", evaluation.project),
+        (46, ("admin",), "active", evaluation.project),
+        (47, ("tutor",), "suspended", evaluation.project),
+        (48, ("tutor",), "deleted", evaluation.project),
+        (49, ("tutor",), "active", other_project),
+        (50, ("tutor",), "active", None),
+    ):
+        user = get_user_model().objects.create_user(
+            id=pk, email=f"recipient-{pk}@example.com", status=status
+        )
+        user.roles.add(*Role.objects.filter(name__in=roles))
+        if project is not None:
+            TutorEligibility.objects.create(tutor=user, project=project)
+    # Participants who are also eligible receive only one message.
+    student.roles.add(Role.objects.get(name="tutor"))
+    for participant in (student, tutor):
+        TutorEligibility.objects.create(tutor=participant, project=evaluation.project)
+    with django_capture_on_commit_callbacks(execute=True):
+        decline_request(evaluation)
+    message = {
+        "type": "user.event",
+        "event": "evaluation.declined",
+        "data": {"id": 17, "status": "pending"},
+    }
+    assert event_sender.await_args_list == [
+        call("user_7", message),
+        call("user_42", message),
+        call("user_43", message),
+        call("user_44", message),
+    ]
+
+
+def test_stale_decline_notifies_actual_picker_before_clearing_pick(
+    evaluation, event_sender, django_capture_on_commit_callbacks
+):
+    new_picker = get_user_model().objects.create_user(id=43, email="new-picker@example.com")
+    new_picker.roles.add(Role.objects.get(name="tutor"))
+    EvaluationRequest.objects.filter(pk=17).update(picked_by=new_picker)
+    assert evaluation.picked_by_id == 42
+    with django_capture_on_commit_callbacks(execute=True):
+        decline_request(evaluation)
+    message = {
+        "type": "user.event",
+        "event": "evaluation.declined",
+        "data": {"id": 17, "status": "pending"},
+    }
+    assert event_sender.await_args_list == [call("user_7", message), call("user_43", message)]
+    assert evaluation.picked_by_id is None
+
+
+def test_rolled_back_decline_sends_no_event(
+    evaluation, event_sender, django_capture_on_commit_callbacks
+):
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(RuntimeError, match="rollback"):
+            with transaction.atomic():
+                decline_request(evaluation)
+                raise RuntimeError("rollback")
+    assert callbacks == []
+    event_sender.assert_not_awaited()
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == 42
+
+
+@pytest.mark.django_db(transaction=True)
+def test_decline_succeeds_and_logs_when_event_delivery_fails(
+    student, evaluation, expected, event_sender, caplog
+):
+    event_sender.side_effect = ConnectionError("Redis unavailable")
+    client = session_client(student)
+    response = client.post(
+        decline_url(),
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
+    assert response.status_code == 200
+    assert response.json() == expected
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.picked_by_id is None
+    assert "Redis unavailable" in caplog.text
+    assert any(record.exc_info for record in caplog.records)

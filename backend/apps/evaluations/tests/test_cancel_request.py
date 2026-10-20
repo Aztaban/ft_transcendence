@@ -3,10 +3,12 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from threading import Barrier
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, call
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.db import close_old_connections
+from django.db import close_old_connections, transaction
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -33,6 +35,15 @@ def cancel_url(pk=17):
 @pytest.fixture(autouse=True)
 def fixed_time(monkeypatch):
     monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
+
+
+@pytest.fixture(autouse=True)
+def event_sender(monkeypatch):
+    sender = AsyncMock()
+    monkeypatch.setattr(
+        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
+    )
+    return sender
 
 
 @pytest.fixture
@@ -108,20 +119,37 @@ def session_client(student):
 
 
 @pytest.mark.parametrize("state", ["pending", "awaiting_confirmation", "confirmed"])
-def test_cancel_each_active_state_with_real_session(student, tutor, evaluation, expected, state):
+def test_cancel_each_active_state_with_real_session(
+    student, tutor, evaluation, expected, state, event_sender, django_capture_on_commit_callbacks
+):
+    other = get_user_model().objects.create_user(id=43, email="eligible@example.com")
+    other.roles.add(Role.objects.get(name="head_tutor"))
+    TutorEligibility.objects.create(tutor=other, project=evaluation.project)
     changes = {"status": state}
     if state == "pending":
         changes.update(picked_by=None, starts_at=None, ends_at=None)
         expected.update(picked_by=None, starts_at=None, ends_at=None)
     EvaluationRequest.objects.filter(pk=17).update(**changes)
     client = session_client(student)
-    response = client.post(
-        cancel_url(),
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(
+            cancel_url(),
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+        )
+        event_sender.assert_not_awaited()
     assert response.status_code == 200
     assert response.json() == expected
+    assert len(callbacks) == 1
+    message = {
+        "type": "user.event",
+        "event": "evaluation.cancelled",
+        "data": {"id": 17, "status": "cancelled"},
+    }
+    if state == "pending":
+        assert event_sender.await_args_list == [call("user_7", message), call("user_43", message)]
+    else:
+        assert event_sender.await_args_list == [call("user_7", message), call("user_42", message)]
     evaluation.refresh_from_db()
     assert evaluation.status == "cancelled"
     assert evaluation.cancelled_by_id == 7
@@ -421,7 +449,9 @@ def test_hidden_or_missing_request_returns_404(evaluation, pk):
 
 
 @pytest.mark.parametrize("state", ["cancelled", "expired"])
-def test_terminal_states_rejected(student, evaluation, state):
+def test_terminal_states_rejected(
+    student, evaluation, state, event_sender, django_capture_on_commit_callbacks
+):
     changes = {"status": state}
     if state == "cancelled":
         changes.update(cancelled_by=student, cancelled_at=NOW)
@@ -430,7 +460,10 @@ def test_terminal_states_rejected(student, evaluation, state):
     EvaluationRequest.objects.filter(pk=17).update(**changes)
     client = APIClient()
     client.force_authenticate(student)
-    response = client.post(cancel_url())
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(cancel_url())
+    assert callbacks == []
+    event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == INVALID_STATE
     evaluation.refresh_from_db()
@@ -439,12 +472,23 @@ def test_terminal_states_rejected(student, evaluation, state):
 
 @pytest.mark.parametrize("state", ["awaiting_confirmation", "confirmed"])
 @pytest.mark.parametrize("offset", [timedelta(0), timedelta(minutes=1), timedelta(hours=1)])
-def test_at_or_after_start_rejected(student, evaluation, monkeypatch, state, offset):
+def test_at_or_after_start_rejected(
+    student,
+    evaluation,
+    monkeypatch,
+    state,
+    offset,
+    event_sender,
+    django_capture_on_commit_callbacks,
+):
     EvaluationRequest.objects.filter(pk=17).update(status=state)
     monkeypatch.setattr("django.utils.timezone.now", lambda: START + offset)
     client = APIClient()
     client.force_authenticate(student)
-    response = client.post(cancel_url())
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(cancel_url())
+    assert callbacks == []
+    event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == {
         "error": {
@@ -496,12 +540,24 @@ def test_recorded_result_cannot_be_cancelled(student, evaluation, monkeypatch, r
     assert evaluation.starts_at == START
 
 
-def test_cancellation_refreshes_released_pick(student, evaluation, expected):
+def test_cancellation_refreshes_released_pick(
+    student, evaluation, expected, event_sender, django_capture_on_commit_callbacks
+):
     # A decline/release may have cleared the slot after the view fetched the row.
     EvaluationRequest.objects.filter(pk=17).update(
         status="pending", picked_by=None, starts_at=None, ends_at=None
     )
-    cancel_request(evaluation)
+    other = get_user_model().objects.create_user(id=43, email="eligible@example.com")
+    other.roles.add(Role.objects.get(name="tutor"))
+    TutorEligibility.objects.create(tutor=other, project=evaluation.project)
+    with django_capture_on_commit_callbacks(execute=True):
+        cancel_request(evaluation)
+    message = {
+        "type": "user.event",
+        "event": "evaluation.cancelled",
+        "data": {"id": 17, "status": "cancelled"},
+    }
+    assert event_sender.await_args_list == [call("user_7", message), call("user_43", message)]
     expected.update(picked_by=None, starts_at=None, ends_at=None)
     client = APIClient()
     client.force_authenticate(student)
@@ -511,7 +567,7 @@ def test_cancellation_refreshes_released_pick(student, evaluation, expected):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_cancellations_have_one_winner(student, evaluation, expected):
+def test_concurrent_cancellations_have_one_winner(student, evaluation, expected, event_sender):
     barrier = Barrier(2)
 
     def submit(_):
@@ -532,3 +588,85 @@ def test_concurrent_cancellations_have_one_winner(student, evaluation, expected)
     assert evaluation.status == "cancelled"
     assert evaluation.picked_by_id == 42
     assert evaluation.starts_at == START
+    message = {
+        "type": "user.event",
+        "event": "evaluation.cancelled",
+        "data": {"id": 17, "status": "cancelled"},
+    }
+    assert event_sender.await_args_list == [call("user_7", message), call("user_42", message)]
+
+
+def test_pending_cancellation_event_filters_and_deduplicates_queue_recipients(
+    student, evaluation, event_sender, django_capture_on_commit_callbacks
+):
+    EvaluationRequest.objects.filter(pk=17).update(
+        status="pending", picked_by=None, starts_at=None, ends_at=None
+    )
+    other_project = Project.objects.create(slug="other", name="Other")
+    for pk, roles, status, project in (
+        (43, ("head_tutor",), "active", evaluation.project),
+        (44, ("tutor", "head_tutor"), "active", evaluation.project),
+        (45, ("student",), "active", evaluation.project),
+        (46, ("admin",), "active", evaluation.project),
+        (47, ("tutor",), "suspended", evaluation.project),
+        (48, ("tutor",), "deleted", evaluation.project),
+        (49, ("tutor",), "active", other_project),
+        (50, ("tutor",), "active", None),
+    ):
+        user = get_user_model().objects.create_user(
+            id=pk, email=f"recipient-{pk}@example.com", status=status
+        )
+        user.roles.add(*Role.objects.filter(name__in=roles))
+        if project is not None:
+            TutorEligibility.objects.create(tutor=user, project=project)
+    student.roles.add(Role.objects.get(name="tutor"))
+    TutorEligibility.objects.create(tutor=student, project=evaluation.project)
+    with django_capture_on_commit_callbacks(execute=True):
+        cancel_request(evaluation)
+    message = {
+        "type": "user.event",
+        "event": "evaluation.cancelled",
+        "data": {"id": 17, "status": "cancelled"},
+    }
+    assert event_sender.await_args_list == [
+        call("user_7", message),
+        call("user_43", message),
+        call("user_44", message),
+    ]
+
+
+def test_cancellation_of_new_pick_uses_locked_state_for_recipients(
+    evaluation, event_sender, django_capture_on_commit_callbacks
+):
+    EvaluationRequest.objects.filter(pk=17).update(status="confirmed")
+    # The caller fetched the request before it was picked and confirmed.
+    evaluation.status = "pending"
+    evaluation.picked_by = None
+    other = get_user_model().objects.create_user(id=43, email="eligible@example.com")
+    other.roles.add(Role.objects.get(name="tutor"))
+    TutorEligibility.objects.create(tutor=other, project=evaluation.project)
+    with django_capture_on_commit_callbacks(execute=True):
+        cancel_request(evaluation)
+    message = {
+        "type": "user.event",
+        "event": "evaluation.cancelled",
+        "data": {"id": 17, "status": "cancelled"},
+    }
+    assert event_sender.await_args_list == [call("user_7", message), call("user_42", message)]
+    assert evaluation.picked_by_id == 42
+
+
+def test_rolled_back_cancellation_sends_no_event(
+    evaluation, event_sender, django_capture_on_commit_callbacks
+):
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(RuntimeError, match="rollback"):
+            with transaction.atomic():
+                cancel_request(evaluation)
+                raise RuntimeError("rollback")
+    assert callbacks == []
+    event_sender.assert_not_awaited()
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == 42
+    assert evaluation.cancelled_at is None
