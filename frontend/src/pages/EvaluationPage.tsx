@@ -140,6 +140,9 @@ function EvaluationPage() {
   const [reloadKey, setReloadKey] = useState(0);
   // Set by a live refresh: a failure then keeps the request already shown.
   const isLiveRefresh = useRef(false);
+  // A 404 from a live refresh or from Accept / Decline: the request is no longer shown to this
+  // user (§5.5).
+  const [isGone, setIsGone] = useState(false);
 
   // This request was picked, confirmed, released, cancelled, expired or changed, or the
   // connection is back (§9, #257). Events about other requests are ignored.
@@ -162,11 +165,16 @@ function EvaluationPage() {
       .then((result) => {
         if (active) {
           setRequest(result);
+          setIsGone(false);
           setLoadState("ready");
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (active) {
+          if (inBackground && error instanceof ApiError && error.status === 404) {
+            setIsGone(true);
+          }
+
           setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
@@ -198,7 +206,11 @@ function EvaluationPage() {
         setWasDeclined(true);
       }
     } catch (error) {
-      setAnswerError(answerErrorMessage(error));
+      if (error instanceof ApiError && error.status === 404) {
+        setIsGone(true);
+      } else {
+        setAnswerError(answerErrorMessage(error));
+      }
     } finally {
       setIsBusy(false);
     }
@@ -220,7 +232,13 @@ function EvaluationPage() {
         </p>
       )}
 
-      {request && status && (
+      {isGone && (
+        <p className="evaluation__error" role="alert">
+          This evaluation is no longer available. It may have been cancelled or declined.
+        </p>
+      )}
+
+      {request && status && !isGone && (
         <article className={`evaluation__card evaluation__card--${status.tone}`}>
           <header className="evaluation__header">
             <span className={`evaluation__pill evaluation__pill--${status.tone}`}>

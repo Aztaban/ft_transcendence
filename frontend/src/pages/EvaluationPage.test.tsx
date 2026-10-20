@@ -121,6 +121,39 @@ describe("EvaluationPage", () => {
     );
   });
 
+  it("says the evaluation is no longer available when accepting answers 404", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
+    vi.mocked(confirmEvaluationRequest).mockRejectedValue(
+      new ApiError(404, "Not found.", "not_found"),
+    );
+    renderPage();
+    await screen.findByRole("heading", { name: "push_swap" });
+
+    fireEvent.click(getButton(/Accept/));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This evaluation is no longer available. It may have been cancelled or declined.",
+    );
+    expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+  });
+
+  it("says the evaluation is no longer available when declining answers 404", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
+    vi.mocked(declineEvaluationRequest).mockRejectedValue(
+      new ApiError(404, "Not found.", "not_found"),
+    );
+    renderPage();
+    await screen.findByRole("heading", { name: "push_swap" });
+
+    fireEvent.click(getButton(/Decline this time/));
+    fireEvent.click(getButton("Yes, decline"));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This evaluation is no longer available. It may have been cancelled or declined.",
+    );
+    expect(screen.queryByRole("button", { name: "Yes, decline" })).toBeNull();
+  });
+
   it("shows no buttons for a request that is not waiting for an answer", async () => {
     vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "pending"));
 
@@ -198,5 +231,29 @@ describe("EvaluationPage live", () => {
     await act(async () => {});
     expect(screen.getByText("Needs your answer")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // e.g. the evaluation was cancelled while the backend restarted: the re-fetch after the
+  // reconnect answers 404 (§5.5).
+  it("says the evaluation is no longer available when the re-fetch answers 404", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(getEvaluationRequest)
+      .mockResolvedValueOnce(awaiting)
+      .mockRejectedValueOnce(new ApiError(404, "Not found.", "not_found"));
+
+    renderLive();
+    await screen.findByText("Needs your answer");
+
+    act(() => {
+      FakeSocket.latest().serverClose(1006);
+      vi.advanceTimersByTime(1000);
+      FakeSocket.latest().serverOpen();
+    });
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This evaluation is no longer available. It may have been cancelled or declined.",
+    );
+    expect(screen.queryByText("Needs your answer")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
   });
 });

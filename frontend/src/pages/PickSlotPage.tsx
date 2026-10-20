@@ -43,6 +43,9 @@ function PickSlotPage() {
   const [reloadKey, setReloadKey] = useState(0);
   // Set by a live refresh: a failure then keeps the request already shown.
   const isLiveRefresh = useRef(false);
+  // A 404 from a live refresh or from the pick: the request is no longer shown to this
+  // Hitchhiker (§5.5).
+  const [isGone, setIsGone] = useState(false);
 
   // Another Hitchhiker picked this request, or the student cancelled it, or the connection is
   // back (§9, #257): the page shows that it is no longer open. Events about other requests are
@@ -71,11 +74,18 @@ function PickSlotPage() {
       .then((result) => {
         if (active) {
           setRequest(result);
+          setIsGone(false);
           setLoadState("ready");
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (active) {
+          // Another Hitchhiker picked it or the student cancelled it: other Hitchhikers then get
+          // 404, not the new status (§5.5).
+          if (inBackground && error instanceof ApiError && error.status === 404) {
+            setIsGone(true);
+          }
+
           setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
@@ -100,7 +110,11 @@ function PickSlotPage() {
       });
       setIsPicked(true);
     } catch (error) {
-      setSubmitError(pickErrorMessage(error));
+      if (error instanceof ApiError && error.status === 404) {
+        setIsGone(true);
+      } else {
+        setSubmitError(pickErrorMessage(error));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -134,7 +148,7 @@ function PickSlotPage() {
                 <p className="pick-slot__note">{request.note || "No note from the student."}</p>
               </section>
 
-              {request.status === "pending" ? (
+              {request.status === "pending" && !isGone ? (
                 <>
                   <section className="pick-slot__card">
                     <h2>Your slot</h2>
@@ -174,7 +188,9 @@ function PickSlotPage() {
                 </>
               ) : (
                 <p className="pick-slot__error" role="alert">
-                  This request is no longer open.
+                  {isGone
+                    ? "This request is no longer open. Another Hitchhiker may have picked it, or the student cancelled it."
+                    : "This request is no longer open."}
                 </p>
               )}
             </div>
