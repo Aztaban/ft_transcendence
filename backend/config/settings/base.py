@@ -132,6 +132,10 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "apps.core.exceptions.envelope_exception_handler",
+    # JSON only: no browsable API pages, so `Accept: text/html` is a 406 (api-plan §5.6).
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
     # Rate limits (api-plan §5.9). Anonymous callers of the default limit are
     # counted per IP. Exceeding a limit gives 429 `throttled` with Retry-After.
     "DEFAULT_THROTTLE_CLASSES": [
