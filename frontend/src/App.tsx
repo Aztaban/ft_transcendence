@@ -13,6 +13,7 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import PendingPage from "./pages/PendingPage";
+import PersonProfilePage from "./pages/PersonProfilePage";
 import PickSlotPage from "./pages/PickSlotPage";
 import ProfilePage from "./pages/ProfilePage";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
@@ -97,6 +98,7 @@ function AuthenticatedApp() {
           }
         />
         <Route path="/hitchhikers" element={<HitchhikersPage />} />
+        <Route path="/people/:id" element={<PersonProfilePage />} />
         <Route path="/projects/:slug" element={<ProjectDetailsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
