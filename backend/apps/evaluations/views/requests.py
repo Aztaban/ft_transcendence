@@ -1,4 +1,4 @@
-"""Create, list, retrieve, edit, pick, confirm and decline evaluation requests."""
+"""Evaluation request endpoints and participant actions."""
 
 from django.db.models import Q
 from django.utils import timezone
@@ -16,6 +16,7 @@ from apps.evaluations.permissions import (
     HITCHHIKER_ROLES,
     OVERRIDE_ROLES,
     CanPickSlot,
+    CanReleaseSlot,
     EvaluationRequestPermission,
 )
 from apps.evaluations.serializers.requests import (
@@ -26,12 +27,14 @@ from apps.evaluations.serializers.requests import (
     EvaluationRequestSerializer,
 )
 from apps.evaluations.services import (
+    cancel_request,
     confirm_request,
     create_request,
     decline_request,
     edit_note,
     history_filter,
     pick_slot,
+    release_slot,
 )
 
 
@@ -146,7 +149,7 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
 
 
 def visible_evaluation_requests(user):
-    """Requests this user may see (api-plan §8.7). Anyone else gets 404."""
+    """Requests this user may see. Anyone else gets 404."""
     queryset = EvaluationRequest.objects.select_related(
         "student", "project", "picked_by", "cancelled_by"
     )
@@ -251,8 +254,64 @@ class EvaluationRequestDeclineView(EvaluationRequestBaseView):
         return Response(self.get_serializer(evaluation).data)
 
 
+class EvaluationRequestCancelView(EvaluationRequestBaseView):
+    """The owning student's POST /evaluation-requests/{id}/cancel/."""
+
+    def get_queryset(self):
+        return visible_evaluation_requests(self.request.user)
+
+    @extend_schema(
+        description="Cancel your own evaluation request before its slot starts.",
+        parameters=[CSRF_HEADER],
+        request=None,
+        responses={
+            200: EvaluationRequestSerializer,
+            **error_responses(
+                {
+                    401: ("not_authenticated",),
+                    403: ("permission_denied", "csrf_failed"),
+                    404: ("not_found",),
+                    409: ("invalid_state_transition", "evaluation_already_started"),
+                }
+            ),
+        },
+    )
+    def post(self, request, pk):
+        evaluation = cancel_request(self.get_object())
+        return Response(self.get_serializer(evaluation).data)
+
+
+class EvaluationRequestReleaseView(EvaluationRequestBaseView):
+    """The picking Hitchhiker's POST /evaluation-requests/{id}/release/."""
+
+    permission_classes = [IsAuthenticated, CanReleaseSlot]
+
+    def get_queryset(self):
+        return visible_evaluation_requests(self.request.user)
+
+    @extend_schema(
+        description="Release a slot you picked before it starts, returning the request to pending.",
+        parameters=[CSRF_HEADER],
+        request=None,
+        responses={
+            200: EvaluationRequestSerializer,
+            **error_responses(
+                {
+                    401: ("not_authenticated",),
+                    403: ("permission_denied", "csrf_failed"),
+                    404: ("not_found",),
+                    409: ("invalid_state_transition", "evaluation_already_started"),
+                }
+            ),
+        },
+    )
+    def post(self, request, pk):
+        evaluation = release_slot(self.get_object(), request.user)
+        return Response(self.get_serializer(evaluation).data)
+
+
 class EvaluationRequestPickSlotView(EvaluationRequestBaseView):
-    """POST /evaluation-requests/{id}/pick-slot/ (api-plan §10.4)."""
+    """POST /evaluation-requests/{id}/pick-slot/."""
 
     permission_classes = [IsAuthenticated, CanPickSlot]
 

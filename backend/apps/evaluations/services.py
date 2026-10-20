@@ -1,11 +1,11 @@
-"""Creation, note editing, slot picking and student responses."""
+"""Evaluation request creation, editing and participant transitions."""
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, PermissionDenied
 
 from .models import EvaluationRequest
 
@@ -123,6 +123,81 @@ def decline_request(evaluation):
     # TODO(notifications): evaluation.declined to the previous picked_by (§8.8);
     # send the §9.3 event to student, previous picked_by and eligible Hitchhikers
     # via on_commit once dispatch exists.
+    return evaluation
+
+
+@transaction.atomic
+def cancel_request(evaluation):
+    """Cancel the owning student's request before its slot starts."""
+    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    cancellable = (
+        EvaluationRequest.Status.PENDING,
+        EvaluationRequest.Status.AWAITING_CONFIRMATION,
+        EvaluationRequest.Status.CONFIRMED,
+    )
+    if current.status not in cancellable:
+        raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
+    at = timezone.now()
+    if current.starts_at is not None and current.starts_at <= at:
+        raise EvaluationAlreadyStarted()
+    if current.result is not None:
+        raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
+    updated = (
+        EvaluationRequest.objects.filter(
+            pk=current.pk,
+            student_id=evaluation.student_id,
+            status=current.status,
+            result__isnull=True,
+        )
+        .filter(Q(starts_at__isnull=True) | Q(starts_at__gt=at))
+        .update(
+            status=EvaluationRequest.Status.CANCELLED,
+            cancelled_by_id=current.student_id,
+            cancelled_at=at,
+            updated_at=at,
+        )
+    )
+    if updated != 1:
+        raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
+    evaluation.refresh_from_db()
+    # TODO(notifications): evaluation.cancelled to picked_by, if present (§8.8);
+    # dispatch the §9.3 event via on_commit once notification/event dispatch exists.
+    return evaluation
+
+
+@transaction.atomic
+def release_slot(evaluation, user):
+    """Return the picking Hitchhiker's slot to the queue before its start (§10.4)."""
+    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    if current.status not in EvaluationRequest.PICKED_STATUSES:
+        raise InvalidStateTransition(_("Only picked requests without a result can be released."))
+    if current.picked_by_id != user.pk:
+        raise PermissionDenied()
+    at = timezone.now()
+    if current.starts_at <= at:
+        raise EvaluationAlreadyStarted()
+    if current.result is not None:
+        raise InvalidStateTransition(_("Only picked requests without a result can be released."))
+    updated = EvaluationRequest.objects.filter(
+        pk=current.pk,
+        status=current.status,
+        picked_by_id=user.pk,
+        starts_at__gt=at,
+        result__isnull=True,
+    ).update(
+        status=EvaluationRequest.Status.PENDING,
+        picked_by=None,
+        starts_at=None,
+        ends_at=None,
+        updated_at=at,
+    )
+    if updated != 1:
+        raise InvalidStateTransition(_("Only picked requests without a result can be released."))
+    evaluation.refresh_from_db()
+    # TODO(notifications): evaluation.released to student, payload
+    # {request_id, project, tutor} (§8.8). Future milestone: on_commit dispatch
+    # evaluation.released {id, status} to student, releasing tutor and eligible
+    # Hitchhikers (§9.3); notifications also emit notification.created.
     return evaluation
 
 
