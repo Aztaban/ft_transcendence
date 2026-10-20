@@ -1,4 +1,4 @@
-"""Creation, note editing and slot picking."""
+"""Creation, note editing, slot picking and student responses."""
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -40,6 +40,12 @@ class StudentUnavailable(APIException):
     default_detail = _("The student already has an evaluation at that time.")
 
 
+class EvaluationAlreadyStarted(APIException):
+    status_code = 409
+    default_code = "evaluation_already_started"
+    default_detail = _("This evaluation has already started.")
+
+
 def history_filter(at):
     return Q(status__in=(EvaluationRequest.Status.CANCELLED, EvaluationRequest.Status.EXPIRED)) | Q(
         status=EvaluationRequest.Status.CONFIRMED, ends_at__lt=at
@@ -71,6 +77,52 @@ def edit_note(evaluation, validated_data):
         raise InvalidStateTransition()
     evaluation.refresh_from_db()
     # evaluation.updated dispatch is deferred to the WebSocket infrastructure task.
+    return evaluation
+
+
+@transaction.atomic
+def confirm_request(evaluation):
+    """Accept the current pick before its start (api-plan §7.1, schema §4.2)."""
+    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    if current.status != EvaluationRequest.Status.AWAITING_CONFIRMATION:
+        raise InvalidStateTransition(_("Only requests awaiting confirmation can be confirmed."))
+    at = timezone.now()
+    if current.starts_at <= at:
+        raise EvaluationAlreadyStarted()
+    updated = EvaluationRequest.objects.filter(
+        pk=current.pk,
+        student_id=evaluation.student_id,
+        status=EvaluationRequest.Status.AWAITING_CONFIRMATION,
+        starts_at__gt=at,
+    ).update(status=EvaluationRequest.Status.CONFIRMED, updated_at=at)
+    if updated != 1:
+        raise InvalidStateTransition(_("Only requests awaiting confirmation can be confirmed."))
+    evaluation.refresh_from_db()
+    # TODO(notifications): evaluation.confirmed to picked_by (§8.8); send the
+    # §9.3 event to student and picked_by via on_commit once dispatch exists.
+    return evaluation
+
+
+@transaction.atomic
+def decline_request(evaluation):
+    """Return an unanswered pick to pending."""
+    updated = EvaluationRequest.objects.filter(
+        pk=evaluation.pk,
+        student_id=evaluation.student_id,
+        status=EvaluationRequest.Status.AWAITING_CONFIRMATION,
+    ).update(
+        status=EvaluationRequest.Status.PENDING,
+        picked_by=None,
+        starts_at=None,
+        ends_at=None,
+        updated_at=timezone.now(),
+    )
+    if updated != 1:
+        raise InvalidStateTransition(_("Only requests awaiting confirmation can be declined."))
+    evaluation.refresh_from_db()
+    # TODO(notifications): evaluation.declined to the previous picked_by (§8.8);
+    # send the §9.3 event to student, previous picked_by and eligible Hitchhikers
+    # via on_commit once dispatch exists.
     return evaluation
 
 
