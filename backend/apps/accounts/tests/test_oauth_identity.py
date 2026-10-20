@@ -3,7 +3,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-from apps.accounts.serializers import OAuth42IdentitySerializer
+from apps.accounts.serializers.oauth import OAuth42IdentitySerializer
 
 pytestmark = pytest.mark.django_db
 
