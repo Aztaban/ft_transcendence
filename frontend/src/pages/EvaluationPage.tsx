@@ -12,6 +12,7 @@ import {
 } from "../api/evaluationRequests";
 import CancelRequestDialog from "../features/student/CancelRequestDialog";
 import { canCancel, cancelErrorMessage } from "../features/student/cancelRequest";
+import { useCurrentUser } from "../store/CurrentUserContext";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
 import "../styles/evaluation.css";
 
@@ -131,6 +132,7 @@ function AcceptedDialog({ project, onClose }: { project: string; onClose: () => 
 function EvaluationPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
   const [request, setRequest] = useState<EvaluationRequest | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isBusy, setIsBusy] = useState(false);
@@ -218,6 +220,9 @@ function EvaluationPage() {
   }, []);
 
   const status = request ? statusInfo[request.status] : null;
+  // Only the student who created the request may accept, decline or cancel it (§10.4 "Own
+  // student"). The picking Hitchhiker sees the same page without these buttons.
+  const isOwnRequest = request?.student != null && request.student.id === user?.id;
 
   return (
     <section className="evaluation">
@@ -326,7 +331,7 @@ function EvaluationPage() {
             </p>
           )}
 
-          {request.status === "awaiting_confirmation" && (
+          {request.status === "awaiting_confirmation" && isOwnRequest && (
             <div className="evaluation__actions">
               {isDeclining ? (
                 <>
@@ -373,7 +378,7 @@ function EvaluationPage() {
             </div>
           )}
 
-          {canCancel(request) && !isAccepted && (
+          {canCancel(request) && isOwnRequest && !isAccepted && (
             <div className="evaluation__cancel">
               <button
                 className="evaluation__cancel-button"

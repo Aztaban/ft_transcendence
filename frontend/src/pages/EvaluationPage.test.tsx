@@ -12,6 +12,13 @@ import {
 import { makeRequest } from "../features/student/testUtils";
 import EvaluationPage from "./EvaluationPage";
 
+// The viewer: the student of `makeRequest` (id 1) unless a test changes it.
+const viewer = vi.hoisted(() => ({ id: 1 }));
+
+vi.mock("../store/CurrentUserContext", () => ({
+  useCurrentUser: () => ({ user: { id: viewer.id }, roles: [], isLoaded: true, refresh: () => {} }),
+}));
+
 vi.mock("../api/evaluationRequests", () => ({
   cancelEvaluationRequest: vi.fn(),
   getEvaluationRequest: vi.fn(),
@@ -22,6 +29,7 @@ vi.mock("../api/evaluationRequests", () => ({
 const awaiting = makeRequest(7, "push_swap", "awaiting_confirmation");
 
 afterEach(() => {
+  viewer.id = 1;
   cleanup();
   vi.resetAllMocks();
 });
@@ -173,6 +181,26 @@ describe("EvaluationPage cancel (#595)", () => {
 
     await screen.findByRole("heading", { name: "This request is no longer active" });
 
+    expect(screen.queryByRole("button", { name: "Cancel request" })).toBeNull();
+  });
+});
+
+describe("EvaluationPage for the picking Hitchhiker", () => {
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  // §10.4: confirm, decline and cancel are for the own student only.
+  it("shows the proposal without Accept, Decline or Cancel", async () => {
+    viewer.id = 2;
+    vi.mocked(getEvaluationRequest).mockResolvedValue({
+      ...awaiting,
+      starts_at: tomorrow,
+      ends_at: tomorrow,
+    });
+    renderPage();
+
+    expect(await screen.findByText("Needs your answer")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Decline/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Cancel request" })).toBeNull();
   });
 });
