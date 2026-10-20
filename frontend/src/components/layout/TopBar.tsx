@@ -2,8 +2,9 @@ import type { RefObject } from "react";
 
 import searchIcon from "../../assets/figma/search.svg";
 import bellIcon from "../../assets/figma/bell.svg";
-import avatarImage from "../../assets/figma/avatar.png";
 import userChevron from "../../assets/figma/user-chevron.svg";
+import PersonAvatar from "../../features/people/PersonAvatar";
+import { useCurrentUser } from "../../store/CurrentUserContext";
 import ConnectionStatus from "./ConnectionStatus";
 
 interface TopBarProps {
@@ -13,6 +14,9 @@ interface TopBarProps {
 }
 
 function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps) {
+  // The logged-in user from GET /users/me/ (§8.2); `null` until it has answered.
+  const { user } = useCurrentUser();
+
   return (
     <header className="topbar">
       {/* Shown on small screens only, where the sidebar is a drawer. */}
@@ -44,9 +48,13 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
           <span className="topbar__notification-dot" />
         </button>
 
-        <img className="topbar__avatar" src={avatarImage} alt="" aria-hidden="true" />
+        <PersonAvatar
+          className="topbar__avatar"
+          name={user?.display_name ?? ""}
+          avatarUrl={user?.avatar_url ?? null}
+        />
 
-        <span className="topbar__username">dkolarov</span>
+        {user && <span className="topbar__username">{user.display_name}</span>}
 
         <button className="topbar__user-menu" type="button" aria-label="Open user menu">
           <img src={userChevron} alt="" aria-hidden="true" />

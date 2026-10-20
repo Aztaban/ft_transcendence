@@ -480,13 +480,25 @@
 }
 
 .topbar__avatar {
-  display: block;
+  display: flex;
   width: 50px;
   height: 50px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
   border: 3px solid var(--color-accent);
   border-radius: 50%;
   object-fit: cover;
   box-shadow: 0 2px 7px rgba(0, 0, 0, 0.16);
+}
+
+/* No avatar yet: the user's initials. */
+.topbar__avatar--initials {
+  background: linear-gradient(135deg, var(--color-accent), #1f1f1f);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .topbar__username {

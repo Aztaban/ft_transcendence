@@ -38,12 +38,24 @@
 }
 
 .profile-card__avatar {
+  display: flex;
   width: 140px;
   height: 140px;
   flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
   object-fit: cover;
   border: 5px solid var(--color-accent);
   border-radius: 50%;
+}
+
+/* No avatar yet: the user's initials. */
+.profile-card__avatar--initials {
+  background: linear-gradient(135deg, var(--color-accent), #1f1f1f);
+  color: #ffffff;
+  font-size: 2.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .profile-card__identity-copy {
