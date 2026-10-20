@@ -3,11 +3,18 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # config/settings/base.py -> backend/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Development gets a safe local fallback. Production overrides this in prod.py.
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "insecure-dev-key")
+# No fallback, in any environment: `make env` writes a random key into .env.
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
+if SECRET_KEY in ("", "change-me-in-dev"):
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY is missing or still the example value. Set a random key in .env "
+        "(e.g. `openssl rand -hex 32`); `make env` does this for a new .env."
+    )
 DEBUG = False
 ALLOWED_HOSTS = [
     host.strip()

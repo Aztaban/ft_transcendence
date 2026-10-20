@@ -5,9 +5,13 @@
 Requires Docker and Docker Compose.
 
 ```bash
-cp .env.example .env   # fill in real dev values
-make up                 # docker compose up --build
+make env   # creates .env from .env.example with a random DJANGO_SECRET_KEY
+make up    # docker compose up --build (runs `make env` first if .env is missing)
 ```
+
+The backend refuses to start with an empty `DJANGO_SECRET_KEY` or the example
+value `change-me-in-dev`. If your `.env` predates this, replace the key with
+`openssl rand -hex 32`.
 
 This starts four services:
 

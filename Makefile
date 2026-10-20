@@ -1,6 +1,15 @@
-.PHONY: up down build logs test
+.PHONY: up down build logs test env
 
-up:
+# Creates .env from the example with a random DJANGO_SECRET_KEY. Never overwrites an existing .env.
+env: .env
+
+.env:
+	cp .env.example .env
+	key=$$(openssl rand -hex 32 2>/dev/null || python3 -c 'import secrets; print(secrets.token_hex(32))'); \
+	sed -i.bak "s|^DJANGO_SECRET_KEY=.*|DJANGO_SECRET_KEY=$$key|" .env && rm -f .env.bak
+	@echo "Created .env with a random DJANGO_SECRET_KEY. Fill in the other values if needed."
+
+up: env
 	docker compose up --build
 
 down:
