@@ -6,30 +6,29 @@ What the application does to stay secure, and what it deliberately leaves out. W
 
 - Nginx is the only public entry point: TLS 1.2/1.3 on 443, port 80 redirects to HTTPS. The self-signed development certificate is generated on first start. Traffic between containers is plain HTTP, which the subject allows.
 - Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a restrictive `Permissions-Policy`; `server_tokens` is off.
-- Not set: HSTS (meaningless with a self-signed certificate, and browsers ignore it then) and a Content-Security-Policy (Vite's development server needs inline scripts for hot reload). Both become worthwhile with a real certificate and a production build (#362).
 
 ## Authentication
 
 - Email and password through Django's auth: Argon2 hashes, the standard password validators (length, similarity, common passwords, numeric only), email normalised to lowercase.
-- 42 OAuth: the `state` is random, stored in the session and accepted once; the authorization code, the access token and the client secret never reach the browser. Accounts are never linked by email automatically (§10.1).
+- 42 OAuth: the `state` is random, stored in the session and accepted once; the authorization code, the access token and the client secret never reach the browser. Accounts are never linked by email automatically (10.1).
 - A wrong password, a suspended or a deleted account all answer `invalid_credentials`, so the account status is not revealed.
-- Login and registration are limited to 10 attempts per minute per client IP (§5.9).
+- Login and registration are limited to 10 attempts per minute per client IP (5.9).
 
 ## Sessions
 
 - Server-side sessions in the database. The cookie is `HttpOnly`, `Secure` and `SameSite=Lax` in every environment; the session key rotates at login; a password change invalidates existing sessions.
-- Logout ends the session and closes its WebSocket connections with code 4401 (§9.3). Only `active` users authenticate.
+- Logout ends the session and closes its WebSocket connections with code 4401 (9.3). Only `active` users authenticate.
 - Pending (#63): suspending or deleting a user ends all their sessions.
 
 ## CSRF
 
-- Double-submit cookie: every `POST`, `PUT`, `PATCH` and `DELETE` must send `X-CSRFToken`, including anonymous login and logout (registration too, once the backend structure change #582 is merged). A failure is the JSON envelope `csrf_failed` (§5.4). The frontend adds the header centrally in `apiRequest`.
+- Double-submit cookie: every `POST`, `PUT`, `PATCH` and `DELETE` must send `X-CSRFToken`, including anonymous login and logout (registration too). A failure is the JSON envelope `csrf_failed` (5.4). The frontend adds the header centrally in `apiRequest`.
 
 ## Authorization
 
-- Every endpoint requires a session unless marked public (§5.3). Roles are read from the database on every request; the role switcher in the UI is presentation only.
-- Objects a user may not see answer 404, not 403, so their existence is not revealed (§5.5). State changes are atomic conditional updates under row locks (schema §4.2), so two users cannot pick or review the same thing twice.
-- The Django admin is limited to staff accounts. WebSocket connections reuse the session cookie and are accepted only from origins in `ALLOWED_HOSTS` (§9.1).
+- Every endpoint requires a session unless marked public (5.3). Roles are read from the database on every request; the role switcher in the UI is presentation only.
+- Objects a user may not see answer 404, not 403, so their existence is not revealed (5.5). State changes are atomic conditional updates under row locks (schema 4.2), so two users cannot pick or review the same thing twice.
+- The Django admin is limited to staff accounts. WebSocket connections reuse the session cookie and are accepted only from origins in `ALLOWED_HOSTS` (9.1).
 
 ## Input validation
 
