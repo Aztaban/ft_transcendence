@@ -2,8 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { getCurrentUser, updateCurrentUser } from "../api/users";
 import { ApiError } from "../api/client";
-import avatar from "../assets/figma/avatar.png";
 import { Badge, Button, Input } from "../components/ui";
+import PersonAvatar from "../features/people/PersonAvatar";
 import type { Language, RoleName, UserProfile, UserRole } from "../types/user";
 import { DISPLAY_NAME_MAX_LENGTH } from "../utils/validation";
 import { useLiveRefresh } from "../websocket/LiveProvider";
@@ -212,13 +212,10 @@ function ProfilePage() {
         <>
           <section className="profile-card">
             <div className="profile-card__identity">
-              <img
+              <PersonAvatar
                 className="profile-card__avatar"
-                src={profile.avatar_url || avatar}
-                alt={`${profile.display_name}'s avatar`}
-                onError={(event) => {
-                  event.currentTarget.src = avatar;
-                }}
+                name={profile.display_name}
+                avatarUrl={profile.avatar_url ?? null}
               />
 
               <div className="profile-card__identity-copy">
