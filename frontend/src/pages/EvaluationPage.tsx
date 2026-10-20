@@ -219,10 +219,17 @@ function EvaluationPage() {
     setCancelError("");
   }, []);
 
-  const status = request ? statusInfo[request.status] : null;
+  const baseStatus = request ? statusInfo[request.status] : null;
   // Only the student who created the request may accept, decline or cancel it (§10.4 "Own
   // student"). The picking Hitchhiker sees the same page without these buttons.
   const isOwnRequest = request?.student != null && request.student.id === user?.id;
+  // The Hitchhiker who proposed the slot. Everyone else who is not the student (a Head Tutor,
+  // an Admin) gets the same neutral wording.
+  const isPicker = request?.picked_by != null && request.picked_by.id === user?.id;
+  const status =
+    baseStatus && request?.status === "awaiting_confirmation" && !isOwnRequest
+      ? { ...baseStatus, label: "Waiting for the student" }
+      : baseStatus;
 
   return (
     <section className="evaluation">
@@ -245,12 +252,20 @@ function EvaluationPage() {
               {status.label}
             </span>
             <h1>
-              {request.status === "awaiting_confirmation" && (
-                <>
-                  A <strong>HITCHHIKER</strong> has taken your request
-                </>
-              )}
-              {request.status === "confirmed" && "Your evaluation is scheduled"}
+              {request.status === "awaiting_confirmation" &&
+                (isOwnRequest ? (
+                  <>
+                    A <strong>HITCHHIKER</strong> has taken your request
+                  </>
+                ) : isPicker ? (
+                  "You proposed a slot"
+                ) : (
+                  "A slot has been proposed"
+                ))}
+              {request.status === "confirmed" &&
+                (isOwnRequest || isPicker
+                  ? "Your evaluation is scheduled"
+                  : "The evaluation is scheduled")}
               {request.status === "pending" && "Waiting for a Hitchhiker"}
               {(request.status === "cancelled" || request.status === "expired") &&
                 "This request is no longer active"}
@@ -277,7 +292,13 @@ function EvaluationPage() {
             </p>
           )}
 
-          {request.status === "pending" && !wasDeclined && (
+          {request.status === "awaiting_confirmation" && isPicker && (
+            <p className="evaluation__notice">
+              The student has to accept or decline your proposal.
+            </p>
+          )}
+
+          {request.status === "pending" && !wasDeclined && isOwnRequest && (
             <p className="evaluation__notice">
               Your request is in the queue. You will be notified when a Hitchhiker proposes a slot.
             </p>
@@ -312,15 +333,23 @@ function EvaluationPage() {
                     <span className="evaluation__icon" aria-hidden="true">
                       👤
                     </span>
-                    Hitchhiker
+                    {isOwnRequest ? "Hitchhiker" : "Student"}
                   </dt>
-                  <dd>{request.picked_by?.display_name}</dd>
+                  <dd>
+                    {isOwnRequest
+                      ? request.picked_by?.display_name
+                      : (request.student?.display_name ?? "—")}
+                  </dd>
                 </div>
               </dl>
 
               <div className="evaluation__tip">
                 <span aria-hidden="true">i</span>
-                <p>Please be on time and prepared. Good luck!</p>
+                <p>
+                  {isOwnRequest
+                    ? "Please be on time and prepared. Good luck!"
+                    : "Please be on time. The student is counting on you."}
+                </p>
               </div>
             </>
           )}

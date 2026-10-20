@@ -198,9 +198,33 @@ describe("EvaluationPage for the picking Hitchhiker", () => {
     });
     renderPage();
 
-    expect(await screen.findByText("Needs your answer")).toBeTruthy();
+    expect(await screen.findByText("Waiting for the student")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Decline/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Cancel request" })).toBeNull();
+  });
+
+  it("speaks to the Hitchhiker, not the student", async () => {
+    viewer.id = 2;
+    vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
+    renderPage();
+
+    expect(await screen.findByText("Waiting for the student")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "You proposed a slot" })).toBeTruthy();
+    expect(screen.getByText("The student has to accept or decline your proposal.")).toBeTruthy();
+    expect(screen.getByText("Student", { selector: "dt" })).toBeTruthy();
+    expect(screen.getByText("Please be on time. The student is counting on you.")).toBeTruthy();
+    expect(screen.queryByText("Needs your answer")).toBeNull();
+    expect(screen.queryByText(/has taken your request/)).toBeNull();
+  });
+
+  it("uses neutral words for someone who is neither the student nor the Hitchhiker", async () => {
+    viewer.id = 9;
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "confirmed"));
+    renderPage();
+
+    expect(
+      await screen.findByRole("heading", { name: "The evaluation is scheduled" }),
+    ).toBeTruthy();
   });
 });
