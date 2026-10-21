@@ -6,6 +6,7 @@ What the application does to stay secure, and what it deliberately leaves out. W
 
 - Nginx is the only public entry point: TLS 1.2/1.3 on 443, port 80 redirects to HTTPS. The self-signed development certificate is generated on first start. Traffic between containers is plain HTTP, which the subject allows.
 - Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a restrictive `Permissions-Policy`; `server_tokens` is off.
+- API views answer with JSON only; the exceptions are listed under Information exposure.
 
 ## Authentication
 
@@ -45,7 +46,7 @@ What the application does to stay secure, and what it deliberately leaves out. W
 
 ## Information exposure
 
-- The API never answers with HTML: unknown paths under `/api/` give the JSON `not_found` envelope, and `Accept: text/html` gives `406`. `/health/` reports `ok` or `error` per service, never the exception. The OpenAPI schema at `/api/docs/` is public by design; it contains no secrets.
+- API views never answer with HTML: unknown paths under `/api/` give the JSON `not_found` envelope, and `Accept: text/html` gives `406`. Errors raised before a request reaches DRF still use the default HTML pages: Django's `400` for a Host header not in `ALLOWED_HOSTS` and its `500` for a crash in middleware, and Nginx's own pages such as `502` when the backend is down or `413` for an oversized body. These pages carry no stack trace or settings while `DEBUG` is off. `/health/` reports `ok` or `error` per service, never the exception. The OpenAPI schema at `/api/docs/` is public by design; it contains no secrets.
 
 ## Not done, and why
 
