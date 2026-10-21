@@ -18,6 +18,7 @@ from .events import (
     publish_updated_event,
 )
 from .models import EvaluationRequest
+from .notifications import notify_slot_picked
 
 
 class ActiveRequestExists(APIException):
@@ -277,4 +278,5 @@ def pick_slot(evaluation, user, starts_at, ends_at):
             raise RequestNotPending()
         evaluation.refresh_from_db()
         publish_slot_picked_event(evaluation)
+        notify_slot_picked(evaluation)
     return evaluation

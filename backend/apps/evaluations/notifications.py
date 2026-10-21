@@ -1,13 +1,36 @@
-"""Eligibility notification facts and event recipients."""
+"""Evaluation and eligibility notification facts and recipients."""
+
+from datetime import timezone
 
 from django.contrib.auth import get_user_model
+from rest_framework.fields import DateTimeField
 
 from apps.accounts.models import Role
 from apps.core.events import publish_user_event
-from apps.evaluations.models import TutorEligibilityRequest
+from apps.evaluations.models import EvaluationRequest, TutorEligibilityRequest
 from apps.evaluations.references import ProjectRefSerializer
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
+
+
+def notify_slot_picked(evaluation: EvaluationRequest) -> None:
+    """Store the student's confirmation prompt inside the successful pick transaction."""
+    timestamp = DateTimeField(default_timezone=timezone.utc)
+    create_notification(
+        recipient_id=evaluation.student_id,
+        notification_type=Notification.Type.EVALUATION_SLOT_PICKED,
+        payload={
+            "request_id": evaluation.pk,
+            "project": ProjectRefSerializer(evaluation.project).data,
+            "tutor": {
+                "id": evaluation.picked_by_id,
+                "display_name": evaluation.picked_by.display_name,
+            },
+            "starts_at": timestamp.to_representation(evaluation.starts_at),
+            "ends_at": timestamp.to_representation(evaluation.ends_at),
+        },
+        target_url=f"/evaluations/{evaluation.pk}",
+    )
 
 
 def notify_eligibility_requested(eligibility_request: TutorEligibilityRequest) -> None:

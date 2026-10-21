@@ -1,4 +1,4 @@
-"""Session-authenticated evaluation actions reach affected users through Redis (#246)."""
+"""Session-authenticated evaluation actions reach affected users through Redis."""
 
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
@@ -16,6 +16,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
+from apps.notifications.models import Notification
 from config.asgi import application
 
 pytestmark = [
@@ -268,6 +269,9 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
             assert response.json() == expected_response
             if rollback:
                 transaction.set_rollback(True)
+        if action == "pick-slot" and not rollback:
+            return Notification.objects.get().pk
+        return None
 
     def assert_committed_state():
         evaluation.refresh_from_db()
@@ -282,10 +286,15 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
         try:
             for _, communicator in connections:
                 assert await communicator.connect() == (True, None)
-            await database_sync_to_async(perform_action)()
+            notification_id = await database_sync_to_async(perform_action)()
             for user_id, communicator in connections:
                 if user_id in recipients:
                     assert await communicator.receive_json_from(timeout=3) == expected_event
+                if action == "pick-slot" and not rollback and user_id == 7:
+                    assert await communicator.receive_json_from(timeout=3) == {
+                        "event": "notification.created",
+                        "data": {"id": notification_id},
+                    }
                 # Also detects duplicate pushes to a user with multiple roles.
                 assert await communicator.receive_nothing(timeout=0.1)
             await database_sync_to_async(assert_committed_state)()
