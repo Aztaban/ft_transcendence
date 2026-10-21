@@ -18,6 +18,9 @@ export function useHitchhikerRequests() {
   const [openRequests, setOpenRequests] = useState<EvaluationRequest[]>([]);
   const [pickedRequests, setPickedRequests] = useState<EvaluationRequest[]>([]);
   const [hasError, setHasError] = useState(false);
+  // True until the first answers arrive or the first load fails; a background refresh keeps it
+  // false, so the requests already shown stay on screen (#258).
+  const [isLoading, setIsLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const hasLoaded = useRef(false);
 
@@ -40,11 +43,13 @@ export function useHitchhikerRequests() {
           setOpenRequests(open.results);
           setPickedRequests(picked.results);
           setHasError(false);
+          setIsLoading(false);
         }
       })
       .catch(() => {
         if (active && !hasLoaded.current) {
           setHasError(true);
+          setIsLoading(false);
         }
       });
 
@@ -53,5 +58,5 @@ export function useHitchhikerRequests() {
     };
   }, [isAuthenticated, reloadKey]);
 
-  return { openRequests, pickedRequests, hasError };
+  return { openRequests, pickedRequests, isLoading, hasError };
 }

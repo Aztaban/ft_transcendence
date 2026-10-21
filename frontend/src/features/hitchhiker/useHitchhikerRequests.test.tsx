@@ -17,9 +17,13 @@ function page(results: EvaluationRequest[]) {
 }
 
 function Probe() {
-  const { openRequests, pickedRequests, hasError } = useHitchhikerRequests();
+  const { openRequests, pickedRequests, isLoading, hasError } = useHitchhikerRequests();
   const names = (requests: EvaluationRequest[]) =>
     requests.map((request) => request.project.name).join(",");
+
+  if (isLoading) {
+    return <p>loading</p>;
+  }
 
   return (
     <p>{hasError ? "error" : `open:${names(openRequests)} picked:${names(pickedRequests)}`}</p>
@@ -59,6 +63,16 @@ describe("useHitchhikerRequests", () => {
     expect(listEvaluationRequests).toHaveBeenCalledWith({ scope: "picked" });
   });
 
+  it("reports loading until the first answers arrive", () => {
+    loggedIn(true);
+    // Answers that never come: the hook stays in its first load.
+    vi.mocked(listEvaluationRequests).mockReturnValue(new Promise(() => {}));
+
+    render(<Probe />);
+
+    expect(screen.getByText("loading")).toBeTruthy();
+  });
+
   it("reports when the requests cannot be loaded", async () => {
     loggedIn(true);
     vi.mocked(listEvaluationRequests).mockRejectedValue(new Error("network"));
@@ -94,6 +108,8 @@ describe("useHitchhikerRequests live", () => {
     act(() =>
       FakeSocket.latest().serverSend({ event: "eligibility.revoked", data: { project_id: 3 } }),
     );
+    // The refresh runs in the background: the requests stay, no loading state.
+    expect(screen.getByText("open:minishell picked:")).toBeTruthy();
 
     expect(await screen.findByText("open: picked:")).toBeTruthy();
 
