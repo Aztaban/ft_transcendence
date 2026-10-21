@@ -8,32 +8,10 @@ from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .models import EvaluationRequest, Project
-from .permissions import OVERRIDE_ROLES
-
-
-class UserRefSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    display_name = serializers.CharField(read_only=True)
-    # Avatar storage is not implemented yet; users without an avatar return null.
-    avatar_url = serializers.URLField(read_only=True, allow_null=True, default=None)
-
-
-class ProjectRefSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Project
-        fields = ("id", "slug", "name")
-        read_only_fields = fields
-
-
-class ProjectSerializer(ProjectRefSerializer):
-    """The detail view supplies eligible_tutors, filtered and sorted."""
-
-    eligible_tutors = UserRefSerializer(many=True, read_only=True)
-
-    class Meta(ProjectRefSerializer.Meta):
-        fields = (*ProjectRefSerializer.Meta.fields, "eligible_tutors")
-        read_only_fields = fields
+from apps.accounts.references import UserRefSerializer
+from apps.evaluations.models import EvaluationRequest, Project
+from apps.evaluations.permissions import OVERRIDE_ROLES
+from apps.evaluations.references import ProjectRefSerializer
 
 
 class EvaluationRequestSerializer(serializers.ModelSerializer):
@@ -156,8 +134,24 @@ def _max_lead_message():
 class EvaluationRequestPickSlotSerializer(serializers.Serializer):
     """Body of POST /evaluation-requests/{id}/pick-slot/ (api-plan §10.4)."""
 
-    starts_at = TimezoneRequiredDateTimeField()
-    ends_at = TimezoneRequiredDateTimeField()
+    starts_at = TimezoneRequiredDateTimeField(
+        help_text=(
+            "Timezone required (Z or offset). After conversion to UTC, use a "
+            f"{settings.EVALUATION_SLOT_GRID_MINUTES}-minute boundary with zero seconds and "
+            "microseconds. Start between "
+            f"{settings.EVALUATION_SLOT_MIN_LEAD_MINUTES} minutes and "
+            f"{settings.EVALUATION_SLOT_MAX_LEAD_DAYS} days from now, inclusive."
+        )
+    )
+    ends_at = TimezoneRequiredDateTimeField(
+        help_text=(
+            "Timezone required (Z or offset). After conversion to UTC, use a "
+            f"{settings.EVALUATION_SLOT_GRID_MINUTES}-minute boundary with zero seconds and "
+            "microseconds. Must be after starts_at, with a duration between "
+            f"{settings.EVALUATION_SLOT_MIN_DURATION_MINUTES} and "
+            f"{settings.EVALUATION_SLOT_MAX_DURATION_MINUTES} minutes, inclusive."
+        )
+    )
 
     def validate(self, attrs):
         # Times are already UTC. Rules are api-plan §7.1; limits are EVALUATION_SLOT_*.
@@ -206,6 +200,12 @@ class EvaluationRequestQuerySerializer(serializers.Serializer):
     def validate_status(self, value):
         field = serializers.ChoiceField(choices=EvaluationRequest.Status.choices)
         return [field.run_validation(item) for item in value.split(",")]
+
+    def validate_project(self, value):
+        # Inactive projects remain valid filters for existing requests (schema §3.1).
+        if not Project.objects.filter(slug=value).exists():
+            raise serializers.ValidationError(_("Unknown project slug."))
+        return value
 
     def validate_result(self, value):
         # `none` is requests without a result (api-plan 10.4)

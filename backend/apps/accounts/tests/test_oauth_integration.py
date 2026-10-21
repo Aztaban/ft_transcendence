@@ -13,7 +13,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
-from apps.accounts.views import OAUTH_42_ME_URL, OAUTH_42_TOKEN_URL
+from apps.accounts.services.oauth import OAUTH_42_ME_URL, OAUTH_42_TOKEN_URL
 
 pytestmark = pytest.mark.django_db
 
@@ -67,7 +67,7 @@ def test_oauth_login_restores_session_and_logs_out_with_csrf(monkeypatch, return
         assert request.get_header("Authorization") == "Bearer integration-token"
         return ProviderResponse({"id": 4242, "login": "current-login", "email": "42@example.com"})
 
-    monkeypatch.setattr("apps.accounts.views.urlopen", provider)
+    monkeypatch.setattr("apps.accounts.services.oauth.urlopen", provider)
     browser = APIClient(enforce_csrf_checks=True)
     redirect = browser.get(reverse("api:oauth_42_redirect"), secure=True, HTTP_HOST="localhost")
     assert redirect.status_code == 302

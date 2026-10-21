@@ -9,7 +9,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.accounts.views import (
+from apps.accounts.views.oauth import (
     OAUTH_42_ERROR_PATH,
     OAUTH_42_STATE_SESSION_KEY,
     OAUTH_42_SUCCESS_PATH,
@@ -59,7 +59,7 @@ def test_callback_rejects_missing_or_mismatched_state_without_consuming_valid_st
     def unexpected_provider_call(*args, **kwargs):
         pytest.fail("An invalid state must be rejected before contacting 42.")
 
-    monkeypatch.setattr("apps.accounts.views.urlopen", unexpected_provider_call)
+    monkeypatch.setattr("apps.accounts.services.oauth.urlopen", unexpected_provider_call)
     client = client_with_state()
 
     response = callback(client, code="fake-code", state=state)
@@ -120,11 +120,11 @@ def test_callback_rejects_missing_code_after_valid_state():
 )
 def test_callback_accepts_valid_state_and_code_and_creates_session(monkeypatch):
     monkeypatch.setattr(
-        "apps.accounts.views._exchange_42_code_for_access_token",
+        "apps.accounts.services.oauth.exchange_42_code_for_access_token",
         lambda code: "temporary-provider-token",
     )
     monkeypatch.setattr(
-        "apps.accounts.views._retrieve_42_account_information",
+        "apps.accounts.services.oauth.retrieve_42_account_information",
         lambda token: {
             "intra_id": 4242,
             "intra_login": "oauth-user",

@@ -16,6 +16,8 @@ vi.mock("../features/student/useStudentRequests", () => ({
 
 afterEach(() => {
   cleanup();
+  // The active workspace is kept for the tab; each test starts as a student.
+  sessionStorage.clear();
 });
 
 // Switches the active role, as the role selector in the sidebar does.

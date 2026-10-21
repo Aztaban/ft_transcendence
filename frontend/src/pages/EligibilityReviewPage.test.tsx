@@ -6,7 +6,7 @@ import { ApiError } from "../api/client";
 import { listEligibilityRequests, reviewEligibilityRequest } from "../api/eligibility";
 import { RoleProvider } from "../store/RoleContext";
 import type { EligibilityRequest } from "../types/eligibility";
-import type { UserProfile } from "../types/user";
+import type { RoleName, UserProfile } from "../types/user";
 import EligibilityReviewPage from "./EligibilityReviewPage";
 
 // The shared /users/me/ store, as loaded for the logged-in Head Tutor.
@@ -24,8 +24,16 @@ vi.mock("../api/eligibility", () => ({
   reviewEligibilityRequest: vi.fn(),
 }));
 
-function logIn(roles: string[]) {
-  currentUser.user = { id: 1, email: "head@42.cz", display_name: "headtut", language: "en", roles };
+function logIn(roles: RoleName[]) {
+  currentUser.user = {
+    id: 1,
+    email: "head@42.cz",
+    display_name: "headtut",
+    avatar_url: null,
+    language: "en",
+    roles: roles.map((name, index) => ({ id: index + 1, name })),
+    intra_login: null,
+  };
   currentUser.roles = roles;
   currentUser.isLoaded = true;
 }

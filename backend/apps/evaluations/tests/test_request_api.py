@@ -433,6 +433,7 @@ def test_all_scope(other, evaluation, expected, role):
         ({"history": "yes"}, "history", '"yes" is not a valid choice.'),
         ({"ordering": "note"}, "ordering", '"note" is not a valid choice.'),
         ({"result": "passed,wrong"}, "result", '"wrong" is not a valid choice.'),
+        ({"project": "missing"}, "project", "Unknown project slug."),
     ],
 )
 def test_filter_validation(client, params, field, message):
@@ -455,7 +456,7 @@ def test_filter_validation(client, params, field, message):
         ({"status": "pending,confirmed"}, True),
         ({"status": "expired"}, False),
         ({"project": "libft"}, True),
-        ({"project": "missing"}, False),
+        ({"project": ""}, True),
     ],
 )
 def test_filters(client, evaluation, expected, params, include):
@@ -469,8 +470,20 @@ def test_filters(client, evaluation, expected, params, include):
     }
 
 
+@pytest.mark.parametrize("is_active", [True, False])
+def test_known_project_without_matching_requests_returns_empty_list(client, evaluation, is_active):
+    Project.objects.create(slug="ft_printf", name="ft_printf", is_active=is_active)
+
+    response = client.get(list_url(), {"project": "ft_printf"})
+
+    assert response.status_code == 200
+    assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+
+
+@pytest.mark.parametrize("is_active", [True, False])
 @pytest.mark.parametrize("state", ["cancelled", "expired", "confirmed"])
-def test_history_fields(client, evaluation, other, expected, state):
+def test_history_fields(client, evaluation, other, expected, state, is_active):
+    Project.objects.filter(pk=4).update(is_active=is_active)
     set_state(state, other, past=True)
     expected.update(status=state, is_history=True)
     if state == "cancelled":
@@ -483,10 +496,10 @@ def test_history_fields(client, evaluation, other, expected, state):
             starts_at="2026-10-10T07:00:00Z",
             ends_at="2026-10-10T08:00:00Z",
         )
-    response = client.get(list_url(), {"history": "true"})
+    response = client.get(list_url(), {"history": "true", "project": "libft"})
     assert response.status_code == 200
     assert response.json() == {"count": 1, "next": None, "previous": None, "results": [expected]}
-    assert client.get(list_url(), {"history": "false"}).json() == {
+    assert client.get(list_url(), {"history": "false", "project": "libft"}).json() == {
         "count": 0,
         "next": None,
         "previous": None,

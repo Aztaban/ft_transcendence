@@ -2,7 +2,7 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getTutorEligibility, listEligibilityRequests } from "../../api/eligibility";
-import type { UserProfile } from "../../types/user";
+import type { RoleName, UserProfile } from "../../types/user";
 import useNeedsEligibility from "./useNeedsEligibility";
 
 // The shared /users/me/ store: `user` stays null until the session check and /users/me/ answer.
@@ -20,13 +20,15 @@ vi.mock("../../api/eligibility", () => ({
   listEligibilityRequests: vi.fn(),
 }));
 
-function logIn(roles: string[]) {
+function logIn(roles: RoleName[]) {
   currentUser.user = {
     id: 2,
     email: "dkolarov@42.cz",
     display_name: "dkolarov",
+    avatar_url: null,
     language: "en",
-    roles,
+    roles: roles.map((name, index) => ({ id: index + 1, name })),
+    intra_login: "dkolarov",
   };
   currentUser.roles = roles;
 }

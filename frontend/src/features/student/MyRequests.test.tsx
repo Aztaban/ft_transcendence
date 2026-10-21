@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../api/client";
@@ -8,6 +8,8 @@ import {
   type ListEvaluationRequestsParams,
 } from "../../api/evaluationRequests";
 import type { EvaluationRequest } from "../../types/evaluation";
+import { LiveContext } from "../../websocket/LiveProvider";
+import { FakeSocket, openLiveSocket } from "../../websocket/testSocket";
 import MyRequests from "./MyRequests";
 import { makeRequest } from "./testUtils";
 
@@ -171,6 +173,60 @@ describe("MyRequests", () => {
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Could not load your requests. Please try again later.",
     );
+  });
+});
+
+describe("MyRequests live", () => {
+  afterEach(() => {
+    FakeSocket.reset();
+  });
+
+  it("loads both lists again from their first page when a request changes", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) =>
+      makeRequest(100 + index, `past-${index}`, "cancelled"),
+    );
+    let activeStatus: EvaluationRequest["status"] = "pending";
+
+    vi.mocked(listEvaluationRequests).mockImplementation(
+      async (params: ListEvaluationRequestsParams = {}) => {
+        if (!params.history) {
+          return page([makeRequest(1, "push_swap", activeStatus)]);
+        }
+
+        return params.page === 2
+          ? page([makeRequest(200, "oldest", "expired")], 21)
+          : page(firstPage, 21, "https://localhost/api/v1/evaluation-requests/?page=2");
+      },
+    );
+
+    render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MyRequests />
+      </LiveContext.Provider>,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Show more past requests (1 left)" }),
+    );
+    await screen.findByRole("heading", { name: "oldest" });
+
+    activeStatus = "awaiting_confirmation";
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.slot_picked",
+        data: { id: 1, status: "awaiting_confirmation" },
+      }),
+    );
+
+    await vi.waitFor(() =>
+      expect(rowStatuses("Active")).toEqual([["push_swap", "Needs your confirmation"]]),
+    );
+    expect(rowStatuses("Past")).toHaveLength(20);
+    expect(screen.queryByText("Loading your requests…")).toBeNull();
+    expect(listEvaluationRequests).toHaveBeenLastCalledWith({
+      scope: "mine",
+      history: true,
+      page: 1,
+    });
   });
 });
 

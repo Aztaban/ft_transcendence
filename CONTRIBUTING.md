@@ -13,8 +13,9 @@ Monorepo — one repository where backend and frontend live side by side and are
 ```text
 ft_transcendence/
 ├── backend/                 # Django + DRF + Channels
-│   ├── config/              # Django project settings
-│   ├── apps/                # Django apps
+│   ├── config/              # Django settings and project URL configuration
+│   ├── api/                 # API root and app URL includes; shared api namespace
+│   ├── apps/                # Django domain apps and shared helpers
 │   ├── requirements.txt
 │   └── manage.py
 ├── frontend/                # React + TypeScript
@@ -44,6 +45,23 @@ ft_transcendence/
 - Shared planning and reference documentation belongs under `docs/`.
 - Every new Django app gets its own subfolder under `backend/apps/`.
 - Repository-level configuration belongs at the repository root or under `.github/` where appropriate.
+
+### Backend API routing
+
+- Keep the `/api/v1/` prefix in `backend/config/urls.py`.
+- Keep the API root and app URL includes in `backend/api/urls.py`.
+- Declare account/auth routes in `backend/apps/accounts/urls.py` and project/evaluation
+  routes in `backend/apps/evaluations/urls.py`. Include new app URL modules from
+  `backend/api/urls.py` as their endpoints are implemented.
+- Use `path("", include("apps.<app>.urls"))` in the API URL module. App paths omit
+  `/api/v1/` and retain the trailing slash required by the API contract.
+- Preserve the shared `api` namespace: do not add `app_name` or a child namespace
+  to included app URL modules. Give every route a name unique across the API.
+- Use `reverse("api:<name>")` in backend code and tests. Moving a declaration must
+  preserve its public path, name, path parameters and view.
+
+See [the routing architecture](docs/architecture.md#31-backend-http-routing) for
+the routing layers and an example of how prefixes compose.
 
 ---
 

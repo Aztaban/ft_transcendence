@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cancelEvaluationRequest, listEvaluationRequests } from "../../api/evaluationRequests";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../../utils/dateTime";
 import CancelRequestDialog from "./CancelRequestDialog";
 import { canCancel, cancelErrorMessage } from "./cancelRequest";
+import { EVALUATION_EVENTS } from "../../websocket/events";
+import { useLiveRefresh } from "../../websocket/LiveProvider";
 import "../../styles/my-requests.css";
 
 type LoadState = "loading" | "ready" | "error";
@@ -102,7 +104,8 @@ interface RequestList {
 }
 
 // One paginated list of the student's requests (§5.7): the first page on mount, then
-// "Show more" appends the next one.
+// "Show more" appends the next one. When one of the requests changes, or after a reconnect,
+// the list is loaded again from its first page in the background (§9, #255).
 function useRequestList(history: boolean): RequestList {
   const [requests, setRequests] = useState<EvaluationRequest[]>([]);
   const [total, setTotal] = useState(0);
@@ -111,9 +114,20 @@ function useRequestList(history: boolean): RequestList {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  // Set by a live refresh: a failure then keeps the requests already shown.
+  const isLiveRefresh = useRef(false);
+
+  useLiveRefresh(EVALUATION_EVENTS, () => {
+    isLiveRefresh.current = true;
+    setPage(1);
+    setReloadKey((key) => key + 1);
+  });
 
   useEffect(() => {
     let active = true;
+    const inBackground = isLiveRefresh.current;
+
+    isLiveRefresh.current = false;
 
     listEvaluationRequests({ scope: "mine", history, page })
       .then((result) => {
@@ -126,7 +140,7 @@ function useRequestList(history: boolean): RequestList {
       })
       .catch(() => {
         if (active && page === 1) {
-          setLoadState("error");
+          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       })
       .finally(() => {
