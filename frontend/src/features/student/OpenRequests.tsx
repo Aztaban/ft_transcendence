@@ -5,13 +5,15 @@ import { formatSlot } from "../../utils/dateTime";
 
 interface OpenRequestsProps {
   requests: EvaluationRequest[];
+  // True during the first load: a skeleton instead of the empty state (#258).
+  isLoading?: boolean;
 }
 
 function needsConfirmation(request: EvaluationRequest) {
   return request.status === "awaiting_confirmation";
 }
 
-function OpenRequests({ requests }: OpenRequestsProps) {
+function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
   // Requests waiting for the student's answer are listed first.
   const openRequests = requests
     .filter((request) => request.status === "pending" || needsConfirmation(request))
@@ -24,7 +26,13 @@ function OpenRequests({ requests }: OpenRequestsProps) {
     >
       <h2 id="open-requests-title">Open Requests</h2>
 
-      {openRequests.length === 0 ? (
+      {isLoading ? (
+        <div className="dashboard-requests" aria-busy="true">
+          <div className="dashboard-requests__skeleton" />
+          <div className="dashboard-requests__skeleton" />
+          <span className="dashboard-requests__sr-only">Loading your requests…</span>
+        </div>
+      ) : openRequests.length === 0 ? (
         <div className="dashboard-empty">
           <div className="dashboard-empty__history-mark" aria-hidden="true">
             —

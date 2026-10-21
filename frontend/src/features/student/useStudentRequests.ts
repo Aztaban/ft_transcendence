@@ -16,6 +16,9 @@ export function useStudentRequests() {
   const { isAuthenticated } = useAuth();
   const [requests, setRequests] = useState<EvaluationRequest[]>([]);
   const [hasError, setHasError] = useState(false);
+  // True until the first answer arrives or the first load fails; a background refresh keeps it
+  // false, so the requests already shown stay on screen (#258).
+  const [isLoading, setIsLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const hasLoaded = useRef(false);
 
@@ -36,11 +39,13 @@ export function useStudentRequests() {
           hasLoaded.current = true;
           setRequests(page.results);
           setHasError(false);
+          setIsLoading(false);
         }
       })
       .catch(() => {
         if (active && !hasLoaded.current) {
           setHasError(true);
+          setIsLoading(false);
         }
       });
 
@@ -49,5 +54,5 @@ export function useStudentRequests() {
     };
   }, [isAuthenticated, reloadKey]);
 
-  return { requests, hasError, reload };
+  return { requests, isLoading, hasError, reload };
 }

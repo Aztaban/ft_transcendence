@@ -13,7 +13,11 @@ vi.mock("../../api/evaluationRequests", () => ({ listEvaluationRequests: vi.fn()
 vi.mock("../../store/AuthContext", () => ({ useAuth: vi.fn() }));
 
 function Probe() {
-  const { requests, hasError } = useStudentRequests();
+  const { requests, isLoading, hasError } = useStudentRequests();
+
+  if (isLoading) {
+    return <p>loading</p>;
+  }
 
   return <p>{hasError ? "error" : requests.map((request) => request.project.name).join(",")}</p>;
 }
@@ -49,6 +53,16 @@ describe("useStudentRequests", () => {
 
     expect(await screen.findByText("push_swap")).toBeTruthy();
     expect(listEvaluationRequests).toHaveBeenCalledWith({ scope: "mine" });
+  });
+
+  it("reports loading until the first answer arrives", () => {
+    loggedIn(true);
+    // An answer that never comes: the hook stays in its first load.
+    vi.mocked(listEvaluationRequests).mockReturnValue(new Promise(() => {}));
+
+    render(<Probe />);
+
+    expect(screen.getByText("loading")).toBeTruthy();
   });
 
   it("reports when the requests cannot be loaded", async () => {
@@ -95,6 +109,8 @@ describe("useStudentRequests live", () => {
         data: { id: 1, status: "awaiting_confirmation" },
       }),
     );
+    // The refresh runs in the background: the requests stay, no loading state.
+    expect(screen.getByText("push_swap")).toBeTruthy();
 
     expect(await screen.findByText("push_swap,minishell")).toBeTruthy();
 
