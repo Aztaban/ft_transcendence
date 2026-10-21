@@ -21,7 +21,8 @@
   --radius-lg: 5px;
 
   /* Layout */
-  --sidebar-width: 270px;
+  /* Wide enough for the longest menu label in every language ("Consejo estudiantil"). */
+  --sidebar-width: 300px;
   --topbar-height: 72px;
 
   /* Spacing */
