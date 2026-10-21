@@ -88,14 +88,33 @@ def test_logout_revoked_session_cookie_cannot_be_reused():
     assert replay.get(reverse("api:me"), HTTP_HOST="localhost").status_code == 401
 
 
-def test_logout_without_csrf_rejected_and_session_remains_active():
+@pytest.mark.parametrize("csrf_case", ["no_header", "malformed_header", "wrong_header"])
+def test_logout_with_invalid_csrf_preserves_session(
+    csrf_case, group_send, django_capture_on_commit_callbacks
+):
     user = create_user()
     client = logged_in_client(user)
     original_session_key = client.cookies["sessionid"].value
 
-    response = post_logout(client, csrf=False)
+    headers = {"HTTP_HOST": "localhost"}
+    if csrf_case == "malformed_header":
+        headers["HTTP_X_CSRFTOKEN"] = "invalid"
+    elif csrf_case == "wrong_header":
+        token = client.cookies["csrftoken"].value
+        headers["HTTP_X_CSRFTOKEN"] = ("a" if token[0] != "a" else "b") + token[1:]
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(reverse("api:logout"), format="json", **headers)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {
+        "error": {
+            "code": "csrf_failed",
+            "message": "CSRF verification failed. Reload the page and try again.",
+        }
+    }
+    assert callbacks == []
+    group_send.assert_not_awaited()
     assert client.session[SESSION_KEY] == str(user.pk)
     assert Session.objects.filter(session_key=original_session_key).exists()
     assert client.get(reverse("api:session"), HTTP_HOST="localhost").status_code == 200
@@ -120,6 +139,39 @@ def test_anonymous_logout_still_requires_csrf():
     response = post_logout(client, csrf=False)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {
+        "error": {
+            "code": "csrf_failed",
+            "message": "CSRF verification failed. Reload the page and try again.",
+        }
+    }
+
+
+@pytest.mark.parametrize("csrf_case", ["malformed_header", "wrong_header"])
+def test_anonymous_logout_rejects_invalid_csrf_header(csrf_case):
+    client = csrf_client()
+    token = client.cookies["csrftoken"].value
+    invalid_token = (
+        "invalid"
+        if csrf_case == "malformed_header"
+        else ("a" if token[0] != "a" else "b") + token[1:]
+    )
+
+    response = client.post(
+        reverse("api:logout"),
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=invalid_token,
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {
+        "error": {
+            "code": "csrf_failed",
+            "message": "CSRF verification failed. Reload the page and try again.",
+        }
+    }
+    assert SESSION_KEY not in client.session
 
 
 def test_logout_only_invalidates_current_browser_session():
@@ -151,7 +203,8 @@ def test_logout_is_post_only():
 def group_send(monkeypatch):
     send = AsyncMock()
     monkeypatch.setattr(
-        "apps.accounts.views.get_channel_layer", lambda: SimpleNamespace(group_send=send)
+        "apps.accounts.views.authentication.get_channel_layer",
+        lambda: SimpleNamespace(group_send=send),
     )
     return send
 

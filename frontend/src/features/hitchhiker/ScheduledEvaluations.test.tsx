@@ -20,6 +20,13 @@ describe("ScheduledEvaluations", () => {
     expect(screen.getByRole("heading", { name: "Upcoming Evaluations" })).toBeTruthy();
   });
 
+  it("shows a loading placeholder instead of the empty state while loading", () => {
+    render(<ScheduledEvaluations requests={[]} viewer="student" isLoading />);
+
+    expect(screen.getByText("Loading scheduled evaluations…")).toBeTruthy();
+    expect(screen.queryByText("Nothing scheduled yet")).toBeNull();
+  });
+
   it("shows the Hitchhiker to a student and the student to a Hitchhiker", () => {
     const requests = [makeRequest(1, "minishell", "confirmed")];
     const { rerender } = render(<ScheduledEvaluations requests={requests} viewer="student" />);

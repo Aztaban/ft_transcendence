@@ -19,6 +19,13 @@ describe("EvaluationHistory", () => {
     expect(screen.getByText("No history yet")).toBeTruthy();
   });
 
+  it("shows a loading placeholder instead of the empty state while loading", () => {
+    render(<EvaluationHistory requests={[]} viewer="hitchhiker" isLoading />);
+
+    expect(screen.getByText("Loading your history…")).toBeTruthy();
+    expect(screen.queryByText("No history yet")).toBeNull();
+  });
+
   it("shows the outcome of each past evaluation", () => {
     const requests = [
       pastEvaluation(1, "minishell", "passed"),

@@ -39,6 +39,11 @@ class ConnectionConsumer(AsyncWebsocketConsumer):
         # frames instead of decoding, echoing or treating them as commands.
         pass
 
+    async def user_event(self, event):
+        """Forward the public envelope without Channels' internal routing fields."""
+        if not getattr(self, "_session_closed", False):
+            await self.send(text_data=json.dumps({"event": event["event"], "data": event["data"]}))
+
     async def session_ended(self, event):
         """Notify the client before closing an ended session."""
         if getattr(self, "_session_closed", False):

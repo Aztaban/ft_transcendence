@@ -3,10 +3,12 @@ import { formatTimeAgo } from "../../utils/dateTime";
 
 interface OpenRequestQueueProps {
   requests: EvaluationRequest[];
+  // True during the first load: a skeleton instead of the empty state (#258).
+  isLoading?: boolean;
 }
 
 // The API (scope=open) already returns only requests for projects the Hitchhiker is eligible for.
-function OpenRequestQueue({ requests }: OpenRequestQueueProps) {
+function OpenRequestQueue({ requests, isLoading = false }: OpenRequestQueueProps) {
   const openRequests = requests.filter((request) => request.status === "pending");
 
   return (
@@ -16,7 +18,13 @@ function OpenRequestQueue({ requests }: OpenRequestQueueProps) {
     >
       <h2 id="open-request-queue-title">Open Requests</h2>
 
-      {openRequests.length === 0 ? (
+      {isLoading ? (
+        <div className="dashboard-requests" aria-busy="true">
+          <div className="dashboard-requests__skeleton" />
+          <div className="dashboard-requests__skeleton" />
+          <span className="dashboard-requests__sr-only">Loading open requests…</span>
+        </div>
+      ) : openRequests.length === 0 ? (
         <div className="dashboard-empty">
           <div className="dashboard-empty__history-mark" aria-hidden="true">
             —

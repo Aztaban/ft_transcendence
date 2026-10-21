@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router";
 
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import { ApiError } from "../api/client";
 import {
+  cancelEvaluationRequest,
   confirmEvaluationRequest,
   declineEvaluationRequest,
   getEvaluationRequest,
 } from "../api/evaluationRequests";
+import CancelRequestDialog from "../features/student/CancelRequestDialog";
+import { canCancel, cancelErrorMessage } from "../features/student/cancelRequest";
+import { useCurrentUser } from "../store/CurrentUserContext";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
+import { EVALUATION_EVENTS } from "../websocket/events";
+import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/evaluation.css";
 
 type LoadState = "loading" | "ready" | "error";
@@ -128,6 +134,7 @@ function AcceptedDialog({ project, onClose }: { project: string; onClose: () => 
 function EvaluationPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
   const [request, setRequest] = useState<EvaluationRequest | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isBusy, setIsBusy] = useState(false);
@@ -135,27 +142,56 @@ function EvaluationPage() {
   const [answerError, setAnswerError] = useState("");
   const [isAccepted, setIsAccepted] = useState(false);
   const [wasDeclined, setWasDeclined] = useState(false);
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState("");
+  const [wasCancelled, setWasCancelled] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Set by a live refresh: a failure then keeps the request already shown.
+  const isLiveRefresh = useRef(false);
+  // A 404 from a live refresh or from Accept / Decline: the request is no longer shown to this
+  // user (§5.5).
+  const [isGone, setIsGone] = useState(false);
+
+  // This request was picked, confirmed, released, cancelled, expired or changed, or the
+  // connection is back (§9, #257). Events about other requests are ignored.
+  useLiveRefresh(EVALUATION_EVENTS, (message) => {
+    if (message && "id" in message.data && message.data.id !== Number(id)) {
+      return;
+    }
+
+    isLiveRefresh.current = true;
+    setReloadKey((key) => key + 1);
+  });
 
   useEffect(() => {
     let active = true;
+    const inBackground = isLiveRefresh.current;
+
+    isLiveRefresh.current = false;
 
     getEvaluationRequest(Number(id))
       .then((result) => {
         if (active) {
           setRequest(result);
+          setIsGone(false);
           setLoadState("ready");
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (active) {
-          setLoadState("error");
+          if (inBackground && error instanceof ApiError && error.status === 404) {
+            setIsGone(true);
+          }
+
+          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
 
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
   async function answer(accept: boolean) {
     if (!request) {
@@ -179,13 +215,52 @@ function EvaluationPage() {
         setWasDeclined(true);
       }
     } catch (error) {
-      setAnswerError(answerErrorMessage(error));
+      if (error instanceof ApiError && error.status === 404) {
+        setIsGone(true);
+      } else {
+        setAnswerError(answerErrorMessage(error));
+      }
     } finally {
       setIsBusy(false);
     }
   }
 
-  const status = request ? statusInfo[request.status] : null;
+  // The student ends the request for good (#595, api-plan §7.1).
+  async function cancelRequest() {
+    if (!request) {
+      return;
+    }
+
+    setCancelError("");
+    setIsCancelling(true);
+
+    try {
+      setRequest(await cancelEvaluationRequest(request.id));
+      setIsCancelOpen(false);
+      setWasCancelled(true);
+    } catch (error) {
+      setCancelError(cancelErrorMessage(error));
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
+  const closeCancel = useCallback(() => {
+    setIsCancelOpen(false);
+    setCancelError("");
+  }, []);
+
+  const baseStatus = request ? statusInfo[request.status] : null;
+  // Only the student who created the request may accept, decline or cancel it (§10.4 "Own
+  // student"). The picking Hitchhiker sees the same page without these buttons.
+  const isOwnRequest = request?.student != null && request.student.id === user?.id;
+  // The Hitchhiker who proposed the slot. Everyone else who is not the student (a Head Tutor,
+  // an Admin) gets the same neutral wording.
+  const isPicker = request?.picked_by != null && request.picked_by.id === user?.id;
+  const status =
+    baseStatus && request?.status === "awaiting_confirmation" && !isOwnRequest
+      ? { ...baseStatus, label: "Waiting for the student" }
+      : baseStatus;
 
   return (
     <section className="evaluation">
@@ -201,19 +276,33 @@ function EvaluationPage() {
         </p>
       )}
 
-      {request && status && (
+      {isGone && (
+        <p className="evaluation__error" role="alert">
+          This evaluation is no longer available. It may have been cancelled or declined.
+        </p>
+      )}
+
+      {request && status && !isGone && (
         <article className={`evaluation__card evaluation__card--${status.tone}`}>
           <header className="evaluation__header">
             <span className={`evaluation__pill evaluation__pill--${status.tone}`}>
               {status.label}
             </span>
             <h1>
-              {request.status === "awaiting_confirmation" && (
-                <>
-                  A <strong>HITCHHIKER</strong> has taken your request
-                </>
-              )}
-              {request.status === "confirmed" && "Your evaluation is scheduled"}
+              {request.status === "awaiting_confirmation" &&
+                (isOwnRequest ? (
+                  <>
+                    A <strong>HITCHHIKER</strong> has taken your request
+                  </>
+                ) : isPicker ? (
+                  "You proposed a slot"
+                ) : (
+                  "A slot has been proposed"
+                ))}
+              {request.status === "confirmed" &&
+                (isOwnRequest || isPicker
+                  ? "Your evaluation is scheduled"
+                  : "The evaluation is scheduled")}
               {request.status === "pending" && "Waiting for a Hitchhiker"}
               {(request.status === "cancelled" || request.status === "expired") &&
                 "This request is no longer active"}
@@ -234,7 +323,19 @@ function EvaluationPage() {
             </p>
           )}
 
-          {request.status === "pending" && !wasDeclined && (
+          {wasCancelled && request.status === "cancelled" && (
+            <p className="evaluation__notice" role="status">
+              Your request has been cancelled. You can create a new one anytime.
+            </p>
+          )}
+
+          {request.status === "awaiting_confirmation" && isPicker && (
+            <p className="evaluation__notice">
+              The student has to accept or decline your proposal.
+            </p>
+          )}
+
+          {request.status === "pending" && !wasDeclined && isOwnRequest && (
             <p className="evaluation__notice">
               Your request is in the queue. You will be notified when a Hitchhiker proposes a slot.
             </p>
@@ -269,15 +370,23 @@ function EvaluationPage() {
                     <span className="evaluation__icon" aria-hidden="true">
                       👤
                     </span>
-                    Hitchhiker
+                    {isOwnRequest ? "Hitchhiker" : "Student"}
                   </dt>
-                  <dd>{request.picked_by?.display_name}</dd>
+                  <dd>
+                    {isOwnRequest
+                      ? request.picked_by?.display_name
+                      : (request.student?.display_name ?? "—")}
+                  </dd>
                 </div>
               </dl>
 
               <div className="evaluation__tip">
                 <span aria-hidden="true">i</span>
-                <p>Please be on time and prepared. Good luck!</p>
+                <p>
+                  {isOwnRequest
+                    ? "Please be on time and prepared. Good luck!"
+                    : "Please be on time. The student is counting on you."}
+                </p>
               </div>
             </>
           )}
@@ -288,7 +397,7 @@ function EvaluationPage() {
             </p>
           )}
 
-          {request.status === "awaiting_confirmation" && (
+          {request.status === "awaiting_confirmation" && isOwnRequest && (
             <div className="evaluation__actions">
               {isDeclining ? (
                 <>
@@ -334,7 +443,30 @@ function EvaluationPage() {
               )}
             </div>
           )}
+
+          {canCancel(request) && isOwnRequest && !isAccepted && (
+            <div className="evaluation__cancel">
+              <button
+                className="evaluation__cancel-button"
+                type="button"
+                disabled={isBusy}
+                onClick={() => setIsCancelOpen(true)}
+              >
+                Cancel request
+              </button>
+            </div>
+          )}
         </article>
+      )}
+
+      {isCancelOpen && request && (
+        <CancelRequestDialog
+          request={request}
+          isSubmitting={isCancelling}
+          error={cancelError}
+          onConfirm={cancelRequest}
+          onClose={closeCancel}
+        />
       )}
 
       {isAccepted && request && (

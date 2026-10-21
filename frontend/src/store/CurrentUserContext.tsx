@@ -17,7 +17,7 @@ interface CurrentUserValue {
 const CurrentUserContext = createContext<CurrentUserValue | undefined>(undefined);
 
 function roleNames(user: UserProfile | null) {
-  return user ? user.roles.map((role) => (typeof role === "string" ? role : role.name)) : [];
+  return user ? user.roles.map((role) => role.name) : [];
 }
 
 interface CurrentUserProviderProps {

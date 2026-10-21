@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { createEligibilityRequest, listEligibilityRequests } from "./eligibility";
+import {
+  createEligibilityRequest,
+  listEligibilityRequests,
+  reviewEligibilityRequest,
+} from "./eligibility";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -34,6 +38,29 @@ describe("createEligibilityRequest", () => {
     expect(options?.method).toBe("POST");
     expect(headers.get("X-CSRFToken")).toBe("test-csrf-token");
     expect(options?.body).toBe(JSON.stringify({ project_ids: [4, 7] }));
+  });
+});
+
+describe("reviewEligibilityRequest", () => {
+  test("posts the decision and note with the CSRF token", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    fetchMock.mockImplementationOnce(async () => {
+      document.cookie = "csrftoken=test-csrf-token; path=/";
+
+      return jsonResponse({ status: "ok", version: "v1" });
+    });
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 9, status: "approved" }));
+
+    await reviewEligibilityRequest(9, { decision: "approved", review_note: "Welcome!" });
+
+    const [path, options] = fetchMock.mock.calls[1];
+    const headers = new Headers(options?.headers);
+
+    expect(path).toBe("/api/v1/tutor-eligibility-requests/9/review/");
+    expect(options?.method).toBe("POST");
+    expect(headers.get("X-CSRFToken")).toBe("test-csrf-token");
+    expect(options?.body).toBe(JSON.stringify({ decision: "approved", review_note: "Welcome!" }));
   });
 });
 
