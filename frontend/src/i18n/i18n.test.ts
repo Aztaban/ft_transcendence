@@ -9,11 +9,16 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// Every text path of a locale file, e.g. "nav.home".
+// Every text path of a locale file, e.g. "nav.home". Plural forms count once: Czech has more of
+// them than English ("time.days_one", "time.days_few", …).
 function keys(texts: object, prefix = ""): string[] {
-  return Object.entries(texts).flatMap(([key, value]) =>
-    typeof value === "object" ? keys(value, `${prefix}${key}.`) : [`${prefix}${key}`],
+  const paths = Object.entries(texts).flatMap(([key, value]) =>
+    typeof value === "object"
+      ? keys(value, `${prefix}${key}.`)
+      : [`${prefix}${key}`.replace(/_(one|few|many|other)$/, "")],
   );
+
+  return [...new Set(paths)];
 }
 
 describe("locale files", () => {
@@ -51,6 +56,24 @@ describe("detectLanguage", () => {
     vi.spyOn(navigator, "languages", "get").mockReturnValue(["es-ES"]);
 
     expect(detectLanguage()).toBe("es");
+  });
+});
+
+describe("plural forms", () => {
+  test("follow each language's rules", async () => {
+    expect([1, 2, 5].map((count) => i18n.t("time.days", { count }))).toEqual([
+      "1 day",
+      "2 days",
+      "5 days",
+    ]);
+
+    await i18n.changeLanguage("cs");
+
+    expect([1, 2, 5].map((count) => i18n.t("time.days", { count }))).toEqual([
+      "1 den",
+      "2 dny",
+      "5 dní",
+    ]);
   });
 });
 

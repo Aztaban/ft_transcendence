@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/client";
 import { createEvaluationRequest } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
+import i18n from "../i18n";
 import CreateRequestPage from "./CreateRequestPage";
 
 vi.mock("../api/projects", () => ({ listProjects: vi.fn() }));
@@ -220,5 +221,27 @@ describe("CreateRequestPage", () => {
       "You already have an active request for this project.",
     );
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("CreateRequestPage in another language", () => {
+  it("shows the steps, the form and the success popup in Spanish", async () => {
+    await i18n.changeLanguage("es");
+    vi.mocked(createEvaluationRequest).mockResolvedValue({} as never);
+    renderPage();
+
+    expect(screen.getByText("Paso 1 / 2 · Elegir proyecto")).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "Detalles de push_swap" })).toBeTruthy();
+
+    await chooseProject("push_swap");
+    fireEvent.click(getButton("Siguiente"));
+
+    expect(screen.getByRole("heading", { name: "Confirmación" })).toBeTruthy();
+
+    fireEvent.click(getButton("Enviar"));
+
+    expect((await screen.findByRole("dialog")).textContent).toBe(
+      "¡Tu solicitud está publicada y esperando a un HITCHHIKER!Haz clic en cualquier sitio para cerrar",
+    );
   });
 });

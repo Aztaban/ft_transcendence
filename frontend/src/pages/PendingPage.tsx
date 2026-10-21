@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../api/client";
 import {
@@ -9,6 +10,7 @@ import {
 import CancelDialog, { type PendingViewer } from "../features/pending/CancelDialog";
 import PreviewDialog from "../features/pending/PreviewDialog";
 import { projectInitials } from "../features/projects/ProjectOverview";
+import i18n from "../i18n";
 import { useRole } from "../store/RoleContext";
 import type { EvaluationRequest } from "../types/evaluation";
 import { formatDayHeading, formatDuration, formatTime } from "../utils/dateTime";
@@ -38,30 +40,34 @@ function loadPending(viewer: PendingViewer) {
 }
 
 function statusLabel(evaluation: EvaluationRequest) {
-  return evaluation.status === "awaiting_confirmation" ? "Waiting for the student" : "Scheduled";
+  return evaluation.status === "awaiting_confirmation"
+    ? i18n.t("status.waitingForStudent")
+    : i18n.t("status.scheduled");
 }
 
 function otherPerson(evaluation: EvaluationRequest, viewer: PendingViewer) {
   if (viewer === "student") {
     return evaluation.picked_by
-      ? { label: "Hitchhiker", name: evaluation.picked_by.display_name }
+      ? { label: i18n.t("common.hitchhiker"), name: evaluation.picked_by.display_name }
       : null;
   }
 
   // The picking Hitchhiker sees the student, but `student` can be null (R15, api-plan §8.7).
-  return evaluation.student ? { label: "Student", name: evaluation.student.display_name } : null;
+  return evaluation.student
+    ? { label: i18n.t("common.student"), name: evaluation.student.display_name }
+    : null;
 }
 
 function cancelErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.code === "evaluation_already_started") {
-      return "This evaluation has already started, so it can't be cancelled.";
+      return i18n.t("cancelRequest.errorStarted");
     }
 
     return error.message;
   }
 
-  return "Could not cancel the evaluation. Please try again.";
+  return i18n.t("pending.errorGeneric");
 }
 
 // Groups the evaluations by local day, keeping the API order (soonest first).
@@ -89,6 +95,7 @@ function groupByDay(evaluations: EvaluationRequest[]) {
 // Sidebar "Pending" (#536): upcoming evaluations by day, with Preview and Cancel (Figma
 // "Pending Evaluations", "Upcoming Evaluation Details", "Cancel Eval").
 function PendingPage() {
+  const { t } = useTranslation();
   const { activeRole } = useRole();
   const viewer: PendingViewer = activeRole === "HITCHHIKER" ? "hitchhiker" : "student";
   const [evaluations, setEvaluations] = useState<EvaluationRequest[]>([]);
@@ -172,17 +179,15 @@ function PendingPage() {
   return (
     <section className="pending-page">
       <header className="pending-page__header">
-        <h1>Pending Evaluations</h1>
+        <h1>{t("pending.title")}</h1>
         <p>
-          {viewer === "student"
-            ? "Your confirmed evaluations, soonest first."
-            : "The evaluations you picked, soonest first."}
+          {viewer === "student" ? t("pending.subtitleStudent") : t("pending.subtitleHitchhiker")}
         </p>
       </header>
 
       <aside className="pending-page__notice">
         <span aria-hidden="true">i</span>
-        <p>You can cancel anytime before the evaluation starts.</p>
+        <p>{t("pending.notice")}</p>
       </aside>
 
       {loadState === "loading" && (
@@ -190,24 +195,20 @@ function PendingPage() {
           {[1, 2].map((placeholder) => (
             <div className="pending-page__skeleton" key={placeholder} />
           ))}
-          <span className="pending-page__sr-only">Loading evaluations…</span>
+          <span className="pending-page__sr-only">{t("pending.loading")}</span>
         </div>
       )}
 
       {loadState === "error" && (
         <p className="pending-page__error" role="alert">
-          Could not load your evaluations. Please try again later.
+          {t("pending.error")}
         </p>
       )}
 
       {loadState === "ready" && groups.length === 0 && (
         <div className="pending-page__empty">
-          <h2>Nothing scheduled yet</h2>
-          <p>
-            {viewer === "student"
-              ? "Once you confirm a time proposed by a Hitchhiker, it will appear here."
-              : "Pick an open request and it will appear here."}
-          </p>
+          <h2>{t("pending.emptyTitle")}</h2>
+          <p>{viewer === "student" ? t("pending.emptyStudent") : t("pending.emptyHitchhiker")}</p>
         </div>
       )}
 
@@ -240,13 +241,13 @@ function PendingPage() {
                       <div className="pending-card__title">
                         <h3>{evaluation.project.name}</h3>
                         <span className="pending-card__status">
-                          {hasStarted ? "In progress" : statusLabel(evaluation)}
+                          {hasStarted ? t("status.inProgress") : statusLabel(evaluation)}
                         </span>
                       </div>
 
                       <dl className="pending-card__facts">
                         <div>
-                          <dt>Time</dt>
+                          <dt>{t("common.time")}</dt>
                           <dd>
                             <time dateTime={startsAt}>
                               {formatTime(startsAt)} – {formatTime(endsAt)}
@@ -254,11 +255,11 @@ function PendingPage() {
                           </dd>
                         </div>
                         <div>
-                          <dt>Duration</dt>
+                          <dt>{t("common.duration")}</dt>
                           <dd>{formatDuration(startsAt, endsAt)}</dd>
                         </div>
                         <div>
-                          <dt>Campus</dt>
+                          <dt>{t("pending.campus")}</dt>
                           <dd>42 Prague</dd>
                         </div>
                         {person && (
@@ -274,19 +275,19 @@ function PendingPage() {
                       <button
                         className="pending-card__preview"
                         type="button"
-                        aria-label={`Preview ${evaluation.project.name}`}
+                        aria-label={t("pending.previewAria", { project: evaluation.project.name })}
                         onClick={() => setPreview(evaluation)}
                       >
-                        Preview
+                        {t("pending.preview")}
                       </button>
                       <button
                         className="pending-card__cancel"
                         type="button"
                         disabled={hasStarted}
-                        aria-label={`Cancel ${evaluation.project.name}`}
+                        aria-label={t("pending.cancelAria", { project: evaluation.project.name })}
                         onClick={() => setCancel({ evaluation, isDone: false })}
                       >
-                        Cancel
+                        {t("common.cancel")}
                       </button>
                     </div>
                   </li>

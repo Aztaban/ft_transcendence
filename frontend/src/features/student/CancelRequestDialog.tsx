@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 
+import i18n from "../../i18n";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
 import "../../styles/cancel-request.css";
@@ -17,14 +19,14 @@ interface CancelRequestDialogProps {
 // or scheduled slot is given up too.
 function consequence(request: EvaluationRequest) {
   if (request.status === "awaiting_confirmation") {
-    return "The proposed slot is dropped and the Hitchhiker is told.";
+    return i18n.t("cancelRequest.consequenceAwaiting");
   }
 
   if (request.status === "confirmed") {
-    return "The evaluation is cancelled and the Hitchhiker is told.";
+    return i18n.t("cancelRequest.consequenceConfirmed");
   }
 
-  return "Hitchhikers won't see the request anymore.";
+  return i18n.t("cancelRequest.consequencePending");
 }
 
 // Asks before a student cancels their request (#595). Cancelling is final; the student can
@@ -36,6 +38,7 @@ function CancelRequestDialog({
   onConfirm,
   onClose,
 }: CancelRequestDialogProps) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,7 +76,7 @@ function CancelRequestDialog({
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id="cancel-request-title">Cancel this request?</h2>
+        <h2 id="cancel-request-title">{t("cancelRequest.title")}</h2>
 
         <div className="cancel-request__summary">
           <strong>{request.project.name}</strong>
@@ -85,7 +88,7 @@ function CancelRequestDialog({
         </div>
 
         <p className="cancel-request__text">
-          {consequence(request)} This can't be undone, but you can create a new request anytime.
+          {consequence(request)} {t("cancelRequest.final")}
         </p>
 
         {error && (
@@ -101,7 +104,7 @@ function CancelRequestDialog({
             disabled={isSubmitting}
             onClick={onClose}
           >
-            Keep request
+            {t("cancelRequest.keep")}
           </button>
           <button
             className="cancel-request__confirm"
@@ -109,7 +112,7 @@ function CancelRequestDialog({
             disabled={isSubmitting}
             onClick={onConfirm}
           >
-            {isSubmitting ? "Cancelling…" : "Cancel request"}
+            {isSubmitting ? t("common.cancelling") : t("cancelRequest.confirm")}
           </button>
         </div>
       </div>
