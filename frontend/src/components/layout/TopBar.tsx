@@ -6,6 +6,7 @@ import userChevron from "../../assets/figma/user-chevron.svg";
 import PersonAvatar from "../../features/people/PersonAvatar";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import ConnectionStatus from "./ConnectionStatus";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 interface TopBarProps {
   isMenuOpen?: boolean;
@@ -42,6 +43,8 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
 
       <div className="topbar__user">
         <ConnectionStatus />
+
+        <LanguageSwitcher />
 
         <button className="topbar__notification" type="button" aria-label="Notifications">
           <img src={bellIcon} alt="" aria-hidden="true" />

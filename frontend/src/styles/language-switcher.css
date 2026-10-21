@@ -1,0 +1,58 @@
+.language-switcher {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 14px;
+  padding: 3px;
+  border: 1px solid #d6dddd;
+  border-radius: 999px;
+  background: #f3f5f5;
+}
+
+.language-switcher__option {
+  min-width: 34px;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #5d6464;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.language-switcher__option:hover {
+  color: var(--color-text-primary);
+}
+
+.language-switcher__option:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.language-switcher__option[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+@media (max-width: 680px) {
+  .language-switcher {
+    margin-right: 8px;
+  }
+
+  .language-switcher__option {
+    min-width: 28px;
+    padding: 0 5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .language-switcher__option {
+    transition: none;
+  }
+}
