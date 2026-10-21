@@ -1,9 +1,10 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
 import {
+  cancelEvaluationRequest,
   confirmEvaluationRequest,
   declineEvaluationRequest,
   getEvaluationRequest,
@@ -13,7 +14,15 @@ import { LiveContext } from "../websocket/LiveProvider";
 import { FakeSocket, openLiveSocket } from "../websocket/testSocket";
 import EvaluationPage from "./EvaluationPage";
 
+// The viewer: the student of `makeRequest` (id 1) unless a test changes it.
+const viewer = vi.hoisted(() => ({ id: 1 }));
+
+vi.mock("../store/CurrentUserContext", () => ({
+  useCurrentUser: () => ({ user: { id: viewer.id }, roles: [], isLoaded: true, refresh: () => {} }),
+}));
+
 vi.mock("../api/evaluationRequests", () => ({
+  cancelEvaluationRequest: vi.fn(),
   getEvaluationRequest: vi.fn(),
   confirmEvaluationRequest: vi.fn(),
   declineEvaluationRequest: vi.fn(),
@@ -22,6 +31,7 @@ vi.mock("../api/evaluationRequests", () => ({
 const awaiting = makeRequest(7, "push_swap", "awaiting_confirmation");
 
 afterEach(() => {
+  viewer.id = 1;
   cleanup();
   vi.resetAllMocks();
 });
@@ -255,5 +265,95 @@ describe("EvaluationPage live", () => {
     );
     expect(screen.queryByText("Needs your answer")).toBeNull();
     expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+  });
+});
+
+describe("EvaluationPage cancel (#595)", () => {
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  it("cancels a pending request after asking", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "pending"));
+    vi.mocked(cancelEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "cancelled"));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel request" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Cancel this request?" });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel request" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "This request is no longer active" }),
+    ).toBeTruthy();
+    expect(cancelEvaluationRequest).toHaveBeenCalledWith(7);
+    expect(screen.getByRole("status").textContent).toBe(
+      "Your request has been cancelled. You can create a new one anytime.",
+    );
+    expect(screen.queryByRole("button", { name: "Cancel request" })).toBeNull();
+  });
+
+  it("also offers it for a proposed slot that has not started", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue({
+      ...awaiting,
+      starts_at: tomorrow,
+      ends_at: tomorrow,
+    });
+    renderPage();
+
+    expect(await screen.findByRole("button", { name: "Cancel request" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Accept/ })).toBeTruthy();
+  });
+
+  it("does not offer it once the request has ended or the slot has started", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "cancelled"));
+    renderPage();
+
+    await screen.findByRole("heading", { name: "This request is no longer active" });
+
+    expect(screen.queryByRole("button", { name: "Cancel request" })).toBeNull();
+  });
+});
+
+describe("EvaluationPage for the picking Hitchhiker", () => {
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  // §10.4: confirm, decline and cancel are for the own student only.
+  it("shows the proposal without Accept, Decline or Cancel", async () => {
+    viewer.id = 2;
+    vi.mocked(getEvaluationRequest).mockResolvedValue({
+      ...awaiting,
+      starts_at: tomorrow,
+      ends_at: tomorrow,
+    });
+    renderPage();
+
+    expect(await screen.findByText("Waiting for the student")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Decline/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancel request" })).toBeNull();
+  });
+
+  it("speaks to the Hitchhiker, not the student", async () => {
+    viewer.id = 2;
+    vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
+    renderPage();
+
+    expect(await screen.findByText("Waiting for the student")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "You proposed a slot" })).toBeTruthy();
+    expect(screen.getByText("The student has to accept or decline your proposal.")).toBeTruthy();
+    expect(screen.getByText("Student", { selector: "dt" })).toBeTruthy();
+    expect(screen.getByText("Please be on time. The student is counting on you.")).toBeTruthy();
+    expect(screen.queryByText("Needs your answer")).toBeNull();
+    expect(screen.queryByText(/has taken your request/)).toBeNull();
+  });
+
+  it("uses neutral words for someone who is neither the student nor the Hitchhiker", async () => {
+    viewer.id = 9;
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "confirmed"));
+    renderPage();
+
+    expect(
+      await screen.findByRole("heading", { name: "The evaluation is scheduled" }),
+    ).toBeTruthy();
   });
 });
