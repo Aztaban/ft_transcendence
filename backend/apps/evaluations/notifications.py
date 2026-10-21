@@ -33,6 +33,43 @@ def notify_slot_picked(evaluation: EvaluationRequest) -> None:
     )
 
 
+def notify_evaluation_confirmed(evaluation: EvaluationRequest) -> None:
+    """Notify the current picker inside the successful confirmation transaction."""
+    timestamp = DateTimeField(default_timezone=timezone.utc)
+    create_notification(
+        recipient_id=evaluation.picked_by_id,
+        notification_type=Notification.Type.EVALUATION_CONFIRMED,
+        payload={
+            "request_id": evaluation.pk,
+            "project": ProjectRefSerializer(evaluation.project).data,
+            "student": {
+                "id": evaluation.student_id,
+                "display_name": evaluation.student.display_name,
+            },
+            "starts_at": timestamp.to_representation(evaluation.starts_at),
+            "ends_at": timestamp.to_representation(evaluation.ends_at),
+        },
+        target_url=f"/evaluations/{evaluation.pk}",
+    )
+
+
+def notify_evaluation_declined(evaluation: EvaluationRequest, *, previous_picker_id: int) -> None:
+    """Notify the picker captured before the declined slot was cleared."""
+    create_notification(
+        recipient_id=previous_picker_id,
+        notification_type=Notification.Type.EVALUATION_DECLINED,
+        payload={
+            "request_id": evaluation.pk,
+            "project": ProjectRefSerializer(evaluation.project).data,
+            "student": {
+                "id": evaluation.student_id,
+                "display_name": evaluation.student.display_name,
+            },
+        },
+        target_url=f"/evaluations/{evaluation.pk}",
+    )
+
+
 def notify_eligibility_requested(eligibility_request: TutorEligibilityRequest) -> None:
     """Call inside the submission transaction, after assigning selected projects."""
     head_ids = list(

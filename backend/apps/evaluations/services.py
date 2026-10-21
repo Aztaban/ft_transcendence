@@ -18,7 +18,11 @@ from .events import (
     publish_updated_event,
 )
 from .models import EvaluationRequest
-from .notifications import notify_slot_picked
+from .notifications import (
+    notify_evaluation_confirmed,
+    notify_evaluation_declined,
+    notify_slot_picked,
+)
 
 
 class ActiveRequestExists(APIException):
@@ -115,7 +119,7 @@ def confirm_request(evaluation):
         evaluation,
         user_ids=(evaluation.student_id, evaluation.picked_by_id),
     )
-    # TODO(notifications): evaluation.confirmed to picked_by (§8.8) once dispatch exists.
+    notify_evaluation_confirmed(evaluation)
     return evaluation
 
 
@@ -139,7 +143,7 @@ def decline_request(evaluation):
         raise InvalidStateTransition(_("Only requests awaiting confirmation can be declined."))
     evaluation.refresh_from_db()
     publish_declined_event(evaluation, previous_picker_id=previous_picker_id)
-    # TODO(notifications): evaluation.declined to previous_picker_id (§8.8) once dispatch exists.
+    notify_evaluation_declined(evaluation, previous_picker_id=previous_picker_id)
     return evaluation
 
 
