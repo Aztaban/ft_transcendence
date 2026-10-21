@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router";
+import { Navigate, Route, Routes, useLocation } from "react-router";
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
@@ -17,6 +17,7 @@ import ProfilePage from "./pages/ProfilePage";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 import RegisterPage from "./pages/RegisterPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
+import { useAuth } from "./store/AuthContext";
 import { useRole } from "./store/RoleContext";
 import { routePermissions } from "./utils/permissions";
 
@@ -27,7 +28,21 @@ function RequestsRoute() {
   return activeRole === "HITCHHIKER" ? <HitchhikerRequestsPage /> : <CreateRequestPage />;
 }
 
+// Every page except login and registration needs a session (#328). Nothing is rendered, and so
+// no API is called, until the session check has answered; logged out, the user goes to the login
+// page, which brings them back here afterwards.
 function AuthenticatedApp() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
   return (
     <BaseLayout>
       <Routes>

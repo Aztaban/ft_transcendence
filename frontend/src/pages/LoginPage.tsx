@@ -32,15 +32,19 @@ function getOAuthErrorMessage(code: string | null) {
   return OAUTH_ERROR_MESSAGES[code] ?? "42 login failed. Please try again.";
 }
 
-// Set by RegisterPage after a successful registration (#522).
+// `registeredEmail`: set by RegisterPage after a successful registration (#522).
+// `from`: the page the login gate sent the user away from (#328).
 interface LoginLocationState {
   registeredEmail?: string;
+  from?: { pathname: string; search?: string; hash?: string };
 }
 
 function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const registeredEmail = (location.state as LoginLocationState | null)?.registeredEmail;
+  const from = (location.state as LoginLocationState | null)?.from;
+  const afterLogin = from ? `${from.pathname}${from.search ?? ""}${from.hash ?? ""}` : "/";
   const [searchParams, setSearchParams] = useSearchParams();
   const { login } = useAuth();
 
@@ -70,7 +74,7 @@ function LoginPage() {
 
     try {
       await login({ email, password });
-      navigate("/", { replace: true });
+      navigate(afterLogin, { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.code === "invalid_credentials") {
         setError("Invalid email or password.");

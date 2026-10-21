@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
 import { getSession, loginUser, logoutUser, type AuthUser, type LoginPayload } from "../api/auth";
+import { setUnauthorizedHandler } from "../api/client";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -67,6 +68,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   const endSession = useCallback(() => setUser(null), []);
+
+  // Any API call answering 401 means the session is gone: forget the user, so the app goes to
+  // the login page instead of staying on a page that keeps failing (#328).
+  useEffect(() => {
+    setUnauthorizedHandler(endSession);
+
+    return () => setUnauthorizedHandler(null);
+  }, [endSession]);
 
   return (
     <AuthContext.Provider
