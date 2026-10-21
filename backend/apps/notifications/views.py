@@ -1,5 +1,6 @@
 """Recipient-owned notification API."""
 
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import DestroyAPIView, GenericAPIView, ListAPIView
@@ -87,3 +88,38 @@ class NotificationDeleteView(OwnNotificationsMixin, DestroyAPIView):
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
+
+
+class NotificationReadView(OwnNotificationsMixin, GenericAPIView):
+    @extend_schema(
+        summary="Mark an own notification as read",
+        request=None,
+        parameters=[CSRF_HEADER],
+        responses={
+            200: NotificationSerializer,
+            **error_responses(
+                {401: ("not_authenticated",), 403: ("csrf_failed",), 404: ("not_found",)}
+            ),
+        },
+    )
+    def post(self, request, pk):
+        now = timezone.now()
+        # Only the first caller sets the timestamp; retries preserve it.
+        self.get_queryset().filter(pk=pk, read_at__isnull=True).update(read_at=now, updated_at=now)
+        return Response(self.get_serializer(self.get_object()).data)
+
+
+class NotificationReadAllView(OwnNotificationsMixin, GenericAPIView):
+    @extend_schema(
+        summary="Mark all own notifications as read",
+        request=None,
+        parameters=[CSRF_HEADER],
+        responses={
+            204: None,
+            **error_responses({401: ("not_authenticated",), 403: ("csrf_failed",)}),
+        },
+    )
+    def post(self, request):
+        now = timezone.now()
+        self.get_queryset().filter(read_at__isnull=True).update(read_at=now, updated_at=now)
+        return Response(status=204)

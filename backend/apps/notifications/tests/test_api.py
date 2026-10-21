@@ -1,4 +1,4 @@
-"""Notification list, badge and deletion contracts."""
+"""Notification API contracts, including idempotent read actions."""
 
 from datetime import datetime, timezone
 
@@ -67,6 +67,8 @@ def notifications(people):
         ("get", "notification-list", {}),
         ("get", "notification-unread-count", {}),
         ("delete", "notification-delete", {"pk": 42}),
+        ("post", "notification-read", {"pk": 42}),
+        ("post", "notification-read-all", {}),
     ],
 )
 def test_endpoints_require_session(method, name, kwargs):
@@ -270,5 +272,150 @@ def test_notification_schema_matches_public_representation_and_routes():
         ("notifications/", "get"),
         ("notifications/unread-count/", "get"),
         ("notifications/{id}/", "delete"),
+        ("notifications/{id}/read/", "post"),
+        ("notifications/read-all/", "post"),
     ]:
         assert schema["paths"][f"/api/v1/{path}"][method]["security"] == [{"cookieAuth": []}]
+    for path, response_status in [
+        ("notifications/{id}/read/", "200"),
+        ("notifications/read-all/", "204"),
+    ]:
+        operation = schema["paths"][f"/api/v1/{path}"]["post"]
+        assert "requestBody" not in operation
+        assert response_status in operation["responses"]
+        assert (
+            next(p for p in operation["parameters"] if p["name"] == "X-CSRFToken")["required"]
+            is True
+        )
+
+
+def test_mark_read_returns_exact_notification_and_preserves_timestamp_on_retry(
+    client, notifications, monkeypatch
+):
+    monkeypatch.setattr("apps.notifications.views.timezone.now", lambda: READ)
+    url = reverse("api:notification-read", kwargs={"pk": 42})
+    response = client.post(url)
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": 42,
+        "type": "eligibility.decided",
+        "payload": {"request_id": 7, "decision": "approved", "review_note": ""},
+        "target_url": "/eligibility-requests/7",
+        "read_at": "2026-10-20T13:00:00Z",
+        "created_at": "2026-10-20T12:00:00Z",
+    }
+    monkeypatch.setattr(
+        "apps.notifications.views.timezone.now",
+        lambda: datetime(2026, 10, 21, 14, tzinfo=timezone.utc),
+    )
+    retry = client.post(url)
+    assert retry.status_code == 200
+    assert retry.json() == {
+        "id": 42,
+        "type": "eligibility.decided",
+        "payload": {"request_id": 7, "decision": "approved", "review_note": ""},
+        "target_url": "/eligibility-requests/7",
+        "read_at": "2026-10-20T13:00:00Z",
+        "created_at": "2026-10-20T12:00:00Z",
+    }
+    changed = Notification.objects.get(pk=42)
+    assert changed.read_at == READ
+    assert changed.updated_at == READ
+    assert Notification.objects.get(pk=43).read_at is None
+    assert client.get(reverse("api:notification-unread-count")).json() == {"count": 0}
+    assert client.get(reverse("api:notification-list"), {"unread": "true"}).json() == {
+        "count": 0,
+        "next": None,
+        "previous": None,
+        "results": [],
+    }
+
+
+@pytest.mark.parametrize("pk", [43, 999])
+def test_mark_read_hides_other_users_and_missing_notifications(client, notifications, pk):
+    response = client.post(reverse("api:notification-read", kwargs={"pk": pk}))
+    assert response.status_code == 404
+    assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
+    assert Notification.objects.get(pk=42).read_at is None
+    assert Notification.objects.get(pk=43).read_at is None
+
+
+def test_read_all_changes_only_own_unread_rows_and_is_idempotent(
+    client, notifications, monkeypatch
+):
+    already_read_updated = Notification.objects.get(pk=41).updated_at
+    monkeypatch.setattr("apps.notifications.views.timezone.now", lambda: READ)
+    url = reverse("api:notification-read-all")
+    response = client.post(url)
+    assert response.status_code == 204
+    assert response.content == b""
+    monkeypatch.setattr(
+        "apps.notifications.views.timezone.now",
+        lambda: datetime(2026, 10, 21, 14, tzinfo=timezone.utc),
+    )
+    response = client.post(url)
+    assert response.status_code == 204
+    assert response.content == b""
+    assert Notification.objects.get(pk=41).read_at == READ
+    assert Notification.objects.get(pk=41).updated_at == already_read_updated
+    assert Notification.objects.get(pk=42).read_at == READ
+    assert Notification.objects.get(pk=42).updated_at == READ
+    assert Notification.objects.get(pk=43).read_at is None
+    assert client.get(reverse("api:notification-unread-count")).json() == {"count": 0}
+
+
+def test_read_all_with_no_notifications_returns_no_content(client):
+    response = client.post(reverse("api:notification-read-all"))
+    assert response.status_code == 204
+    assert response.content == b""
+
+
+@pytest.mark.parametrize(
+    "name,kwargs",
+    [
+        ("notification-read", {"pk": 42}),
+        ("notification-read-all", {}),
+    ],
+)
+@pytest.mark.parametrize("csrf", [True, False])
+def test_read_actions_through_real_login_require_csrf(people, notifications, name, kwargs, csrf):
+    client = APIClient(enforce_csrf_checks=True)
+    client.get(reverse("api:session"))
+    login = client.post(
+        reverse("api:login"),
+        {"email": "owner@example.com", "password": "secret"},
+        format="json",
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
+    assert login.status_code == 200
+    headers = {"HTTP_X_CSRFTOKEN": client.cookies["csrftoken"].value} if csrf else {}
+    response = client.post(reverse(f"api:{name}", kwargs=kwargs), **headers)
+    if csrf:
+        assert response.status_code == (200 if name == "notification-read" else 204)
+        assert Notification.objects.get(pk=42).read_at is not None
+    else:
+        assert response.status_code == 403
+        assert response.json() == {
+            "error": {
+                "code": "csrf_failed",
+                "message": "CSRF verification failed. Reload the page and try again.",
+            }
+        }
+        assert Notification.objects.get(pk=42).read_at is None
+    assert Notification.objects.get(pk=43).read_at is None
+
+
+@pytest.mark.parametrize(
+    "name,kwargs",
+    [
+        ("notification-read", {"pk": 42}),
+        ("notification-read-all", {}),
+    ],
+)
+def test_read_actions_reject_get_without_changing_state(client, notifications, name, kwargs):
+    response = client.get(reverse(f"api:{name}", kwargs=kwargs))
+    assert response.status_code == 405
+    assert response.json() == {
+        "error": {"code": "method_not_allowed", "message": "Method not allowed."}
+    }
+    assert Notification.objects.get(pk=42).read_at is None
