@@ -101,19 +101,17 @@ def test_session_endpoint_is_get_only():
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
 
-def test_cookie_settings_differ_between_local_http_and_production_https(monkeypatch):
+def test_cookie_settings_are_the_same_in_development_and_production(monkeypatch):
+    # The app is always used through nginx's TLS, so dev cookies are Secure too (#340).
     # Production settings require a secret and allowed hosts at import time.
     monkeypatch.setenv("DJANGO_SECRET_KEY", "cookie-settings-test-secret")
     monkeypatch.setenv("DJANGO_ALLOWED_HOSTS", "example.com")
     dev = importlib.import_module("config.settings.dev")
     prod = importlib.reload(importlib.import_module("config.settings.prod"))
 
-    assert dev.SESSION_COOKIE_SECURE is False
-    assert dev.CSRF_COOKIE_SECURE is False
-    assert prod.SESSION_COOKIE_SECURE is True
-    assert prod.CSRF_COOKIE_SECURE is True
-
     for configuration in (dev, prod):
+        assert configuration.SESSION_COOKIE_SECURE is True
+        assert configuration.CSRF_COOKIE_SECURE is True
         assert configuration.SESSION_COOKIE_HTTPONLY is True
         assert configuration.SESSION_COOKIE_SAMESITE == "Lax"
         assert configuration.CSRF_COOKIE_HTTPONLY is False

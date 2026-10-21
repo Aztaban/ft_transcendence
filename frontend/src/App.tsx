@@ -8,6 +8,7 @@ import CouncilMessagePage from "./pages/CouncilMessagePage";
 import CouncilPage from "./pages/CouncilPage";
 import CreateRequestPage from "./pages/CreateRequestPage";
 import EligibilityRequestPage from "./pages/EligibilityRequestPage";
+import EligibilityReviewPage from "./pages/EligibilityReviewPage";
 import EvaluationPage from "./pages/EvaluationPage";
 import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
@@ -76,6 +77,17 @@ function AuthenticatedApp() {
               fallback={<UnauthorizedPage />}
             >
               <EligibilityRequestPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/eligibility-requests"
+          element={
+            <RoleGuard
+              allowedRoles={routePermissions.eligibilityReview}
+              fallback={<UnauthorizedPage />}
+            >
+              <EligibilityReviewPage />
             </RoleGuard>
           }
         />

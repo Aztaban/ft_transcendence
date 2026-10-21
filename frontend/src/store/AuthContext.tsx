@@ -84,6 +84,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 }
 
+// The session state, or undefined without an AuthProvider (e.g. in component tests), for
+// providers that must also work there.
+export function useOptionalAuth(): AuthContextValue | undefined {
+  return useContext(AuthContext);
+}
+
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
 

@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { listEvaluationRequests } from "../../api/evaluationRequests";
+import { cancelEvaluationRequest, listEvaluationRequests } from "../../api/evaluationRequests";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../../utils/dateTime";
+import CancelRequestDialog from "./CancelRequestDialog";
+import { canCancel, cancelErrorMessage } from "./cancelRequest";
+import { EVALUATION_EVENTS } from "../../websocket/events";
+import { useLiveRefresh } from "../../websocket/LiveProvider";
 import "../../styles/my-requests.css";
 
 type LoadState = "loading" | "ready" | "error";
@@ -46,7 +50,13 @@ function statusLabel(request: EvaluationRequest): { label: string; tone: Tone } 
   return { label: "Result pending", tone: "violet" };
 }
 
-function RequestRow({ request }: { request: EvaluationRequest }) {
+interface RequestRowProps {
+  request: EvaluationRequest;
+  // Only active rows can be cancelled.
+  onCancel?: (request: EvaluationRequest) => void;
+}
+
+function RequestRow({ request, onCancel }: RequestRowProps) {
   const status = statusLabel(request);
 
   return (
@@ -67,6 +77,17 @@ function RequestRow({ request }: { request: EvaluationRequest }) {
       <span className={`my-requests__status my-requests__status--${status.tone}`}>
         {status.label}
       </span>
+
+      {onCancel && canCancel(request) && (
+        <button
+          className="my-requests__cancel"
+          type="button"
+          aria-label={`Cancel the ${request.project.name} request`}
+          onClick={() => onCancel(request)}
+        >
+          Cancel
+        </button>
+      )}
     </li>
   );
 }
@@ -78,10 +99,13 @@ interface RequestList {
   loadState: LoadState;
   isLoadingMore: boolean;
   loadMore: () => void;
+  // Loads the list again from its first page, e.g. after a cancel.
+  reload: () => void;
 }
 
 // One paginated list of the student's requests (§5.7): the first page on mount, then
-// "Show more" appends the next one.
+// "Show more" appends the next one. When one of the requests changes, or after a reconnect,
+// the list is loaded again from its first page in the background (§9, #255).
 function useRequestList(history: boolean): RequestList {
   const [requests, setRequests] = useState<EvaluationRequest[]>([]);
   const [total, setTotal] = useState(0);
@@ -89,9 +113,21 @@ function useRequestList(history: boolean): RequestList {
   const [hasMore, setHasMore] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Set by a live refresh: a failure then keeps the requests already shown.
+  const isLiveRefresh = useRef(false);
+
+  useLiveRefresh(EVALUATION_EVENTS, () => {
+    isLiveRefresh.current = true;
+    setPage(1);
+    setReloadKey((key) => key + 1);
+  });
 
   useEffect(() => {
     let active = true;
+    const inBackground = isLiveRefresh.current;
+
+    isLiveRefresh.current = false;
 
     listEvaluationRequests({ scope: "mine", history, page })
       .then((result) => {
@@ -104,7 +140,7 @@ function useRequestList(history: boolean): RequestList {
       })
       .catch(() => {
         if (active && page === 1) {
-          setLoadState("error");
+          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       })
       .finally(() => {
@@ -116,7 +152,7 @@ function useRequestList(history: boolean): RequestList {
     return () => {
       active = false;
     };
-  }, [history, page]);
+  }, [history, page, reloadKey]);
 
   return {
     requests,
@@ -127,6 +163,10 @@ function useRequestList(history: boolean): RequestList {
     loadMore: () => {
       setIsLoadingMore(true);
       setPage((current) => current + 1);
+    },
+    reload: () => {
+      setPage(1);
+      setReloadKey((key) => key + 1);
     },
   };
 }
@@ -158,6 +198,37 @@ function ShowMore({ list, label }: { list: RequestList; label: string }) {
 function MyRequests() {
   const active = useRequestList(false);
   const past = useRequestList(true);
+  const [cancelling, setCancelling] = useState<EvaluationRequest | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const closeCancel = useCallback(() => {
+    setCancelling(null);
+    setCancelError("");
+  }, []);
+
+  // A cancelled request moves from the active list to the past one (api-plan §7.1, #595).
+  async function handleCancel() {
+    if (!cancelling) {
+      return;
+    }
+
+    setCancelError("");
+    setIsCancelling(true);
+
+    try {
+      await cancelEvaluationRequest(cancelling.id);
+      setNotice(`Your ${cancelling.project.name} request was cancelled.`);
+      setCancelling(null);
+      active.reload();
+      past.reload();
+    } catch (error) {
+      setCancelError(cancelErrorMessage(error));
+    } finally {
+      setIsCancelling(false);
+    }
+  }
 
   const loadState: LoadState =
     active.loadState === "error" || past.loadState === "error"
@@ -170,6 +241,12 @@ function MyRequests() {
   return (
     <section className="my-requests" aria-labelledby="my-requests-title">
       <h2 id="my-requests-title">Your requests</h2>
+
+      {notice && (
+        <p className="my-requests__notice" role="status">
+          {notice}
+        </p>
+      )}
 
       {loadState === "loading" && (
         <div className="my-requests__list" aria-busy="true">
@@ -199,7 +276,14 @@ function MyRequests() {
             ) : (
               <ul className="my-requests__list">
                 {active.requests.map((request) => (
-                  <RequestRow request={request} key={request.id} />
+                  <RequestRow
+                    request={request}
+                    key={request.id}
+                    onCancel={(chosen) => {
+                      setNotice("");
+                      setCancelling(chosen);
+                    }}
+                  />
                 ))}
               </ul>
             )}
@@ -218,6 +302,16 @@ function MyRequests() {
             </div>
           )}
         </>
+      )}
+
+      {cancelling && (
+        <CancelRequestDialog
+          request={cancelling}
+          isSubmitting={isCancelling}
+          error={cancelError}
+          onConfirm={handleCancel}
+          onClose={closeCancel}
+        />
       )}
     </section>
   );

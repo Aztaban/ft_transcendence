@@ -15,6 +15,13 @@ describe("AwaitingConfirmation", () => {
     expect(screen.getByText("Nothing waiting")).toBeTruthy();
   });
 
+  it("shows a loading placeholder instead of the empty state while loading", () => {
+    render(<AwaitingConfirmation requests={[]} isLoading />);
+
+    expect(screen.getByText("Loading proposed slots…")).toBeTruthy();
+    expect(screen.queryByText("Nothing waiting")).toBeNull();
+  });
+
   it("displays proposed slots waiting for the student", () => {
     render(
       <AwaitingConfirmation
