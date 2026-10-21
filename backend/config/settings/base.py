@@ -3,11 +3,18 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # config/settings/base.py -> backend/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Development gets a safe local fallback. Production overrides this in prod.py.
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "insecure-dev-key")
+# No fallback, in any environment: `make env` writes a random key into .env.
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
+if SECRET_KEY in ("", "change-me-in-dev"):
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY is missing or still the example value. Set a random key in .env "
+        "(e.g. `openssl rand -hex 32`); `make env` does this for a new .env."
+    )
 DEBUG = False
 ALLOWED_HOSTS = [
     host.strip()
@@ -132,6 +139,10 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "apps.core.exceptions.envelope_exception_handler",
+    # JSON only: no browsable API pages, so `Accept: text/html` is a 406 (api-plan §5.6).
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
     # Rate limits (api-plan §5.9). Anonymous callers of the default limit are
     # counted per IP. Exceeding a limit gives 429 `throttled` with Retry-After.
     "DEFAULT_THROTTLE_CLASSES": [

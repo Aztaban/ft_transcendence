@@ -23,6 +23,11 @@ class DummyConnection:
         return DummyCursor()
 
 
+class BrokenConnection:
+    def cursor(self):
+        raise RuntimeError("Access denied for user 'transcendence'@'10.0.0.7'")
+
+
 class DummyRedis:
     def ping(self):
         return True
@@ -43,6 +48,23 @@ def test_health_reports_db_redis_and_celery(monkeypatch):
     assert response.json() == {
         "status": "ok",
         "db": "ok",
+        "redis": "ok",
+        "celery": "ok",
+    }
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"])
+def test_health_hides_failure_details(monkeypatch):
+    """The endpoint is public: it says a service is down, never why."""
+    monkeypatch.setattr("config.views.connection", BrokenConnection())
+    monkeypatch.setattr("config.views.redis.from_url", lambda _url: DummyRedis())
+
+    response = Client().get("/health/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "error",
+        "db": "error",
         "redis": "ok",
         "celery": "ok",
     }
