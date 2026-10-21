@@ -184,11 +184,16 @@ CACHES = {
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+NOTIFICATION_RETENTION_DAYS = 90
 CELERY_BEAT_SCHEDULE = {
     "heartbeat-every-10s": {
         "task": "heartbeat",
         "schedule": 10.0,
-    }
+    },
+    "purge-old-notifications-daily": {
+        "task": "purge_old_notifications",
+        "schedule": 86400.0,
+    },
 }
 
 PASSWORD_HASHERS = [
