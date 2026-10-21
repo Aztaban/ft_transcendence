@@ -70,6 +70,33 @@ def notify_evaluation_declined(evaluation: EvaluationRequest, *, previous_picker
     )
 
 
+def notify_evaluation_cancelled(evaluation: EvaluationRequest) -> None:
+    """Notify the affected participants inside the cancellation transaction (§8.8)."""
+    recipients = set()
+    if evaluation.picked_by_id is not None:
+        recipients.add(evaluation.picked_by_id)
+    if evaluation.cancelled_by_id != evaluation.student_id:
+        recipients.add(evaluation.student_id)
+    recipients.discard(evaluation.cancelled_by_id)
+    if not recipients:
+        return
+    payload = {
+        "request_id": evaluation.pk,
+        "project": ProjectRefSerializer(evaluation.project).data,
+        "cancelled_by": {
+            "id": evaluation.cancelled_by_id,
+            "display_name": evaluation.cancelled_by.display_name,
+        },
+    }
+    for recipient_id in sorted(recipients):
+        create_notification(
+            recipient_id=recipient_id,
+            notification_type=Notification.Type.EVALUATION_CANCELLED,
+            payload=payload,
+            target_url=f"/evaluations/{evaluation.pk}",
+        )
+
+
 def notify_eligibility_requested(eligibility_request: TutorEligibilityRequest) -> None:
     """Call inside the submission transaction, after assigning selected projects."""
     head_ids = list(

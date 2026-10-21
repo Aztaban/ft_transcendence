@@ -19,6 +19,7 @@ from .events import (
 )
 from .models import EvaluationRequest
 from .notifications import (
+    notify_evaluation_cancelled,
     notify_evaluation_confirmed,
     notify_evaluation_declined,
     notify_slot_picked,
@@ -182,7 +183,7 @@ def cancel_request(evaluation):
         raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
     evaluation.refresh_from_db()
     publish_cancelled_event(evaluation, previous_status=current.status)
-    # TODO(notifications): evaluation.cancelled to picked_by, if present (§8.8).
+    notify_evaluation_cancelled(evaluation)
     return evaluation
 
 

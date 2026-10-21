@@ -269,7 +269,9 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
             assert response.json() == expected_response
             if rollback:
                 transaction.set_rollback(True)
-        if action in ("pick-slot", "confirm", "decline") and not rollback:
+        if not rollback and (
+            action in ("pick-slot", "confirm", "decline") or (action == "cancel" and picked)
+        ):
             return Notification.objects.get().pk
         return None
 
@@ -291,6 +293,8 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
                 if user_id in recipients:
                     assert await communicator.receive_json_from(timeout=3) == expected_event
                 notification_recipient = {"pick-slot": 7, "confirm": 42, "decline": 42}.get(action)
+                if action == "cancel" and picked:
+                    notification_recipient = 42
                 if not rollback and user_id == notification_recipient:
                     assert await communicator.receive_json_from(timeout=3) == {
                         "event": "notification.created",
