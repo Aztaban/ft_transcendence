@@ -21,7 +21,9 @@ from .models import EvaluationRequest
 from .notifications import (
     notify_evaluation_cancelled,
     notify_evaluation_confirmed,
+    notify_evaluation_created,
     notify_evaluation_declined,
+    notify_evaluation_released,
     notify_slot_picked,
 )
 
@@ -81,7 +83,7 @@ def create_request(student, project, note):
         raise ActiveRequestExists()
     evaluation = EvaluationRequest.objects.create(student=student, project=project, note=note)
     publish_created_event(evaluation)
-    # TODO(notifications): evaluation.created to eligible Hitchhikers (§8.8).
+    notify_evaluation_created(evaluation)
     return evaluation
 
 
@@ -217,8 +219,7 @@ def release_slot(evaluation, user):
         raise InvalidStateTransition(_("Only picked requests without a result can be released."))
     evaluation.refresh_from_db()
     publish_released_event(evaluation, previous_picker_id=current.picked_by_id)
-    # TODO(notifications): evaluation.released to student, payload
-    # {request_id, project, tutor} (§8.8); also emit notification.created.
+    notify_evaluation_released(evaluation, previous_picker=current.picked_by)
     return evaluation
 
 

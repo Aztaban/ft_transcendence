@@ -7,10 +7,89 @@ from rest_framework.fields import DateTimeField
 
 from apps.accounts.models import Role
 from apps.core.events import publish_user_event
+from apps.evaluations.events import _eligible_hitchhiker_ids
 from apps.evaluations.models import EvaluationRequest, TutorEligibilityRequest
 from apps.evaluations.references import ProjectRefSerializer
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
+
+
+def notify_evaluation_created(evaluation: EvaluationRequest) -> None:
+    """Notify active eligible Hitchhikers without disclosing the student (§8.8)."""
+    payload = {
+        "request_id": evaluation.pk,
+        "project": ProjectRefSerializer(evaluation.project).data,
+    }
+    for recipient_id in _eligible_hitchhiker_ids(evaluation.project_id).exclude(
+        tutor_id=evaluation.student_id
+    ):
+        create_notification(
+            recipient_id=recipient_id,
+            notification_type=Notification.Type.EVALUATION_CREATED,
+            payload=payload,
+            target_url=f"/evaluations/{evaluation.pk}",
+        )
+
+
+def notify_evaluation_released(evaluation: EvaluationRequest, *, previous_picker) -> None:
+    """Use the locked picker's facts after release has cleared the pick."""
+    create_notification(
+        recipient_id=evaluation.student_id,
+        notification_type=Notification.Type.EVALUATION_RELEASED,
+        payload={
+            "request_id": evaluation.pk,
+            "project": ProjectRefSerializer(evaluation.project).data,
+            "tutor": {"id": previous_picker.pk, "display_name": previous_picker.display_name},
+        },
+        target_url=f"/evaluations/{evaluation.pk}",
+    )
+
+
+def notify_evaluation_expired(
+    evaluation: EvaluationRequest, *, previous_status: str, previous_picker_id: int | None
+) -> None:
+    """Expiry callers must capture the prior state before clearing the pick (§8.8)."""
+    if previous_status not in (
+        EvaluationRequest.Status.PENDING,
+        EvaluationRequest.Status.AWAITING_CONFIRMATION,
+    ):
+        raise ValueError("Only pending or awaiting-confirmation requests can expire")
+    if (
+        previous_status == EvaluationRequest.Status.AWAITING_CONFIRMATION
+        and previous_picker_id is None
+    ):
+        raise ValueError("An awaiting-confirmation request must have a previous picker")
+    recipients = {evaluation.student_id}
+    if previous_status == EvaluationRequest.Status.AWAITING_CONFIRMATION:
+        recipients.add(previous_picker_id)
+    payload = {
+        "request_id": evaluation.pk,
+        "project": ProjectRefSerializer(evaluation.project).data,
+        "previous_status": previous_status,
+    }
+    for recipient_id in sorted(recipients):
+        create_notification(
+            recipient_id=recipient_id,
+            notification_type=Notification.Type.EVALUATION_EXPIRED,
+            payload=payload,
+            target_url=f"/evaluations/{evaluation.pk}",
+        )
+
+
+def notify_evaluation_result_recorded(evaluation: EvaluationRequest) -> None:
+    """The admin calls this only when result changes from null to a value (§8.8)."""
+    payload = {
+        "request_id": evaluation.pk,
+        "project": ProjectRefSerializer(evaluation.project).data,
+        "result": evaluation.result,
+    }
+    for recipient_id in sorted({evaluation.student_id, evaluation.picked_by_id}):
+        create_notification(
+            recipient_id=recipient_id,
+            notification_type=Notification.Type.EVALUATION_RESULT_RECORDED,
+            payload=payload,
+            target_url=f"/evaluations/{evaluation.pk}",
+        )
 
 
 def notify_slot_picked(evaluation: EvaluationRequest) -> None:
