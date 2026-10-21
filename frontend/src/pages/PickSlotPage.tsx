@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { ApiError } from "../api/client";
@@ -7,8 +8,14 @@ import SlotPicker, {
   type ChosenSlot,
   type SlotFieldErrors,
 } from "../features/hitchhiker/SlotPicker";
-import { isStartAllowed, MIN_LEAD_MINUTES } from "../features/hitchhiker/slotRules";
+import {
+  DURATION_OPTIONS,
+  isStartAllowed,
+  MAX_DAYS_AHEAD,
+  MIN_LEAD_MINUTES,
+} from "../features/hitchhiker/slotRules";
 import SuccessDialog from "../features/hitchhiker/SuccessDialog";
+import i18n from "../i18n";
 import type { EvaluationRequest } from "../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../utils/dateTime";
 import { EVALUATION_EVENTS } from "../websocket/events";
@@ -21,24 +28,28 @@ type LoadState = "loading" | "ready" | "error";
 // become too soon.
 const NOW_REFRESH_MS = 30_000;
 
-const pickErrorMessages: Record<string, string> = {
-  slot_overlaps: "You already have an evaluation at that time. Choose another slot.",
-  student_unavailable: "The student already has an evaluation at that time. Choose another slot.",
-  request_not_pending: "Another Hitchhiker has just picked this request.",
-  not_eligible: "You are not eligible to evaluate this project.",
-  cannot_pick_own_request: "You cannot pick your own request.",
+// Error code (api-plan §5.6) → key of the "pickSlot" texts.
+const pickErrorKeys: Record<string, string> = {
+  slot_overlaps: "pickSlot.errorOverlaps",
+  student_unavailable: "pickSlot.errorStudentUnavailable",
+  request_not_pending: "pickSlot.errorNotPending",
+  not_eligible: "pickSlot.errorNotEligible",
+  cannot_pick_own_request: "pickSlot.errorOwnRequest",
 };
 
 function pickErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
-    return pickErrorMessages[error.code ?? ""] ?? error.message;
+    const key = pickErrorKeys[error.code ?? ""];
+
+    return key ? i18n.t(key) : error.message;
   }
 
-  return "Could not send the slot. Please try again.";
+  return i18n.t("pickSlot.errorGeneric");
 }
 
 // Hitchhiker "choose a slot" page (Figma "pending requests - details" and "confirm"), #505.
 function PickSlotPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [now, setNow] = useState(() => new Date());
@@ -164,35 +175,35 @@ function PickSlotPage() {
   return (
     <section className="pick-slot">
       <Link className="pick-slot__back" to="/requests">
-        <span aria-hidden="true">‹</span> Back to requests
+        <span aria-hidden="true">‹</span> {t("pickSlot.back")}
       </Link>
 
-      {loadState === "loading" && <p className="pick-slot__status">Loading the request…</p>}
+      {loadState === "loading" && <p className="pick-slot__status">{t("pickSlot.loading")}</p>}
 
       {loadState === "error" && (
         <p className="pick-slot__error" role="alert">
-          This request could not be loaded. It may have been picked or cancelled.
+          {t("pickSlot.loadError")}
         </p>
       )}
 
       {request && (
         <>
           <header className="pick-slot__header">
-            <h1>Choose a slot for {request.project.name}</h1>
-            <p>Requested {formatTimeAgo(request.created_at)}</p>
+            <h1>{t("pickSlot.title", { project: request.project.name })}</h1>
+            <p>{t("common.requestedAgo", { time: formatTimeAgo(request.created_at) })}</p>
           </header>
 
           <div className="pick-slot__layout">
             <div className="pick-slot__main">
               <section className="pick-slot__card">
-                <h2>Note from the student</h2>
-                <p className="pick-slot__note">{request.note || "No note from the student."}</p>
+                <h2>{t("pickSlot.noteTitle")}</h2>
+                <p className="pick-slot__note">{request.note || t("common.noNote")}</p>
               </section>
 
               {request.status === "pending" && !isGone ? (
                 <>
                   <section className="pick-slot__card">
-                    <h2>Your slot</h2>
+                    <h2>{t("pickSlot.yourSlot")}</h2>
                     <SlotPicker now={now} onChange={chooseSlot} errors={fieldErrors} />
                   </section>
 
@@ -201,19 +212,21 @@ function PickSlotPage() {
                       ✓
                     </span>
                     <div>
-                      <strong>Selected slot</strong>
+                      <strong>{t("pickSlot.selected")}</strong>
                       <p>
                         {slot
-                          ? `${formatSlot(slot.start.toISOString(), slot.end.toISOString())} (${slot.durationMinutes} min)`
-                          : "Choose a day and a start time."}
+                          ? t("pickSlot.selectedValue", {
+                              slot: formatSlot(slot.start.toISOString(), slot.end.toISOString()),
+                              minutes: slot.durationMinutes,
+                            })
+                          : t("pickSlot.choosePrompt")}
                       </p>
                     </div>
                   </div>
 
                   {isTooSoon && (
                     <p className="pick-slot__error" role="alert">
-                      The chosen start is now less than {MIN_LEAD_MINUTES} minutes away. Please
-                      choose a later time.
+                      {t("pickSlot.tooSoon", { minutes: MIN_LEAD_MINUTES })}
                     </p>
                   )}
 
@@ -230,33 +243,36 @@ function PickSlotPage() {
                       disabled={!slot || isTooSoon || isSubmitting}
                       onClick={handleSubmit}
                     >
-                      {isSubmitting ? "Sending…" : "Submit"}
+                      {isSubmitting ? t("common.sending") : t("common.submit")}
                     </button>
                   </div>
                 </>
               ) : (
                 <p className="pick-slot__error" role="alert">
-                  {isGone
-                    ? "This request is no longer open. Another Hitchhiker may have picked it, or the student cancelled it."
-                    : "This request is no longer open."}
+                  {isGone ? t("pickSlot.gone") : t("pickSlot.notOpen")}
                 </p>
               )}
             </div>
 
             <aside className="pick-slot__aside">
               <section className="pick-slot__panel">
-                <h2>Slot rules</h2>
+                <h2>{t("pickSlot.rulesTitle")}</h2>
                 <ul>
-                  <li>Starts on :00, :15, :30 or :45</li>
-                  <li>Lasts 15 to 120 minutes</li>
-                  <li>At least 30 minutes from now</li>
-                  <li>At most 14 days ahead</li>
+                  <li>{t("pickSlot.ruleQuarter")}</li>
+                  <li>
+                    {t("pickSlot.ruleLength", {
+                      min: DURATION_OPTIONS[0],
+                      max: DURATION_OPTIONS[DURATION_OPTIONS.length - 1],
+                    })}
+                  </li>
+                  <li>{t("pickSlot.ruleLead", { minutes: MIN_LEAD_MINUTES })}</li>
+                  <li>{t("pickSlot.ruleAhead", { days: MAX_DAYS_AHEAD })}</li>
                 </ul>
               </section>
 
               <section className="pick-slot__panel pick-slot__panel--tip">
-                <h2>What happens next</h2>
-                <p>The student gets your proposal and confirms or declines it.</p>
+                <h2>{t("pickSlot.nextTitle")}</h2>
+                <p>{t("pickSlot.nextText")}</p>
               </section>
             </aside>
           </div>
@@ -265,7 +281,7 @@ function PickSlotPage() {
 
       {isPicked && (
         <SuccessDialog onClose={() => navigate("/requests")}>
-          The request has been picked! <strong>The student has to accept.</strong>
+          <Trans i18nKey="pickSlot.success" components={{ strong: <strong /> }} />
         </SuccessDialog>
       )}
     </section>

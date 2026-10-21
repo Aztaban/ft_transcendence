@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { listProjects } from "../../api/projects";
@@ -24,6 +25,7 @@ function projectInitials(name: string) {
 // Native radio buttons styled as tiles, so arrow keys and screen readers work.
 // "Details" sits outside the radio's label, so opening a project does not select it.
 function ProjectSelect({ value, onChange }: ProjectSelectProps) {
+  const { t } = useTranslation();
   const groupName = useId();
   const [projects, setProjects] = useState<ProjectRef[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
@@ -51,25 +53,25 @@ function ProjectSelect({ value, onChange }: ProjectSelectProps) {
 
   return (
     <fieldset className="project-select">
-      <legend className="project-select__label">Choose the project</legend>
+      <legend className="project-select__label">{t("projectSelect.legend")}</legend>
 
       {loadState === "loading" && (
         <div className="project-select__grid" aria-busy="true">
           {[1, 2, 3, 4, 5, 6].map((placeholder) => (
             <span className="project-select__skeleton" key={placeholder} />
           ))}
-          <span className="project-select__sr-only">Loading projects…</span>
+          <span className="project-select__sr-only">{t("projectSelect.loading")}</span>
         </div>
       )}
 
       {loadState === "error" && (
         <p className="project-select__error" role="alert">
-          Could not load the projects. Please try again later.
+          {t("projectSelect.error")}
         </p>
       )}
 
       {loadState === "ready" && projects.length === 0 && (
-        <p className="project-select__empty">No projects available</p>
+        <p className="project-select__empty">{t("projectSelect.empty")}</p>
       )}
 
       {loadState === "ready" && projects.length > 0 && (
@@ -103,9 +105,9 @@ function ProjectSelect({ value, onChange }: ProjectSelectProps) {
               <Link
                 className="project-select__details"
                 to={`/projects/${project.slug}`}
-                aria-label={`Details about ${project.name}`}
+                aria-label={t("projectSelect.detailsAria", { project: project.name })}
               >
-                Details <span aria-hidden="true">→</span>
+                {t("projectSelect.details")} <span aria-hidden="true">→</span>
               </Link>
             </div>
           ))}

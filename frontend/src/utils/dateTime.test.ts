@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import i18n from "../i18n";
 import { formatDayHeading, formatDuration, formatStartsIn, formatTimeAgo } from "./dateTime";
 
 describe("formatTimeAgo", () => {
@@ -57,5 +58,18 @@ describe("formatStartsIn", () => {
 describe("formatDuration", () => {
   it("gives the slot length in minutes", () => {
     expect(formatDuration("2026-10-13T09:00:00Z", "2026-10-13T09:45:00Z")).toBe("45 min");
+  });
+});
+
+describe("in Czech", () => {
+  it("uses Czech words, plurals and dates", async () => {
+    await i18n.changeLanguage("cs");
+    const now = new Date(2026, 9, 13, 10, 0);
+
+    expect(formatStartsIn(new Date(2026, 9, 15, 14, 0).toISOString(), now)).toBe("2 dny 4 hodiny");
+    expect(formatTimeAgo(new Date(2026, 9, 12, 10, 0).toISOString(), now)).toBe("včera");
+    expect(formatDayHeading(new Date(2026, 9, 14, 9, 0).toISOString(), now)).toBe(
+      "Zítra · středa 14. října",
+    );
   });
 });

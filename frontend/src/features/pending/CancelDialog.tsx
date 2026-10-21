@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { Trans, useTranslation } from "react-i18next";
 
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
 import type { EvaluationRequest } from "../../types/evaluation";
@@ -30,6 +31,7 @@ function CancelDialog({
   onConfirm,
   onClose,
 }: CancelDialogProps) {
+  const { t } = useTranslation();
   const cardRef = useDialog<HTMLDivElement>(onClose);
   const { starts_at: startsAt, ends_at: endsAt } = evaluation;
 
@@ -47,16 +49,12 @@ function CancelDialog({
         >
           <div>
             <h2 id="released-dialog-title">
-              Done. <strong>Your slot has been released!</strong>
+              <Trans i18nKey="pending.doneTitle" components={{ strong: <strong /> }} />
             </h2>
-            <p>
-              {viewer === "student"
-                ? "You can book a new evaluation anytime."
-                : "The request is back in the open requests, so another Hitchhiker can pick it."}
-            </p>
+            <p>{viewer === "student" ? t("pending.doneStudent") : t("pending.doneHitchhiker")}</p>
           </div>
           <img className="pending-dialog__image" src={hitchhikersIcon} alt="" aria-hidden="true" />
-          <p className="pending-dialog__hint">Click anywhere to close</p>
+          <p className="pending-dialog__hint">{t("common.clickToClose")}</p>
         </div>
       </div>,
       document.body,
@@ -74,7 +72,7 @@ function CancelDialog({
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id="cancel-dialog-title">Cancel this evaluation?</h2>
+        <h2 id="cancel-dialog-title">{t("pending.cancelTitle")}</h2>
 
         <div className="pending-cancel__summary">
           <strong>{evaluation.project.name}</strong>
@@ -87,8 +85,8 @@ function CancelDialog({
 
         <p className="pending-cancel__text">
           {viewer === "student"
-            ? "Your request will be cancelled. You can create a new one anytime."
-            : "Your slot will be released and the request goes back to the open requests."}
+            ? t("pending.cancelTextStudent")
+            : t("pending.cancelTextHitchhiker")}
         </p>
 
         {error && (
@@ -99,7 +97,7 @@ function CancelDialog({
 
         <div className="pending-cancel__actions">
           <button className="pending-cancel__keep" type="button" onClick={onClose}>
-            Keep evaluation
+            {t("pending.keep")}
           </button>
           <button
             className="pending-cancel__confirm"
@@ -107,7 +105,7 @@ function CancelDialog({
             disabled={isSubmitting}
             onClick={onConfirm}
           >
-            {isSubmitting ? "Cancelling…" : "Cancel evaluation"}
+            {isSubmitting ? t("common.cancelling") : t("pending.confirm")}
           </button>
         </div>
       </div>
