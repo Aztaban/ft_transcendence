@@ -4,5 +4,47 @@
     "en": "English",
     "cs": "Čeština",
     "es": "Español"
+  },
+  "nav": {
+    "primary": "Primary navigation",
+    "home": "Home",
+    "request": "Request",
+    "requests": "Requests",
+    "pending": "Pending",
+    "history": "History",
+    "hitchhikers": "Hitchhikers",
+    "profile": "Profile",
+    "studentCouncil": "Student Council",
+    "messages": "Messages",
+    "councilProfile": "Council Profile",
+    "eligibility": "Eligibility"
+  },
+  "workspace": {
+    "select": "Select role",
+    "STUDENT": "STUDENT",
+    "HITCHHIKER": "HITCHHIKER",
+    "COUNCIL": "COUNCIL"
+  },
+  "sidebar": {
+    "logout": "Logout",
+    "loggingOut": "Logging out...",
+    "logoutFailed": "Logout failed. Please try again.",
+    "externalTools": "External tools",
+    "openIntra": "Open 42 Intra",
+    "openNotion": "Open Notion",
+    "openSlack": "Open Slack"
+  },
+  "topbar": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "search": "Search",
+    "searchPlaceholder": "search",
+    "notifications": "Notifications",
+    "userMenu": "Open user menu"
+  },
+  "connection": {
+    "reconnecting": "Reconnecting…",
+    "paused": "Live updates are paused. The page keeps working.",
+    "backOnline": "Back online"
   }
 }

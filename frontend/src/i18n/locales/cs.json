@@ -4,5 +4,47 @@
     "en": "English",
     "cs": "Čeština",
     "es": "Español"
+  },
+  "nav": {
+    "primary": "Hlavní navigace",
+    "home": "Domů",
+    "request": "Žádost",
+    "requests": "Žádosti",
+    "pending": "Čekající",
+    "history": "Historie",
+    "hitchhikers": "Hitchhikeři",
+    "profile": "Profil",
+    "studentCouncil": "Studentská rada",
+    "messages": "Zprávy",
+    "councilProfile": "Profil rady",
+    "eligibility": "Oprávnění"
+  },
+  "workspace": {
+    "select": "Vybrat roli",
+    "STUDENT": "STUDENT",
+    "HITCHHIKER": "HITCHHIKER",
+    "COUNCIL": "RADA"
+  },
+  "sidebar": {
+    "logout": "Odhlásit se",
+    "loggingOut": "Odhlašování…",
+    "logoutFailed": "Odhlášení se nepovedlo. Zkuste to prosím znovu.",
+    "externalTools": "Externí nástroje",
+    "openIntra": "Otevřít 42 Intra",
+    "openNotion": "Otevřít Notion",
+    "openSlack": "Otevřít Slack"
+  },
+  "topbar": {
+    "openMenu": "Otevřít menu",
+    "closeMenu": "Zavřít menu",
+    "search": "Hledat",
+    "searchPlaceholder": "hledat",
+    "notifications": "Oznámení",
+    "userMenu": "Otevřít uživatelské menu"
+  },
+  "connection": {
+    "reconnecting": "Obnovuji spojení…",
+    "paused": "Živé aktualizace jsou pozastavené. Stránka dál funguje.",
+    "backOnline": "Opět online"
   }
 }
