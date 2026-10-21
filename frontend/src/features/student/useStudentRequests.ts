@@ -13,12 +13,12 @@ import { useLiveRefresh } from "../../websocket/LiveProvider";
 // Re-fetched in the background when one of the requests changes or after a reconnect (§9,
 // #254); a failed refresh keeps the requests already shown.
 export function useStudentRequests() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: isCheckingSession } = useAuth();
   const [requests, setRequests] = useState<EvaluationRequest[]>([]);
   const [hasError, setHasError] = useState(false);
   // True until the first answer arrives or the first load fails; a background refresh keeps it
   // false, so the requests already shown stay on screen (#258).
-  const [isLoading, setIsLoading] = useState(true);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const hasLoaded = useRef(false);
 
@@ -39,13 +39,13 @@ export function useStudentRequests() {
           hasLoaded.current = true;
           setRequests(page.results);
           setHasError(false);
-          setIsLoading(false);
+          setIsFirstLoad(false);
         }
       })
       .catch(() => {
         if (active && !hasLoaded.current) {
           setHasError(true);
-          setIsLoading(false);
+          setIsFirstLoad(false);
         }
       });
 
@@ -53,6 +53,10 @@ export function useStudentRequests() {
       active = false;
     };
   }, [isAuthenticated, reloadKey]);
+
+  // Loading while the session check runs and, once logged in, until the first answer. Logged out,
+  // nothing is loaded, so there is nothing to wait for.
+  const isLoading = isCheckingSession || (isAuthenticated && isFirstLoad);
 
   return { requests, isLoading, hasError, reload };
 }

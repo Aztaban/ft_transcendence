@@ -38,6 +38,20 @@ describe("useStudentRequests", () => {
     render(<Probe />);
 
     expect(listEvaluationRequests).not.toHaveBeenCalled();
+    // Nothing is loaded, so there is nothing to wait for.
+    expect(screen.queryByText("loading")).toBeNull();
+  });
+
+  it("reports loading while the session check runs", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+    } as ReturnType<typeof useAuth>);
+
+    render(<Probe />);
+
+    expect(screen.getByText("loading")).toBeTruthy();
+    expect(listEvaluationRequests).not.toHaveBeenCalled();
   });
 
   it("loads all of the student's requests once logged in", async () => {
