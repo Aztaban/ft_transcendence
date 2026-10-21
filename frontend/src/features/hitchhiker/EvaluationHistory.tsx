@@ -5,6 +5,8 @@ interface EvaluationHistoryProps {
   requests: EvaluationRequest[];
   // Who is looking: a student sees the Hitchhiker, a Hitchhiker sees the student.
   viewer: "student" | "hitchhiker";
+  // True during the first load: a skeleton instead of the empty state (#258).
+  isLoading?: boolean;
 }
 
 // Results are entered manually by the team in the Django admin; until then `result` is null.
@@ -28,7 +30,7 @@ function outcomeLabel(request: EvaluationRequest) {
   return "Result pending";
 }
 
-function EvaluationHistory({ requests, viewer }: EvaluationHistoryProps) {
+function EvaluationHistory({ requests, viewer, isLoading = false }: EvaluationHistoryProps) {
   const history = requests.filter((request) => request.is_history);
 
   return (
@@ -38,7 +40,13 @@ function EvaluationHistory({ requests, viewer }: EvaluationHistoryProps) {
     >
       <h2 id="evaluation-history-title">History</h2>
 
-      {history.length === 0 ? (
+      {isLoading ? (
+        <div className="dashboard-requests" aria-busy="true">
+          <div className="dashboard-requests__skeleton" />
+          <div className="dashboard-requests__skeleton" />
+          <span className="dashboard-requests__sr-only">Loading your history…</span>
+        </div>
+      ) : history.length === 0 ? (
         <div className="dashboard-empty">
           <div className="dashboard-empty__history-mark" aria-hidden="true">
             —

@@ -15,6 +15,13 @@ describe("OpenRequestQueue", () => {
     expect(screen.getByText("No open requests")).toBeTruthy();
   });
 
+  it("shows a loading placeholder instead of the empty state while loading", () => {
+    render(<OpenRequestQueue requests={[]} isLoading />);
+
+    expect(screen.getByText("Loading open requests…")).toBeTruthy();
+    expect(screen.queryByText("No open requests")).toBeNull();
+  });
+
   it("displays pending requests with the student, when they were requested and the note", () => {
     const requests = [
       { ...makeRequest(1, "libft", "pending"), note: "Need help with parsing." },

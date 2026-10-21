@@ -282,6 +282,33 @@
   background: #ffffff;
 }
 
+.dashboard-requests__skeleton {
+  min-height: 80px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #eceff0 25%, #f6f7f7 50%, #eceff0 75%);
+  background-size: 200% 100%;
+  animation: dashboard-shimmer 1.3s ease-in-out infinite;
+}
+
+.dashboard-requests__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes dashboard-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
 .dashboard-request {
   display: flex;
   align-items: center;
@@ -495,6 +522,10 @@
 
   .dashboard-request:hover {
     transform: none;
+  }
+
+  .dashboard-requests__skeleton {
+    animation: none;
   }
 }
 

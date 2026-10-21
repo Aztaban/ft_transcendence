@@ -162,39 +162,47 @@ const dashboards: Record<AppRole, DashboardDefinition> = {
   COUNCIL: councilDashboard,
 };
 
-// The student's request boxes, filled from the API (#507).
+// The student's request boxes, filled from the API (#507). They show skeletons during the first
+// load, and only the error when it fails, never empty states that may not be true (#258).
 function StudentRequestSections() {
-  const { requests, hasError } = useStudentRequests();
+  const { requests, isLoading, hasError } = useStudentRequests();
+
+  if (hasError) {
+    return (
+      <p className="dashboard__load-error" role="alert">
+        Could not load your requests. Please try again later.
+      </p>
+    );
+  }
 
   return (
     <>
-      {hasError && (
-        <p className="dashboard__load-error" role="alert">
-          Could not load your requests. Please try again later.
-        </p>
-      )}
-      <OpenRequests requests={requests} />
-      <ScheduledEvaluations requests={requests} viewer="student" />
-      <EvaluationHistory requests={requests} viewer="student" />
+      <OpenRequests requests={requests} isLoading={isLoading} />
+      <ScheduledEvaluations requests={requests} viewer="student" isLoading={isLoading} />
+      <EvaluationHistory requests={requests} viewer="student" isLoading={isLoading} />
     </>
   );
 }
 
 // The Hitchhiker's boxes, filled from the API: the open queue and the picked requests (#61).
+// Skeletons during the first load, only the error when it fails (#258).
 function HitchhikerRequestSections() {
-  const { openRequests, pickedRequests, hasError } = useHitchhikerRequests();
+  const { openRequests, pickedRequests, isLoading, hasError } = useHitchhikerRequests();
+
+  if (hasError) {
+    return (
+      <p className="dashboard__load-error" role="alert">
+        Could not load your requests. Please try again later.
+      </p>
+    );
+  }
 
   return (
     <>
-      {hasError && (
-        <p className="dashboard__load-error" role="alert">
-          Could not load your requests. Please try again later.
-        </p>
-      )}
-      <OpenRequestQueue requests={openRequests} />
-      <AwaitingConfirmation requests={pickedRequests} />
-      <ScheduledEvaluations requests={pickedRequests} viewer="hitchhiker" />
-      <EvaluationHistory requests={pickedRequests} viewer="hitchhiker" />
+      <OpenRequestQueue requests={openRequests} isLoading={isLoading} />
+      <AwaitingConfirmation requests={pickedRequests} isLoading={isLoading} />
+      <ScheduledEvaluations requests={pickedRequests} viewer="hitchhiker" isLoading={isLoading} />
+      <EvaluationHistory requests={pickedRequests} viewer="hitchhiker" isLoading={isLoading} />
     </>
   );
 }

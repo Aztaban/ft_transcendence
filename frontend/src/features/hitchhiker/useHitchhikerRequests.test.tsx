@@ -17,9 +17,13 @@ function page(results: EvaluationRequest[]) {
 }
 
 function Probe() {
-  const { openRequests, pickedRequests, hasError } = useHitchhikerRequests();
+  const { openRequests, pickedRequests, isLoading, hasError } = useHitchhikerRequests();
   const names = (requests: EvaluationRequest[]) =>
     requests.map((request) => request.project.name).join(",");
+
+  if (isLoading) {
+    return <p>loading</p>;
+  }
 
   return (
     <p>{hasError ? "error" : `open:${names(openRequests)} picked:${names(pickedRequests)}`}</p>
@@ -42,6 +46,20 @@ describe("useHitchhikerRequests", () => {
     render(<Probe />);
 
     expect(listEvaluationRequests).not.toHaveBeenCalled();
+    // Nothing is loaded, so there is nothing to wait for.
+    expect(screen.queryByText("loading")).toBeNull();
+  });
+
+  it("reports loading while the session check runs", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+    } as ReturnType<typeof useAuth>);
+
+    render(<Probe />);
+
+    expect(screen.getByText("loading")).toBeTruthy();
+    expect(listEvaluationRequests).not.toHaveBeenCalled();
   });
 
   it("loads the open queue and the picked requests once logged in", async () => {
@@ -57,6 +75,16 @@ describe("useHitchhikerRequests", () => {
     expect(await screen.findByText("open:minishell picked:push_swap")).toBeTruthy();
     expect(listEvaluationRequests).toHaveBeenCalledWith({ scope: "open" });
     expect(listEvaluationRequests).toHaveBeenCalledWith({ scope: "picked" });
+  });
+
+  it("reports loading until the first answers arrive", () => {
+    loggedIn(true);
+    // Answers that never come: the hook stays in its first load.
+    vi.mocked(listEvaluationRequests).mockReturnValue(new Promise(() => {}));
+
+    render(<Probe />);
+
+    expect(screen.getByText("loading")).toBeTruthy();
   });
 
   it("reports when the requests cannot be loaded", async () => {
@@ -94,6 +122,8 @@ describe("useHitchhikerRequests live", () => {
     act(() =>
       FakeSocket.latest().serverSend({ event: "eligibility.revoked", data: { project_id: 3 } }),
     );
+    // The refresh runs in the background: the requests stay, no loading state.
+    expect(screen.getByText("open:minishell picked:")).toBeTruthy();
 
     expect(await screen.findByText("open: picked:")).toBeTruthy();
 
