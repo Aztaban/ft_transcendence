@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,8 @@ import {
   getEvaluationRequest,
 } from "../api/evaluationRequests";
 import { makeRequest } from "../features/student/testUtils";
+import { LiveContext } from "../websocket/LiveProvider";
+import { FakeSocket, openLiveSocket } from "../websocket/testSocket";
 import EvaluationPage from "./EvaluationPage";
 
 vi.mock("../api/evaluationRequests", () => ({
@@ -119,12 +121,139 @@ describe("EvaluationPage", () => {
     );
   });
 
+  it("says the evaluation is no longer available when accepting answers 404", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
+    vi.mocked(confirmEvaluationRequest).mockRejectedValue(
+      new ApiError(404, "Not found.", "not_found"),
+    );
+    renderPage();
+    await screen.findByRole("heading", { name: "push_swap" });
+
+    fireEvent.click(getButton(/Accept/));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This evaluation is no longer available. It may have been cancelled or declined.",
+    );
+    expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+  });
+
+  it("says the evaluation is no longer available when declining answers 404", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
+    vi.mocked(declineEvaluationRequest).mockRejectedValue(
+      new ApiError(404, "Not found.", "not_found"),
+    );
+    renderPage();
+    await screen.findByRole("heading", { name: "push_swap" });
+
+    fireEvent.click(getButton(/Decline this time/));
+    fireEvent.click(getButton("Yes, decline"));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This evaluation is no longer available. It may have been cancelled or declined.",
+    );
+    expect(screen.queryByRole("button", { name: "Yes, decline" })).toBeNull();
+  });
+
   it("shows no buttons for a request that is not waiting for an answer", async () => {
     vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "pending"));
 
     renderPage();
 
     expect(await screen.findByRole("heading", { name: "Waiting for a Hitchhiker" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+  });
+});
+
+describe("EvaluationPage live", () => {
+  function renderLive() {
+    return render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MemoryRouter initialEntries={["/evaluations/7"]}>
+          <Routes>
+            <Route path="/evaluations/:id" element={<EvaluationPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LiveContext.Provider>,
+    );
+  }
+
+  afterEach(() => {
+    FakeSocket.reset();
+    vi.useRealTimers();
+  });
+
+  it("re-fetches when this request changes and ignores other requests", async () => {
+    vi.mocked(getEvaluationRequest)
+      .mockResolvedValueOnce(awaiting)
+      .mockResolvedValueOnce(makeRequest(7, "push_swap", "pending"));
+
+    renderLive();
+    await screen.findByText("Needs your answer");
+
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.slot_picked",
+        data: { id: 8, status: "awaiting_confirmation" },
+      }),
+    );
+
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(1);
+
+    // The Hitchhiker released the slot: the request is back in the queue.
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.released",
+        data: { id: 7, status: "pending" },
+      }),
+    );
+
+    expect(await screen.findByText("In the queue")).toBeTruthy();
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Needs your answer")).toBeNull();
+  });
+
+  it("re-fetches after a reconnect and keeps the request if that fails", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(getEvaluationRequest)
+      .mockResolvedValueOnce(awaiting)
+      .mockRejectedValueOnce(new Error("network"));
+
+    renderLive();
+    await screen.findByText("Needs your answer");
+
+    act(() => {
+      FakeSocket.latest().serverClose(1006);
+      vi.advanceTimersByTime(1000);
+      FakeSocket.latest().serverOpen();
+    });
+
+    await vi.waitFor(() => expect(getEvaluationRequest).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+    expect(screen.getByText("Needs your answer")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // e.g. the evaluation was cancelled while the backend restarted: the re-fetch after the
+  // reconnect answers 404 (§5.5).
+  it("says the evaluation is no longer available when the re-fetch answers 404", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(getEvaluationRequest)
+      .mockResolvedValueOnce(awaiting)
+      .mockRejectedValueOnce(new ApiError(404, "Not found.", "not_found"));
+
+    renderLive();
+    await screen.findByText("Needs your answer");
+
+    act(() => {
+      FakeSocket.latest().serverClose(1006);
+      vi.advanceTimersByTime(1000);
+      FakeSocket.latest().serverOpen();
+    });
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This evaluation is no longer available. It may have been cancelled or declined.",
+    );
+    expect(screen.queryByText("Needs your answer")).toBeNull();
     expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
   });
 });

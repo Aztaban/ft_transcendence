@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../api/client";
 import {
@@ -12,6 +12,8 @@ import { projectInitials } from "../features/projects/ProjectOverview";
 import { useRole } from "../store/RoleContext";
 import type { EvaluationRequest } from "../types/evaluation";
 import { formatDayHeading, formatDuration, formatTime } from "../utils/dateTime";
+import { EVALUATION_EVENTS } from "../websocket/events";
+import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/pending.css";
 
 type LoadState = "loading" | "ready" | "error";
@@ -92,15 +94,31 @@ function PendingPage() {
   const [evaluations, setEvaluations] = useState<EvaluationRequest[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [reloadKey, setReloadKey] = useState(0);
+  // Set by a live refresh: that load runs in the background (no skeleton, and a failure keeps
+  // the evaluations already shown).
+  const isLiveRefresh = useRef(false);
   const [preview, setPreview] = useState<EvaluationRequest | null>(null);
   const [cancel, setCancel] = useState<OpenCancel | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
 
+  // An evaluation was confirmed, cancelled, released or changed, or the connection is back
+  // (§9, #255).
+  useLiveRefresh(EVALUATION_EVENTS, () => {
+    isLiveRefresh.current = true;
+    setReloadKey((key) => key + 1);
+  });
+
   useEffect(() => {
     let active = true;
+    const inBackground = isLiveRefresh.current;
 
-    setLoadState("loading");
+    isLiveRefresh.current = false;
+
+    if (!inBackground) {
+      setLoadState("loading");
+    }
+
     loadPending(viewer)
       .then((page) => {
         if (active) {
@@ -110,7 +128,7 @@ function PendingPage() {
       })
       .catch(() => {
         if (active) {
-          setLoadState("error");
+          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
 

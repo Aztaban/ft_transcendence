@@ -1,10 +1,12 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
 import { getEvaluationRequest, pickSlot } from "../api/evaluationRequests";
 import { makeRequest } from "../features/student/testUtils";
+import { LiveContext } from "../websocket/LiveProvider";
+import { FakeSocket, openLiveSocket } from "../websocket/testSocket";
 import PickSlotPage from "./PickSlotPage";
 
 vi.mock("../api/evaluationRequests", () => ({
@@ -114,6 +116,20 @@ describe("PickSlotPage", () => {
     );
   });
 
+  // The student cancelled it, or another Hitchhiker picked it, just before Submit (§5.5).
+  it("shows that the request is no longer open when the pick answers 404", async () => {
+    vi.mocked(pickSlot).mockRejectedValue(new ApiError(404, "Not found.", "not_found"));
+    renderPage();
+    await chooseTomorrowAt1015();
+
+    fireEvent.click(getButton("Submit"));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This request is no longer open. Another Hitchhiker may have picked it, or the student cancelled it.",
+    );
+    expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
+  });
+
   it("does not offer a slot when the request is no longer open", async () => {
     vi.mocked(getEvaluationRequest).mockResolvedValue(
       makeRequest(7, "push_swap", "awaiting_confirmation"),
@@ -122,6 +138,170 @@ describe("PickSlotPage", () => {
 
     expect((await screen.findByRole("alert")).textContent).toBe("This request is no longer open.");
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
+  });
+});
+
+describe("PickSlotPage live", () => {
+  afterEach(() => {
+    FakeSocket.reset();
+  });
+
+  it("shows that the request is no longer open when another Hitchhiker picks it", async () => {
+    vi.mocked(getEvaluationRequest)
+      .mockResolvedValueOnce(makeRequest(7, "push_swap", "pending"))
+      .mockResolvedValueOnce(makeRequest(7, "push_swap", "awaiting_confirmation"));
+
+    render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MemoryRouter initialEntries={["/requests/7"]}>
+          <Routes>
+            <Route path="/requests/:id" element={<PickSlotPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LiveContext.Provider>,
+    );
+    await screen.findByRole("button", { name: "Submit" });
+
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.created",
+        data: { id: 8, status: "pending" },
+      }),
+    );
+
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(1);
+
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.slot_picked",
+        data: { id: 7, status: "awaiting_confirmation" },
+      }),
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toBe("This request is no longer open.");
+    expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not re-fetch after the Hitchhiker's own pick", async () => {
+    vi.mocked(pickSlot).mockResolvedValue(makeRequest(7, "push_swap", "awaiting_confirmation"));
+    render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MemoryRouter initialEntries={["/requests/7"]}>
+          <Routes>
+            <Route path="/requests/:id" element={<PickSlotPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LiveContext.Provider>,
+    );
+    await chooseTomorrowAt1015();
+    fireEvent.click(getButton("Submit"));
+    await screen.findByRole("dialog");
+
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.slot_picked",
+        data: { id: 7, status: "awaiting_confirmation" },
+      }),
+    );
+
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("ignores its own pick's event when it arrives before the server's answer", async () => {
+    let answerPick: (value: ReturnType<typeof makeRequest>) => void = () => {};
+
+    vi.mocked(pickSlot).mockReturnValue(
+      new Promise((resolve) => {
+        answerPick = resolve;
+      }),
+    );
+    render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MemoryRouter initialEntries={["/requests/7"]}>
+          <Routes>
+            <Route path="/requests/:id" element={<PickSlotPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LiveContext.Provider>,
+    );
+    await chooseTomorrowAt1015();
+    fireEvent.click(getButton("Submit"));
+
+    // §9.3: the event is sent on commit, usually before the POST response arrives.
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.slot_picked",
+        data: { id: 7, status: "awaiting_confirmation" },
+      }),
+    );
+
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(1);
+
+    await act(async () => answerPick(makeRequest(7, "push_swap", "awaiting_confirmation")));
+
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(getEvaluationRequest).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("This request is no longer open.")).toBeNull();
+  });
+
+  // Other Hitchhikers get 404 once the request is picked or cancelled, not its new status (§5.5).
+  it("shows that the request is no longer open when the re-fetch answers 404", async () => {
+    vi.mocked(getEvaluationRequest)
+      .mockResolvedValueOnce(makeRequest(7, "push_swap", "pending"))
+      .mockRejectedValueOnce(new ApiError(404, "Not found.", "not_found"));
+    render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MemoryRouter initialEntries={["/requests/7"]}>
+          <Routes>
+            <Route path="/requests/:id" element={<PickSlotPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LiveContext.Provider>,
+    );
+    await screen.findByRole("button", { name: "Submit" });
+
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.cancelled",
+        data: { id: 7, status: "cancelled" },
+      }),
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This request is no longer open. Another Hitchhiker may have picked it, or the student cancelled it.",
+    );
+    expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Choose a slot for push_swap" })).toBeTruthy();
+  });
+
+  it("keeps the slot picker when a re-fetch fails for another reason", async () => {
+    vi.mocked(getEvaluationRequest)
+      .mockResolvedValueOnce(makeRequest(7, "push_swap", "pending"))
+      .mockRejectedValueOnce(new ApiError(500, "Server error"));
+    render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MemoryRouter initialEntries={["/requests/7"]}>
+          <Routes>
+            <Route path="/requests/:id" element={<PickSlotPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LiveContext.Provider>,
+    );
+    await screen.findByRole("button", { name: "Submit" });
+
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.cancelled",
+        data: { id: 7, status: "cancelled" },
+      }),
+    );
+
+    await vi.waitFor(() => expect(getEvaluationRequest).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+    expect(screen.getByRole("button", { name: "Submit" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 

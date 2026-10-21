@@ -2,7 +2,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { EVALUATION_EVENTS } from "./events";
+import { EVALUATION_EVENTS, type LiveMessage } from "./events";
 import { LiveProvider, liveSocketUrl, useConnectionStatus, useLiveRefresh } from "./LiveProvider";
 import { createFakeSocket, FakeSocket } from "./testSocket";
 
@@ -23,7 +23,7 @@ vi.mock("../store/AuthContext", () => ({
   }),
 }));
 
-function Listener({ refetch }: { refetch: () => void }) {
+function Listener({ refetch }: { refetch: (message?: LiveMessage) => void }) {
   useLiveRefresh(EVALUATION_EVENTS, refetch);
 
   return <p>Status: {useConnectionStatus()}</p>;
@@ -118,6 +118,11 @@ describe("LiveProvider", () => {
     });
 
     expect(refetch).toHaveBeenCalledTimes(1);
+    // The event tells which request changed.
+    expect(refetch).toHaveBeenCalledWith({
+      event: "evaluation.slot_picked",
+      data: { id: 3, status: "awaiting_confirmation" },
+    });
   });
 
   it("re-fetches after a reconnect", () => {
@@ -138,6 +143,7 @@ describe("LiveProvider", () => {
     act(() => FakeSocket.latest().serverOpen());
 
     expect(refetch).toHaveBeenCalledTimes(1);
+    expect(refetch).toHaveBeenCalledWith();
     expect(screen.getByText("Status: open")).toBeTruthy();
   });
 
