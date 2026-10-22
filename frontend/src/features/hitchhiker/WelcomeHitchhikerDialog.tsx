@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../api/client";
 import { createEligibilityRequest } from "../../api/eligibility";
 import { listProjects } from "../../api/projects";
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
+import useDialog from "../../components/ui/useDialog";
 import i18n from "../../i18n";
 import type { ProjectRef } from "../../types/project";
 import "../../styles/welcome-hitchhiker.css";
@@ -47,7 +48,7 @@ function submitErrorMessage(error: unknown) {
 // Projects can be added later from /eligibility-requests/new.
 function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
   const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useDialog<HTMLDivElement>(onClose);
   const [view, setView] = useState<View>("form");
   const [projects, setProjects] = useState<ProjectRef[]>([]);
   const [loadError, setLoadError] = useState(false);
@@ -75,23 +76,10 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
     };
   }, []);
 
+  // "Form sent!" is a new card: it gets the focus too.
   useEffect(() => {
     cardRef.current?.focus();
-  }, [view]);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
+  }, [view, cardRef]);
 
   function toggle(projectId: number) {
     setSelectedIds((current) =>

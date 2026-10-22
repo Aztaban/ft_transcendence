@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import ProjectOverview from "../projects/ProjectOverview";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatDayHeading, formatStartsIn, formatTime } from "../../utils/dateTime";
-import useDialog from "./useDialog";
+import useDialog from "../../components/ui/useDialog";
 
 interface PreviewDialogProps {
   evaluation: EvaluationRequest;

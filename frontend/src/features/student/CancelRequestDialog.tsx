@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import useDialog from "../../components/ui/useDialog";
 import i18n from "../../i18n";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
@@ -39,23 +39,7 @@ function CancelRequestDialog({
   onClose,
 }: CancelRequestDialogProps) {
   const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    cardRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !isSubmitting) {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isSubmitting, onClose]);
+  const cardRef = useDialog<HTMLDivElement>(onClose, { closeOnEscape: !isSubmitting });
 
   return createPortal(
     <div

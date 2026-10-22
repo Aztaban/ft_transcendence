@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
+import useDialog from "../../components/ui/useDialog";
 
 interface EligibilitySentDialogProps {
   onClose: () => void;
@@ -10,23 +10,7 @@ interface EligibilitySentDialogProps {
 // Shown after the eligibility request is sent. Closes on a click outside the card or on Escape.
 function EligibilitySentDialog({ onClose }: EligibilitySentDialogProps) {
   const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    cardRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
+  const cardRef = useDialog<HTMLDivElement>(onClose);
 
   return (
     <div className="eligibility-dialog" data-testid="eligibility-dialog-backdrop" onClick={onClose}>
