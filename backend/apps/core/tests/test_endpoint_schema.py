@@ -167,6 +167,16 @@ def test_root_and_shared_error_component_shapes(schema):
         ),
         ("projects/", "get", {}),
         ("projects/{slug}/", "get", {404: "not_found"}),
+        (
+            "projects/{slug}/eligibility/{tutor_id}/",
+            "delete",
+            {
+                400: "validation_error",
+                403: "permission_denied csrf_failed",
+                404: "not_found",
+                415: "unsupported_media_type",
+            },
+        ),
         ("tutors/{user_id}/eligibility/", "get", {404: "not_found"}),
         (
             "tutor-eligibility-requests/",
@@ -286,7 +296,7 @@ def test_remaining_implemented_operations_document_relevant_errors(schema, path,
         assert response["content"]["application/json"]["schema"] == {
             "$ref": "#/components/schemas/ErrorResponse"
         }
-    if method in {"post", "patch"}:
+    if method in {"post", "patch", "delete"}:
         header = next(p for p in operation["parameters"] if p["name"] == "X-CSRFToken")
         assert header["required"] is True
         assert header["in"] == "header"
