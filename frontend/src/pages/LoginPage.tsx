@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 
 import logo42 from "../assets/figma/42.svg";
 import { ApiError } from "../api/client";
@@ -174,6 +174,13 @@ function LoginPage() {
           <img src={logo42} alt="" aria-hidden="true" />
           {t("auth.continueWith42")}
         </a>
+
+        <p className="registration-switch">
+          {t("auth.noAccount")}
+          <Link to="/register">
+            {t("auth.createAccount")} <span aria-hidden="true">→</span>
+          </Link>
+        </p>
       </div>
     </main>
   );

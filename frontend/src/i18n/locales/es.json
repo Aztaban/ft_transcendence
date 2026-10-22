@@ -673,7 +673,11 @@
     "oauthAccountExists": "Ya existe una cuenta con este correo. Inicia sesión con tu correo y contraseña.",
     "oauthIdentityConflict": "No se pudo vincular tu cuenta de 42. Contacta con soporte.",
     "oauthAccountConflict": "No se pudo crear tu cuenta desde 42. Inténtalo de nuevo.",
-    "oauthFailed": "Falló el inicio de sesión con 42. Inténtalo de nuevo."
+    "oauthFailed": "Falló el inicio de sesión con 42. Inténtalo de nuevo.",
+    "noAccount": "¿No tienes cuenta?",
+    "createAccount": "Crea una",
+    "haveAccount": "¿Ya tienes cuenta?",
+    "logIn": "Inicia sesión"
   },
   "validation": {
     "displayNameRequired": "El nombre visible es obligatorio.",

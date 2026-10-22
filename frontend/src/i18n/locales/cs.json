@@ -680,7 +680,11 @@
     "oauthAccountExists": "Účet s tímto e-mailem už existuje. Přihlaste se e-mailem a heslem.",
     "oauthIdentityConflict": "Váš účet 42 se nepodařilo propojit. Kontaktujte prosím podporu.",
     "oauthAccountConflict": "Účet z 42 se nepodařilo vytvořit. Zkuste to prosím znovu.",
-    "oauthFailed": "Přihlášení přes 42 se nepovedlo. Zkuste to prosím znovu."
+    "oauthFailed": "Přihlášení přes 42 se nepovedlo. Zkuste to prosím znovu.",
+    "noAccount": "Nemáte účet?",
+    "createAccount": "Vytvořte si ho",
+    "haveAccount": "Už máte účet?",
+    "logIn": "Přihlaste se"
   },
   "validation": {
     "displayNameRequired": "Zobrazované jméno je povinné.",
