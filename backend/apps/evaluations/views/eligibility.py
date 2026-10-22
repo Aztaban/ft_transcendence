@@ -1,4 +1,4 @@
-"""Tutor eligibility endpoints (api-plan §10.3)."""
+"""Tutor eligibility endpoints."""
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -20,6 +20,7 @@ from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
 from apps.evaluations.eligibility import list_approved_projects_for_tutor
 from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
+from apps.evaluations.notifications import notify_eligibility_decided, notify_eligibility_requested
 from apps.evaluations.references import ProjectRefSerializer
 from apps.evaluations.serializers.eligibility import (
     EligibilityRequestCreateSerializer,
@@ -143,8 +144,8 @@ def _create_eligibility_request(request):
             )
         eligibility_request = TutorEligibilityRequest.objects.create(requester=request.user)
         eligibility_request.projects.set(projects)
+        notify_eligibility_requested(eligibility_request)
 
-    # TODO(notifications): eligibility.requested + WebSocket event (notifications app not yet).
     return Response(
         EligibilityRequestSerializer(eligibility_request).data,
         status=status.HTTP_201_CREATED,
@@ -293,6 +294,8 @@ def tutor_eligibility_request_review(request, request_id):
                 ignore_conflicts=True,
             )
 
-    # TODO(notifications): eligibility.decided + WS + audit eligibility.reviewed.
-    eligibility_request.refresh_from_db()
+        eligibility_request.refresh_from_db()
+        notify_eligibility_decided(eligibility_request)
+
+    # TODO(audit): eligibility.reviewed.
     return Response(EligibilityRequestSerializer(eligibility_request).data)

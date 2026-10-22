@@ -18,6 +18,14 @@ from .events import (
     publish_updated_event,
 )
 from .models import EvaluationRequest
+from .notifications import (
+    notify_evaluation_cancelled,
+    notify_evaluation_confirmed,
+    notify_evaluation_created,
+    notify_evaluation_declined,
+    notify_evaluation_released,
+    notify_slot_picked,
+)
 
 
 class ActiveRequestExists(APIException):
@@ -75,7 +83,7 @@ def create_request(student, project, note):
         raise ActiveRequestExists()
     evaluation = EvaluationRequest.objects.create(student=student, project=project, note=note)
     publish_created_event(evaluation)
-    # TODO(notifications): evaluation.created to eligible Hitchhikers (§8.8).
+    notify_evaluation_created(evaluation)
     return evaluation
 
 
@@ -114,7 +122,7 @@ def confirm_request(evaluation):
         evaluation,
         user_ids=(evaluation.student_id, evaluation.picked_by_id),
     )
-    # TODO(notifications): evaluation.confirmed to picked_by (§8.8) once dispatch exists.
+    notify_evaluation_confirmed(evaluation)
     return evaluation
 
 
@@ -138,7 +146,7 @@ def decline_request(evaluation):
         raise InvalidStateTransition(_("Only requests awaiting confirmation can be declined."))
     evaluation.refresh_from_db()
     publish_declined_event(evaluation, previous_picker_id=previous_picker_id)
-    # TODO(notifications): evaluation.declined to previous_picker_id (§8.8) once dispatch exists.
+    notify_evaluation_declined(evaluation, previous_picker_id=previous_picker_id)
     return evaluation
 
 
@@ -177,7 +185,7 @@ def cancel_request(evaluation):
         raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
     evaluation.refresh_from_db()
     publish_cancelled_event(evaluation, previous_status=current.status)
-    # TODO(notifications): evaluation.cancelled to picked_by, if present (§8.8).
+    notify_evaluation_cancelled(evaluation)
     return evaluation
 
 
@@ -211,8 +219,7 @@ def release_slot(evaluation, user):
         raise InvalidStateTransition(_("Only picked requests without a result can be released."))
     evaluation.refresh_from_db()
     publish_released_event(evaluation, previous_picker_id=current.picked_by_id)
-    # TODO(notifications): evaluation.released to student, payload
-    # {request_id, project, tutor} (§8.8); also emit notification.created.
+    notify_evaluation_released(evaluation, previous_picker=current.picked_by)
     return evaluation
 
 
@@ -277,4 +284,5 @@ def pick_slot(evaluation, user, starts_at, ends_at):
             raise RequestNotPending()
         evaluation.refresh_from_db()
         publish_slot_picked_event(evaluation)
+        notify_slot_picked(evaluation)
     return evaluation

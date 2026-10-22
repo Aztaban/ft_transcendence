@@ -1,4 +1,4 @@
-"""POST /evaluation-requests/{id}/pick-slot/ (issues #190 through #193 and #557).
+"""POST /evaluation-requests/{id}/pick-slot/.
 
 An eligible Hitchhiker claims a pending request inside a transaction that locks
 both people and rejects an overlapping evaluation. Exactly one concurrent pick
@@ -22,6 +22,7 @@ from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
 from apps.evaluations.services import RequestNotPending
 from apps.evaluations.views.requests import pick_slot as claim_pending_request
+from apps.notifications.models import Notification
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
@@ -156,7 +157,7 @@ def test_pick_slot_real_session(
         event_sender.assert_not_awaited()
     assert response.status_code == 200
     assert response.json() == claim(expected)
-    assert len(callbacks) == 1
+    assert len(callbacks) == 2
     assert event_sender.await_args_list == [
         call(
             "user_7",
@@ -174,12 +175,37 @@ def test_pick_slot_real_session(
                 "data": {"id": 17, "status": "awaiting_confirmation"},
             },
         ),
+        call(
+            "user_7",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
     ]
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
     assert evaluation.picked_by_id == hitchhiker.pk
     assert evaluation.starts_at == datetime(2026, 10, 12, 15, tzinfo=timezone.utc)
     assert evaluation.ends_at == datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc)
+    assert list(
+        Notification.objects.values("recipient_id", "type", "payload", "target_url", "read_at")
+    ) == [
+        {
+            "recipient_id": 7,
+            "type": "evaluation.slot_picked",
+            "payload": {
+                "request_id": 17,
+                "project": {"id": 4, "slug": "libft", "name": "Libft"},
+                "tutor": {"id": 42, "display_name": "Bob"},
+                "starts_at": "2026-10-12T15:00:00Z",
+                "ends_at": "2026-10-12T15:45:00Z",
+            },
+            "target_url": "/evaluations/17",
+            "read_at": None,
+        }
+    ]
 
 
 def test_slot_picked_targets_only_participants_and_active_eligible_hitchhikers(
@@ -223,6 +249,14 @@ def test_slot_picked_targets_only_participants_and_active_eligible_hitchhikers(
         call("user_42", message),
         call("user_43", message),
         call("user_44", message),
+        call(
+            "user_7",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
     ]
 
 
@@ -244,6 +278,7 @@ def test_rolled_back_pick_sends_no_event(
     evaluation.refresh_from_db()
     assert evaluation.status == "pending"
     assert evaluation.picked_by_id is None
+    assert not Notification.objects.exists()
 
 
 def test_repeated_pick_does_not_schedule_another_event(
@@ -255,8 +290,59 @@ def test_repeated_pick_does_not_schedule_another_event(
         claim_pending_request(evaluation, hitchhiker, starts_at, ends_at)
         with pytest.raises(RequestNotPending):
             claim_pending_request(evaluation, hitchhiker, starts_at, ends_at)
-    assert len(callbacks) == 1
-    assert event_sender.await_count == 2
+    assert len(callbacks) == 2
+    assert event_sender.await_count == 3
+    assert Notification.objects.count() == 1
+
+
+def test_notification_failure_rolls_back_pick_and_all_events(
+    hitchhiker, evaluation, event_sender, monkeypatch, django_capture_on_commit_callbacks
+):
+    from apps.notifications.services import create_notification
+
+    def fail_after_write(**kwargs):
+        create_notification(**kwargs)
+        raise RuntimeError("Injected notification failure")
+
+    monkeypatch.setattr("apps.evaluations.notifications.create_notification", fail_after_write)
+    client = logged_in_client(hitchhiker)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(
+            pick_url(),
+            SLOT,
+            format="json",
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+        )
+    assert response.status_code == 500
+    assert response.json() == {
+        "error": {"code": "server_error", "message": "Something went wrong. Please try again."}
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "pending"
+    assert evaluation.picked_by_id is None
+    assert evaluation.starts_at is None
+    assert evaluation.ends_at is None
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    event_sender.assert_not_awaited()
+
+
+@override_settings(TIME_ZONE="Europe/Prague")
+def test_slot_notification_times_are_utc(hitchhiker, evaluation):
+    claim_pending_request(
+        evaluation,
+        hitchhiker,
+        datetime.fromisoformat("2026-10-12T17:00:00+02:00"),
+        datetime.fromisoformat("2026-10-12T17:45:00+02:00"),
+    )
+    assert Notification.objects.get().payload == {
+        "request_id": 17,
+        "project": {"id": 4, "slug": "libft", "name": "Libft"},
+        "tutor": {"id": 42, "display_name": "Bob"},
+        "starts_at": "2026-10-12T15:00:00Z",
+        "ends_at": "2026-10-12T15:45:00Z",
+    }
 
 
 def test_csrf_required(student, evaluation):
@@ -748,6 +834,30 @@ def test_only_one_hitchhiker_wins(
         call("user_7", message),
         call("user_42", message),
         call("user_46", message),
+        call(
+            "user_7",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
+    ]
+    assert list(Notification.objects.values("recipient_id", "type", "payload")) == [
+        {
+            "recipient_id": 7,
+            "type": "evaluation.slot_picked",
+            "payload": {
+                "request_id": 17,
+                "project": {"id": 4, "slug": "libft", "name": "Libft"},
+                "tutor": {
+                    "id": evaluation.picked_by_id,
+                    "display_name": "Bob" if evaluation.picked_by_id == 42 else "Fay",
+                },
+                "starts_at": "2026-10-12T15:00:00Z",
+                "ends_at": "2026-10-12T15:45:00Z",
+            },
+        }
     ]
 
 

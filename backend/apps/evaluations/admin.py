@@ -7,11 +7,13 @@ evaluation results here after an evaluation (api-plan §7.1).
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from .events import publish_updated_event
 from .models import EvaluationRequest, Project, TutorEligibility, TutorEligibilityRequest
+from .notifications import notify_evaluation_result_recorded
 
 
 @admin.register(Project)
@@ -88,7 +90,18 @@ class EvaluationRequestAdmin(admin.ModelAdmin):
     )
     fields = readonly_fields[:-2] + ("result", "feedback", "completed_at") + readonly_fields[-2:]
 
+    @transaction.atomic
     def save_model(self, request, obj, form, change):
+        result_recorded = False
+        if change and "result" in form.changed_data and obj.result is not None:
+            previous_result = (
+                EvaluationRequest.objects.select_for_update()
+                .values_list("result", flat=True)
+                .get(pk=obj.pk)
+            )
+            result_recorded = previous_result is None
         super().save_model(request, obj, form, change)
         if change and form.changed_data:
             publish_updated_event(obj)
+        if result_recorded:
+            notify_evaluation_result_recorded(obj)
