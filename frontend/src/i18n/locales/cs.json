@@ -528,5 +528,42 @@
   },
   "notFound": {
     "text": "Stránka nenalezena."
+  },
+  "auth": {
+    "email": "E-mail",
+    "password": "Heslo",
+    "displayName": "Zobrazované jméno",
+    "login": "PŘIHLÁSIT SE",
+    "loggingIn": "PŘIHLAŠUJI…",
+    "or": "nebo",
+    "continueWith42": "POKRAČOVAT PŘES 42",
+    "registered": "Účet je vytvořený. Teď se můžete přihlásit.",
+    "invalidCredentials": "Nesprávný e-mail nebo heslo.",
+    "loginError": "Přihlášení se nepovedlo. Zkuste to prosím znovu.",
+    "register": "ZAREGISTROVAT SE",
+    "registering": "REGISTRUJI…",
+    "registerError": "Účet se nepodařilo vytvořit. Zkuste to prosím znovu.",
+    "oauthNotConfigured": "Přihlášení přes 42 teď není k dispozici.",
+    "oauthInvalidState": "Vaše přihlášení přes 42 vypršelo. Zkuste to prosím znovu.",
+    "oauthMissingCode": "Přihlášení přes 42 bylo zrušeno nebo nebylo dokončeno.",
+    "oauthTokenExchangeFailed": "Přihlášení přes 42 se nepodařilo ověřit. Zkuste to prosím znovu.",
+    "oauthProfileRetrievalFailed": "Váš profil 42 se nepodařilo načíst. Zkuste to prosím znovu.",
+    "oauthAccessDenied": "Přihlášení přes 42 bylo zamítnuto. Pro pokračování povolte přístup.",
+    "oauthProviderError": "42 má teď potíže. Zkuste to prosím později.",
+    "oauthAccountSuspended": "Váš účet je pozastavený nebo zablokovaný.",
+    "oauthAccountExists": "Účet s tímto e-mailem už existuje. Přihlaste se e-mailem a heslem.",
+    "oauthIdentityConflict": "Váš účet 42 se nepodařilo propojit. Kontaktujte prosím podporu.",
+    "oauthAccountConflict": "Účet z 42 se nepodařilo vytvořit. Zkuste to prosím znovu.",
+    "oauthFailed": "Přihlášení přes 42 se nepovedlo. Zkuste to prosím znovu."
+  },
+  "validation": {
+    "displayNameRequired": "Zobrazované jméno je povinné.",
+    "displayNameTooLong": "Zobrazované jméno může mít nejvýš {{max}} znaků.",
+    "emailRequired": "E-mail je povinný.",
+    "emailTooLong": "E-mail může mít nejvýš {{max}} znaků.",
+    "emailInvalid": "Zadejte platnou e-mailovou adresu.",
+    "passwordRequired": "Heslo je povinné.",
+    "passwordTooShort": "Heslo musí mít alespoň {{min}} znaků.",
+    "passwordNumeric": "Heslo nemůže obsahovat jen číslice."
   }
 }

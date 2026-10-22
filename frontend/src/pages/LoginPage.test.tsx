@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import i18n from "../i18n";
 import { AuthProvider } from "../store/AuthContext";
 import LoginPage from "./LoginPage";
 
@@ -237,5 +238,28 @@ describe("LoginPage", () => {
 
     expect(screen.queryByRole("status")).toBeNull();
     expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("");
+  });
+});
+
+describe("LoginPage in another language", () => {
+  test("shows the form and a 42 login error in Czech", async () => {
+    mockAnonymousSession(mockFetch());
+    await i18n.changeLanguage("cs");
+    renderLoginPage("/login?oauth=oauth_access_denied");
+
+    expect(screen.getByLabelText("E-mail")).toBeTruthy();
+    expect(screen.getByLabelText("Heslo")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "PŘIHLÁSIT SE" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "POKRAČOVAT PŘES 42" })).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Přihlášení přes 42 bylo zamítnuto. Pro pokračování povolte přístup.",
+    );
+    expect(screen.getByRole("group", { name: "Jazyk" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Español" }));
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Se denegó el inicio de sesión con 42. Autoriza el acceso para continuar.",
+    );
   });
 });

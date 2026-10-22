@@ -523,5 +523,42 @@
   },
   "notFound": {
     "text": "Página no encontrada."
+  },
+  "auth": {
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "displayName": "Nombre visible",
+    "login": "INICIAR SESIÓN",
+    "loggingIn": "INICIANDO SESIÓN…",
+    "or": "o",
+    "continueWith42": "CONTINUAR CON 42",
+    "registered": "Cuenta creada. Ya puedes iniciar sesión.",
+    "invalidCredentials": "Correo o contraseña incorrectos.",
+    "loginError": "No se pudo iniciar sesión. Inténtalo de nuevo.",
+    "register": "REGISTRARSE",
+    "registering": "REGISTRANDO…",
+    "registerError": "No se pudo crear la cuenta. Inténtalo de nuevo.",
+    "oauthNotConfigured": "El inicio de sesión con 42 no está disponible ahora mismo.",
+    "oauthInvalidState": "Tu sesión de inicio con 42 ha caducado. Inténtalo de nuevo.",
+    "oauthMissingCode": "El inicio de sesión con 42 se canceló o no terminó.",
+    "oauthTokenExchangeFailed": "No se pudo verificar tu inicio de sesión con 42. Inténtalo de nuevo.",
+    "oauthProfileRetrievalFailed": "No se pudo cargar tu perfil de 42. Inténtalo de nuevo.",
+    "oauthAccessDenied": "Se denegó el inicio de sesión con 42. Autoriza el acceso para continuar.",
+    "oauthProviderError": "42 tiene problemas ahora mismo. Inténtalo más tarde.",
+    "oauthAccountSuspended": "Tu cuenta está suspendida o desactivada.",
+    "oauthAccountExists": "Ya existe una cuenta con este correo. Inicia sesión con tu correo y contraseña.",
+    "oauthIdentityConflict": "No se pudo vincular tu cuenta de 42. Contacta con soporte.",
+    "oauthAccountConflict": "No se pudo crear tu cuenta desde 42. Inténtalo de nuevo.",
+    "oauthFailed": "Falló el inicio de sesión con 42. Inténtalo de nuevo."
+  },
+  "validation": {
+    "displayNameRequired": "El nombre visible es obligatorio.",
+    "displayNameTooLong": "El nombre visible puede tener como máximo {{max}} caracteres.",
+    "emailRequired": "El correo electrónico es obligatorio.",
+    "emailTooLong": "El correo electrónico puede tener como máximo {{max}} caracteres.",
+    "emailInvalid": "Introduce un correo electrónico válido.",
+    "passwordRequired": "La contraseña es obligatoria.",
+    "passwordTooShort": "La contraseña debe tener al menos {{min}} caracteres.",
+    "passwordNumeric": "La contraseña no puede contener solo números."
   }
 }
