@@ -15,6 +15,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
 from apps.evaluations.services import InvalidStateTransition, decline_request
+from apps.notifications.models import Notification
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
@@ -135,7 +136,7 @@ def test_decline_with_real_session_and_no_body(
     expected["updated_at"] = "2026-10-10T09:01:00Z"
     assert response.status_code == 200
     assert response.json() == expected
-    assert len(callbacks) == 1
+    assert len(callbacks) == 2
     assert event_sender.await_args_list == [
         call(
             "user_7",
@@ -153,6 +154,14 @@ def test_decline_with_real_session_and_no_body(
                 "data": {"id": 17, "status": "pending"},
             },
         ),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
     ]
     evaluation.refresh_from_db()
     assert evaluation.status == "pending"
@@ -162,6 +171,21 @@ def test_decline_with_real_session_and_no_body(
     assert evaluation.created_at == NOW
     assert evaluation.updated_at == at
     assert evaluation.note == "Parsing."
+    assert list(
+        Notification.objects.values("recipient_id", "type", "payload", "target_url", "read_at")
+    ) == [
+        {
+            "recipient_id": 42,
+            "type": "evaluation.declined",
+            "payload": {
+                "request_id": 17,
+                "project": {"id": 4, "slug": "libft", "name": "Libft"},
+                "student": {"id": 7, "display_name": "Alice"},
+            },
+            "target_url": "/evaluations/17",
+            "read_at": None,
+        }
+    ]
 
 
 @pytest.mark.parametrize("picker_id", [42, 43])
@@ -346,6 +370,7 @@ def test_other_states_rejected(
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(decline_url())
     assert callbacks == []
+    assert not Notification.objects.exists()
     event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == INVALID_STATE
@@ -433,7 +458,18 @@ def test_competing_transitions_have_one_winner(
             "event": "evaluation.declined",
             "data": {"id": 17, "status": "pending"},
         }
-    assert event_sender.await_args_list == [call("user_7", message), call("user_42", message)]
+    assert event_sender.await_args_list == [
+        call("user_7", message),
+        call("user_42", message),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
+    ]
 
 
 def test_decline_event_refreshes_only_active_eligible_queues(
@@ -472,6 +508,14 @@ def test_decline_event_refreshes_only_active_eligible_queues(
         call("user_42", message),
         call("user_43", message),
         call("user_44", message),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
     ]
 
 
@@ -489,7 +533,19 @@ def test_stale_decline_notifies_actual_picker_before_clearing_pick(
         "event": "evaluation.declined",
         "data": {"id": 17, "status": "pending"},
     }
-    assert event_sender.await_args_list == [call("user_7", message), call("user_43", message)]
+    assert event_sender.await_args_list == [
+        call("user_7", message),
+        call("user_43", message),
+        call(
+            "user_43",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
+    ]
+    assert Notification.objects.get().recipient_id == 43
     assert evaluation.picked_by_id is None
 
 
@@ -502,6 +558,7 @@ def test_rolled_back_decline_sends_no_event(
                 decline_request(evaluation)
                 raise RuntimeError("rollback")
     assert callbacks == []
+    assert not Notification.objects.exists()
     event_sender.assert_not_awaited()
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
@@ -526,3 +583,34 @@ def test_decline_succeeds_and_logs_when_event_delivery_fails(
     assert evaluation.picked_by_id is None
     assert "Redis unavailable" in caplog.text
     assert any(record.exc_info for record in caplog.records)
+
+
+def test_notification_creation_failure_rolls_back_transition(
+    student, evaluation, event_sender, monkeypatch, django_capture_on_commit_callbacks
+):
+    from apps.notifications.services import create_notification
+
+    def fail_after_write(**kwargs):
+        create_notification(**kwargs)
+        raise RuntimeError("Injected notification failure")
+
+    monkeypatch.setattr("apps.evaluations.notifications.create_notification", fail_after_write)
+    client = session_client(student)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(
+            decline_url(),
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+        )
+    assert response.status_code == 500
+    assert response.json() == {
+        "error": {"code": "server_error", "message": "Something went wrong. Please try again."}
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == 42
+    assert evaluation.starts_at == START
+    assert evaluation.ends_at == START + timedelta(minutes=45)
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    event_sender.assert_not_awaited()

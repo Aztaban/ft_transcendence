@@ -14,7 +14,9 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
-from apps.evaluations.services import cancel_request
+from apps.evaluations.notifications import notify_evaluation_cancelled
+from apps.evaluations.services import InvalidStateTransition, cancel_request
+from apps.notifications.models import Notification
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
@@ -140,7 +142,7 @@ def test_cancel_each_active_state_with_real_session(
         event_sender.assert_not_awaited()
     assert response.status_code == 200
     assert response.json() == expected
-    assert len(callbacks) == 1
+    assert len(callbacks) == (1 if state == "pending" else 2)
     message = {
         "type": "user.event",
         "event": "evaluation.cancelled",
@@ -148,8 +150,35 @@ def test_cancel_each_active_state_with_real_session(
     }
     if state == "pending":
         assert event_sender.await_args_list == [call("user_7", message), call("user_43", message)]
+        assert not Notification.objects.exists()
     else:
-        assert event_sender.await_args_list == [call("user_7", message), call("user_42", message)]
+        assert event_sender.await_args_list == [
+            call("user_7", message),
+            call("user_42", message),
+            call(
+                "user_42",
+                {
+                    "type": "user.event",
+                    "event": "notification.created",
+                    "data": {"id": Notification.objects.get().pk},
+                },
+            ),
+        ]
+        assert list(
+            Notification.objects.values("recipient_id", "type", "payload", "target_url", "read_at")
+        ) == [
+            {
+                "recipient_id": 42,
+                "type": "evaluation.cancelled",
+                "payload": {
+                    "request_id": 17,
+                    "project": {"id": 4, "slug": "libft", "name": "Libft"},
+                    "cancelled_by": {"id": 7, "display_name": "Alice"},
+                },
+                "target_url": "/evaluations/17",
+                "read_at": None,
+            }
+        ]
     evaluation.refresh_from_db()
     assert evaluation.status == "cancelled"
     assert evaluation.cancelled_by_id == 7
@@ -463,6 +492,7 @@ def test_terminal_states_rejected(
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(cancel_url())
     assert callbacks == []
+    assert not Notification.objects.exists()
     event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == INVALID_STATE
@@ -488,6 +518,7 @@ def test_at_or_after_start_rejected(
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(cancel_url())
     assert callbacks == []
+    assert not Notification.objects.exists()
     event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == {
@@ -593,7 +624,18 @@ def test_concurrent_cancellations_have_one_winner(student, evaluation, expected,
         "event": "evaluation.cancelled",
         "data": {"id": 17, "status": "cancelled"},
     }
-    assert event_sender.await_args_list == [call("user_7", message), call("user_42", message)]
+    assert event_sender.await_args_list == [
+        call("user_7", message),
+        call("user_42", message),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
+    ]
 
 
 def test_pending_cancellation_event_filters_and_deduplicates_queue_recipients(
@@ -652,7 +694,18 @@ def test_cancellation_of_new_pick_uses_locked_state_for_recipients(
         "event": "evaluation.cancelled",
         "data": {"id": 17, "status": "cancelled"},
     }
-    assert event_sender.await_args_list == [call("user_7", message), call("user_42", message)]
+    assert event_sender.await_args_list == [
+        call("user_7", message),
+        call("user_42", message),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
+    ]
     assert evaluation.picked_by_id == 42
 
 
@@ -665,8 +718,139 @@ def test_rolled_back_cancellation_sends_no_event(
                 cancel_request(evaluation)
                 raise RuntimeError("rollback")
     assert callbacks == []
+    assert not Notification.objects.exists()
     event_sender.assert_not_awaited()
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
     assert evaluation.picked_by_id == 42
     assert evaluation.cancelled_at is None
+
+
+def test_notification_failure_rolls_back_cancellation(
+    student, evaluation, event_sender, monkeypatch, django_capture_on_commit_callbacks
+):
+    from apps.notifications.services import create_notification
+
+    def fail_after_write(**kwargs):
+        create_notification(**kwargs)
+        raise RuntimeError("Injected notification failure")
+
+    monkeypatch.setattr("apps.evaluations.notifications.create_notification", fail_after_write)
+    client = session_client(student)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(
+            cancel_url(),
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+        )
+    assert response.status_code == 500
+    assert response.json() == {
+        "error": {"code": "server_error", "message": "Something went wrong. Please try again."}
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == 42
+    assert evaluation.starts_at == START
+    assert evaluation.ends_at == START + timedelta(minutes=45)
+    assert evaluation.cancelled_by_id is None
+    assert evaluation.cancelled_at is None
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    event_sender.assert_not_awaited()
+
+
+def test_repeated_cancellation_cannot_duplicate_notification(evaluation):
+    cancel_request(evaluation)
+    with pytest.raises(InvalidStateTransition):
+        cancel_request(evaluation)
+    assert Notification.objects.count() == 1
+
+
+@pytest.mark.parametrize("role", ["head_tutor", "admin"])
+@pytest.mark.parametrize("has_pick", [True, False])
+def test_cancellation_notification_helper_supports_override_recipients(
+    evaluation, role, has_pick, event_sender, django_capture_on_commit_callbacks
+):
+    # The override endpoint is pending; test the helper's documented recipient rules.
+    actor = get_user_model().objects.create_user(
+        id=43, email="moderator@example.com", display_name="Moderator"
+    )
+    actor.roles.add(Role.objects.get(name=role))
+    changes = {"status": "cancelled", "cancelled_by": actor, "cancelled_at": NOW}
+    if not has_pick:
+        changes.update(picked_by=None, starts_at=None, ends_at=None)
+    EvaluationRequest.objects.filter(pk=17).update(**changes)
+    evaluation.refresh_from_db()
+    with django_capture_on_commit_callbacks(execute=True):
+        with transaction.atomic():
+            notify_evaluation_cancelled(evaluation)
+            event_sender.assert_not_awaited()
+    expected = [
+        {
+            "recipient_id": 7,
+            "type": "evaluation.cancelled",
+            "payload": {
+                "request_id": 17,
+                "project": {"id": 4, "slug": "libft", "name": "Libft"},
+                "cancelled_by": {"id": 43, "display_name": "Moderator"},
+            },
+            "target_url": "/evaluations/17",
+            "read_at": None,
+        }
+    ]
+    if has_pick:
+        expected.append(
+            {
+                "recipient_id": 42,
+                "type": "evaluation.cancelled",
+                "payload": {
+                    "request_id": 17,
+                    "project": {"id": 4, "slug": "libft", "name": "Libft"},
+                    "cancelled_by": {"id": 43, "display_name": "Moderator"},
+                },
+                "target_url": "/evaluations/17",
+                "read_at": None,
+            }
+        )
+    assert (
+        list(
+            Notification.objects.order_by("recipient_id").values(
+                "recipient_id", "type", "payload", "target_url", "read_at"
+            )
+        )
+        == expected
+    )
+    notifications = list(Notification.objects.order_by("recipient_id"))
+    expected_events = [
+        call(
+            "user_7",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": notifications[0].pk},
+            },
+        )
+    ]
+    if has_pick:
+        expected_events.append(
+            call(
+                "user_42",
+                {
+                    "type": "user.event",
+                    "event": "notification.created",
+                    "data": {"id": notifications[1].pk},
+                },
+            )
+        )
+    assert event_sender.await_args_list == expected_events
+
+
+def test_cancellation_helper_does_not_notify_the_overriding_picker(evaluation, tutor):
+    tutor.roles.add(Role.objects.get(name="head_tutor"))
+    EvaluationRequest.objects.filter(pk=17).update(
+        status="cancelled", cancelled_by=tutor, cancelled_at=NOW
+    )
+    evaluation.refresh_from_db()
+    with transaction.atomic():
+        notify_evaluation_cancelled(evaluation)
+    assert list(Notification.objects.values_list("recipient_id", flat=True)) == [7]

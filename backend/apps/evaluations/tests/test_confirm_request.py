@@ -1,4 +1,4 @@
-"""Student confirmation (#196) and Pending Evaluations visibility (#198)."""
+"""Student confirmation and Pending Evaluations visibility."""
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -9,12 +9,14 @@ from unittest.mock import AsyncMock, call
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import close_old_connections, transaction
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
 from apps.evaluations.services import InvalidStateTransition, confirm_request
+from apps.notifications.models import Notification
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
@@ -135,7 +137,7 @@ def test_confirm_with_real_session_and_no_body(
         event_sender.assert_not_awaited()
     assert response.status_code == 200
     assert response.json() == expected
-    assert len(callbacks) == 1
+    assert len(callbacks) == 2
     assert event_sender.await_args_list == [
         call(
             "user_7",
@@ -153,12 +155,38 @@ def test_confirm_with_real_session_and_no_body(
                 "data": {"id": 17, "status": "confirmed"},
             },
         ),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
     ]
     evaluation.refresh_from_db()
     assert evaluation.status == "confirmed"
     assert evaluation.picked_by_id == 42
     assert evaluation.starts_at == START
     assert evaluation.ends_at == START + timedelta(minutes=45)
+
+    assert list(
+        Notification.objects.values("recipient_id", "type", "payload", "target_url", "read_at")
+    ) == [
+        {
+            "recipient_id": 42,
+            "type": "evaluation.confirmed",
+            "payload": {
+                "request_id": 17,
+                "project": {"id": 4, "slug": "libft", "name": "Libft"},
+                "student": {"id": 7, "display_name": "Alice"},
+                "starts_at": "2026-10-12T15:00:00Z",
+                "ends_at": "2026-10-12T15:45:00Z",
+            },
+            "target_url": "/evaluations/17",
+            "read_at": None,
+        }
+    ]
 
     # Re-fetch using exactly the existing PendingPage student query.
     response = client.get(
@@ -322,6 +350,7 @@ def test_visible_non_owner_cannot_confirm(
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(confirm_url())
     assert callbacks == []
+    assert not Notification.objects.exists()
     event_sender.assert_not_awaited()
     assert response.status_code == 403
     assert response.json() == {
@@ -361,6 +390,7 @@ def test_other_states_rejected(
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(confirm_url())
     assert callbacks == []
+    assert not Notification.objects.exists()
     event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == INVALID_STATE
@@ -378,6 +408,7 @@ def test_start_boundary_rejected(
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(confirm_url())
     assert callbacks == []
+    assert not Notification.objects.exists()
     event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == {
@@ -447,6 +478,14 @@ def test_concurrent_confirmation_has_one_winner(student, evaluation, expected, e
                 "data": {"id": 17, "status": "confirmed"},
             },
         ),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
     ]
 
 
@@ -459,6 +498,7 @@ def test_rolled_back_confirmation_sends_no_event(
                 confirm_request(evaluation)
                 raise RuntimeError("rollback")
     assert callbacks == []
+    assert not Notification.objects.exists()
     event_sender.assert_not_awaited()
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
@@ -472,7 +512,7 @@ def test_confirmation_event_waits_for_outer_transaction(
             confirm_request(evaluation)
             event_sender.assert_not_awaited()
         event_sender.assert_not_awaited()
-    assert len(callbacks) == 1
+    assert len(callbacks) == 2
     assert event_sender.await_args_list == [
         call(
             "user_7",
@@ -490,4 +530,66 @@ def test_confirmation_event_waits_for_outer_transaction(
                 "data": {"id": 17, "status": "confirmed"},
             },
         ),
+        call(
+            "user_42",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
     ]
+
+
+def test_notification_creation_failure_rolls_back_transition(
+    student, evaluation, event_sender, monkeypatch, django_capture_on_commit_callbacks
+):
+    from apps.notifications.services import create_notification
+
+    def fail_after_write(**kwargs):
+        create_notification(**kwargs)
+        raise RuntimeError("Injected notification failure")
+
+    monkeypatch.setattr("apps.evaluations.notifications.create_notification", fail_after_write)
+    client = session_client(student)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = client.post(
+            confirm_url(),
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+        )
+    assert response.status_code == 500
+    assert response.json() == {
+        "error": {"code": "server_error", "message": "Something went wrong. Please try again."}
+    }
+    evaluation.refresh_from_db()
+    assert evaluation.status == "awaiting_confirmation"
+    assert evaluation.picked_by_id == 42
+    assert evaluation.starts_at == START
+    assert evaluation.ends_at == START + timedelta(minutes=45)
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    event_sender.assert_not_awaited()
+
+
+@override_settings(TIME_ZONE="Europe/Prague")
+def test_confirmation_notification_times_are_utc_and_retry_creates_no_duplicate(evaluation):
+    confirm_request(evaluation)
+    assert Notification.objects.get().payload == {
+        "request_id": 17,
+        "project": {"id": 4, "slug": "libft", "name": "Libft"},
+        "student": {"id": 7, "display_name": "Alice"},
+        "starts_at": "2026-10-12T15:00:00Z",
+        "ends_at": "2026-10-12T15:45:00Z",
+    }
+    with pytest.raises(InvalidStateTransition):
+        confirm_request(evaluation)
+    assert Notification.objects.count() == 1
+
+
+def test_stale_confirmation_notifies_actual_picker(evaluation):
+    new_picker = get_user_model().objects.create_user(id=43, email="new-picker@example.com")
+    EvaluationRequest.objects.filter(pk=17).update(picked_by=new_picker)
+    assert evaluation.picked_by_id == 42
+    confirm_request(evaluation)
+    assert Notification.objects.get().recipient_id == 43
