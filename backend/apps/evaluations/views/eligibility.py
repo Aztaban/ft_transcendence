@@ -335,7 +335,7 @@ def revoke_tutor_eligibility(request, slug, tutor_id):
 
     serializer = EligibilityRevokeSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    # TODO(audit): eligibility.revoked (#343). The audit log model is not on this branch (issue #53).
+    # TODO(audit): eligibility.revoked (#343). The audit log model is not on this branch.
     # After it exists, write target_type tutor_eligibility, target_id of the deleted row,
     # actor request.user and serializer.validated_data["reason"] in this transaction.
     # The reason is validated and then discarded.
