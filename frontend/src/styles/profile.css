@@ -8,7 +8,7 @@
 
 .profile-page__eyebrow {
   margin: 0 0 4px;
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -306,7 +306,7 @@
 
 .profile-language--active .profile-language__code {
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 /* Shared */

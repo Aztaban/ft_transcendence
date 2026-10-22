@@ -26,7 +26,7 @@
 .ui-button--primary {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .ui-button--primary:hover:not(:disabled) {

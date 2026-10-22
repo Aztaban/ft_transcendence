@@ -16,7 +16,7 @@
 }
 
 .evaluation__back:hover {
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
 }
 
 /* Main card */
@@ -78,7 +78,7 @@
 
 .evaluation__pill--accent {
   background: #e6f8f8;
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
 }
 
 .evaluation__pill--neutral {
@@ -88,7 +88,7 @@
 
 .evaluation__pill--muted {
   background: #f4f5f5;
-  color: #87908f;
+  color: var(--color-text-secondary);
 }
 
 /* Project */
@@ -108,7 +108,7 @@
   place-items: center;
   border-radius: 14px;
   background: #e6f8f8;
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
   font-size: 1.15rem;
   font-weight: 700;
 }
@@ -288,7 +288,7 @@
 .evaluation__button--primary {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .evaluation__button--primary:hover:enabled {
@@ -385,7 +385,7 @@
   place-items: center;
   border-radius: 50%;
   background: #ffffff;
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
   font-size: 2.2rem;
   font-weight: 700;
   animation: evaluation-pop-in 0.5s 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;

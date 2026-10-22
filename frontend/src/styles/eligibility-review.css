@@ -209,8 +209,8 @@
 }
 
 .eligibility-review__approve {
-  border: 1px solid #16a34a;
-  background: #16a34a;
+  border: 1px solid #15803d;
+  background: #15803d;
   color: #ffffff;
 }
 
@@ -402,7 +402,7 @@
   flex-direction: column;
   gap: 14px;
   padding: 30px 32px 24px;
-  border-top: 6px solid #16a34a;
+  border-top: 6px solid #15803d;
   border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
@@ -525,7 +525,7 @@
 }
 
 .review-dialog__confirm--approved {
-  background: #16a34a;
+  background: #15803d;
 }
 
 .review-dialog__confirm--declined {

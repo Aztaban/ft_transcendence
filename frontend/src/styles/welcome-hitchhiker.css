@@ -202,7 +202,7 @@
   border-color: #00797b;
   background: var(--color-accent);
   box-shadow: 0 3px 0 #00797b;
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .welcome-dialog__submit:hover:enabled {
