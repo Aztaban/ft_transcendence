@@ -335,12 +335,17 @@ def revoke_tutor_eligibility(request, slug, tutor_id):
 
     serializer = EligibilityRevokeSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    # TODO(audit): eligibility.revoked (#343). The audit log model is not on this branch (issue #53).
+    # TODO(audit): eligibility.revoked (#343). The audit log model is not on this
+    # branch (issue #53).
     # After it exists, write target_type tutor_eligibility, target_id of the deleted row,
     # actor request.user and serializer.validated_data["reason"] in this transaction.
     # The reason is validated and then discarded.
 
     with transaction.atomic():
+        # The notification insert locks the tutor. Pick already holds that user
+        # before it locks the grant, so revocation takes the same order (schema §4.2).
+        if User.objects.select_for_update().filter(pk=tutor_id).first() is None:
+            return error_response("not_found", _("Not found."), status.HTTP_404_NOT_FOUND)
         eligibility = (
             TutorEligibility.objects.select_for_update()
             .select_related("project")

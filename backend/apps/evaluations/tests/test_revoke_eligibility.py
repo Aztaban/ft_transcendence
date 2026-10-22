@@ -1,5 +1,6 @@
 """DELETE /api/v1/projects/{slug}/eligibility/{tutor_id}/ (api-plan §10.3)."""
 
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from threading import Barrier
@@ -10,11 +11,13 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.db import close_old_connections, connection, connections, transaction
 from django.db.models.query import QuerySet
+from django.db.utils import OperationalError
 from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
+from apps.evaluations.services import pick_slot as write_pick
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 
@@ -23,6 +26,7 @@ PASSWORD = "secret"
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
 SLOT_START = datetime(2026, 10, 12, 15, tzinfo=timezone.utc)
 SLOT_END = datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc)
+PICK_SLOT = {"starts_at": "2026-10-12T15:00:00Z", "ends_at": "2026-10-12T15:45:00Z"}
 REVIEWERS = (Role.Name.HEAD_TUTOR, Role.Name.ADMIN)
 FORBIDDEN = (Role.Name.STUDENT, Role.Name.TUTOR, Role.Name.SC_MEMBER)
 
@@ -398,7 +402,9 @@ def test_competing_revokes_have_one_winner(make_user, monkeypatch):
     original_fetch = QuerySet._fetch_all
 
     def fetch_after_both_reach_the_lock(queryset):
-        if queryset.model is TutorEligibility and queryset.query.select_for_update:
+        # Rendezvous before the tutor row lock. Waiting after acquisition deadlocks,
+        # and the grant lock is taken only once that user lock is held.
+        if queryset.model is get_user_model() and queryset.query.select_for_update:
             barrier.wait(timeout=10)
         return original_fetch(queryset)
 
@@ -432,3 +438,186 @@ def test_competing_revokes_have_one_winner(make_user, monkeypatch):
     assert list(Notification.objects.values("recipient_id", "type")) == [
         {"recipient_id": tutor.pk, "type": "eligibility.revoked"}
     ]
+
+
+def open_pick(make_user):
+    """Pending request whose tutor is still eligible. transaction=True drops seeded roles."""
+    assert connection.vendor == "mysql", "This test requires real MySQL row locking."
+    for name in Role.Name.values:
+        Role.objects.get_or_create(name=name)
+    student = make_user("student@example.com", display_name="Student", roles=(Role.Name.STUDENT,))
+    tutor = make_user("tutor@example.com", display_name="Tutor", roles=(Role.Name.TUTOR,))
+    head = make_user("head@example.com", display_name="Head", roles=(Role.Name.HEAD_TUTOR,))
+    project = Project.objects.create(slug="libft", name="Libft")
+    grant(tutor, project)
+    pending = EvaluationRequest.objects.create(student=student, project=project)
+    return tutor, head, project, pending
+
+
+def post_pick(tutor_id, request_id):
+    close_old_connections()
+    try:
+        client = APIClient()
+        client.force_authenticate(get_user_model().objects.get(pk=tutor_id))
+        response = client.post(
+            reverse("api:evaluation-request-pick-slot", kwargs={"pk": request_id}),
+            PICK_SLOT,
+            format="json",
+        )
+        return response.status_code, response.json()
+    finally:
+        connections.close_all()
+
+
+def eligibility_lock_is_held(tutor_id, project_id):
+    """True when another transaction already holds this grant's row lock."""
+    held = False
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SET SESSION innodb_lock_wait_timeout = 1")
+            cursor.execute(
+                """
+                SELECT id FROM tutor_eligibility
+                WHERE tutor_id = %s AND project_id = %s
+                FOR UPDATE
+                """,
+                [tutor_id, project_id],
+            )
+    except OperationalError as exc:
+        held = exc.args[0] == 1205
+    finally:
+        connection.rollback()
+    with connection.cursor() as cursor:
+        cursor.execute("SET SESSION innodb_lock_wait_timeout = 50")
+    return held
+
+
+@pytest.mark.django_db(transaction=True)
+def test_revocation_between_permission_check_and_write_refuses_the_pick(
+    make_user, send, monkeypatch
+):
+    """CanPickSlot passes, revocation commits, and only then does the pick write."""
+    monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
+    tutor, head, project, pending = open_pick(make_user)
+    passed_check = Barrier(2)
+    revocation_done = Barrier(2)
+    pick_locks = []
+    original_fetch = QuerySet._fetch_all
+
+    def fetch(queryset):
+        original_fetch(queryset)
+        sql = str(queryset.query).upper()
+        if (
+            queryset.model is TutorEligibility
+            and queryset.query.select_for_update
+            and "JOIN" not in sql
+        ):
+            pick_locks.append(queryset._result_cache)
+
+    def pick_after_revocation(evaluation, user, starts_at, ends_at):
+        # post() is already past get_object(), so CanPickSlot has passed.
+        # The pick transaction and its write start only after revocation commits.
+        passed_check.wait(timeout=10)
+        revocation_done.wait(timeout=10)
+        return write_pick(evaluation, user, starts_at, ends_at)
+
+    monkeypatch.setattr(QuerySet, "_fetch_all", fetch)
+    monkeypatch.setattr("apps.evaluations.views.requests.pick_slot", pick_after_revocation)
+    head_browser = browser_for(head)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        pick_future = executor.submit(post_pick, tutor.pk, pending.pk)
+        try:
+            passed_check.wait(timeout=10)
+            revoked = revoke(head_browser, project.slug, tutor.pk, {"reason": "no longer eligible"})
+            assert revoked.status_code == 204
+            revocation_done.wait(timeout=10)
+            status_code, body = pick_future.result(timeout=10)
+        finally:
+            passed_check.abort()
+            revocation_done.abort()
+
+    assert status_code == 403
+    assert body == {
+        "error": {
+            "code": "not_eligible",
+            "message": "You are not eligible to evaluate this project.",
+        }
+    }
+    assert pick_locks == [[]]
+    pending.refresh_from_db()
+    assert pending.status == EvaluationRequest.Status.PENDING
+    assert pending.picked_by_id is None
+    assert pending.starts_at is None
+    assert pending.ends_at is None
+    assert not TutorEligibility.objects.filter(tutor=tutor, project=project).exists()
+    assert list(Notification.objects.values("recipient_id", "type")) == [
+        {"recipient_id": tutor.pk, "type": "eligibility.revoked"}
+    ]
+    send.assert_awaited()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_pick_holds_the_eligibility_lock_until_commit(make_user, send, monkeypatch):
+    """Revocation waits on the grant row while the pick transaction is still open."""
+    monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
+    tutor, head, project, pending = open_pick(make_user)
+    held = Barrier(2)
+    release = Barrier(2)
+    pick_thread = []
+    original_fetch = QuerySet._fetch_all
+
+    def fetch(queryset):
+        original_fetch(queryset)
+        if (
+            pick_thread
+            and threading.current_thread() is pick_thread[0]
+            and queryset.model is TutorEligibility
+            and queryset.query.select_for_update
+            and queryset._result_cache
+        ):
+            held.wait(timeout=10)
+            release.wait(timeout=10)
+
+    def submit_pick(tutor_id, request_id):
+        pick_thread.append(threading.current_thread())
+        return post_pick(tutor_id, request_id)
+
+    def submit_revoke(browser, slug, tutor_id):
+        close_old_connections()
+        try:
+            response = revoke(browser, slug, tutor_id, {"reason": "no longer eligible"})
+            return response.status_code
+        finally:
+            connections.close_all()
+
+    monkeypatch.setattr(QuerySet, "_fetch_all", fetch)
+    head_browser = browser_for(head)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        pick_future = executor.submit(submit_pick, tutor.pk, pending.pk)
+        try:
+            held.wait(timeout=10)
+            revoke_future = executor.submit(submit_revoke, head_browser, project.slug, tutor.pk)
+            assert eligibility_lock_is_held(tutor.pk, project.pk)
+            pending.refresh_from_db()
+            assert pending.status == EvaluationRequest.Status.PENDING
+            assert TutorEligibility.objects.filter(tutor=tutor, project=project).exists()
+            release.wait(timeout=10)
+            pick_status, pick_body = pick_future.result(timeout=10)
+            revoke_status = revoke_future.result(timeout=10)
+        finally:
+            held.abort()
+            release.abort()
+
+    assert pick_status == 200
+    assert pick_body["status"] == "awaiting_confirmation"
+    assert pick_body["picked_by"]["id"] == tutor.pk
+    assert revoke_status == 204
+    pending.refresh_from_db()
+    assert pending.status == EvaluationRequest.Status.AWAITING_CONFIRMATION
+    assert pending.picked_by_id == tutor.pk
+    assert not TutorEligibility.objects.filter(tutor=tutor, project=project).exists()
+    assert list(Notification.objects.order_by("pk").values_list("recipient_id", "type")) == [
+        (pending.student_id, "evaluation.slot_picked"),
+        (tutor.pk, "eligibility.revoked"),
+    ]
+    send.assert_awaited()

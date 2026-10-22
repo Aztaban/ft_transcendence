@@ -17,7 +17,7 @@ from .events import (
     publish_slot_picked_event,
     publish_updated_event,
 )
-from .models import EvaluationRequest
+from .models import EvaluationRequest, TutorEligibility
 from .notifications import (
     notify_evaluation_cancelled,
     notify_evaluation_confirmed,
@@ -26,6 +26,7 @@ from .notifications import (
     notify_evaluation_released,
     notify_slot_picked,
 )
+from .permissions import NotEligible
 
 
 class ActiveRequestExists(APIException):
@@ -248,13 +249,10 @@ def person_is_busy(person_id, starts_at, ends_at, request_id):
 
 
 def pick_slot(evaluation, user, starts_at, ends_at):
-    """Claim a pending request the caller is already allowed to pick (§7.1, §10.4).
+    """Claim a pending evaluation request (§7.1, §10.4).
 
-    Eligibility is CanPickSlot on the view. Inside one transaction the Hitchhiker
-    and the student are locked, a request that is no longer pending is refused
-    before the overlap checks, and the conditional update names the single winner
-    (schema §4.2). A pending row cannot store a pick, so that update also moves
-    the request to awaiting_confirmation.
+    Re-check and lock eligibility inside the transaction to prevent
+    picking a slot after concurrent revocation (schema §4.2).
     """
     with transaction.atomic():
         lock_participants(user.pk, evaluation.student_id)
@@ -265,6 +263,14 @@ def pick_slot(evaluation, user, starts_at, ends_at):
         )
         if status != EvaluationRequest.Status.PENDING:
             raise RequestNotPending()
+        # Held until commit, so revocation of this grant waits on the same row.
+        eligibility = (
+            TutorEligibility.objects.select_for_update()
+            .filter(tutor_id=user.pk, project_id=evaluation.project_id)
+            .first()
+        )
+        if eligibility is None:
+            raise NotEligible()
         if person_is_busy(user.pk, starts_at, ends_at, evaluation.pk):
             raise SlotOverlaps()
         if person_is_busy(evaluation.student_id, starts_at, ends_at, evaluation.pk):
