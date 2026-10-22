@@ -6,16 +6,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { RoleProvider, useRole, type AppRole } from "../store/RoleContext";
 import HomePage from "./HomePage";
 
+// What the mocked hooks report; each test may change it before rendering.
+const load = vi.hoisted(() => ({ isLoading: false, hasError: false }));
+
 // The student boxes load data from the API; that is tested in OpenRequests and the hook itself.
 vi.mock("../features/hitchhiker/useHitchhikerRequests", () => ({
-  useHitchhikerRequests: () => ({ openRequests: [], pickedRequests: [], hasError: false }),
+  useHitchhikerRequests: () => ({ openRequests: [], pickedRequests: [], ...load }),
 }));
 vi.mock("../features/student/useStudentRequests", () => ({
-  useStudentRequests: () => ({ requests: [], hasError: false, reload: vi.fn() }),
+  useStudentRequests: () => ({ requests: [], ...load, reload: vi.fn() }),
 }));
 
 afterEach(() => {
   cleanup();
+  // The active workspace is kept for the tab; each test starts as a student.
+  sessionStorage.clear();
+  load.isLoading = false;
+  load.hasError = false;
 });
 
 // Switches the active role, as the role selector in the sidebar does.
@@ -74,5 +81,36 @@ describe("HomePage", () => {
     }
     expect(screen.queryByText("No history yet")).toBeTruthy();
     expect(screen.queryByText("Your recent activity will appear here.")).toBeNull();
+  });
+
+  it("shows skeletons instead of empty states while the student's requests load", () => {
+    load.isLoading = true;
+    renderHomeAs("STUDENT");
+
+    expect(screen.getByText("Loading your requests…")).toBeTruthy();
+    expect(screen.getByText("Loading scheduled evaluations…")).toBeTruthy();
+    expect(screen.getByText("Loading your history…")).toBeTruthy();
+    expect(screen.queryByText("No open requests")).toBeNull();
+  });
+
+  it("shows skeletons in all four Hitchhiker boxes while loading", () => {
+    load.isLoading = true;
+    renderHomeAs("HITCHHIKER");
+
+    expect(screen.getByText("Loading open requests…")).toBeTruthy();
+    expect(screen.getByText("Loading proposed slots…")).toBeTruthy();
+    expect(screen.getByText("Loading scheduled evaluations…")).toBeTruthy();
+    expect(screen.getByText("Loading your history…")).toBeTruthy();
+  });
+
+  it("shows only the error when the first load fails, without empty states", () => {
+    load.hasError = true;
+    renderHomeAs("HITCHHIKER");
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Could not load your requests. Please try again later.",
+    );
+    expect(screen.queryByText("No open requests")).toBeNull();
+    expect(screen.queryByText("No history yet")).toBeNull();
   });
 });

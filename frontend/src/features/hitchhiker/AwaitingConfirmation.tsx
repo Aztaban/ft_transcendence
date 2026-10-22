@@ -3,10 +3,12 @@ import { formatSlot } from "../../utils/dateTime";
 
 interface AwaitingConfirmationProps {
   requests: EvaluationRequest[];
+  // True during the first load: a skeleton instead of the empty state (#258).
+  isLoading?: boolean;
 }
 
 // Slots the Hitchhiker proposed (scope=picked) that the student has not answered yet.
-function AwaitingConfirmation({ requests }: AwaitingConfirmationProps) {
+function AwaitingConfirmation({ requests, isLoading = false }: AwaitingConfirmationProps) {
   const awaitingRequests = requests.filter((request) => request.status === "awaiting_confirmation");
 
   return (
@@ -16,7 +18,13 @@ function AwaitingConfirmation({ requests }: AwaitingConfirmationProps) {
     >
       <h2 id="awaiting-confirmation-title">Awaiting Confirmation</h2>
 
-      {awaitingRequests.length === 0 ? (
+      {isLoading ? (
+        <div className="dashboard-requests" aria-busy="true">
+          <div className="dashboard-requests__skeleton" />
+          <div className="dashboard-requests__skeleton" />
+          <span className="dashboard-requests__sr-only">Loading proposed slots…</span>
+        </div>
+      ) : awaitingRequests.length === 0 ? (
         <div className="dashboard-empty">
           <div className="dashboard-empty__history-mark" aria-hidden="true">
             —

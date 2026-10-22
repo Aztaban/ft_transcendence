@@ -21,6 +21,13 @@ describe("OpenRequests", () => {
     expect(screen.getByText("No open requests")).toBeTruthy();
   });
 
+  it("shows a loading placeholder instead of the empty state while loading", () => {
+    renderWithRouter(<OpenRequests requests={[]} isLoading />);
+
+    expect(screen.getByText("Loading your requests…")).toBeTruthy();
+    expect(screen.queryByText("No open requests")).toBeNull();
+  });
+
   it("displays pending and awaiting-confirmation requests", () => {
     const requests = [
       makeRequest(1, "ft_transcendence", "pending"),

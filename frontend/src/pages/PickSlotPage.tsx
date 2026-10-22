@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { ApiError } from "../api/client";
-import { getEvaluationRequest, pickSlot } from "../api/evaluationRequests";
+import { pickSlot } from "../api/evaluationRequests";
 import SlotPicker, {
   type ChosenSlot,
   type SlotFieldErrors,
 } from "../features/hitchhiker/SlotPicker";
 import { isStartAllowed, MIN_LEAD_MINUTES } from "../features/hitchhiker/slotRules";
+import { findOpenRequest } from "../features/hitchhiker/findOpenRequest";
 import SuccessDialog from "../features/hitchhiker/SuccessDialog";
 import type { EvaluationRequest } from "../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../utils/dateTime";
+import { EVALUATION_EVENTS } from "../websocket/events";
+import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/pick-slot.css";
 
 type LoadState = "loading" | "ready" | "error";
@@ -18,6 +21,9 @@ type LoadState = "loading" | "ready" | "error";
 // How often "now" is refreshed while the page stays open, so a chosen start cannot silently
 // become too soon.
 const NOW_REFRESH_MS = 30_000;
+
+const GONE_MESSAGE =
+  "This request is no longer open. Another Hitchhiker may have picked it, or the student cancelled it.";
 
 const pickErrorMessages: Record<string, string> = {
   slot_overlaps: "You already have an evaluation at that time. Choose another slot.",
@@ -47,6 +53,31 @@ function PickSlotPage() {
   const [submitError, setSubmitError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<SlotFieldErrors>({});
   const [isPicked, setIsPicked] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Set by a live refresh: a failure then keeps the request already shown.
+  const isLiveRefresh = useRef(false);
+  // The project of the request shown, so a live refresh reads only that project's open list.
+  const projectSlug = useRef<string | undefined>(undefined);
+  // The request left the open list, or the pick answered 404: it is not open for this
+  // Hitchhiker anymore (§8.7).
+  const [isGone, setIsGone] = useState(false);
+
+  // Another Hitchhiker picked this request, or the student cancelled it, or the connection is
+  // back (§9, #257): the page shows that it is no longer open. Events about other requests are
+  // ignored, and so is the Hitchhiker's own pick: its event is sent on commit and usually arrives
+  // while the pick is still being sent, before the popup opens.
+  useLiveRefresh(EVALUATION_EVENTS, (message) => {
+    if (
+      isSubmitting ||
+      isPicked ||
+      (message && "id" in message.data && message.data.id !== Number(id))
+    ) {
+      return;
+    }
+
+    isLiveRefresh.current = true;
+    setReloadKey((key) => key + 1);
+  });
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), NOW_REFRESH_MS);
@@ -56,24 +87,38 @@ function PickSlotPage() {
 
   useEffect(() => {
     let active = true;
+    const inBackground = isLiveRefresh.current;
 
-    getEvaluationRequest(Number(id))
+    isLiveRefresh.current = false;
+
+    // The open list, not GET /evaluation-requests/{id}/: a request that was picked or cancelled
+    // is simply missing from it, instead of a 404 in the console.
+    findOpenRequest(Number(id), inBackground ? projectSlug.current : undefined)
       .then((result) => {
-        if (active) {
-          setRequest(result);
-          setLoadState("ready");
+        if (!active) {
+          return;
         }
+
+        if (result) {
+          projectSlug.current = result.project.slug;
+          setRequest(result);
+          setIsGone(false);
+        } else {
+          setIsGone(true);
+        }
+
+        setLoadState("ready");
       })
       .catch(() => {
         if (active) {
-          setLoadState("error");
+          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
 
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
   // A new choice clears the messages about the previous one.
   function chooseSlot(next: ChosenSlot | null) {
@@ -106,6 +151,11 @@ function PickSlotPage() {
       });
       setIsPicked(true);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        setIsGone(true);
+        return;
+      }
+
       if (error instanceof ApiError && error.code === "validation_error") {
         setFieldErrors({
           start: error.fields?.starts_at?.[0],
@@ -131,7 +181,13 @@ function PickSlotPage() {
 
       {loadState === "error" && (
         <p className="pick-slot__error" role="alert">
-          This request could not be loaded. It may have been picked or cancelled.
+          This request could not be loaded. Please try again later.
+        </p>
+      )}
+
+      {loadState === "ready" && isGone && !request && (
+        <p className="pick-slot__error" role="alert">
+          {GONE_MESSAGE}
         </p>
       )}
 
@@ -149,7 +205,7 @@ function PickSlotPage() {
                 <p className="pick-slot__note">{request.note || "No note from the student."}</p>
               </section>
 
-              {request.status === "pending" ? (
+              {!isGone ? (
                 <>
                   <section className="pick-slot__card">
                     <h2>Your slot</h2>
@@ -196,7 +252,7 @@ function PickSlotPage() {
                 </>
               ) : (
                 <p className="pick-slot__error" role="alert">
-                  This request is no longer open.
+                  {GONE_MESSAGE}
                 </p>
               )}
             </div>

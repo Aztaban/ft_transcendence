@@ -215,6 +215,38 @@
 
 /* Buttons */
 
+/* "Cancel request" for the student (#595): quieter than the main actions. */
+.evaluation__cancel {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.evaluation__cancel-button {
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: #b42318;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.evaluation__cancel-button:hover:enabled {
+  color: #912018;
+}
+
+.evaluation__cancel-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.evaluation__cancel-button:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
 .evaluation__actions {
   display: flex;
   flex-wrap: wrap;

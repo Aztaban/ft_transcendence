@@ -88,6 +88,46 @@
 
 /* Status pill */
 
+/* A row that can be cancelled gets a fourth column for the button (#595). */
+.my-requests__row:has(.my-requests__cancel) {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.my-requests__cancel {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #b42318;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.my-requests__cancel:hover {
+  border-color: #d92d20;
+  background: #fef3f2;
+}
+
+.my-requests__cancel:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+.my-requests__notice {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid #b7e4c7;
+  border-radius: 8px;
+  background: #effaf3;
+  color: #1c7c3c;
+}
+
 .my-requests__status {
   padding: 4px 12px;
   border-radius: 999px;
@@ -229,6 +269,15 @@
   }
 
   .my-requests__status {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .my-requests__row:has(.my-requests__cancel) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .my-requests__cancel {
     grid-column: 2;
     justify-self: start;
   }
