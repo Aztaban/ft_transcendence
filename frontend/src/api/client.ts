@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 export interface ApiErrorFields {
   [field: string]: string[];
 }
@@ -23,8 +25,6 @@ export class ApiError extends Error {
     this.fields = fields;
   }
 }
-
-import i18n from "../i18n";
 
 // Methods that change data need the CSRF header (api-plan §5.4).
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
