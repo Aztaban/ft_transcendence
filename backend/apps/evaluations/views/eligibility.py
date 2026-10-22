@@ -20,13 +20,18 @@ from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
 from apps.evaluations.eligibility import list_approved_projects_for_tutor
 from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
-from apps.evaluations.notifications import notify_eligibility_decided, notify_eligibility_requested
+from apps.evaluations.notifications import (
+    notify_eligibility_decided,
+    notify_eligibility_requested,
+    notify_eligibility_revoked,
+)
 from apps.evaluations.references import ProjectRefSerializer
 from apps.evaluations.serializers.eligibility import (
     EligibilityRequestCreateSerializer,
     EligibilityRequestPageSerializer,
     EligibilityRequestReviewSerializer,
     EligibilityRequestSerializer,
+    EligibilityRevokeSerializer,
 )
 
 User = get_user_model()
@@ -299,3 +304,53 @@ def tutor_eligibility_request_review(request, request_id):
 
     # TODO(audit): eligibility.reviewed.
     return Response(EligibilityRequestSerializer(eligibility_request).data)
+
+
+@extend_schema(
+    parameters=[CSRF_HEADER],
+    summary="Revoke one project's eligibility",
+    request=EligibilityRevokeSerializer,
+    responses={
+        204: None,
+        **error_responses(
+            {
+                400: ("validation_error",),
+                401: ("not_authenticated",),
+                403: ("permission_denied", "csrf_failed"),
+                404: ("not_found",),
+                415: ("unsupported_media_type",),
+            }
+        ),
+    },
+)
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def revoke_tutor_eligibility(request, slug, tutor_id):
+    """Delete one Hitchhiker's eligibility for a project (api-plan §10.3)."""
+    if not request.user.roles.filter(name__in=_ELIGIBILITY_REQUEST_SEE_ALL).exists():
+        raise PermissionDenied(
+            _("You do not have permission to perform this action."),
+            code="permission_denied",
+        )
+
+    serializer = EligibilityRevokeSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    # TODO(audit): eligibility.revoked (#343). The audit log model is not on this branch (issue #53).
+    # After it exists, write target_type tutor_eligibility, target_id of the deleted row,
+    # actor request.user and serializer.validated_data["reason"] in this transaction.
+    # The reason is validated and then discarded.
+
+    with transaction.atomic():
+        eligibility = (
+            TutorEligibility.objects.select_for_update()
+            .select_related("project")
+            .filter(project__slug=slug, tutor_id=tutor_id)
+            .first()
+        )
+        if eligibility is None:
+            return error_response("not_found", _("Not found."), status.HTTP_404_NOT_FOUND)
+        project = eligibility.project
+        eligibility.delete()
+        notify_eligibility_revoked(project, tutor_id)
+
+    return Response(status=status.HTTP_204_NO_CONTENT)

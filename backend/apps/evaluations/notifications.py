@@ -209,6 +209,21 @@ def notify_eligibility_requested(eligibility_request: TutorEligibilityRequest) -
     )
 
 
+def notify_eligibility_revoked(project, tutor_id: int) -> None:
+    """Call inside the winning revocation transaction, after the eligibility row is gone."""
+    create_notification(
+        recipient_id=tutor_id,
+        notification_type=Notification.Type.ELIGIBILITY_REVOKED,
+        payload={"project": ProjectRefSerializer(project).data},
+        target_url="/profile",
+    )
+    publish_user_event(
+        event="eligibility.revoked",
+        data={"project_id": project.pk},
+        user_ids=[tutor_id],
+    )
+
+
 def notify_eligibility_decided(eligibility_request: TutorEligibilityRequest) -> None:
     """Call inside the winning review transaction, after grants and refresh."""
     create_notification(
