@@ -188,10 +188,10 @@ function PendingPage() {
         </p>
       </header>
 
-      <aside className="pending-page__notice">
+      <div className="pending-page__notice" role="note">
         <span aria-hidden="true">i</span>
         <p>{t("pending.notice")}</p>
-      </aside>
+      </div>
 
       {loadState === "loading" && (
         <div className="pending-page__list" aria-busy="true">

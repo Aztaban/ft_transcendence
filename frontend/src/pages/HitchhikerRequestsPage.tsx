@@ -240,7 +240,7 @@ function HitchhikerRequestsPage() {
           )}
         </div>
 
-        <aside className="hitchhiker-requests__aside">
+        <div className="hitchhiker-requests__aside">
           <section className="hitchhiker-requests__panel">
             <h2>{t("common.howItWorks")}</h2>
             <ol className="hitchhiker-requests__steps">
@@ -265,7 +265,7 @@ function HitchhikerRequestsPage() {
               {t("hitchhikerRequests.projectsLink")} <span aria-hidden="true">→</span>
             </Link>
           </section>
-        </aside>
+        </div>
       </div>
     </section>
   );

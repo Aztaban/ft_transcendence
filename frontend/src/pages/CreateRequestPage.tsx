@@ -267,7 +267,7 @@ function CreateRequestPage() {
           )}
         </div>
 
-        <aside className="create-request__aside">
+        <div className="create-request__aside">
           <section className="create-request__panel">
             <h2>{t("common.howItWorks")}</h2>
             <ol className="create-request__steps">
@@ -284,7 +284,7 @@ function CreateRequestPage() {
             <h2>{t("common.tip")}</h2>
             <p>{t("createRequest.tipText")}</p>
           </section>
-        </aside>
+        </div>
       </div>
 
       {stepId === "project" && <MyRequests />}

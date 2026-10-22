@@ -225,7 +225,7 @@ function EligibilityRequestPage() {
           )}
         </div>
 
-        <aside className="eligibility-request__aside">
+        <div className="eligibility-request__aside">
           <section className="eligibility-request__panel">
             <h2>{t("common.howItWorks")}</h2>
             <ol className="eligibility-request__steps">
@@ -242,7 +242,7 @@ function EligibilityRequestPage() {
             <h2>{t("common.tip")}</h2>
             <p>{t("eligibility.tipText")}</p>
           </section>
-        </aside>
+        </div>
       </div>
 
       {isSent && <EligibilitySentDialog onClose={() => navigate("/requests")} />}
