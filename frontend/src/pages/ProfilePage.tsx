@@ -1,34 +1,27 @@
 import { useEffect, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { getCurrentUser, updateCurrentUser } from "../api/users";
-import { changeLanguage } from "../i18n";
+import i18n, { changeLanguage } from "../i18n";
 import { ApiError } from "../api/client";
 import { Button, Input } from "../components/ui";
 import PersonAvatar from "../features/people/PersonAvatar";
 import { useCurrentUser } from "../store/CurrentUserContext";
-import type { Language, RoleName, UserProfile, UserRole } from "../types/user";
+import type { Language, UserProfile, UserRole } from "../types/user";
 import { DISPLAY_NAME_MAX_LENGTH } from "../utils/validation";
 import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/profile.css";
 
-const languageLabels: Record<Language, string> = {
-  en: "English",
-  cs: "Czech",
-  es: "Spanish",
-};
-
 const languages: Language[] = ["en", "cs", "es"];
 
-const roleLabels: Record<RoleName, string> = {
-  student: "Student",
-  tutor: "Hitchhiker",
-  head_tutor: "Head Tutor",
-  sc_member: "Student Council",
-  admin: "Admin",
-};
+// The language's name in the language the page is shown in, e.g. "Czech" or "Čeština".
+function languageLabel(language: Language) {
+  return i18n.t(`profile.languageNames.${language}`);
+}
 
+// Role names are translated under "roles", e.g. `tutor` → "Hitchhiker".
 function formatRole(role: UserRole) {
-  return roleLabels[role.name];
+  return i18n.t(`roles.${role.name}`);
 }
 
 // Small line icons for the info tiles (decorative).
@@ -57,6 +50,7 @@ interface InfoTile {
 }
 
 function ProfilePage() {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -142,12 +136,12 @@ function ProfilePage() {
     const trimmedDisplayName = displayName.trim();
 
     if (!trimmedDisplayName) {
-      setFormError("Display name is required.");
+      setFormError(t("profile.nameRequired"));
       return;
     }
 
     if (trimmedDisplayName.length > DISPLAY_NAME_MAX_LENGTH) {
-      setFormError(`Display name must be ${DISPLAY_NAME_MAX_LENGTH} characters or fewer.`);
+      setFormError(t("profile.nameTooLong", { max: DISPLAY_NAME_MAX_LENGTH }));
       return;
     }
 
@@ -166,14 +160,14 @@ function ProfilePage() {
       setDisplayName(updatedProfile.display_name);
       setSettingsLanguage(updatedProfile.language);
       setIsEditing(false);
-      setSaveMessage("Profile updated.");
+      setSaveMessage(t("profile.updated"));
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(
           error.fields?.display_name?.[0] ?? error.fields?.language?.[0] ?? error.message,
         );
       } else {
-        setFormError("Unable to save profile changes.");
+        setFormError(t("profile.saveError"));
       }
     } finally {
       setIsSaving(false);
@@ -197,12 +191,12 @@ function ProfilePage() {
       setProfile(updatedProfile);
       setSettingsLanguage(updatedProfile.language);
       changeLanguage(updatedProfile.language);
-      setSettingsMessage("Settings updated.");
+      setSettingsMessage(t("profile.settingsUpdated"));
     } catch (error) {
       if (error instanceof ApiError) {
         setSettingsError(error.fields?.language?.[0] ?? error.message);
       } else {
-        setSettingsError("Unable to save settings.");
+        setSettingsError(t("profile.settingsError"));
       }
     } finally {
       setIsSavingSettings(false);
@@ -211,23 +205,25 @@ function ProfilePage() {
 
   const tiles: InfoTile[] = profile
     ? [
-        { key: "email", label: "Email", value: profile.email, icon: "mail" },
+        { key: "email", label: t("profile.email"), value: profile.email, icon: "mail" },
         {
           key: "language",
-          label: "Language",
-          value: languageLabels[profile.language] ?? profile.language,
+          label: t("profile.language"),
+          value: languageLabel(profile.language),
           icon: "globe",
         },
         {
           key: "sign-in",
-          label: "Signs in with",
-          value: profile.intra_login ? `42 account · ${profile.intra_login}` : "Email and password",
+          label: t("profile.signsInWith"),
+          value: profile.intra_login
+            ? t("profile.intraAccount", { login: profile.intra_login })
+            : t("profile.emailPassword"),
           icon: "key",
         },
         {
           key: "roles",
-          label: profile.roles.length === 1 ? "Role" : "Roles",
-          value: profile.roles.map(formatRole).join(", ") || "Student",
+          label: t("profile.roles", { count: profile.roles.length }),
+          value: profile.roles.map(formatRole).join(", ") || t("roles.student"),
           icon: "shield",
         },
       ]
@@ -237,13 +233,13 @@ function ProfilePage() {
     <section className="profile-page">
       {isLoading && (
         <div className="profile-hero profile-hero--loading" aria-busy="true">
-          <span className="profile-page__sr-only">Loading profile...</span>
+          <span className="profile-page__sr-only">{t("profile.loading")}</span>
         </div>
       )}
 
       {!isLoading && (loadError || !profile) && (
         <div className="profile-page__message" role="alert">
-          Profile information is currently unavailable.
+          {t("profile.unavailable")}
         </div>
       )}
 
@@ -258,9 +254,9 @@ function ProfilePage() {
               />
 
               <div className="profile-hero__identity">
-                <p className="profile-page__eyebrow">Your profile</p>
+                <p className="profile-page__eyebrow">{t("profile.eyebrow")}</p>
                 <h1 id="profile-name">{profile.display_name}</h1>
-                <ul className="profile-hero__roles" aria-label="Roles">
+                <ul className="profile-hero__roles" aria-label={t("profile.rolesAria")}>
                   {profile.roles.map((role, index) => (
                     <li
                       key={role.id}
@@ -275,7 +271,7 @@ function ProfilePage() {
 
               {!isEditing && (
                 <Button className="profile-hero__edit" variant="secondary" onClick={startEditing}>
-                  Edit profile
+                  {t("profile.edit")}
                 </Button>
               )}
             </div>
@@ -289,10 +285,10 @@ function ProfilePage() {
 
           {isEditing && (
             <form className="profile-edit" onSubmit={handleProfileSubmit}>
-              <h2>Edit your profile</h2>
+              <h2>{t("profile.editTitle")}</h2>
               <Input
                 id="profile-display-name"
-                label="Display name"
+                label={t("profile.displayName")}
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 maxLength={DISPLAY_NAME_MAX_LENGTH}
@@ -307,17 +303,17 @@ function ProfilePage() {
 
               <div className="profile-page__actions">
                 <Button type="button" variant="ghost" onClick={cancelEditing} disabled={isSaving}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
 
                 <Button type="submit" disabled={isSaving}>
-                  {isSaving ? "Saving..." : "Save changes"}
+                  {isSaving ? t("profile.saving") : t("profile.saveChanges")}
                 </Button>
               </div>
             </form>
           )}
 
-          <ul className="profile-tiles" aria-label="Account details">
+          <ul className="profile-tiles" aria-label={t("profile.accountDetails")}>
             {tiles.map((tile, index) => (
               <li
                 key={tile.key}
@@ -338,17 +334,15 @@ function ProfilePage() {
           <section className="profile-settings" aria-labelledby="profile-settings-title">
             <div className="profile-settings__header">
               <div>
-                <p className="profile-page__eyebrow">Preferences</p>
-                <h2 id="profile-settings-title">Language</h2>
-                <p className="profile-settings__hint">
-                  Choose the language used across the application.
-                </p>
+                <p className="profile-page__eyebrow">{t("profile.preferences")}</p>
+                <h2 id="profile-settings-title">{t("profile.language")}</h2>
+                <p className="profile-settings__hint">{t("profile.languageHint")}</p>
               </div>
             </div>
 
             <form className="profile-settings__form" onSubmit={handleSettingsSubmit}>
               <fieldset className="profile-languages">
-                <legend className="profile-page__sr-only">Language</legend>
+                <legend className="profile-page__sr-only">{t("profile.language")}</legend>
                 {languages.map((language) => (
                   <label
                     key={language}
@@ -368,7 +362,7 @@ function ProfilePage() {
                     <span className="profile-language__code" aria-hidden="true">
                       {language.toUpperCase()}
                     </span>
-                    {languageLabels[language]}
+                    {languageLabel(language)}
                   </label>
                 ))}
               </fieldset>
@@ -387,7 +381,7 @@ function ProfilePage() {
 
               <div className="profile-page__actions">
                 <Button type="submit" disabled={isSavingSettings}>
-                  {isSavingSettings ? "Saving..." : "Save settings"}
+                  {isSavingSettings ? t("profile.saving") : t("profile.saveSettings")}
                 </Button>
               </div>
             </form>
