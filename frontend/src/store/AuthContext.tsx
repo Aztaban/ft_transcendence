@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
 import { getSession, loginUser, logoutUser, type AuthUser, type LoginPayload } from "../api/auth";
 
@@ -8,6 +8,9 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
+  // Forgets the user without calling the API, when the server already ended the session
+  // (WebSocket `session.ended` or close code 4401, api-plan §9.1).
+  endSession: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -63,6 +66,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
   }
 
+  const endSession = useCallback(() => setUser(null), []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -71,11 +76,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isLoading,
         login,
         logout,
+        endSession,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
+}
+
+// The session state, or undefined without an AuthProvider (e.g. in component tests), for
+// providers that must also work there.
+export function useOptionalAuth(): AuthContextValue | undefined {
+  return useContext(AuthContext);
 }
 
 export function useAuth(): AuthContextValue {

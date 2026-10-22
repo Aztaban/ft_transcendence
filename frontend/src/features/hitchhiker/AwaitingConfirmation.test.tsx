@@ -15,6 +15,13 @@ describe("AwaitingConfirmation", () => {
     expect(screen.getByText("Nothing waiting")).toBeTruthy();
   });
 
+  it("shows a loading placeholder instead of the empty state while loading", () => {
+    render(<AwaitingConfirmation requests={[]} isLoading />);
+
+    expect(screen.getByText("Loading proposed slots…")).toBeTruthy();
+    expect(screen.queryByText("Nothing waiting")).toBeNull();
+  });
+
   it("displays proposed slots waiting for the student", () => {
     render(
       <AwaitingConfirmation
@@ -26,6 +33,16 @@ describe("AwaitingConfirmation", () => {
     expect(screen.getByText("Proposed to Student")).toBeTruthy();
     expect(screen.getByText("Waiting for student")).toBeTruthy();
     expect(document.querySelector("time")?.getAttribute("datetime")).toBe("2026-10-12T15:00:00Z");
+  });
+
+  it("does not break when the student is hidden", () => {
+    render(
+      <AwaitingConfirmation
+        requests={[{ ...makeRequest(1, "push_swap", "awaiting_confirmation"), student: null }]}
+      />,
+    );
+
+    expect(screen.getByText("Proposed to the student")).toBeTruthy();
   });
 
   it("does not display requests in other states", () => {

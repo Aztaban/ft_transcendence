@@ -4,11 +4,15 @@ import historyIcon from "../assets/figma/history.svg";
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import pendingIcon from "../assets/figma/pending.svg";
 import requestIcon from "../assets/figma/request.svg";
+import AwaitingConfirmation from "../features/hitchhiker/AwaitingConfirmation";
+import EvaluationHistory from "../features/hitchhiker/EvaluationHistory";
+import OpenRequestQueue from "../features/hitchhiker/OpenRequestQueue";
+import ScheduledEvaluations from "../features/hitchhiker/ScheduledEvaluations";
+import { useHitchhikerRequests } from "../features/hitchhiker/useHitchhikerRequests";
 import OpenRequests from "../features/student/OpenRequests";
-import PendingEvaluations from "../features/student/PendingEvaluations";
+import { useStudentRequests } from "../features/student/useStudentRequests";
 import { useRole, type AppRole } from "../store/RoleContext";
 import "../styles/dashboard.css";
-import EvaluationHistory from "../features/hitchhiker/EvaluationHistory";
 
 interface OverviewItem {
   value: string;
@@ -158,6 +162,51 @@ const dashboards: Record<AppRole, DashboardDefinition> = {
   COUNCIL: councilDashboard,
 };
 
+// The student's request boxes, filled from the API (#507). They show skeletons during the first
+// load, and only the error when it fails, never empty states that may not be true (#258).
+function StudentRequestSections() {
+  const { requests, isLoading, hasError } = useStudentRequests();
+
+  if (hasError) {
+    return (
+      <p className="dashboard__load-error" role="alert">
+        Could not load your requests. Please try again later.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <OpenRequests requests={requests} isLoading={isLoading} />
+      <ScheduledEvaluations requests={requests} viewer="student" isLoading={isLoading} />
+      <EvaluationHistory requests={requests} viewer="student" isLoading={isLoading} />
+    </>
+  );
+}
+
+// The Hitchhiker's boxes, filled from the API: the open queue and the picked requests (#61).
+// Skeletons during the first load, only the error when it fails (#258).
+function HitchhikerRequestSections() {
+  const { openRequests, pickedRequests, isLoading, hasError } = useHitchhikerRequests();
+
+  if (hasError) {
+    return (
+      <p className="dashboard__load-error" role="alert">
+        Could not load your requests. Please try again later.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <OpenRequestQueue requests={openRequests} isLoading={isLoading} />
+      <AwaitingConfirmation requests={pickedRequests} isLoading={isLoading} />
+      <ScheduledEvaluations requests={pickedRequests} viewer="hitchhiker" isLoading={isLoading} />
+      <EvaluationHistory requests={pickedRequests} viewer="hitchhiker" isLoading={isLoading} />
+    </>
+  );
+}
+
 function HomePage() {
   const { activeRole } = useRole();
   const dashboard = dashboards[activeRole];
@@ -191,13 +240,9 @@ function HomePage() {
       </section>
 
       <div className="dashboard__columns">
-        {activeRole === "STUDENT" ? (
-          <>
-            <OpenRequests requests={[]} />
-            <PendingEvaluations requests={[]} />
-            <EvaluationHistory requests={[]} viewer="student" />
-          </>
-        ) : (
+        {activeRole === "STUDENT" && <StudentRequestSections />}
+        {activeRole === "HITCHHIKER" && <HitchhikerRequestSections />}
+        {activeRole === "COUNCIL" && (
           <section className="dashboard__section">
             <h2>{dashboard.emptyTitle}</h2>
 
@@ -215,7 +260,7 @@ function HomePage() {
           </section>
         )}
 
-        {activeRole !== "STUDENT" && (
+        {activeRole === "COUNCIL" && (
           <section className="dashboard__section">
             <h2>{dashboard.historyTitle}</h2>
 

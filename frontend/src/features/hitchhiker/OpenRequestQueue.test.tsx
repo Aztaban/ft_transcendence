@@ -15,6 +15,13 @@ describe("OpenRequestQueue", () => {
     expect(screen.getByText("No open requests")).toBeTruthy();
   });
 
+  it("shows a loading placeholder instead of the empty state while loading", () => {
+    render(<OpenRequestQueue requests={[]} isLoading />);
+
+    expect(screen.getByText("Loading open requests…")).toBeTruthy();
+    expect(screen.queryByText("No open requests")).toBeNull();
+  });
+
   it("displays pending requests with the student, when they were requested and the note", () => {
     const requests = [
       { ...makeRequest(1, "libft", "pending"), note: "Need help with parsing." },
@@ -28,6 +35,14 @@ describe("OpenRequestQueue", () => {
     expect(screen.getAllByText(/^Student · Requested /)).toHaveLength(2);
     expect(screen.getByText("Need help with parsing.")).toBeTruthy();
     expect(screen.getAllByText("Open")).toHaveLength(2);
+  });
+
+  it("keeps the student anonymous while the request is pending (R15)", () => {
+    render(
+      <OpenRequestQueue requests={[{ ...makeRequest(1, "libft", "pending"), student: null }]} />,
+    );
+
+    expect(screen.getByText(/^Anonymous student · Requested /)).toBeTruthy();
   });
 
   it("does not display requests that are no longer open", () => {

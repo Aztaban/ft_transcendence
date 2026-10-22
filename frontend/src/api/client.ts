@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 export interface ApiErrorFields {
   [field: string]: string[];
 }
@@ -24,11 +26,54 @@ export class ApiError extends Error {
   }
 }
 
+// Methods that change data need the CSRF header (api-plan §5.4).
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function getCookie(name: string): string | null {
+  const prefix = `${name}=`;
+
+  for (const cookie of document.cookie.split(";")) {
+    const trimmed = cookie.trim();
+
+    if (trimmed.startsWith(prefix)) {
+      return decodeURIComponent(trimmed.slice(prefix.length));
+    }
+  }
+
+  return null;
+}
+
+// Reads the csrftoken cookie on every request (Django issues a new one at login, §5.4).
+// If it is missing, GET /api/v1/ sets it first. That call is a GET, so it does not recurse.
+async function getCsrfToken(): Promise<string> {
+  let csrfToken = getCookie("csrftoken");
+
+  if (!csrfToken) {
+    await apiRequest<{ status: string; version: string }>("/api/v1/");
+    csrfToken = getCookie("csrftoken");
+  }
+
+  if (!csrfToken) {
+    throw new Error("CSRF token is unavailable.");
+  }
+
+  return csrfToken;
+}
+
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
 
+  // The backend answers its messages in this language (api-plan §5.5).
+  if (!headers.has("Accept-Language")) {
+    headers.set("Accept-Language", i18n.language || "en");
+  }
+
   if (!headers.has("Accept")) {
     headers.set("Accept", "application/json");
+  }
+
+  if (UNSAFE_METHODS.has((options.method ?? "GET").toUpperCase())) {
+    headers.set("X-CSRFToken", await getCsrfToken());
   }
 
   const response = await fetch(path, {

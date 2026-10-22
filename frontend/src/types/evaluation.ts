@@ -1,16 +1,7 @@
-// Shapes from docs/api-plan.md §8.1, §8.6 and §8.7.
+// Shape from docs/api-plan.md §8.7. UserRef (§8.1) and ProjectRef (§8.6) live in ./project.
+import type { ProjectRef, UserRef } from "./project";
 
-export interface UserRef {
-  id: number;
-  display_name: string;
-  avatar_url: string | null;
-}
-
-export interface ProjectRef {
-  id: number;
-  slug: string;
-  name: string;
-}
+export type { ProjectRef, UserRef };
 
 export type EvaluationRequestStatus =
   "pending" | "awaiting_confirmation" | "confirmed" | "cancelled" | "expired";
@@ -19,7 +10,9 @@ export type EvaluationResult = "passed" | "failed";
 
 export interface EvaluationRequest {
   id: number;
-  student: UserRef;
+  // null for anyone except the student, the Hitchhiker in `picked_by`, Head Tutors and Admins:
+  // a `pending` request is anonymous to eligible Hitchhikers (R15).
+  student: UserRef | null;
   project: ProjectRef;
   note: string;
   status: EvaluationRequestStatus;

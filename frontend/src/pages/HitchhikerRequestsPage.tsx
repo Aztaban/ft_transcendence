@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 
 import { listEvaluationRequests } from "../api/evaluationRequests";
 import type { EvaluationRequest } from "../types/evaluation";
 import { formatTimeAgo } from "../utils/dateTime";
+import { OPEN_QUEUE_EVENTS } from "../websocket/events";
+import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/hitchhiker-requests.css";
 
 type LoadState = "loading" | "ready" | "error";
@@ -29,12 +32,16 @@ function isWaitingLong(request: EvaluationRequest, now: number) {
 }
 
 // The Hitchhiker's "Requests" page (Figma "pending requests"): open requests for projects they
-// are eligible for, from GET /evaluation-requests/?scope=open (api-plan §10.4).
+// are eligible for, from GET /evaluation-requests/?scope=open (api-plan §10.4). It re-fetches
+// in the background when the queue changes or after a reconnect (§9, #255).
 function HitchhikerRequestsPage() {
   const [requests, setRequests] = useState<EvaluationRequest[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useLiveRefresh(OPEN_QUEUE_EVENTS, () => setReloadKey((key) => key + 1));
 
   useEffect(() => {
     let active = true;
@@ -48,7 +55,8 @@ function HitchhikerRequestsPage() {
         }
       })
       .catch(() => {
-        if (active) {
+        // A failed background refresh keeps the cards already shown.
+        if (active && reloadKey === 0) {
           setLoadState("error");
         }
       });
@@ -56,7 +64,7 @@ function HitchhikerRequestsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   const now = Date.now();
 
@@ -70,9 +78,14 @@ function HitchhikerRequestsPage() {
     return [...counts.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [requests]);
 
+  // A project whose last request just left the queue is no longer a filter.
+  const activeFilter = projectCounts.some(([name]) => name === projectFilter)
+    ? projectFilter
+    : null;
+
   const visibleRequests = useMemo(() => {
-    const filtered = projectFilter
-      ? requests.filter((request) => request.project.name === projectFilter)
+    const filtered = activeFilter
+      ? requests.filter((request) => request.project.name === activeFilter)
       : requests;
 
     return [...filtered].sort((a, b) => {
@@ -80,7 +93,7 @@ function HitchhikerRequestsPage() {
 
       return sortOrder === "oldest" ? difference : -difference;
     });
-  }, [requests, projectFilter, sortOrder]);
+  }, [requests, activeFilter, sortOrder]);
 
   const oldestRequest = requests.reduce<EvaluationRequest | null>(
     (oldest, request) =>
@@ -126,7 +139,7 @@ function HitchhikerRequestsPage() {
                 <button
                   className="hitchhiker-requests__chip"
                   type="button"
-                  aria-pressed={projectFilter === null}
+                  aria-pressed={activeFilter === null}
                   onClick={() => setProjectFilter(null)}
                 >
                   All <span>{requests.length}</span>
@@ -136,7 +149,7 @@ function HitchhikerRequestsPage() {
                     className="hitchhiker-requests__chip"
                     type="button"
                     key={name}
-                    aria-pressed={projectFilter === name}
+                    aria-pressed={activeFilter === name}
                     onClick={() => setProjectFilter(name)}
                   >
                     {name} <span>{count}</span>
@@ -199,19 +212,14 @@ function HitchhikerRequestsPage() {
                     {request.note || "No note from the student."}
                   </p>
 
-                  {/* TODO: opens the slot-picking flow once POST …/pick-slot/ exists (#32, #190). */}
                   <div className="hitchhiker-requests__action">
-                    <button
+                    <Link
                       className="hitchhiker-requests__review"
-                      type="button"
-                      disabled
-                      aria-describedby={`review-hint-${request.id}`}
+                      to={`/requests/${request.id}`}
+                      aria-label={`Review the ${request.project.name} request`}
                     >
                       Review
-                    </button>
-                    <span className="hitchhiker-requests__hint" id={`review-hint-${request.id}`}>
-                      Slot picking coming soon
-                    </span>
+                    </Link>
                   </div>
                 </li>
               ))}
@@ -235,6 +243,14 @@ function HitchhikerRequestsPage() {
           <section className="hitchhiker-requests__panel hitchhiker-requests__panel--tip">
             <h2>Tip</h2>
             <p>Requests marked “Waiting a while” have been open for more than a day.</p>
+          </section>
+
+          <section className="hitchhiker-requests__panel hitchhiker-requests__panel--projects">
+            <h2>Your projects</h2>
+            <p>You only see requests for projects you are approved to evaluate.</p>
+            <Link className="hitchhiker-requests__projects-link" to="/eligibility-requests/new">
+              Request more projects <span aria-hidden="true">→</span>
+            </Link>
           </section>
         </aside>
       </div>

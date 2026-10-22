@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 
 import logo42 from "../../assets/figma/42.svg";
@@ -16,7 +16,9 @@ import intraLogo from "../../assets/figma/intra.png";
 import notionLogo from "../../assets/figma/notion.svg";
 import slackLogo from "../../assets/figma/slack.svg";
 import { useAuth } from "../../store/AuthContext";
-import { roles, useRole, type AppRole } from "../../store/RoleContext";
+import { useCurrentUser } from "../../store/CurrentUserContext";
+import { useRole, type AppRole } from "../../store/RoleContext";
+import { canReviewEligibility } from "../../utils/permissions";
 
 interface NavigationItem {
   label: string;
@@ -29,6 +31,7 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
     { label: "Home", to: "/", icon: homeIcon },
     { label: "Request", to: "/requests", icon: requestIcon },
     { label: "Pending", to: "/pending", icon: pendingIcon },
+    { label: "History", to: "/history", icon: historyIcon },
     { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
     { label: "Profile", to: "/profile", icon: profileIcon },
     { label: "Student Council", to: "/council", icon: councilIcon },
@@ -38,6 +41,7 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
     { label: "Home", to: "/", icon: homeIcon },
     { label: "Requests", to: "/requests", icon: requestIcon },
     { label: "Pending", to: "/pending", icon: pendingIcon },
+    { label: "History", to: "/history", icon: historyIcon },
     { label: "Student Council", to: "/council", icon: councilIcon },
     { label: "Profile", to: "/profile", icon: profileIcon },
   ],
@@ -51,15 +55,39 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
   ],
 };
 
-function Sidebar() {
-  const { activeRole, setActiveRole } = useRole();
+const eligibilityItem: NavigationItem = {
+  label: "Eligibility",
+  to: "/eligibility-requests",
+  icon: hitchhikersIcon,
+};
+
+interface SidebarProps {
+  // Small screens only: the sidebar is a drawer that the top bar opens.
+  isOpen?: boolean;
+}
+
+function Sidebar({ isOpen = false }: SidebarProps) {
+  const { activeRole, setActiveRole, availableRoles } = useRole();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
 
-  const visibleNavigation = navigationByRole[activeRole];
+  // Head Tutors and Admins also review eligibility requests in the Hitchhiker workspace.
+  const { roles: userRoles } = useCurrentUser();
+  const visibleNavigation =
+    activeRole === "HITCHHIKER" && canReviewEligibility(userRoles)
+      ? [...navigationByRole.HITCHHIKER, eligibilityItem]
+      : navigationByRole[activeRole];
+
+  // Opening the drawer moves the focus to its first link.
+  useEffect(() => {
+    if (isOpen) {
+      navRef.current?.querySelector("a")?.focus();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!logoutError) {
@@ -93,14 +121,17 @@ function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
+    <aside
+      id="app-sidebar"
+      className={["sidebar", isOpen ? "sidebar--open" : ""].filter(Boolean).join(" ")}
+    >
       <div className="sidebar__brand">
         <img className="sidebar__brand-logo" src={logo42} alt="42" />
         <span className="sidebar__brand-name">EVALS</span>
       </div>
 
       <div className="sidebar__middle">
-        <nav className="sidebar__nav" aria-label="Primary navigation">
+        <nav ref={navRef} className="sidebar__nav" aria-label="Primary navigation">
           {visibleNavigation.map((item) => (
             <NavLink
               key={item.to}
@@ -146,7 +177,7 @@ function Sidebar() {
 
           {isRoleMenuOpen && (
             <div className="sidebar__role-menu" role="listbox" aria-label="Select role">
-              {roles.map((role) => (
+              {availableRoles.map((role) => (
                 <button
                   key={role}
                   className={[

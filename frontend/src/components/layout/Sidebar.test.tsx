@@ -3,12 +3,19 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { RoleProvider } from "../../store/RoleContext";
+
+const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
+
+vi.mock("../../store/CurrentUserContext", () => ({
+  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+}));
 import Sidebar from "./Sidebar";
 
 const logoutMock = vi.fn();
 
-vi.mock("../../store/AuthContext", () => ({
-  useAuth: () => ({
+vi.mock("../../store/AuthContext", () => {
+  // Built on each call: mocks are hoisted above `logoutMock`.
+  const session = () => ({
     user: {
       id: 1,
       email: "login@example.com",
@@ -18,10 +25,16 @@ vi.mock("../../store/AuthContext", () => ({
     isLoading: false,
     login: vi.fn(),
     logout: logoutMock,
-  }),
-}));
+  });
+
+  return { useAuth: session, useOptionalAuth: session };
+});
 
 afterEach(() => {
+  currentUser.roles = [];
+  currentUser.isLoaded = false;
+  // The active workspace is kept for the tab; each test starts as a student.
+  sessionStorage.clear();
   cleanup();
   vi.clearAllMocks();
   vi.useRealTimers();
@@ -81,5 +94,49 @@ describe("Sidebar logout", () => {
     await vi.advanceTimersByTimeAsync(3500);
 
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("Sidebar role switcher", () => {
+  test("lists only the workspaces of the user's real roles", () => {
+    currentUser.roles = ["student", "sc_member"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "STUDENT",
+      "COUNCIL",
+    ]);
+  });
+});
+
+describe("Sidebar eligibility link", () => {
+  function switchToHitchhiker() {
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+    fireEvent.click(screen.getByRole("option", { name: "HITCHHIKER" }));
+  }
+
+  test("shows Eligibility to a Head Tutor in the Hitchhiker workspace", () => {
+    currentUser.roles = ["tutor", "head_tutor"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    switchToHitchhiker();
+
+    expect(screen.getByRole("link", { name: "Eligibility" }).getAttribute("href")).toBe(
+      "/eligibility-requests",
+    );
+  });
+
+  test("hides Eligibility from a Hitchhiker who is not a Head Tutor", () => {
+    currentUser.roles = ["tutor"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    switchToHitchhiker();
+
+    expect(screen.queryByRole("link", { name: "Eligibility" })).toBeNull();
   });
 });

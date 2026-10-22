@@ -1,25 +1,38 @@
+import { Link } from "react-router";
+
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
 
 interface OpenRequestsProps {
   requests: EvaluationRequest[];
+  // True during the first load: a skeleton instead of the empty state (#258).
+  isLoading?: boolean;
 }
 
 function needsConfirmation(request: EvaluationRequest) {
   return request.status === "awaiting_confirmation";
 }
 
-function OpenRequests({ requests }: OpenRequestsProps) {
+function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
   // Requests waiting for the student's answer are listed first.
   const openRequests = requests
     .filter((request) => request.status === "pending" || needsConfirmation(request))
     .sort((a, b) => Number(needsConfirmation(b)) - Number(needsConfirmation(a)));
 
   return (
-    <section className="dashboard__section" aria-labelledby="open-requests-title">
+    <section
+      className="dashboard__section dashboard__section--teal"
+      aria-labelledby="open-requests-title"
+    >
       <h2 id="open-requests-title">Open Requests</h2>
 
-      {openRequests.length === 0 ? (
+      {isLoading ? (
+        <div className="dashboard-requests" aria-busy="true">
+          <div className="dashboard-requests__skeleton" />
+          <div className="dashboard-requests__skeleton" />
+          <span className="dashboard-requests__sr-only">Loading your requests…</span>
+        </div>
+      ) : openRequests.length === 0 ? (
         <div className="dashboard-empty">
           <div className="dashboard-empty__history-mark" aria-hidden="true">
             —
@@ -56,6 +69,19 @@ function OpenRequests({ requests }: OpenRequestsProps) {
               <span className="dashboard-request__status">
                 {needsConfirmation(request) ? "Needs your confirmation" : "Pending"}
               </span>
+
+              {/* The student answers on /evaluations/{id}, the page the notification opens (§8.8). */}
+              {needsConfirmation(request) && (
+                <div className="dashboard-request__actions">
+                  <Link
+                    className="dashboard-request__review"
+                    to={`/evaluations/${request.id}`}
+                    aria-label={`Review the ${request.project.name} proposal`}
+                  >
+                    Review proposal <span aria-hidden="true">→</span>
+                  </Link>
+                </div>
+              )}
             </article>
           ))}
         </div>

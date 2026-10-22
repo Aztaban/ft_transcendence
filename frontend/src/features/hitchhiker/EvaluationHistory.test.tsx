@@ -19,6 +19,13 @@ describe("EvaluationHistory", () => {
     expect(screen.getByText("No history yet")).toBeTruthy();
   });
 
+  it("shows a loading placeholder instead of the empty state while loading", () => {
+    render(<EvaluationHistory requests={[]} viewer="hitchhiker" isLoading />);
+
+    expect(screen.getByText("Loading your history…")).toBeTruthy();
+    expect(screen.queryByText("No history yet")).toBeNull();
+  });
+
   it("shows the outcome of each past evaluation", () => {
     const requests = [
       pastEvaluation(1, "minishell", "passed"),
@@ -78,5 +85,17 @@ describe("EvaluationHistory", () => {
 
     expect(screen.queryByText(/^With /)).toBeNull();
     expect(screen.getByText("Cancelled")).toBeTruthy();
+  });
+
+  it("shows no student to a Hitchhiker when the API hides it", () => {
+    render(
+      <EvaluationHistory
+        requests={[{ ...makeRequest(1, "cpp09", "expired"), student: null }]}
+        viewer="hitchhiker"
+      />,
+    );
+
+    expect(screen.queryByText(/^With /)).toBeNull();
+    expect(screen.getByText("Expired")).toBeTruthy();
   });
 });

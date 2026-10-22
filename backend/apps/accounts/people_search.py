@@ -6,13 +6,14 @@ from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
 from apps.accounts.models import Role
-from apps.accounts.serializers import RoleSerializer, TutorEligibleProjectSerializer
+from apps.accounts.serializers.roles import RoleSerializer
+from apps.core.pagination import APIPageNumberPagination
 from apps.evaluations.models import Project, TutorEligibility
+from apps.evaluations.references import ProjectRefSerializer
 
 
 class PeopleSearchSerializer(serializers.ModelSerializer):
@@ -30,13 +31,13 @@ class PeopleSearchSerializer(serializers.ModelSerializer):
         # Current main has no avatar file relation; null means the default avatar.
         return None
 
-    @extend_schema_field(TutorEligibleProjectSerializer(many=True))
+    @extend_schema_field(ProjectRefSerializer(many=True))
     def get_eligible_projects(self, obj):
         if not any(
             role.name in (Role.Name.TUTOR, Role.Name.HEAD_TUTOR) for role in obj.roles.all()
         ):
             return []
-        return TutorEligibleProjectSerializer(
+        return ProjectRefSerializer(
             [eligibility.project for eligibility in obj.search_eligibilities], many=True
         ).data
 
@@ -65,12 +66,6 @@ class PeopleSearchQuerySerializer(serializers.Serializer):
         if Role.Name.TUTOR in names:
             names.append(Role.Name.HEAD_TUTOR)
         return names
-
-
-class PeopleSearchPagination(PageNumberPagination):
-    page_size = 20
-    page_size_query_param = "page_size"
-    max_page_size = 100
 
 
 class PeopleSearchThrottle(UserRateThrottle):
@@ -103,7 +98,7 @@ class PeopleSearchThrottle(UserRateThrottle):
 class PeopleSearchView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = PeopleSearchSerializer
-    pagination_class = PeopleSearchPagination
+    pagination_class = APIPageNumberPagination
     throttle_classes = [PeopleSearchThrottle]
 
     def get_queryset(self):

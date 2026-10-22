@@ -1,0 +1,336 @@
+.history-page {
+  display: flex;
+  max-width: 920px;
+  flex-direction: column;
+  gap: 22px;
+  margin: 0 auto;
+  padding: 32px 16px 56px;
+}
+
+.history-page__header h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.history-page__header p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 1.05rem;
+}
+
+/* Filters */
+
+.history-page__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  border: 1px solid #e3e7e7;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.history-page__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-page__chip {
+  padding: 7px 16px;
+  border: 1px solid #d5d9d9;
+  border-radius: 999px;
+  background: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.history-page__chip:hover {
+  border-color: var(--color-accent);
+}
+
+.history-page__chip--active {
+  border-color: var(--color-accent);
+  background: #e6f8f8;
+  color: #00797b;
+  font-weight: 500;
+}
+
+.history-page__project {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.history-page__project select {
+  min-width: 180px;
+  padding: 8px 12px;
+  border: 1px solid #c9cfcf;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111111;
+  font: inherit;
+}
+
+.history-page__chip:focus-visible,
+.history-page__project select:focus-visible,
+.history-page__pages button:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+/* Cards */
+
+.history-page__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  animation: history-slide-in 0.35s ease;
+}
+
+.history-card {
+  --tone: #9aa1a1;
+  --tone-ink: #5c6464;
+  --tone-soft: #f0f2f2;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px 22px;
+  border: 1px solid #e3e7e7;
+  border-left: 5px solid var(--tone);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.history-card:hover {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.history-card--green {
+  --tone: #16a34a;
+  --tone-ink: #1c7c3c;
+  --tone-soft: #e7f6ec;
+}
+
+.history-card--red {
+  --tone: #d92d20;
+  --tone-ink: #b42318;
+  --tone-soft: #fef3f2;
+}
+
+.history-card--violet {
+  --tone: #8b6fd1;
+  --tone-ink: #6b4fb3;
+  --tone-soft: #f2eefb;
+}
+
+.history-card__badge {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--tone-soft);
+  color: var(--tone-ink);
+  font-weight: 600;
+}
+
+.history-card__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-card__title h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.history-card__outcome {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--tone-soft);
+  color: var(--tone-ink);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.history-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.history-card__note {
+  margin: 6px 0 0;
+  color: #4d5555;
+  font-size: 0.85rem;
+}
+
+.history-card__feedback {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--tone);
+  border-radius: 0 8px 8px 0;
+  background: var(--tone-soft);
+}
+
+.history-card__feedback span {
+  color: var(--tone-ink);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.history-card__feedback p {
+  margin: 4px 0 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Pagination */
+
+.history-page__pages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.history-page__pages button {
+  padding: 8px 16px;
+  border: 1px solid #c9cfcf;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111111;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.history-page__pages button:hover:enabled {
+  border-color: var(--color-accent);
+  background: #f6fdfd;
+}
+
+.history-page__pages button:disabled {
+  color: #9aa1a1;
+  cursor: not-allowed;
+}
+
+/* States */
+
+.history-page__skeleton {
+  min-height: 92px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #eceff0 25%, #f6f7f7 50%, #eceff0 75%);
+  background-size: 200% 100%;
+  animation: history-shimmer 1.3s ease-in-out infinite;
+}
+
+.history-page__empty {
+  padding: 40px 20px;
+  border: 1px dashed #c9cfcf;
+  border-radius: 14px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.history-page__empty h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.history-page__empty p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+}
+
+.history-page__error {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.history-page__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes history-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes history-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .history-page__filters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .history-page__project select {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .history-page *,
+  .history-card {
+    animation: none !important;
+    transition: none !important;
+  }
+}

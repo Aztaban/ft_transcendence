@@ -3,6 +3,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from drf_spectacular.generators import SchemaGenerator
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
@@ -145,7 +146,7 @@ def test_inactive_projects_are_hidden_without_hiding_the_tutor(directory):
 
 def test_session_authentication_allows_an_ordinary_student(directory):
     _, _, caller = directory
-    client = APIClient()
+    client = APIClient(enforce_csrf_checks=True)
     assert client.login(email=caller.email, password="secret")
     response = client.get(reverse("api:search-people"))
     assert response.status_code == 200
@@ -442,3 +443,31 @@ def test_query_length_boundaries_are_accepted(directory):
         response = client.get(reverse("api:search-people"), {"q": q})
         assert response.status_code == 200
         assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+
+
+def test_search_schema_uses_shared_project_reference_and_complete_pagination():
+    schema = SchemaGenerator().get_schema(request=None, public=True)
+    components = schema["components"]["schemas"]
+    result = components["PeopleSearch"]
+    assert set(result["properties"]) == {
+        "id",
+        "display_name",
+        "avatar_url",
+        "roles",
+        "eligible_projects",
+    }
+    assert result["properties"]["avatar_url"] == {
+        "type": "string",
+        "nullable": True,
+        "readOnly": True,
+    }
+    assert result["properties"]["eligible_projects"]["items"] == {
+        "$ref": "#/components/schemas/ProjectRef"
+    }
+    assert set(components["PaginatedPeopleSearchList"]["required"]) == {
+        "count",
+        "next",
+        "previous",
+        "results",
+    }
+    assert "TutorEligibleProject" not in components

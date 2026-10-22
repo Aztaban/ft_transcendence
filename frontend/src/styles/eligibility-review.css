@@ -1,0 +1,640 @@
+.eligibility-review {
+  display: flex;
+  max-width: 1080px;
+  flex-direction: column;
+  gap: 20px;
+  margin: 0 auto;
+  padding: 32px 16px 56px;
+}
+
+.eligibility-review__header h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.eligibility-review__header p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 1.05rem;
+}
+
+/* Tabs */
+
+.eligibility-review__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.eligibility-review__tab {
+  --tab: var(--color-accent-dark);
+  --tab-soft: #e6f8f8;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: 1px solid #d5d9d9;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111111;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.eligibility-review__tab--pending {
+  --tab: #9a6512;
+  --tab-soft: #fff4dc;
+}
+
+.eligibility-review__tab--approved {
+  --tab: #1c7c3c;
+  --tab-soft: #e7f6ec;
+}
+
+.eligibility-review__tab--declined {
+  --tab: #b42318;
+  --tab-soft: #fef3f2;
+}
+
+.eligibility-review__tab:hover {
+  border-color: var(--tab);
+}
+
+.eligibility-review__tab--active {
+  border-color: var(--tab);
+  background: var(--tab-soft);
+  color: var(--tab);
+  font-weight: 500;
+}
+
+.eligibility-review__tab-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--tab);
+  color: #ffffff;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.eligibility-review__tab:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+/* Table */
+
+.eligibility-review__table {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #e3e7e7;
+  border-top: 5px solid var(--color-accent);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  animation: eligibility-review-slide-in 0.35s ease;
+}
+
+.eligibility-review__table th {
+  padding: 14px 20px;
+  border-bottom: 1px solid #e3e7e7;
+  background: #fafcfc;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.eligibility-review__table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eef1f1;
+  vertical-align: middle;
+}
+
+.eligibility-review__table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.eligibility-review__table tbody tr:hover {
+  background: #f8fcfc;
+}
+
+.eligibility-review__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.eligibility-review__person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+}
+
+.eligibility-review__avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: #eaf1fc;
+  color: #2f5ea8;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.eligibility-review__own {
+  display: block;
+  margin-top: 2px;
+  color: #6b4fb3;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.eligibility-review__projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eligibility-review__projects li {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: #e6f8f8;
+  color: #00797b;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.eligibility-review__table time {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* Approve / Decline */
+
+.eligibility-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.eligibility-review__approve,
+.eligibility-review__decline {
+  padding: 7px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    transform 0.15s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.eligibility-review__approve {
+  border: 1px solid #16a34a;
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.eligibility-review__decline {
+  border: 1px solid #f3b8b2;
+  background: #ffffff;
+  color: #b42318;
+}
+
+.eligibility-review__approve:hover:enabled,
+.eligibility-review__decline:hover:enabled {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.eligibility-review__decline:hover:enabled {
+  background: #fef3f2;
+}
+
+.eligibility-review__approve:disabled,
+.eligibility-review__decline:disabled {
+  border-color: #d5d9d9;
+  background: #f0f2f2;
+  color: #9aa1a1;
+  cursor: not-allowed;
+}
+
+.eligibility-review__approve:focus-visible,
+.eligibility-review__decline:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+.eligibility-review__decision {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.eligibility-review__status {
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.eligibility-review__status--approved {
+  background: #e7f6ec;
+  color: #1c7c3c;
+}
+
+.eligibility-review__status--declined {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.eligibility-review__note {
+  color: #4d5555;
+  font-style: italic;
+}
+
+/* Messages and states */
+
+.eligibility-review__message {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #b9e6c9;
+  border-radius: 10px;
+  background: #e7f6ec;
+  color: #1c7c3c;
+  animation: eligibility-review-slide-in 0.3s ease;
+}
+
+/* A decision that could not be saved, e.g. another Head Tutor was faster */
+
+.eligibility-review__notice {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #f5d27a;
+  border-radius: 10px;
+  background: #fffaf0;
+  color: #8a5a00;
+  animation: eligibility-review-slide-in 0.3s ease;
+}
+
+.eligibility-review__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.eligibility-review__skeleton {
+  min-height: 64px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #eceff0 25%, #f6f7f7 50%, #eceff0 75%);
+  background-size: 200% 100%;
+  animation: eligibility-review-shimmer 1.3s ease-in-out infinite;
+}
+
+.eligibility-review__empty {
+  padding: 36px 20px;
+  border: 1px dashed #c9cfcf;
+  border-radius: 14px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.eligibility-review__empty h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.eligibility-review__empty p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.eligibility-review__more {
+  align-self: center;
+  padding: 8px 18px;
+  border: 1px solid #c9cfcf;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #00797b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.eligibility-review__more:hover:enabled {
+  border-color: var(--color-accent);
+  background: #f2fbfb;
+}
+
+.eligibility-review__more:disabled {
+  color: #9aa1a1;
+  cursor: wait;
+}
+
+.eligibility-review__more:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+.eligibility-review__error {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.eligibility-review__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Review popup */
+
+.review-dialog {
+  position: fixed;
+  z-index: 100;
+  display: grid;
+  inset: 0;
+  place-items: center;
+  padding: 16px;
+  background: rgba(17, 17, 17, 0.45);
+  backdrop-filter: blur(3px);
+  animation: eligibility-review-fade-in 0.2s ease;
+}
+
+.review-dialog__card {
+  display: flex;
+  width: min(100%, 520px);
+  flex-direction: column;
+  gap: 14px;
+  padding: 30px 32px 24px;
+  border-top: 6px solid #16a34a;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  animation: eligibility-review-pop-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.review-dialog__card--declined {
+  border-top-color: #d92d20;
+}
+
+.review-dialog__card:focus {
+  outline: none;
+}
+
+.review-dialog__card h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+.review-dialog__text {
+  margin: 0;
+  color: #4d5555;
+  line-height: 1.5;
+}
+
+.review-dialog__projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-dialog__projects li {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: #e6f8f8;
+  color: #00797b;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.review-dialog__note {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-dialog__note em {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-style: normal;
+}
+
+.review-dialog__note textarea {
+  min-height: 80px;
+  padding: 10px 12px;
+  border: 1px solid #c9cfcf;
+  border-radius: 10px;
+  font: inherit;
+  resize: vertical;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.review-dialog__note textarea:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 186, 188, 0.15);
+}
+
+.review-dialog__count {
+  align-self: flex-end;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.review-dialog__error {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.review-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.review-dialog__cancel,
+.review-dialog__confirm {
+  min-width: 110px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+}
+
+.review-dialog__cancel {
+  border: 1px solid #bfc5c5;
+  background: #ffffff;
+}
+
+.review-dialog__cancel:hover {
+  border-color: #111111;
+}
+
+.review-dialog__confirm {
+  border: 1px solid transparent;
+  color: #ffffff;
+  transition: transform 0.15s ease;
+}
+
+.review-dialog__confirm--approved {
+  background: #16a34a;
+}
+
+.review-dialog__confirm--declined {
+  background: #d92d20;
+}
+
+.review-dialog__confirm:hover:enabled {
+  transform: translateY(-1px);
+}
+
+.review-dialog__confirm:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.review-dialog__cancel:focus-visible,
+.review-dialog__confirm:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+@keyframes eligibility-review-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes eligibility-review-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes eligibility-review-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes eligibility-review-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Phones: each row becomes a card */
+
+@media (max-width: 760px) {
+  .eligibility-review__table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .eligibility-review__table,
+  .eligibility-review__table tbody,
+  .eligibility-review__table tr,
+  .eligibility-review__table td {
+    display: block;
+  }
+
+  .eligibility-review__table tr {
+    border-bottom: 1px solid #e3e7e7;
+  }
+
+  .eligibility-review__table td {
+    padding: 8px 16px;
+    border-bottom: 0;
+  }
+
+  .eligibility-review__table td::before {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--color-text-secondary);
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eligibility-review *,
+  .review-dialog,
+  .review-dialog * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
