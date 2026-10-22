@@ -6,4 +6,5 @@ from . import views
 
 urlpatterns = [
     path("sc-messages/", views.sc_message_list, name="sc-message-list"),
+    path("sc-messages/<int:pk>/", views.sc_message_detail, name="sc-message-detail"),
 ]
