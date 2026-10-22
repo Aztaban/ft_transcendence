@@ -163,8 +163,11 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
 }
 
-# Eligibility request submit (api-plan §10.3): max projects in one request.
+# Eligibility request submit: max projects in one request.
 ELIGIBILITY_REQUEST_MAX_PROJECTS = 50
+
+# Unpicked evaluation requests expire after this many days.
+EVALUATION_REQUEST_TTL_DAYS = 14
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 CHANNEL_LAYERS = {
@@ -193,6 +196,10 @@ CELERY_BEAT_SCHEDULE = {
     "purge-old-notifications-daily": {
         "task": "purge_old_notifications",
         "schedule": 86400.0,
+    },
+    "expire-evaluation-requests-every-5m": {
+        "task": "expire_evaluation_requests",
+        "schedule": 300.0,
     },
 }
 
