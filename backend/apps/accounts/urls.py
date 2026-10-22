@@ -2,9 +2,11 @@
 
 from django.urls import path
 
+from .people_search import PeopleSearchView
 from .views import authentication, oauth, profiles, roles
 
 urlpatterns = [
+    path("search/people/", PeopleSearchView.as_view(), name="search-people"),
     path("auth/register/", authentication.register, name="register"),
     path("auth/login/", authentication.LoginView.as_view(), name="login"),
     path("auth/logout/", authentication.LogoutView.as_view(), name="logout"),

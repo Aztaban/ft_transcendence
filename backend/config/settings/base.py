@@ -151,6 +151,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "user": "1000/hour",
         "auth": "10/minute",
+        "people_search": "60/minute",
     },
     # Nginx is the one proxy in front of Django: the client IP is the last
     # X-Forwarded-For entry, so a forged header cannot pick its own IP.
