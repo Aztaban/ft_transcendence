@@ -17,7 +17,8 @@
     "studentCouncil": "Consejo estudiantil",
     "messages": "Mensajes",
     "councilProfile": "Perfil del consejo",
-    "eligibility": "Elegibilidad"
+    "eligibility": "Elegibilidad",
+    "skipToContent": "Saltar al contenido"
   },
   "workspace": {
     "select": "Elegir rol",

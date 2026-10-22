@@ -175,3 +175,63 @@ describe("Sidebar eligibility link", () => {
     expect(screen.queryByRole("link", { name: "Eligibility" })).toBeNull();
   });
 });
+
+describe("Sidebar role menu keyboard", () => {
+  function openWithKeyboard() {
+    currentUser.roles = ["student", "tutor", "sc_member"];
+    currentUser.isLoaded = true;
+    renderSidebar();
+    const button = screen.getByRole("button", { name: /STUDENT/ });
+
+    button.focus();
+    fireEvent.keyDown(button, { key: "ArrowDown" });
+
+    return button;
+  }
+
+  test("opens with the arrow key on the current workspace", () => {
+    openWithKeyboard();
+
+    expect(document.activeElement?.textContent).toBe("STUDENT");
+  });
+
+  test("moves with the arrow keys, Home and End, and wraps around", () => {
+    openWithKeyboard();
+    const menu = screen.getByRole("listbox");
+
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(document.activeElement?.textContent).toBe("HITCHHIKER");
+
+    fireEvent.keyDown(menu, { key: "End" });
+    expect(document.activeElement?.textContent).toBe("COUNCIL");
+
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(document.activeElement?.textContent).toBe("STUDENT");
+
+    fireEvent.keyDown(menu, { key: "ArrowUp" });
+    expect(document.activeElement?.textContent).toBe("COUNCIL");
+
+    fireEvent.keyDown(menu, { key: "Home" });
+    expect(document.activeElement?.textContent).toBe("STUDENT");
+  });
+
+  test("closes on Escape and returns to the button", () => {
+    const button = openWithKeyboard();
+
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(document.activeElement).toBe(button);
+  });
+
+  test("selects a workspace and returns to the button", () => {
+    const button = openWithKeyboard();
+
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "ArrowDown" });
+    fireEvent.click(document.activeElement as HTMLElement);
+
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(button.textContent).toBe("HITCHHIKER");
+    expect(document.activeElement).toBe(button);
+  });
+});

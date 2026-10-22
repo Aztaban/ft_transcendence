@@ -77,6 +77,8 @@ function Sidebar({ isOpen = false }: SidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+  const roleButtonRef = useRef<HTMLButtonElement>(null);
+  const roleMenuRef = useRef<HTMLDivElement>(null);
 
   // Head Tutors and Admins also review eligibility requests in the Hitchhiker workspace.
   const { roles: userRoles } = useCurrentUser();
@@ -121,6 +123,40 @@ function Sidebar({ isOpen = false }: SidebarProps) {
   const selectRole = (role: AppRole) => {
     setActiveRole(role);
     setIsRoleMenuOpen(false);
+    roleButtonRef.current?.focus();
+  };
+
+  // Opening the role menu moves the focus to the current workspace.
+  useEffect(() => {
+    if (isRoleMenuOpen) {
+      roleMenuRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
+    }
+  }, [isRoleMenuOpen]);
+
+  // The role menu is a listbox (WAI-ARIA): arrow keys, Home and End move between the
+  // workspaces, Escape closes it and returns to the button, Tab closes it and moves on.
+  const handleRoleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const options = [
+      ...(roleMenuRef.current?.querySelectorAll<HTMLElement>('[role="option"]') ?? []),
+    ];
+    const index = options.indexOf(document.activeElement as HTMLElement);
+    const moves: Record<string, number> = {
+      ArrowDown: (index + 1) % options.length,
+      ArrowUp: (index - 1 + options.length) % options.length,
+      Home: 0,
+      End: options.length - 1,
+    };
+
+    if (event.key in moves) {
+      event.preventDefault();
+      options[moves[event.key]]?.focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setIsRoleMenuOpen(false);
+      roleButtonRef.current?.focus();
+    } else if (event.key === "Tab") {
+      setIsRoleMenuOpen(false);
+    }
   };
 
   return (
@@ -157,11 +193,18 @@ function Sidebar({ isOpen = false }: SidebarProps) {
 
         <div className="sidebar__role">
           <button
+            ref={roleButtonRef}
             className="sidebar__role-selector"
             type="button"
             aria-haspopup="listbox"
             aria-expanded={isRoleMenuOpen}
             onClick={() => setIsRoleMenuOpen((open) => !open)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                setIsRoleMenuOpen(true);
+              }
+            }}
           >
             <span>{t(`workspace.${activeRole}`)}</span>
 
@@ -179,7 +222,13 @@ function Sidebar({ isOpen = false }: SidebarProps) {
           </button>
 
           {isRoleMenuOpen && (
-            <div className="sidebar__role-menu" role="listbox" aria-label={t("workspace.select")}>
+            <div
+              ref={roleMenuRef}
+              className="sidebar__role-menu"
+              role="listbox"
+              aria-label={t("workspace.select")}
+              onKeyDown={handleRoleMenuKeyDown}
+            >
               {availableRoles.map((role) => (
                 <button
                   key={role}
@@ -191,6 +240,7 @@ function Sidebar({ isOpen = false }: SidebarProps) {
                     .join(" ")}
                   type="button"
                   role="option"
+                  tabIndex={-1}
                   aria-selected={activeRole === role}
                   onClick={() => selectRole(role)}
                 >
