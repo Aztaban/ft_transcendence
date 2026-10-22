@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 import { registerUser } from "../api/auth";
 import { ApiError } from "../api/client";
@@ -152,6 +152,13 @@ function RegisterPage() {
             {isSubmitting ? t("auth.registering") : t("auth.register")}
           </Button>
         </form>
+
+        <p className="registration-switch">
+          {t("auth.haveAccount")}
+          <Link to="/login">
+            {t("auth.logIn")} <span aria-hidden="true">→</span>
+          </Link>
+        </p>
       </div>
     </main>
   );

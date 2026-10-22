@@ -180,3 +180,51 @@
   width: 28px;
   height: auto;
 }
+
+/* "Don't have an account? Create one" under Login, and the way back under Register. The link
+   text stays black with a teal underline: teal text on white is too light to read (WCAG). */
+.registration-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  margin: 28px 0 0;
+  padding: 16px 20px;
+  border: 1px solid #e6e9e9;
+  border-radius: 8px;
+  background: #f7f9f9;
+  color: #5d6464;
+  font-size: 0.95rem;
+}
+
+.registration-switch a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 1px;
+  border-bottom: 2px solid var(--color-accent);
+  color: #000000;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    color 0.15s ease,
+    gap 0.15s ease;
+}
+
+.registration-switch a:hover {
+  gap: 10px;
+  color: var(--color-accent-dark);
+}
+
+.registration-switch a:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .registration-switch a {
+    transition: none;
+  }
+}

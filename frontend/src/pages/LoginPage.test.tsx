@@ -29,6 +29,7 @@ function renderLoginPage(initialEntry: string | { pathname: string; state: unkno
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<div>Home after login</div>} />
+          <Route path="/register" element={<div>Register page</div>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -261,5 +262,18 @@ describe("LoginPage in another language", () => {
     expect(screen.getByRole("alert").textContent).toBe(
       "Se denegó el inicio de sesión con 42. Autoriza el acceso para continuar.",
     );
+  });
+});
+
+describe("LoginPage link to Register", () => {
+  test("lets a visitor without an account go to the Register page", async () => {
+    mockAnonymousSession(mockFetch());
+    renderLoginPage();
+
+    expect(screen.getByText("Don't have an account?")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("link", { name: "Create one" }));
+
+    expect(await screen.findByText("Register page")).toBeTruthy();
   });
 });
