@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Trans, useTranslation } from "react-i18next";
 
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
 
@@ -8,6 +9,7 @@ interface EligibilitySentDialogProps {
 
 // Shown after the eligibility request is sent. Closes on a click outside the card or on Escape.
 function EligibilitySentDialog({ onClose }: EligibilitySentDialogProps) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ function EligibilitySentDialog({ onClose }: EligibilitySentDialogProps) {
         onClick={(event) => event.stopPropagation()}
       >
         <p id="eligibility-dialog-title" className="eligibility-dialog__title">
-          Your request was sent to the <strong>HEAD TUTORS!</strong>
+          <Trans i18nKey="eligibility.sentTitle" components={{ strong: <strong /> }} />
         </p>
         <img
           className="eligibility-dialog__image"
@@ -46,11 +48,8 @@ function EligibilitySentDialog({ onClose }: EligibilitySentDialogProps) {
           alt=""
           aria-hidden="true"
         />
-        <p className="eligibility-dialog__text">
-          You will get a notification when they decide. Once approved, you can pick requests for
-          these projects.
-        </p>
-        <p className="eligibility-dialog__hint">Click anywhere to close</p>
+        <p className="eligibility-dialog__text">{t("eligibility.sentText")}</p>
+        <p className="eligibility-dialog__hint">{t("common.clickToClose")}</p>
       </div>
     </div>
   );

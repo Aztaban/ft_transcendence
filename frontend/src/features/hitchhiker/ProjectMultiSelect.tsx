@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { listProjects } from "../../api/projects";
@@ -23,6 +24,7 @@ function projectInitials(name: string) {
 // Native checkboxes styled as tiles. "Details" sits outside each label, so opening a project
 // does not select it. The chosen projects keep the API order (sorted by name).
 function ProjectMultiSelect({ value, onChange }: ProjectMultiSelectProps) {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<ProjectRef[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
 
@@ -64,39 +66,39 @@ function ProjectMultiSelect({ value, onChange }: ProjectMultiSelectProps) {
 
   return (
     <fieldset className="project-multi">
-      <legend className="project-multi__label">Choose the projects you want to evaluate</legend>
+      <legend className="project-multi__label">{t("eligibility.legend")}</legend>
 
       {loadState === "loading" && (
         <div className="project-multi__grid" aria-busy="true">
           {[1, 2, 3, 4, 5, 6].map((placeholder) => (
             <span className="project-multi__skeleton" key={placeholder} />
           ))}
-          <span className="project-multi__sr-only">Loading projects…</span>
+          <span className="project-multi__sr-only">{t("projectSelect.loading")}</span>
         </div>
       )}
 
       {loadState === "error" && (
         <p className="project-multi__error" role="alert">
-          Could not load the projects. Please try again later.
+          {t("projectSelect.error")}
         </p>
       )}
 
       {loadState === "ready" && projects.length === 0 && (
-        <p className="project-multi__empty">No projects available</p>
+        <p className="project-multi__empty">{t("projectSelect.empty")}</p>
       )}
 
       {loadState === "ready" && projects.length > 0 && (
         <>
           <div className="project-multi__toolbar">
             <span className="project-multi__count" aria-live="polite">
-              {selectedIds.size} of {projects.length} selected
+              {t("eligibility.selectedOf", { selected: selectedIds.size, total: projects.length })}
             </span>
             <button
               className="project-multi__all"
               type="button"
               onClick={() => onChange(allSelected ? [] : projects)}
             >
-              {allSelected ? "Clear all" : "Select all"}
+              {allSelected ? t("eligibility.clearAll") : t("eligibility.selectAll")}
             </button>
           </div>
 
@@ -131,9 +133,9 @@ function ProjectMultiSelect({ value, onChange }: ProjectMultiSelectProps) {
                   <Link
                     className="project-multi__details"
                     to={`/projects/${project.slug}`}
-                    aria-label={`Details about ${project.name}`}
+                    aria-label={t("projectSelect.detailsAria", { project: project.name })}
                   >
-                    Details <span aria-hidden="true">→</span>
+                    {t("projectSelect.details")} <span aria-hidden="true">→</span>
                   </Link>
                 </div>
               );
