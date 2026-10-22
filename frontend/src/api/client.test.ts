@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import i18n from "../i18n";
 import { ApiError, apiRequest, setUnauthorizedHandler } from "./client";
 import { updateCurrentUser } from "./users";
 
@@ -18,6 +19,24 @@ function jsonResponse(body: unknown) {
 function csrfHeader(call: unknown[]) {
   return new Headers((call[1] as RequestInit | undefined)?.headers).get("X-CSRFToken");
 }
+
+describe("apiRequest Accept-Language", () => {
+  test("asks the backend for the current language", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => jsonResponse({}));
+
+    await apiRequest("/api/v1/things/");
+    await i18n.changeLanguage("cs");
+    await apiRequest("/api/v1/things/");
+
+    expect(
+      fetchMock.mock.calls.map((call) =>
+        new Headers((call[1] as RequestInit | undefined)?.headers).get("Accept-Language"),
+      ),
+    ).toEqual(["en", "cs"]);
+  });
+});
 
 describe("apiRequest CSRF", () => {
   test("adds the token from the cookie to unsafe methods", async () => {

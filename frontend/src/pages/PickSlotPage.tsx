@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 
 import { ApiError } from "../api/client";
-import { getEvaluationRequest, pickSlot } from "../api/evaluationRequests";
+import { pickSlot } from "../api/evaluationRequests";
 import SlotPicker, {
   type ChosenSlot,
   type SlotFieldErrors,
 } from "../features/hitchhiker/SlotPicker";
 import { isStartAllowed, MIN_LEAD_MINUTES } from "../features/hitchhiker/slotRules";
+import { findOpenRequest } from "../features/hitchhiker/findOpenRequest";
 import SuccessDialog from "../features/hitchhiker/SuccessDialog";
 import type { EvaluationRequest } from "../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../utils/dateTime";
@@ -20,6 +21,9 @@ type LoadState = "loading" | "ready" | "error";
 // How often "now" is refreshed while the page stays open, so a chosen start cannot silently
 // become too soon.
 const NOW_REFRESH_MS = 30_000;
+
+const GONE_MESSAGE =
+  "This request is no longer open. Another Hitchhiker may have picked it, or the student cancelled it.";
 
 const pickErrorMessages: Record<string, string> = {
   slot_overlaps: "You already have an evaluation at that time. Choose another slot.",
@@ -52,8 +56,10 @@ function PickSlotPage() {
   const [reloadKey, setReloadKey] = useState(0);
   // Set by a live refresh: a failure then keeps the request already shown.
   const isLiveRefresh = useRef(false);
-  // A 404 from a live refresh or from the pick: the request is no longer shown to this
-  // Hitchhiker (§5.5).
+  // The project of the request shown, so a live refresh reads only that project's open list.
+  const projectSlug = useRef<string | undefined>(undefined);
+  // The request left the open list, or the pick answered 404: it is not open for this
+  // Hitchhiker anymore (§8.7).
   const [isGone, setIsGone] = useState(false);
 
   // Another Hitchhiker picked this request, or the student cancelled it, or the connection is
@@ -85,22 +91,26 @@ function PickSlotPage() {
 
     isLiveRefresh.current = false;
 
-    getEvaluationRequest(Number(id))
+    // The open list, not GET /evaluation-requests/{id}/: a request that was picked or cancelled
+    // is simply missing from it, instead of a 404 in the console.
+    findOpenRequest(Number(id), inBackground ? projectSlug.current : undefined)
       .then((result) => {
-        if (active) {
+        if (!active) {
+          return;
+        }
+
+        if (result) {
+          projectSlug.current = result.project.slug;
           setRequest(result);
           setIsGone(false);
-          setLoadState("ready");
+        } else {
+          setIsGone(true);
         }
-      })
-      .catch((error) => {
-        if (active) {
-          // Another Hitchhiker picked it or the student cancelled it: other Hitchhikers then get
-          // 404, not the new status (§5.5).
-          if (inBackground && error instanceof ApiError && error.status === 404) {
-            setIsGone(true);
-          }
 
+        setLoadState("ready");
+      })
+      .catch(() => {
+        if (active) {
           setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
@@ -171,7 +181,13 @@ function PickSlotPage() {
 
       {loadState === "error" && (
         <p className="pick-slot__error" role="alert">
-          This request could not be loaded. It may have been picked or cancelled.
+          This request could not be loaded. Please try again later.
+        </p>
+      )}
+
+      {loadState === "ready" && isGone && !request && (
+        <p className="pick-slot__error" role="alert">
+          {GONE_MESSAGE}
         </p>
       )}
 
@@ -189,7 +205,7 @@ function PickSlotPage() {
                 <p className="pick-slot__note">{request.note || "No note from the student."}</p>
               </section>
 
-              {request.status === "pending" && !isGone ? (
+              {!isGone ? (
                 <>
                   <section className="pick-slot__card">
                     <h2>Your slot</h2>
@@ -236,9 +252,7 @@ function PickSlotPage() {
                 </>
               ) : (
                 <p className="pick-slot__error" role="alert">
-                  {isGone
-                    ? "This request is no longer open. Another Hitchhiker may have picked it, or the student cancelled it."
-                    : "This request is no longer open."}
+                  {GONE_MESSAGE}
                 </p>
               )}
             </div>

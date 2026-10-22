@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 export interface ApiErrorFields {
   [field: string]: string[];
 }
@@ -69,6 +71,11 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
+
+  // The backend answers its messages in this language (api-plan §5.5).
+  if (!headers.has("Accept-Language")) {
+    headers.set("Accept-Language", i18n.language || "en");
+  }
 
   if (!headers.has("Accept")) {
     headers.set("Accept", "application/json");
