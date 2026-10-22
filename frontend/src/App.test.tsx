@@ -33,6 +33,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  sessionStorage.clear();
 });
 
 const renderAt = (path: string) =>
@@ -103,5 +104,61 @@ describe("logged out", () => {
 
     expect(container.querySelector(".sidebar")).toBeNull();
     expect(screen.queryByLabelText("Email")).toBeNull();
+  });
+});
+
+describe("42 login", () => {
+  test("remembers the page when the user leaves for 42", async () => {
+    vi.mocked(getSession).mockResolvedValue({ authenticated: false, user: null });
+    renderAt("/history?status=cancelled");
+
+    const link = await screen.findByRole("link", { name: /CONTINUE WITH 42/ });
+
+    // jsdom cannot follow the link to the backend; the remembered page is what matters here.
+    link.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(link);
+
+    expect(sessionStorage.getItem("login-return-to")).toBe("/history?status=cancelled");
+  });
+
+  test("opens the remembered page when the user comes back logged in", async () => {
+    vi.mocked(getSession).mockResolvedValue({ authenticated: true, user });
+    sessionStorage.setItem("login-return-to", "/history?status=cancelled");
+    renderAt("/");
+
+    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(sessionStorage.getItem("login-return-to")).toBeNull();
+  });
+
+  test("prefers the page from the gate over one kept for an earlier 42 login", async () => {
+    vi.mocked(getSession).mockResolvedValue({ authenticated: false, user: null });
+    vi.mocked(loginUser).mockResolvedValue({ ...user, message: "Logged in." });
+    sessionStorage.setItem("login-return-to", "/pending");
+    renderAt("/history");
+
+    fireEvent.change(await screen.findByLabelText("Email"), {
+      target: { value: "student@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
+    fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
+
+    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(sessionStorage.getItem("login-return-to")).toBeNull();
+  });
+
+  test("uses the page kept for 42 when the 42 login failed and the form is used instead", async () => {
+    vi.mocked(getSession).mockResolvedValue({ authenticated: false, user: null });
+    vi.mocked(loginUser).mockResolvedValue({ ...user, message: "Logged in." });
+    sessionStorage.setItem("login-return-to", "/history?status=cancelled");
+    renderAt("/login?oauth=oauth_access_denied");
+
+    fireEvent.change(await screen.findByLabelText("Email"), {
+      target: { value: "student@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
+    fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
+
+    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(sessionStorage.getItem("login-return-to")).toBeNull();
   });
 });

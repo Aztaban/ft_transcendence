@@ -5,6 +5,7 @@ import logo42 from "../assets/figma/42.svg";
 import { ApiError } from "../api/client";
 import { Button, Input } from "../components/ui";
 import { useAuth } from "../store/AuthContext";
+import { rememberReturnPath, takeReturnPath } from "../utils/loginReturn";
 import "../styles/registration.css";
 
 const OAUTH_42_REDIRECT_URL = "/api/v1/auth/42/redirect/";
@@ -74,7 +75,10 @@ function LoginPage() {
 
     try {
       await login({ email, password });
-      navigate(afterLogin, { replace: true });
+      // A failed 42 login comes back here without the gate's page; the one kept for it applies.
+      const keptForOAuth = takeReturnPath();
+
+      navigate(from ? afterLogin : (keptForOAuth ?? "/"), { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.code === "invalid_credentials") {
         setError("Invalid email or password.");
@@ -150,6 +154,7 @@ function LoginPage() {
         <a
           className="ui-button ui-button--secondary registration-oauth"
           href={OAUTH_42_REDIRECT_URL}
+          onClick={() => rememberReturnPath(afterLogin)}
         >
           <img src={logo42} alt="" aria-hidden="true" />
           CONTINUE WITH 42
