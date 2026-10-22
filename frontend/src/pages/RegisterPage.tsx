@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { registerUser } from "../api/auth";
 import { ApiError } from "../api/client";
 import logo42 from "../assets/figma/42.svg";
@@ -19,6 +20,8 @@ import "../styles/registration.css";
 
 function RegisterPage() {
   const { t, i18n } = useTranslation();
+
+  usePageTitle(t("pageTitle.register"));
   const navigate = useNavigate();
   const [errors, setErrors] = useState<RegistrationFieldErrors>({});
   // The values that failed the checks in the browser, so the messages can be shown again in a
@@ -104,6 +107,8 @@ function RegisterPage() {
         </div>
 
         <div className="registration-brand__accent" />
+
+        <h1 className="registration-page__title">{t("pageTitle.register")}</h1>
 
         <form className="registration-form" onSubmit={handleSubmit} noValidate>
           <Input

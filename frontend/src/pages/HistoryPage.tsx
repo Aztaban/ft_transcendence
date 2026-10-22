@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { listEvaluationRequests, type EvaluationResultFilter } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
 import { projectInitials } from "../features/projects/ProjectOverview";
@@ -109,6 +110,8 @@ function endNote(request: EvaluationRequest) {
 // Hitchhiker picked (`picked`), with outcome and project filters and pages of 20.
 function HistoryPage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("history.title"));
   const { activeRole } = useRole();
   const viewer: Viewer = activeRole === "HITCHHIKER" ? "hitchhiker" : "student";
   const [filter, setFilter] = useState<HistoryFilter>("all");

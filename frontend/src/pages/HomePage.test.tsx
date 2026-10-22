@@ -54,6 +54,7 @@ describe("HomePage", () => {
 
     expect(screen.getByText("NEED AN EVALUATION?")).toBeTruthy();
     expect(screen.getByText("Student")).toBeTruthy();
+    expect(document.title).toBe("Home · 42 Evals");
   });
 
   it("shows the Hitchhiker dashboard for Hitchhikers", () => {
@@ -122,6 +123,7 @@ describe("HomePage in another language", () => {
     renderHomeAs("STUDENT");
 
     expect(screen.getByRole("heading", { name: "Vítejte zpět" })).toBeTruthy();
+    expect(document.title).toBe("Domů · 42 Evals");
     expect(screen.getByText("POTŘEBUJETE HODNOCENÍ?")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Otevřené žádosti" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Čekající hodnocení" })).toBeTruthy();

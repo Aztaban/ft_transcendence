@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useParams } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { ApiError } from "../api/client";
 import { getProject } from "../api/projects";
 import ProjectOverview, { projectInitials } from "../features/projects/ProjectOverview";
@@ -20,6 +21,8 @@ function ProjectDetailsPage() {
   const { isAuthenticated, isLoading: isSessionLoading } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+
+  usePageTitle(project?.name ?? t("pageTitle.project"));
 
   useEffect(() => {
     if (isSessionLoading || !isAuthenticated) {

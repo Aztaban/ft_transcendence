@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { getCurrentUser, updateCurrentUser } from "../api/users";
 import i18n, { changeLanguage } from "../i18n";
 import { ApiError } from "../api/client";
@@ -51,6 +52,8 @@ interface InfoTile {
 
 function ProfilePage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("nav.profile"));
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);

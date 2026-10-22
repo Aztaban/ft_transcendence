@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import { ApiError } from "../api/client";
 import {
@@ -141,6 +142,11 @@ function EvaluationPage() {
   const [cancelError, setCancelError] = useState("");
   const [wasCancelled, setWasCancelled] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+
+  // "push_swap · Evaluation · 42 Evals" once the request is loaded.
+  usePageTitle(
+    request ? `${request.project.name} · ${t("pageTitle.evaluation")}` : t("pageTitle.evaluation"),
+  );
   // Set by a live refresh: a failure then keeps the request already shown.
   const isLiveRefresh = useRef(false);
   // A 404 from a live refresh or from Accept / Decline: the request is no longer shown to this

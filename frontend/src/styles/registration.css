@@ -228,3 +228,13 @@
     transition: none;
   }
 }
+
+/* The page's main heading, for screen readers only: the 42 EVALS logo is the visible title. */
+.registration-page__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

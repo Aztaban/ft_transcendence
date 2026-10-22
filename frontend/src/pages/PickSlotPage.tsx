@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { ApiError } from "../api/client";
 import { getEvaluationRequest, pickSlot } from "../api/evaluationRequests";
 import SlotPicker, {
@@ -60,6 +61,12 @@ function PickSlotPage() {
   const [submitError, setSubmitError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<SlotFieldErrors>({});
   const [isPicked, setIsPicked] = useState(false);
+
+  usePageTitle(
+    request
+      ? t("pickSlot.title", { project: request.project.name })
+      : t("hitchhikerRequests.title"),
+  );
   const [reloadKey, setReloadKey] = useState(0);
   // Set by a live refresh: a failure then keeps the request already shown.
   const isLiveRefresh = useRef(false);

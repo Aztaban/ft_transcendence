@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { ApiError } from "../api/client";
 import { createEligibilityRequest } from "../api/eligibility";
 import EligibilitySentDialog from "../features/hitchhiker/EligibilitySentDialog";
@@ -84,6 +85,8 @@ function submitErrorMessage(error: unknown) {
 // reviewed as a whole by a Head Tutor (api-plan §7.2, §10.3).
 function EligibilityRequestPage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("eligibility.title"));
   const navigate = useNavigate();
   const [stepId, setStepId] = useState<StepId>("projects");
   const [projects, setProjects] = useState<ProjectRef[]>(readDraft);

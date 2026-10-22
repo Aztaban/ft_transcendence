@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { ApiError } from "../api/client";
 import {
   listEligibilityRequests,
@@ -66,6 +67,8 @@ function initials(name: string) {
 // one Approve / Decline decision for the whole request (api-plan §7.2, §10.3).
 function EligibilityReviewPage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("review.title"));
   // The real roles from the shared /users/me/ store; the backend checks them again (§10.3).
   const { user, roles, isLoaded } = useCurrentUser();
   const userId = user?.id ?? null;

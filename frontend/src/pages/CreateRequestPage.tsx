@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { ApiError } from "../api/client";
 import { createEvaluationRequest } from "../api/evaluationRequests";
 import i18n from "../i18n";
@@ -80,6 +81,8 @@ function writeDraft(draft: Draft | null) {
 
 function CreateRequestPage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("createRequest.title"));
   const navigate = useNavigate();
   const [stepId, setStepId] = useState<StepId>("project");
   const [project, setProject] = useState<ProjectRef | null>(() => readDraft().project);

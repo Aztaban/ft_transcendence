@@ -248,6 +248,8 @@ describe("LoginPage in another language", () => {
     await i18n.changeLanguage("cs");
     renderLoginPage("/login?oauth=oauth_access_denied");
 
+    expect(screen.getByRole("heading", { level: 1, name: "Přihlášení" })).toBeTruthy();
+    expect(document.title).toBe("Přihlášení · 42 Evals");
     expect(screen.getByLabelText("E-mail")).toBeTruthy();
     expect(screen.getByLabelText("Heslo")).toBeTruthy();
     expect(screen.getByRole("button", { name: "PŘIHLÁSIT SE" })).toBeTruthy();

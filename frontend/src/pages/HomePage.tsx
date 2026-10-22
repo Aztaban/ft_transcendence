@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import historyIcon from "../assets/figma/history.svg";
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import pendingIcon from "../assets/figma/pending.svg";
@@ -213,6 +214,8 @@ function HitchhikerRequestSections() {
 
 function HomePage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("nav.home"));
   const { activeRole } = useRole();
   const dashboard = dashboards[activeRole];
 

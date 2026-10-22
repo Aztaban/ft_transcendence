@@ -1,11 +1,14 @@
 import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { useRole } from "../store/RoleContext";
 import "../styles/unauthorized.css";
 
 function UnauthorizedPage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("pageTitle.unauthorized"));
   const { activeRole } = useRole();
 
   return (

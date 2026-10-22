@@ -552,5 +552,13 @@
     "title": "Tato stránka není pro vaši aktuální roli dostupná.",
     "text": "Role <strong>{{role}}</strong> nemá oprávnění tuto stránku zobrazit.",
     "back": "Zpět na přehled"
+  },
+  "pageTitle": {
+    "evaluation": "Hodnocení",
+    "project": "Projekt",
+    "login": "Přihlášení",
+    "register": "Registrace",
+    "notFound": "Stránka nenalezena",
+    "unauthorized": "Přístup omezen"
   }
 }
