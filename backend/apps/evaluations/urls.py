@@ -8,6 +8,11 @@ urlpatterns = [
     path("projects/", projects.ProjectListView.as_view(), name="project-list"),
     path("projects/<slug:slug>/", projects.ProjectDetailView.as_view(), name="project-detail"),
     path(
+        "projects/<slug:slug>/eligibility/<int:tutor_id>/",
+        eligibility.revoke_tutor_eligibility,
+        name="project-eligibility-revoke",
+    ),
+    path(
         "evaluation-requests/",
         requests.EvaluationRequestListCreateView.as_view(),
         name="evaluation-request-list",
