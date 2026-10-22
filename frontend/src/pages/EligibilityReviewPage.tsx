@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../api/client";
 import {
@@ -7,6 +8,7 @@ import {
   type EligibilityDecision,
 } from "../api/eligibility";
 import ReviewDialog from "../features/headTutor/ReviewDialog";
+import i18n from "../i18n";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { EligibilityRequest, EligibilityRequestStatus } from "../types/eligibility";
 import { formatTimeAgo } from "../utils/dateTime";
@@ -16,16 +18,19 @@ import "../styles/eligibility-review.css";
 
 type LoadState = "loading" | "ready" | "error";
 
-const tabs: { status: EligibilityRequestStatus; label: string }[] = [
-  { status: "pending", label: "Pending" },
-  { status: "approved", label: "Approved" },
-  { status: "declined", label: "Declined" },
-];
+const tabs: EligibilityRequestStatus[] = ["pending", "approved", "declined"];
 
+// Keys of the "review" texts for each status: its name, and the empty list of that tab.
 const statusLabels: Record<EligibilityRequestStatus, string> = {
-  pending: "Pending",
-  approved: "Approved",
-  declined: "Declined",
+  pending: "review.pending",
+  approved: "review.approved",
+  declined: "review.declined",
+};
+
+const emptyLabels: Record<EligibilityRequestStatus, string> = {
+  pending: "review.noPending",
+  approved: "review.noApproved",
+  declined: "review.noDeclined",
 };
 
 interface OpenReview {
@@ -36,17 +41,17 @@ interface OpenReview {
 function reviewErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.code === "cannot_review_own_request") {
-      return "You can't review your own request. Another Head Tutor or an Admin will.";
+      return i18n.t("review.errorOwn");
     }
 
     if (error.code === "eligibility_request_already_reviewed") {
-      return "Another Head Tutor already reviewed this request.";
+      return i18n.t("review.errorReviewed");
     }
 
     return error.fields?.review_note?.[0] ?? error.fields?.decision?.[0] ?? error.message;
   }
 
-  return "Could not save the decision. Please try again.";
+  return i18n.t("review.errorGeneric");
 }
 
 // "dkolarov" → "DK"
@@ -60,6 +65,7 @@ function initials(name: string) {
 // Head Tutor table of eligibility requests (#175, #176, #177): requester and full project list,
 // one Approve / Decline decision for the whole request (api-plan §7.2, §10.3).
 function EligibilityReviewPage() {
+  const { t } = useTranslation();
   // The real roles from the shared /users/me/ store; the backend checks them again (§10.3).
   const { user, roles, isLoaded } = useCurrentUser();
   const userId = user?.id ?? null;
@@ -167,7 +173,9 @@ function EligibilityReviewPage() {
       setOpenReview(null);
       setPageError("");
       setMessage(
-        `${request.requester.display_name}'s request was ${decision === "approved" ? "approved" : "declined"}.`,
+        t(decision === "approved" ? "review.approvedMessage" : "review.declinedMessage", {
+          name: request.requester.display_name,
+        }),
       );
       reload();
     } catch (error) {
@@ -189,7 +197,7 @@ function EligibilityReviewPage() {
   if (!isLoaded) {
     return (
       <section className="eligibility-review" aria-busy="true">
-        <span className="eligibility-review__sr-only">Loading…</span>
+        <span className="eligibility-review__sr-only">{t("review.loading")}</span>
       </section>
     );
   }
@@ -202,33 +210,33 @@ function EligibilityReviewPage() {
     <section className="eligibility-review">
       <header className="eligibility-review__header">
         <div>
-          <h1>Eligibility requests</h1>
-          <p>Hitchhikers asking to evaluate projects. Your decision covers the whole request.</p>
+          <h1>{t("review.title")}</h1>
+          <p>{t("review.subtitle")}</p>
         </div>
       </header>
 
-      <div className="eligibility-review__tabs" role="tablist" aria-label="Request status">
+      <div className="eligibility-review__tabs" role="tablist" aria-label={t("review.tabsAria")}>
         {tabs.map((tab) => (
           <button
-            key={tab.status}
+            key={tab}
             className={
-              tab.status === status
-                ? `eligibility-review__tab eligibility-review__tab--${tab.status} eligibility-review__tab--active`
-                : `eligibility-review__tab eligibility-review__tab--${tab.status}`
+              tab === status
+                ? `eligibility-review__tab eligibility-review__tab--${tab} eligibility-review__tab--active`
+                : `eligibility-review__tab eligibility-review__tab--${tab}`
             }
             type="button"
             role="tab"
-            aria-selected={tab.status === status}
+            aria-selected={tab === status}
             onClick={() => {
-              setStatus(tab.status);
+              setStatus(tab);
               setPage(1);
               setMoreFailed(false);
               setMessage("");
               setPageError("");
             }}
           >
-            {tab.label}
-            {tab.status === status && loadState === "ready" && (
+            {t(statusLabels[tab])}
+            {tab === status && loadState === "ready" && (
               <span className="eligibility-review__tab-count">{total}</span>
             )}
           </button>
@@ -252,20 +260,20 @@ function EligibilityReviewPage() {
           {[1, 2, 3].map((placeholder) => (
             <div className="eligibility-review__skeleton" key={placeholder} />
           ))}
-          <span className="eligibility-review__sr-only">Loading requests…</span>
+          <span className="eligibility-review__sr-only">{t("hitchhikerRequests.loading")}</span>
         </div>
       )}
 
       {loadState === "error" && (
         <p className="eligibility-review__error" role="alert">
-          Could not load the requests. Please try again later.
+          {t("hitchhikerRequests.error")}
         </p>
       )}
 
       {loadState === "ready" && requests.length === 0 && (
         <div className="eligibility-review__empty">
-          <h2>No {statusLabels[status].toLowerCase()} requests</h2>
-          {status === "pending" && <p>New requests from Hitchhikers will appear here.</p>}
+          <h2>{t(emptyLabels[status])}</h2>
+          {status === "pending" && <p>{t("review.newRequests")}</p>}
         </div>
       )}
 
@@ -273,10 +281,12 @@ function EligibilityReviewPage() {
         <table className="eligibility-review__table">
           <thead>
             <tr>
-              <th scope="col">Requester</th>
-              <th scope="col">Projects</th>
-              <th scope="col">Requested</th>
-              <th scope="col">{status === "pending" ? "Decision" : "Reviewed by"}</th>
+              <th scope="col">{t("review.requester")}</th>
+              <th scope="col">{t("review.projects")}</th>
+              <th scope="col">{t("review.requested")}</th>
+              <th scope="col">
+                {status === "pending" ? t("review.decision") : t("review.reviewedBy")}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -285,47 +295,57 @@ function EligibilityReviewPage() {
 
               return (
                 <tr key={request.id}>
-                  <td data-label="Requester">
+                  <td data-label={t("review.requester")}>
                     <span className="eligibility-review__person">
                       <span className="eligibility-review__avatar" aria-hidden="true">
                         {initials(request.requester.display_name)}
                       </span>
                       <span>
                         {request.requester.display_name}
-                        {isOwn && <span className="eligibility-review__own">Your request</span>}
+                        {isOwn && (
+                          <span className="eligibility-review__own">{t("review.yourRequest")}</span>
+                        )}
                       </span>
                     </span>
                   </td>
-                  <td data-label="Projects">
+                  <td data-label={t("review.projects")}>
                     <ul className="eligibility-review__projects">
                       {request.projects.map((project) => (
                         <li key={project.id}>{project.name}</li>
                       ))}
                     </ul>
                   </td>
-                  <td data-label="Requested">
+                  <td data-label={t("review.requested")}>
                     <time dateTime={request.created_at}>{formatTimeAgo(request.created_at)}</time>
                   </td>
-                  <td data-label={status === "pending" ? "Decision" : "Reviewed by"}>
+                  <td
+                    data-label={
+                      status === "pending" ? t("review.decision") : t("review.reviewedBy")
+                    }
+                  >
                     {request.status === "pending" ? (
                       <div className="eligibility-review__actions">
                         <button
                           className="eligibility-review__approve"
                           type="button"
                           disabled={isOwn}
-                          aria-label={`Approve ${request.requester.display_name}'s request`}
+                          aria-label={t("review.approveAria", {
+                            name: request.requester.display_name,
+                          })}
                           onClick={() => setOpenReview({ request, decision: "approved" })}
                         >
-                          Approve
+                          {t("review.approve")}
                         </button>
                         <button
                           className="eligibility-review__decline"
                           type="button"
                           disabled={isOwn}
-                          aria-label={`Decline ${request.requester.display_name}'s request`}
+                          aria-label={t("review.declineAria", {
+                            name: request.requester.display_name,
+                          })}
                           onClick={() => setOpenReview({ request, decision: "declined" })}
                         >
-                          Decline
+                          {t("review.decline")}
                         </button>
                       </div>
                     ) : (
@@ -333,9 +353,11 @@ function EligibilityReviewPage() {
                         <span
                           className={`eligibility-review__status eligibility-review__status--${request.status}`}
                         >
-                          {statusLabels[request.status]}
+                          {t(statusLabels[request.status])}
                         </span>
-                        {request.reviewed_by && <span>by {request.reviewed_by.display_name}</span>}
+                        {request.reviewed_by && (
+                          <span>{t("review.by", { name: request.reviewed_by.display_name })}</span>
+                        )}
                         {request.review_note && (
                           <q className="eligibility-review__note">{request.review_note}</q>
                         )}
@@ -351,7 +373,7 @@ function EligibilityReviewPage() {
 
       {loadState === "ready" && moreFailed && (
         <p className="eligibility-review__notice" role="alert">
-          Could not load more requests. Please try again.
+          {t("review.moreError")}
         </p>
       )}
 
@@ -362,7 +384,9 @@ function EligibilityReviewPage() {
           disabled={isLoadingMore}
           onClick={showMore}
         >
-          {isLoadingMore ? "Loading…" : `Show more (${total - requests.length} left)`}
+          {isLoadingMore
+            ? t("review.loading")
+            : t("review.showMore", { count: total - requests.length })}
         </button>
       )}
 

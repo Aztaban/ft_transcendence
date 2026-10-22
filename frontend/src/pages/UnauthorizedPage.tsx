@@ -1,9 +1,11 @@
+import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { useRole } from "../store/RoleContext";
 import "../styles/unauthorized.css";
 
 function UnauthorizedPage() {
+  const { t } = useTranslation();
   const { activeRole } = useRole();
 
   return (
@@ -11,14 +13,18 @@ function UnauthorizedPage() {
       <div className="unauthorized-page__code">403</div>
 
       <div className="unauthorized-page__content">
-        <p className="unauthorized-page__eyebrow">ACCESS RESTRICTED</p>
-        <h1>This page is not available for your current role.</h1>
+        <p className="unauthorized-page__eyebrow">{t("unauthorized.eyebrow")}</p>
+        <h1>{t("unauthorized.title")}</h1>
         <p>
-          The <strong>{activeRole}</strong> role does not have permission to view this page.
+          <Trans
+            i18nKey="unauthorized.text"
+            values={{ role: t(`workspace.${activeRole}`) }}
+            components={{ strong: <strong /> }}
+          />
         </p>
 
         <Link className="unauthorized-page__action" to="/">
-          Back to dashboard
+          {t("unauthorized.back")}
         </Link>
       </div>
     </section>

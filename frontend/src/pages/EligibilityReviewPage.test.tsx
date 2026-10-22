@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
+import i18n from "../i18n";
 import { listEligibilityRequests, reviewEligibilityRequest } from "../api/eligibility";
 import { RoleProvider } from "../store/RoleContext";
 import type { EligibilityRequest } from "../types/eligibility";
@@ -300,5 +301,34 @@ describe("EligibilityReviewPage", () => {
       vi.mocked(listEligibilityRequests).mock.calls.filter(([, options]) => options?.page === 2),
     ).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
+  });
+});
+
+describe("EligibilityReviewPage in another language", () => {
+  it("shows the table and the approve dialog in Czech", async () => {
+    await i18n.changeLanguage("cs");
+    vi.mocked(listEligibilityRequests).mockResolvedValue(page([request(9, "dkolarov")]));
+
+    renderPage();
+
+    expect(await screen.findByRole("heading", { name: "Žádosti o oprávnění" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /Čekající/ })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Žadatel" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Schválit žádost uživatele dkolarov" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Schválit žádost uživatele dkolarov?" }),
+    ).toBeTruthy();
+  });
+
+  it("explains the restricted page in Spanish", async () => {
+    await i18n.changeLanguage("es");
+    logIn(["tutor"]);
+
+    renderPage();
+
+    expect(await screen.findByText("ACCESO RESTRINGIDO")).toBeTruthy();
+    expect(screen.getByText("ESTUDIANTE").tagName).toBe("STRONG");
   });
 });
