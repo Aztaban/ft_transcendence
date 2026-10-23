@@ -582,6 +582,7 @@ Events carry ids, never full objects. On receipt the frontend re-fetches what it
 | `eligibility.revoked` | `{project_id}` | The Hitchhiker |
 | `role.changed` | `{}` | The user. The frontend re-fetches `/users/me/` and rebuilds navigation. |
 | `notification.created` | `{id}` | Recipient. The frontend refreshes the unread count. |
+| `notification.updated` | `{}` | The user, after marking one or all notifications read or deleting one. The frontend refreshes the unread count and any notification list it shows, so other tabs and devices stay in sync. |
 | `session.ended` | `{}` | On logout: the connections of that session. On suspension or deletion: all of the user's connections. The server closes them with 4401 right after. |
 
 Events are sent with `transaction.on_commit`, so a client never re-fetches before the change is visible.
@@ -863,7 +864,7 @@ How the pages map: a student's Requests page is `scope=mine&history=false`; a Hi
 | POST | `/api/v1/notifications/read-all/` | Own | Marks all as read. 204. |
 | DELETE | `/api/v1/notifications/{id}/` | Own | Deletes one. 204. |
 
-Notifications are created only by the backend. Other users' notifications return 404.
+Notifications are created only by the backend. Other users' notifications return 404. Read, read-all and delete send the event `notification.updated` (§9.3).
 
 ### 10.6 Student Council inbox
 
