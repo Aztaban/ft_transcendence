@@ -1,9 +1,11 @@
 import { useEffect, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 
 import { getCurrentUser, updateCurrentUser } from "../api/users";
+import { changeLanguage } from "../i18n";
 import { ApiError } from "../api/client";
 import { Button, Input } from "../components/ui";
 import PersonAvatar from "../features/people/PersonAvatar";
+import { useCurrentUser } from "../store/CurrentUserContext";
 import type { Language, RoleName, UserProfile, UserRole } from "../types/user";
 import { DISPLAY_NAME_MAX_LENGTH } from "../utils/validation";
 import { useLiveRefresh } from "../websocket/LiveProvider";
@@ -97,6 +99,16 @@ function ProfilePage() {
     };
   }, []);
 
+  // A language picked in the top bar is saved to the profile as well: show it here too.
+  const savedLanguage = useCurrentUser().user?.language;
+
+  useEffect(() => {
+    if (savedLanguage) {
+      setProfile((shown) => (shown ? { ...shown, language: savedLanguage } : shown));
+      setSettingsLanguage(savedLanguage);
+    }
+  }, [savedLanguage]);
+
   // §9.3 `role.changed`: re-fetch the roles shown here. The form fields being edited are kept.
   useLiveRefresh(["role.changed"], () => {
     getCurrentUser()
@@ -184,6 +196,7 @@ function ProfilePage() {
 
       setProfile(updatedProfile);
       setSettingsLanguage(updatedProfile.language);
+      changeLanguage(updatedProfile.language);
       setSettingsMessage("Settings updated.");
     } catch (error) {
       if (error instanceof ApiError) {

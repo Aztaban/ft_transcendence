@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
 import { sendSCMessage } from "../api/scMessages";
+import i18n from "../i18n";
 import CouncilMessagePage from "./CouncilMessagePage";
 
 vi.mock("../api/scMessages", () => ({ SC_MESSAGE_MAX_LENGTH: 5000, sendSCMessage: vi.fn() }));
@@ -185,5 +186,25 @@ describe("CouncilMessagePage", () => {
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Could not send your message. Please try again.",
     );
+  });
+});
+
+describe("CouncilMessagePage in another language", () => {
+  it("shows the form, the counter and the sent popup in Czech", async () => {
+    await i18n.changeLanguage("cs");
+    vi.mocked(sendSCMessage).mockResolvedValue({ id: 3, created_at: "2026-10-23T09:00:00Z" });
+    renderPage();
+
+    expect(screen.getByRole("heading", { name: "Anonymní zpráva" })).toBeTruthy();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Vaše zpráva pro Studentskou radu" }), {
+      target: { value: "Lednice ve 3. patře zase nefunguje." },
+    });
+
+    expect(screen.getByText("Znaky: 35 / 5000")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Odeslat zprávu" }));
+
+    expect(await screen.findByRole("dialog", { name: "Zpráva odeslána" })).toBeTruthy();
   });
 });

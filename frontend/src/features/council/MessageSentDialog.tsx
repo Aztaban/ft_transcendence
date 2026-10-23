@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 interface MessageSentDialogProps {
   onClose: () => void;
@@ -6,6 +7,7 @@ interface MessageSentDialogProps {
 
 // Figma "Message Sent". Closes on a click outside the card or on Escape.
 function MessageSentDialog({ onClose }: MessageSentDialogProps) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,11 +42,11 @@ function MessageSentDialog({ onClose }: MessageSentDialogProps) {
           <path d="m15 27 7.5 7.5L37 19.5" />
         </svg>
         <h2 id="message-sent-title" className="message-sent__title">
-          Message Sent
+          {t("council.sentTitle")}
         </h2>
-        <p>Your anonymous message has been delivered.</p>
-        <p>The council members cannot reply to you directly because your identity is hidden.</p>
-        <p className="message-sent__hint">Click anywhere to close</p>
+        <p>{t("council.sentDelivered")}</p>
+        <p>{t("council.sentNoReply")}</p>
+        <p className="message-sent__hint">{t("council.clickToClose")}</p>
       </div>
     </div>
   );
