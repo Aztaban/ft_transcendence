@@ -1,0 +1,721 @@
+/* Student Council pages: /council and /council/send */
+
+.council-page,
+.council-message {
+  display: flex;
+  max-width: 1080px;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0 auto;
+  padding: 32px 16px 56px;
+}
+
+/* Header */
+
+.council-header {
+  animation: council-fade-in 0.3s ease;
+}
+
+.council-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.council-header > p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 1.05rem;
+}
+
+.council-header--back {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.council-back {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid #d5d9d9;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #111111;
+  cursor: pointer;
+  font-size: 1.6rem;
+  line-height: 1;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.council-back:hover:enabled {
+  border-color: var(--color-accent);
+  transform: translateX(-3px);
+}
+
+.council-back:disabled {
+  color: #9aa1a1;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.council-privacy {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  background: #e6f8f8;
+  color: #0b5e5f;
+  line-height: 1.45;
+}
+
+.council-privacy svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  fill: var(--color-accent);
+}
+
+.council-privacy__tick {
+  fill: none;
+  stroke: #ffffff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+/* Layout: content and side panels */
+
+.council-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  align-items: start;
+  gap: 24px;
+}
+
+.council-message__body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: council-slide-in 0.35s ease;
+}
+
+.council-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: council-slide-in 0.45s ease;
+}
+
+.council-panel {
+  padding: 20px 22px;
+  border: 1px solid #e3e7e7;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.council-panel h2 {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.council-panel p {
+  margin: 0;
+  color: #4d5555;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.council-panel--tip {
+  border-color: #f5d27a;
+  background: #fffaf0;
+}
+
+.council-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+  list-style: none;
+}
+
+.council-steps li {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  column-gap: 12px;
+  counter-increment: step;
+}
+
+.council-steps li::before {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  grid-row: span 2;
+  place-items: center;
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  color: var(--color-accent-dark);
+  content: counter(step);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.council-steps strong {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.council-steps span {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.council-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.council-checks li {
+  position: relative;
+  padding-left: 30px;
+  color: #4d5555;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.council-checks li::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e6f8f8;
+  color: var(--color-accent-dark);
+  content: "✓";
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Invite card on /council */
+
+.council-invite {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 32px;
+  border: 1px solid #e3e7e7;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ffffff 60%, #effafa 100%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  animation: council-slide-in 0.35s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.council-invite::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--color-accent);
+  content: "";
+}
+
+.council-invite:hover {
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.09);
+  transform: translateY(-2px);
+}
+
+.council-invite__icon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  flex: none;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--color-accent);
+  box-shadow: 0 10px 20px rgba(0, 186, 188, 0.3);
+  animation: council-float 2.6s ease-in-out infinite;
+}
+
+.council-invite__icon img {
+  width: 32px;
+  filter: brightness(0) invert(1);
+}
+
+.council-invite__content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.council-invite__content h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.council-invite__content p {
+  margin: 0;
+  color: #3d4545;
+  line-height: 1.6;
+}
+
+/* Message card on /council/send */
+
+.council-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 28px;
+  border: 1px solid #e3e7e7;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.council-recipient {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.council-recipient__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  background: #e6f8f8;
+}
+
+.council-recipient__icon img {
+  width: 24px;
+}
+
+.council-recipient p {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.council-recipient p span {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.council-recipient p strong {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.council-message__box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid #c9cfcf;
+  border-radius: 10px;
+  background: #fcfdfd;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.council-message__box:focus-within {
+  border-color: var(--color-accent);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(0, 186, 188, 0.15);
+}
+
+.council-message__box textarea {
+  min-height: 200px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111111;
+  font: inherit;
+  line-height: 1.55;
+  outline: none;
+  resize: vertical;
+}
+
+.council-message__box textarea::placeholder {
+  color: #9aa1a1;
+}
+
+.council-message__footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.council-message__count {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.council-meter {
+  position: relative;
+  height: 4px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf0f0;
+}
+
+.council-meter span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition:
+    width 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.council-meter--full span {
+  background: #f5a524;
+}
+
+.council-error {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+  animation: council-shake 0.35s ease;
+}
+
+.council-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 1px solid #f5d27a;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+
+.council-notice__icon {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: #f5a524;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.council-notice p {
+  margin: 0;
+  color: #5c4a14;
+  line-height: 1.5;
+}
+
+/* Buttons */
+
+.council-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.council-button {
+  display: inline-flex;
+  min-width: 190px;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 28px;
+  border: 1px solid #111111;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 4px 0 #111111;
+  color: #111111;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.2s ease;
+}
+
+.council-button span,
+.council-button svg {
+  transition: transform 0.2s ease;
+}
+
+.council-button svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--color-accent);
+}
+
+.council-button:hover:not(:disabled) {
+  background: #f6fdfd;
+  box-shadow: 0 6px 0 #111111;
+  transform: translateY(-2px);
+}
+
+.council-button:hover:not(:disabled) span {
+  transform: translateX(4px);
+}
+
+.council-button:hover:not(:disabled) svg {
+  transform: translate(3px, -3px) rotate(-8deg);
+}
+
+.council-button:active:not(:disabled) {
+  box-shadow: 0 1px 0 #111111;
+  transform: translateY(3px);
+}
+
+.council-button:disabled {
+  border-color: #c9cfcf;
+  box-shadow: 0 4px 0 #c9cfcf;
+  color: #9aa1a1;
+  cursor: not-allowed;
+}
+
+.council-button:disabled svg {
+  fill: #c9cfcf;
+}
+
+.council-back:focus-visible,
+.council-button:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 3px;
+}
+
+.council-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #c9cfcf;
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: council-spin 0.8s linear infinite;
+}
+
+/* "Message Sent" popup */
+
+.message-sent {
+  position: fixed;
+  z-index: 100;
+  display: grid;
+  inset: 0;
+  place-items: center;
+  padding: 16px;
+  background: rgba(17, 17, 17, 0.45);
+  backdrop-filter: blur(3px);
+  animation: council-fade-in 0.2s ease;
+}
+
+.message-sent__card {
+  display: flex;
+  max-width: 520px;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 40px 20px;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  animation: council-pop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.message-sent__card:focus {
+  outline: none;
+}
+
+.message-sent__check {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 12px;
+  fill: none;
+  stroke: #16a34a;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.message-sent__check circle {
+  stroke-dasharray: 145;
+  stroke-dashoffset: 145;
+  animation: council-draw 0.5s ease 0.15s forwards;
+}
+
+.message-sent__check path {
+  stroke-dasharray: 35;
+  stroke-dashoffset: 35;
+  animation: council-draw 0.35s ease 0.6s forwards;
+}
+
+.message-sent__title {
+  margin: 0 0 14px;
+  font-size: 1.45rem;
+  font-style: italic;
+}
+
+.message-sent__card p {
+  margin: 0 0 12px;
+  color: #3d4545;
+  line-height: 1.5;
+}
+
+.message-sent__card .message-sent__hint {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+/* Animations */
+
+@keyframes council-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes council-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes council-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes council-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes council-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes council-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes council-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-4px);
+  }
+
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+@media (max-width: 960px) {
+  .council-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .council-invite {
+    flex-direction: column;
+    padding: 24px 20px;
+  }
+
+  .council-card {
+    padding: 20px;
+  }
+
+  .council-privacy {
+    border-radius: 12px;
+  }
+
+  .council-actions .council-button {
+    width: 100%;
+  }
+
+  .message-sent__card {
+    padding: 28px 24px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .council-page *,
+  .council-message *,
+  .message-sent,
+  .message-sent * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .message-sent__check circle,
+  .message-sent__check path {
+    stroke-dashoffset: 0;
+  }
+}
