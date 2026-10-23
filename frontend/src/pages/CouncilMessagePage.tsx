@@ -1,40 +1,40 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import { ApiError } from "../api/client";
 import { SC_MESSAGE_MAX_LENGTH, sendSCMessage } from "../api/scMessages";
 import councilIcon from "../assets/figma/student-council.svg";
 import MessageSentDialog from "../features/council/MessageSentDialog";
+import i18n from "../i18n";
 import "../styles/council.css";
 
 // The character meter turns amber when the message gets close to the limit.
 const NEARLY_FULL = 0.9;
 
-const privacyPoints = [
-  "The council never sees who wrote the message.",
-  "Your identity is stored only to investigate abuse.",
-  "You don't get a copy, and nobody can reply to you directly.",
-];
+// Keys of the "council" texts.
+const privacyPoints = ["privacyNoName", "privacyAbuse", "privacyNoReply"];
 
 function sendErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.code === "throttled") {
-      return "You have sent too many messages. Please try again later.";
+      return i18n.t("council.errorThrottled");
     }
 
     if (error.code === "not_authenticated") {
-      return "Your session has expired. Please log in again.";
+      return i18n.t("council.errorSession");
     }
 
     return error.fields?.body?.[0] ?? error.message;
   }
 
-  return "Could not send your message. Please try again.";
+  return i18n.t("council.errorGeneric");
 }
 
 // Anonymous message to the Student Council (#276, Figma "Message"). The sender is stored only
 // for abuse investigation and never shown to the council (api-plan §7.3, §10.6).
 function CouncilMessagePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -64,23 +64,20 @@ function CouncilMessagePage() {
         <button
           className="council-back"
           type="button"
-          aria-label="Back to the Student Council"
+          aria-label={t("council.back")}
           disabled={isSending}
           onClick={() => navigate("/council")}
         >
           ‹
         </button>
         <div>
-          <h1>Anonymous Message</h1>
+          <h1>{t("council.messageTitle")}</h1>
           <p className="council-privacy">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" />
               <path className="council-privacy__tick" d="m8.5 12 2.5 2.5 4.5-5" />
             </svg>
-            <span>
-              Your identity will NOT be shared with the council members. It is stored only to
-              investigate abuse.
-            </span>
+            <span>{t("council.privacy")}</span>
           </p>
         </div>
       </header>
@@ -93,26 +90,26 @@ function CouncilMessagePage() {
                 <img src={councilIcon} alt="" />
               </span>
               <p>
-                <span>Recipient</span>
-                <strong>Student Council</strong>
+                <span>{t("council.recipient")}</span>
+                <strong>{t("council.recipientName")}</strong>
               </p>
             </div>
 
             <div className="council-message__box">
               <textarea
                 id="council-message-body"
-                aria-label="Your message to the Student Council"
+                aria-label={t("council.bodyLabel")}
                 aria-describedby={sendError ? "council-message-error" : undefined}
                 value={body}
                 maxLength={SC_MESSAGE_MAX_LENGTH}
                 rows={8}
-                placeholder="Write your message…"
+                placeholder={t("council.placeholder")}
                 disabled={isSending}
                 onChange={(event) => setBody(event.target.value)}
               />
               <div className="council-message__footer">
                 <span className="council-message__count" aria-live="polite">
-                  Characters: {body.length} / {SC_MESSAGE_MAX_LENGTH}
+                  {t("council.characters", { length: body.length, max: SC_MESSAGE_MAX_LENGTH })}
                 </span>
                 <span
                   className={`council-meter${fill >= NEARLY_FULL ? " council-meter--full" : ""}`}
@@ -135,9 +132,9 @@ function CouncilMessagePage() {
               i
             </span>
             <p>
-              Please be respectful.
+              {t("council.respectful")}
               <br />
-              Abusive messages may be ignored.
+              {t("council.ignored")}
             </p>
           </aside>
 
@@ -151,11 +148,11 @@ function CouncilMessagePage() {
               {isSending ? (
                 <>
                   <span className="council-spinner" aria-hidden="true" />
-                  Sending…
+                  {t("council.sending")}
                 </>
               ) : (
                 <>
-                  Send Message
+                  {t("council.sendMessage")}
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M3 11.5 21 3l-8.5 18-2-7.5L3 11.5Z" />
                   </svg>
@@ -167,17 +164,17 @@ function CouncilMessagePage() {
 
         <aside className="council-aside">
           <section className="council-panel">
-            <h2>Your privacy</h2>
+            <h2>{t("council.privacyTitle")}</h2>
             <ul className="council-checks">
               {privacyPoints.map((point) => (
-                <li key={point}>{point}</li>
+                <li key={point}>{t(`council.${point}`)}</li>
               ))}
             </ul>
           </section>
 
           <section className="council-panel council-panel--tip">
-            <h2>Tip</h2>
-            <p>You can send up to 10 messages per hour, so put everything in one message.</p>
+            <h2>{t("council.tip")}</h2>
+            <p>{t("council.tipLimit")}</p>
           </section>
         </aside>
       </div>
