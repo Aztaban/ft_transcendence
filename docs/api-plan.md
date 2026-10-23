@@ -2,7 +2,7 @@
 
 **Status:** Approved for implementation (features marked "?" excepted)
 **Owner:** rkravche, IT Architect
-**Last updated:** October 6, 2026
+**Last updated:** October 23, 2026
 
 ## 1. Purpose
 
@@ -44,8 +44,8 @@ Django ── MySQL (all state)
 | R1 | Tutor eligibility is fully manual. No sync with the 42 Intra API. | Team, July 2026 |
 | R2 | One `evaluation_request` resource covers the whole lifecycle. There are no separate slot or evaluation resources. | Architect, Oct 2026 |
 | R3 | Concurrent state changes are protected by atomic conditional updates, not by a unique index (schema §4.2). | Architect, Oct 2026 |
-| R4 | The `tutor` role is assigned by a Head Tutor or Administrator. Only users holding it can request project eligibility. | `roles-and-permissions.md` §11 |
-| R5 | Every account receives the `student` role when it is created. | `roles-and-permissions.md` §11 |
+| R4 | The `tutor` role is assigned by a Head Tutor or Administrator. Only users holding it can request project eligibility. | `Info/Preparation/mjusta/roles-and-permissions.md` §11 |
+| R5 | Every account receives the `student` role when it is created. | `Info/Preparation/mjusta/roles-and-permissions.md` §11 |
 | R6 | When a Hitchhiker gives up a slot (release), the request returns to `pending`. Only the student or an override cancels a request for good. | Team, Oct 2026 |
 | R7 | Requests expire automatically: `pending` after 14 days, `awaiting_confirmation` once the proposed start time passes. | Team, Oct 2026 |
 | R8 | Evaluation results (`result`, `feedback`, `completed_at`) are columns on the request, entered manually in the Django admin. | Team, Oct 2026 |
@@ -102,7 +102,7 @@ These rules apply to every endpoint unless the endpoint says otherwise.
 
 ### 5.3 Authentication
 
-- Session cookie based. A successful login (password or 42 OAuth) sets the `sessionid` cookie (`HttpOnly`, `SameSite=Lax`, and `Secure` in production). The browser sends it automatically. The frontend never sees or stores a token.
+- Session cookie based. A successful login (password or 42 OAuth) sets the `sessionid` cookie (`HttpOnly`, `SameSite=Lax`, `Secure`; development is served over Nginx TLS too). The browser sends it automatically. The frontend never sees or stores a token.
 - On startup the frontend calls `GET /api/v1/auth/session/`. It always answers 200, and `authenticated` says whether the user is logged in. It is the only endpoint that reports a missing session without 401, so opening the app never logs a failed request in the browser console. The frontend calls other endpoints only after it knows the user is logged in.
 - Only users with `status = "active"` are authenticated. Suspending or deleting a user ends all their sessions immediately; their next request gets 401.
 - Every endpoint requires authentication unless marked **Public**.
@@ -145,7 +145,7 @@ Every error response has this body:
 | 401 | `invalid_credentials` | Login with a wrong email or password, or for a suspended or deleted account. |
 | 403 | `csrf_failed` | Unsafe method without a valid `X-CSRFToken`. |
 | 403 | `permission_denied` | Logged in, but the role or ownership does not allow this action. |
-| 403 | `not_eligible` | Picking a slot without the Hitchhiker role or without eligibility for the project. |
+| 403 | `not_eligible` | Picking a slot without the Hitchhiker role or without eligibility for the project. Only Head Tutors and Admins can get it: they see every request, while anyone else who may not pick a request cannot see it and gets 404 (§8.7). |
 | 403 | `cannot_pick_own_request` | A Hitchhiker picking their own request. |
 | 403 | `cannot_review_own_request` | Reviewing your own eligibility request. |
 | 403 | `role_not_assignable` | The caller may not assign this role, or the role is never assigned through the API (`student`, `admin`). Rules in §5.8. |
@@ -154,7 +154,7 @@ Every error response has this body:
 | 406 | `not_acceptable` | The request's `Accept` header excludes every response format the endpoint supports. |
 | 409 | `email_already_exists` | Registration or admin edit with an email already in use. |
 | 409 | `active_request_exists` | The student already has an active request for this project. |
-| 409 | `request_not_pending` | Pick on a request that is no longer `pending` (someone else was faster). |
+| 409 | `request_not_pending` | Pick on a request that is no longer `pending` but still visible to the caller: a Head Tutor or Admin, or a Hitchhiker who lost a simultaneous pick. A Hitchhiker who opens it after someone else's pick has committed gets 404, because it has left their view (§8.7); the frontend shows both as "someone else was faster". |
 | 409 | `invalid_state_transition` | Any other action not allowed in the request's current status. |
 | 409 | `evaluation_already_started` | Confirm, release or cancel after `starts_at`. |
 | 409 | `slot_overlaps` | The Hitchhiker already has an evaluation overlapping this time, as evaluator or as student. |
@@ -169,7 +169,7 @@ Every error response has this body:
 | 429 | `throttled` | Rate limit hit (§5.9). The `Retry-After` header gives the wait in seconds. |
 | 500 | `server_error` | Unexpected failure. The message never contains internal details. |
 
-The 406 and 415 responses use the normal error envelope without `fields`. Malformed JSON sent with a supported `Content-Type` remains 400 `validation_error`, with the parse error in `fields.non_field_errors`.
+The 406 and 415 responses use the normal error envelope without `fields`. The one exception to the envelope is 413: Nginx rejects bodies over 11 MB before Django sees them (§2, §10.7), so that response has no `code`, and the frontend treats any 413 as "file too large". Malformed JSON sent with a supported `Content-Type` remains 400 `validation_error`, with the parse error in `fields.non_field_errors`.
 
 New codes are added to this table before they are used.
 
@@ -197,7 +197,7 @@ Role names on the wire: `student`, `tutor`, `head_tutor`, `sc_member`, `admin`. 
 | Head Tutor | Holds `head_tutor`. |
 | SC Member | Holds `sc_member`. |
 | Admin | Holds `admin`. Does not imply any other role. |
-| Override | Head Tutor or Admin acting on someone else's evaluation request. Requires a `reason` and writes an audit log entry. |
+| Override | Head Tutor or Admin acting on someone else's evaluation request. Requires a `reason` (1–500 chars; missing or blank is 400 `validation_error`) and writes an audit log entry. |
 
 Role assignment rules:
 
@@ -254,7 +254,7 @@ The frontend's TypeScript types for API data must match §8 field for field. The
           ▼                                                            │
 create ─► pending ─── pick ───► awaiting_confirmation ─── confirm ───► confirmed
           │                          │                                   │
-          │ 14 days without a pick   │ starts_at passed, unconfirmed     │ ends_at passed
+          │ 14 days after creation   │ starts_at passed, unconfirmed     │ ends_at passed
           ▼                          ▼                                   ▼
        expired                    expired                     history (result entered later)
 
@@ -361,7 +361,7 @@ Returned by `GET /users/me/`. The only representation with private fields of the
 | display_name | string, 1–64 chars | yes | Leading and trailing spaces are trimmed. Not unique. |
 | avatar_url | string or null | no | Relative URL of the avatar download (§10.7). `null` means use the default avatar. Changed through `/users/me/avatar/`. |
 | language | `"en"`, `"cs"`, `"es"` | yes | `cs` is the language code; `cz` is invalid. |
-| roles | Role[] | no | Always present, sorted by name. Every account has at least `student`. |
+| roles | Role[] | no | Always present, sorted by name. Every account has at least `student`; only a deleted account has none (schema §2.4). |
 | intra_login | string or null | no | 42 login when the account came from 42 OAuth. |
 
 ```json
@@ -474,7 +474,7 @@ Returned by the admin user endpoints only. `Me` plus:
 
 The frontend builds the displayed sentence from `type` and `payload` in the current language. The backend never sends sentences. `target_url` values are routes the frontend must provide.
 
-Every create, update or delete action that affects another user notifies that user, as listed below. Actions that affect only the person performing them notify no one.
+Every create, update or delete action that affects another user notifies that user, as listed below. Actions that affect only the person performing them notify no one. Deliberate exceptions, which notify no one: editing a request's note, read state and the discussion note of the shared council inbox, and suspending, reactivating or deleting an account (the user cannot log in to read it); open views catch up through §9.3 events or §9.4.
 
 **Types**, with recipients and payload. `user` objects in payloads are `{id, display_name}`; `project` objects are `ProjectRef`.
 
@@ -484,7 +484,7 @@ Every create, update or delete action that affects another user notifies that us
 | `evaluation.slot_picked` | Student | `{request_id, project, tutor, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.confirmed` | Picking Hitchhiker | `{request_id, project, student, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.declined` | Picking Hitchhiker | `{request_id, project, student}` | `/evaluations/{id}` |
-| `evaluation.released` | Student | `{request_id, project, tutor}` | `/evaluations/{id}` |
+| `evaluation.released` | Student; also the picking Hitchhiker when released by override | `{request_id, project, tutor}` | `/evaluations/{id}` |
 | `evaluation.cancelled` | Picking Hitchhiker if any; the student if cancelled by override | `{request_id, project, cancelled_by}` | `/evaluations/{id}` |
 | `evaluation.expired` | Student; also the Hitchhiker if it was `awaiting_confirmation` | `{request_id, project, previous_status}` | `/evaluations/{id}` |
 | `evaluation.result_recorded` | Student and Hitchhiker | `{request_id, project, result}` | `/evaluations/{id}` |
@@ -591,6 +591,7 @@ Events are sent with `transaction.on_commit`, so a client never re-fetches befor
 - Events missed while disconnected are not replayed. After reconnecting, the frontend re-fetches everything it displays.
 - Reconnect with backoff: 1 s, 2 s, 4 s, … up to 30 s, with jitter. Do not reconnect after 4401.
 - The UI shows a small "reconnecting" indicator while disconnected. It keeps working over HTTP.
+- Some changes have no event because they would only refresh views of other people with the same role: the eligibility review table after a colleague's decision, the council inbox (read state, discussion note, deletion), profiles in the user's other tabs, file lists, `scope=all` and the exceptions list. Pages showing such data re-fetch it when the browser tab becomes visible again (`visibilitychange`).
 
 ## 10. Endpoints
 
@@ -719,13 +720,13 @@ This endpoint never answers 401, so the startup check never shows up as a failed
 
 - 200 with the target's `PublicUser`. Assigning a role the user already has is a no-op 200.
 - 403 `role_not_assignable` when the caller may not assign that role, and always for `student` and `admin` (§5.8); 400 `validation_error` for an unknown role name; 404 for unknown or deleted users.
-- Creates a `role.changed` notification and an audit log entry `role.assigned`.
+- Notification and event `role.changed`, audit `role.assigned`.
 
 **Revoke a role.** `DELETE /users/{id}/roles/{role_id}/`
 
 - 204, also when the user did not hold the role. 409 `role_not_revocable` for `student` and `admin`. 409 `cannot_modify_self`.
 - Revoking `tutor` keeps eligibility rows (schema §3.4) and does not touch picked requests.
-- Notification `role.changed`, audit `role.revoked`.
+- Notification and event `role.changed`, audit `role.revoked`.
 
 **Admin user list.** `GET /admin/users/`
 
@@ -740,9 +741,10 @@ This endpoint never answers 401, so the startup check never shows up as a failed
 - Suspension ends all the user's sessions and sends `session.ended`. Their requests and picks are left alone and appear in the exceptions list (§10.9).
 - Audit `user.suspended` / `user.reactivated`.
 
-**Delete.** `DELETE /admin/users/{id}/` with `{"reason": "..."}`.
+**Delete.** `DELETE /admin/users/{id}/` with `{"reason": "..."}` (required, 1–500 chars).
 
-- Anonymizes the account as described in schema §2.4. Irreversible. 204.
+- Anonymizes the account as described in schema §2.4. Irreversible. 204. Ends the user's sessions and sends `session.ended`.
+- Each evaluation request it cancels or releases sends the same notifications and events as an override cancel or release, so the other party learns about it.
 - 409 `cannot_modify_self`. 409 `invalid_user_status` if the account is already deleted. Audit `user.deleted`.
 
 ### 10.3 Projects and tutor eligibility
@@ -778,7 +780,7 @@ This endpoint never answers 401, so the startup check never shows up as a failed
 - 403 `cannot_review_own_request`. 409 `eligibility_request_already_reviewed`.
 - Notification `eligibility.decided`, event `eligibility.decided`, audit `eligibility.reviewed`.
 
-**Revoke.** `DELETE /projects/{slug}/eligibility/{tutor_id}/` with optional `{"reason": "..."}`.
+**Revoke.** `DELETE /projects/{slug}/eligibility/{tutor_id}/` with optional `{"reason": "..."}` (up to 500 chars).
 
 - 204. 404 if the user is not eligible for the project.
 - Existing picks stay; new picks are refused. Notification and event `eligibility.revoked`, audit `eligibility.revoked`.
@@ -834,7 +836,7 @@ How the pages map: a student's Requests page is `scope=mine&history=false`; a Hi
 ```
 
 - Slot rules and overlaps: §7.1.
-- Errors: 403 `not_eligible`, 403 `cannot_pick_own_request`, 400 `validation_error`, 409 `request_not_pending`, 409 `slot_overlaps`, 409 `student_unavailable`.
+- Errors: 404 `not_found` when the caller cannot see the request (§8.7), 403 `not_eligible`, 403 `cannot_pick_own_request`, 400 `validation_error`, 409 `request_not_pending`, 409 `slot_overlaps`, 409 `student_unavailable`.
 - 200 with `status: "awaiting_confirmation"`. Notification `evaluation.slot_picked` to the student; event `evaluation.slot_picked`.
 
 **Confirm.** `POST …/{id}/confirm/`, no body. 200 with `status: "confirmed"`. 409 `evaluation_already_started` if `starts_at` has passed. Notification and event `evaluation.confirmed`.
@@ -871,7 +873,7 @@ Notifications are created only by the backend. Other users' notifications return
 | GET | `/api/v1/sc-messages/` | SC Member, Admin | Paginated `SCMessage` list, newest first. Filter `unread=true`. |
 | GET | `/api/v1/sc-messages/{id}/` | SC Member, Admin | `SCMessage`. Does not change read state. |
 | PATCH | `/api/v1/sc-messages/{id}/` | SC Member, Admin | `is_read`, and/or `discussion_note` with `discussion_note_version`. 200 `SCMessage`. |
-| DELETE | `/api/v1/sc-messages/{id}/` | Admin | Remove abusive content. Body `{"reason": "..."}`. 204. Audit `sc_message.deleted`. |
+| DELETE | `/api/v1/sc-messages/{id}/` | Admin | Remove abusive content. Body `{"reason": "..."}` (required, 1–500 chars). 204. Audit `sc_message.deleted`. |
 | POST | `/api/v1/sc-messages/{id}/reveal-sender/` | Admin | Abuse investigation only. |
 
 **Send.** `POST /sc-messages/` with `{"body": "..."}` (1–5000 chars). 201 `{"id": 3, "created_at": "..."}`. Deliberately nothing more: the sender never gets the message back. Notification `sc_message.created` to all SC Members.
