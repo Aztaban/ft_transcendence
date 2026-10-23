@@ -213,6 +213,8 @@ Role assignment rules:
 
 Role changes take effect on the user's next request, because permissions are read from the database every time.
 
+The endpoint-by-role view of these rules is `docs/permissions.md`.
+
 ### 5.9 Rate limits
 
 | Scope | Limit |
