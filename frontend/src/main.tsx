@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router";
 import { AuthProvider } from "./store/AuthContext";
 import { CurrentUserProvider } from "./store/CurrentUserContext";
 import App from "./App";
+import "./i18n";
 import { RoleProvider } from "./store/RoleContext";
 import { LiveProvider } from "./websocket/LiveProvider";
 import "./styles/global.css";

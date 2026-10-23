@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
 import { getCurrentUser } from "../api/users";
+import { changeLanguage, isLanguage } from "../i18n";
 import type { UserProfile } from "../types/user";
 import { useLiveRefresh } from "../websocket/LiveProvider";
 import { useAuth } from "./AuthContext";
@@ -51,6 +52,11 @@ export function CurrentUserProvider({ children }: CurrentUserProviderProps) {
         if (active) {
           setUser(profile);
           setIsLoaded(true);
+
+          // The language saved in the profile wins over this device's choice (#309).
+          if (isLanguage(profile.language)) {
+            changeLanguage(profile.language);
+          }
         }
       })
       .catch(() => {
