@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Trans, useTranslation } from "react-i18next";
 
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
 
@@ -8,6 +9,7 @@ interface MarkedReadDialogProps {
 
 // Figma "marks as read". Closes on a click outside the card or on Escape.
 function MarkedReadDialog({ onClose }: MarkedReadDialogProps) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,10 +40,10 @@ function MarkedReadDialog({ onClose }: MarkedReadDialogProps) {
         onClick={(event) => event.stopPropagation()}
       >
         <p id="marked-read-title" className="marked-read__title">
-          Done. You can now find the message in the <strong>History</strong> list!
+          <Trans i18nKey="council.markedReadTitle" components={{ strong: <strong /> }} />
         </p>
         <img className="marked-read__image" src={hitchhikersIcon} alt="" aria-hidden="true" />
-        <p className="message-sent__hint">Click anywhere to close</p>
+        <p className="message-sent__hint">{t("council.clickToClose")}</p>
       </div>
     </div>
   );

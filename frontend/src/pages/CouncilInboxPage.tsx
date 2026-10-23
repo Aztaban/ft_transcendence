@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
 import { listSCMessages } from "../api/scMessages";
@@ -14,11 +15,8 @@ type LoadState = "loading" | "ready" | "error";
 const DAY = 24 * 60 * 60 * 1000;
 
 // What council members do with a message (api-plan §7.3, §10.6).
-const howItWorks = [
-  { title: "Read the message", text: "Opening it does not mark it as read." },
-  { title: "Mark it as read", text: "It moves to the History for every council member." },
-  { title: "Keep a note", text: "Coordinate in the shared note. The sender never sees it." },
-];
+// The texts are "council.how<Step>Title" and "council.how<Step>Text".
+const howItWorks = ["Open", "Mark", "Note"];
 
 // Council "Messages" (#277, Figma "new messages"): messages no council member has read yet,
 // newest first, from GET /sc-messages/?unread=true (api-plan §10.6). Messages have no title,
@@ -26,6 +24,7 @@ const howItWorks = [
 // council member (`notification.created`, §9.3), so the list re-fetches in the background then
 // and after a reconnect.
 function CouncilInboxPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<SCMessage[]>([]);
   const [total, setTotal] = useState(0);
@@ -82,28 +81,28 @@ function CouncilInboxPage() {
         <button
           className="council-back"
           type="button"
-          aria-label="Back to home"
+          aria-label={t("council.backHome")}
           onClick={() => navigate("/")}
         >
           ‹
         </button>
         <div>
           <h1>
-            Messages
+            {t("council.messages")}
             {loadState === "ready" && total > 0 && (
-              <span className="council-count">{total} new</span>
+              <span className="council-count">{t("council.newCount", { count: total })}</span>
             )}
           </h1>
-          <p className="council-subtitle">New anonymous messages from your peers.</p>
+          <p className="council-subtitle">{t("council.inboxSubtitle")}</p>
         </div>
       </header>
 
-      <nav className="council-tabs" aria-label="Council messages">
+      <nav className="council-tabs" aria-label={t("council.tabsAria")}>
         <span className="council-tabs__tab council-tabs__tab--active" aria-current="page">
-          New
+          {t("council.tabNew")}
         </span>
         <Link className="council-tabs__tab" to="/council/history">
-          History
+          {t("council.tabHistory")}
         </Link>
       </nav>
 
@@ -114,13 +113,13 @@ function CouncilInboxPage() {
               {[1, 2, 3].map((placeholder) => (
                 <div className="council-skeleton" key={placeholder} />
               ))}
-              <span className="council-sr-only">Loading messages…</span>
+              <span className="council-sr-only">{t("council.loadingMessages")}</span>
             </div>
           )}
 
           {loadState === "error" && (
             <p className="council-error" role="alert">
-              Could not load the messages. Please try again later.
+              {t("council.loadMessagesError")}
             </p>
           )}
 
@@ -129,17 +128,17 @@ function CouncilInboxPage() {
               <span className="council-empty__icon" aria-hidden="true">
                 ✓
               </span>
-              <h2>All caught up!</h2>
-              <p>There are no new messages. The ones you have read are in the History.</p>
+              <h2>{t("council.caughtUp")}</h2>
+              <p>{t("council.caughtUpText")}</p>
               <Link className="council-button council-button--small" to="/council/history">
-                Open History <span aria-hidden="true">→</span>
+                {t("council.openHistory")} <span aria-hidden="true">→</span>
               </Link>
             </div>
           )}
 
           {loadState === "ready" && messages.length > 0 && (
             <>
-              <ul className="council-list" aria-label="New messages">
+              <ul className="council-list" aria-label={t("council.newListAria")}>
                 {messages.map((message, index) => (
                   <li
                     className="council-item"
@@ -152,13 +151,13 @@ function CouncilInboxPage() {
                     </span>
                     <div className="council-item__content">
                       <div className="council-item__head">
-                        <h2>Message #{message.id}</h2>
+                        <h2>{t("council.messageNumber", { id: message.id })}</h2>
                         {now.getTime() - new Date(message.created_at).getTime() < DAY && (
-                          <span className="council-pill">New</span>
+                          <span className="council-pill">{t("council.newPill")}</span>
                         )}
                         <span className="council-item__time">
                           <ClockIcon />
-                          Received {formatTimeAgo(message.created_at, now)}
+                          {t("council.received", { time: formatTimeAgo(message.created_at, now) })}
                         </span>
                       </div>
                       <p className="council-item__preview">{message.body}</p>
@@ -166,9 +165,9 @@ function CouncilInboxPage() {
                     <Link
                       className="council-button council-button--small"
                       to={`/council/inbox/${message.id}`}
-                      aria-label={`Read message #${message.id}`}
+                      aria-label={t("council.readAria", { id: message.id })}
                     >
-                      Read <span aria-hidden="true">→</span>
+                      {t("council.read")} <span aria-hidden="true">→</span>
                     </Link>
                   </li>
                 ))}
@@ -185,7 +184,9 @@ function CouncilInboxPage() {
                       setPage((current) => current + 1);
                     }}
                   >
-                    {isLoadingMore ? "Loading…" : `Show more (${total - messages.length} left)`}
+                    {isLoadingMore
+                      ? t("council.loadingMore")
+                      : t("council.showMore", { count: total - messages.length })}
                   </button>
                 </div>
               )}
@@ -195,20 +196,20 @@ function CouncilInboxPage() {
 
         <aside className="council-aside">
           <section className="council-panel">
-            <h2>How the inbox works</h2>
+            <h2>{t("council.inboxHowTitle")}</h2>
             <ol className="council-steps">
               {howItWorks.map((item) => (
-                <li key={item.title}>
-                  <strong>{item.title}</strong>
-                  <span>{item.text}</span>
+                <li key={item}>
+                  <strong>{t(`council.how${item}Title`)}</strong>
+                  <span>{t(`council.how${item}Text`)}</span>
                 </li>
               ))}
             </ol>
           </section>
 
           <section className="council-panel council-panel--tip">
-            <h2>Tip</h2>
-            <p>Messages are anonymous: nobody in the council can see who wrote them.</p>
+            <h2>{t("council.tip")}</h2>
+            <p>{t("council.inboxTip")}</p>
           </section>
         </aside>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 
 import { ApiError } from "../api/client";
@@ -11,6 +12,7 @@ import {
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
 import MarkedReadDialog from "../features/council/MarkedReadDialog";
+import i18n from "../i18n";
 import type { SCMessage } from "../types/scMessage";
 import { formatDate, formatTimeAgo } from "../utils/dateTime";
 import "../styles/council.css";
@@ -20,17 +22,17 @@ type LoadState = "loading" | "ready" | "missing" | "error";
 function actionErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.code === "not_authenticated") {
-      return "Your session has expired. Please log in again.";
+      return i18n.t("council.errorSession");
     }
 
     if (error.code === "permission_denied") {
-      return "Only Student Council members can manage messages.";
+      return i18n.t("council.errorPermission");
     }
 
     return error.fields?.discussion_note?.[0] ?? error.message;
   }
 
-  return "Something went wrong. Please try again.";
+  return i18n.t("council.errorSomething");
 }
 
 // One council message (#277, #278, Figma "new message" and "history review"). Opening it does
@@ -39,6 +41,7 @@ function actionErrorMessage(error: unknown) {
 // member saved first (409 `edit_conflict`), their note is loaded and the draft stays for merging.
 // It is also the page council notifications open (`/council/inbox/{id}`, §8.8).
 function CouncilInboxMessagePage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [message, setMessage] = useState<SCMessage | null>(null);
@@ -136,26 +139,26 @@ function CouncilInboxMessagePage() {
         <button
           className="council-back"
           type="button"
-          aria-label="Back to the messages"
+          aria-label={t("council.backToMessages")}
           disabled={isBusy}
           onClick={() => navigate(isRead ? "/council/history" : "/council/inbox")}
         >
           ‹
         </button>
         <div>
-          <h1>Message #{id}</h1>
+          <h1>{t("council.messageNumber", { id })}</h1>
           {message && (
             <p className="council-meta">
               {message.read_at ? (
                 <span className="council-status council-status--read">
-                  Read {formatDate(message.read_at)}
+                  {t("council.readOn", { date: formatDate(message.read_at) })}
                 </span>
               ) : (
-                <span className="council-status council-status--unread">Unread</span>
+                <span className="council-status council-status--unread">{t("council.unread")}</span>
               )}
               <span className="council-meta__time">
                 <ClockIcon />
-                Received {formatTimeAgo(message.created_at)}
+                {t("council.received", { time: formatTimeAgo(message.created_at) })}
               </span>
             </p>
           )}
@@ -164,19 +167,19 @@ function CouncilInboxMessagePage() {
 
       {loadState === "loading" && (
         <div className="council-skeleton council-skeleton--tall" aria-busy="true">
-          <span className="council-sr-only">Loading the message…</span>
+          <span className="council-sr-only">{t("council.loadingMessage")}</span>
         </div>
       )}
 
       {loadState === "missing" && (
         <p className="council-error" role="alert">
-          This message does not exist or was removed.
+          {t("council.missing")}
         </p>
       )}
 
       {loadState === "error" && (
         <p className="council-error" role="alert">
-          Could not load the message. Please try again later.
+          {t("council.loadMessageError")}
         </p>
       )}
 
@@ -189,8 +192,8 @@ function CouncilInboxMessagePage() {
                   <AnonymousIcon />
                 </span>
                 <span>
-                  <strong>Anonymous</strong>
-                  <span>Sender hidden from the council</span>
+                  <strong>{t("council.anonymous")}</strong>
+                  <span>{t("council.senderHidden")}</span>
                 </span>
               </p>
               <p className="council-letter__text">{message.body}</p>
@@ -205,8 +208,8 @@ function CouncilInboxMessagePage() {
             <div className="council-actions council-actions--between council-actionbar">
               <p className="council-read-state">
                 {message.read_at
-                  ? `Marked as read, ${formatDate(message.read_at)}`
-                  : "Not read by the council yet"}
+                  ? t("council.markedReadOn", { date: formatDate(message.read_at) })
+                  : t("council.notReadYet")}
               </p>
               {isRead ? (
                 <button
@@ -215,7 +218,7 @@ function CouncilInboxMessagePage() {
                   disabled={isBusy}
                   onClick={() => updateRead(false)}
                 >
-                  Mark as unread
+                  {t("council.markUnread")}
                 </button>
               ) : (
                 <button
@@ -224,7 +227,8 @@ function CouncilInboxMessagePage() {
                   disabled={isBusy}
                   onClick={() => updateRead(true)}
                 >
-                  {isUpdatingRead ? "Saving…" : "Mark as read"} <span aria-hidden="true">✓</span>
+                  {isUpdatingRead ? t("council.saving") : t("council.markRead")}{" "}
+                  <span aria-hidden="true">✓</span>
                 </button>
               )}
             </div>
@@ -238,27 +242,27 @@ function CouncilInboxMessagePage() {
                     <rect x="5" y="10" width="14" height="10" rx="2" />
                     <path d="M8 10V7a4 4 0 0 1 8 0v3" />
                   </svg>
-                  Council note
+                  {t("council.noteTitle")}
                 </h2>
-                <span className="council-pill council-pill--muted">Internal</span>
+                <span className="council-pill council-pill--muted">{t("council.internal")}</span>
               </div>
-              <p>Shared by all council members. Never shown to the sender.</p>
+              <p>{t("council.noteHint")}</p>
 
               {noteStatus === "conflict" && (
                 <div className="council-conflict" role="alert">
-                  <strong>Another council member saved the note in the meantime.</strong>
-                  <p>Their version:</p>
-                  <blockquote>{message.discussion_note || "(empty)"}</blockquote>
-                  <p>Your text is still in the box. Merge it and save again.</p>
+                  <strong>{t("council.conflictTitle")}</strong>
+                  <p>{t("council.conflictTheirs")}</p>
+                  <blockquote>{message.discussion_note || t("council.empty")}</blockquote>
+                  <p>{t("council.conflictMerge")}</p>
                 </div>
               )}
 
               <textarea
-                aria-label="Council note"
+                aria-label={t("council.noteTitle")}
                 value={note}
                 maxLength={SC_NOTE_MAX_LENGTH}
                 rows={6}
-                placeholder="e.g. Forwarded to the building manager."
+                placeholder={t("council.notePlaceholder")}
                 disabled={isSavingNote}
                 onChange={(event) => {
                   setNote(event.target.value);
@@ -278,7 +282,7 @@ function CouncilInboxMessagePage() {
               <div className="council-note__actions">
                 {noteStatus === "saved" && (
                   <span className="council-saved" role="status">
-                    Saved ✓
+                    {t("council.saved")}
                   </span>
                 )}
                 <button
@@ -287,7 +291,7 @@ function CouncilInboxMessagePage() {
                   disabled={!noteChanged || isBusy}
                   onClick={saveNote}
                 >
-                  {isSavingNote ? "Saving…" : "Save note"}
+                  {isSavingNote ? t("council.saving") : t("council.saveNote")}
                 </button>
               </div>
             </section>

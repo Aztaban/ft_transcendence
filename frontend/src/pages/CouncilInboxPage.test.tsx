@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { listSCMessages } from "../api/scMessages";
+import i18n from "../i18n";
 import type { SCMessage } from "../types/scMessage";
 import { LiveContext } from "../websocket/LiveProvider";
 import { LiveSocket } from "../websocket/LiveSocket";
@@ -152,5 +153,21 @@ describe("CouncilInboxPage", () => {
     expect(screen.queryByText("Loading messages…")).toBeNull();
     expect(await screen.findByRole("heading", { name: "Message #5" })).toBeTruthy();
     expect(listSCMessages).toHaveBeenLastCalledWith({ unread: true, page: 1 });
+  });
+});
+
+describe("CouncilInboxPage in another language", () => {
+  it("shows the inbox in Spanish", async () => {
+    await i18n.changeLanguage("es");
+    vi.mocked(listSCMessages).mockResolvedValue(
+      page([scMessage(4, "Zonas de estudio tranquilas.")]),
+    );
+
+    renderPage();
+
+    expect(await screen.findByRole("heading", { name: "Mensaje n.º 4" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Mensajes1 nuevos");
+    expect(screen.getByRole("link", { name: "Leer el mensaje n.º 4" })).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Mensajes del consejo" })).toBeTruthy();
   });
 });
