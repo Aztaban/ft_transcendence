@@ -20,6 +20,7 @@ from apps.core.schema import CSRF_HEADER, error_responses
 from apps.core.throttling import SCMessageSendRateThrottle
 
 from .models import SCMessage
+from .notifications import notify_sc_message_created
 from .serializers import (
     SCMessageCreatedSerializer,
     SCMessageCreateSerializer,
@@ -35,12 +36,12 @@ def _create_sc_message(request):
     """Send an anonymous message; the sender is stored but never returned (api-plan §10.6)."""
     serializer = SCMessageCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    message = SCMessage.objects.create(
-        sender=request.user,
-        body=serializer.validated_data["body"],
-    )
-    # TODO(notifications): sc_message.created to all SC Members (api-plan §8.8), once the
-    # notification backend (#611, #612, #616) is on main.
+    with transaction.atomic():
+        message = SCMessage.objects.create(
+            sender=request.user,
+            body=serializer.validated_data["body"],
+        )
+        notify_sc_message_created(message)
     return Response(SCMessageCreatedSerializer(message).data, status=status.HTTP_201_CREATED)
 
 
