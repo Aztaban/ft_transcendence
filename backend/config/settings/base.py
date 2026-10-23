@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "apps.accounts",
     "apps.evaluations",
+    "apps.notifications",
     "apps.council",
 ]
 
@@ -164,9 +165,11 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
 }
 
-# Eligibility request submit (api-plan §10.3): max projects in one request.
+# Eligibility request submit: max projects in one request.
 ELIGIBILITY_REQUEST_MAX_PROJECTS = 50
 
+# Unpicked evaluation requests expire after this many days.
+EVALUATION_REQUEST_TTL_DAYS = 14
 # Student Council message body and discussion note (api-plan §10.6): max characters.
 SC_MESSAGE_MAX_LENGTH = 5000
 
@@ -188,11 +191,20 @@ CACHES = {
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+NOTIFICATION_RETENTION_DAYS = 90
 CELERY_BEAT_SCHEDULE = {
     "heartbeat-every-10s": {
         "task": "heartbeat",
         "schedule": 10.0,
-    }
+    },
+    "purge-old-notifications-daily": {
+        "task": "purge_old_notifications",
+        "schedule": 86400.0,
+    },
+    "expire-evaluation-requests-every-5m": {
+        "task": "expire_evaluation_requests",
+        "schedule": 300.0,
+    },
 }
 
 PASSWORD_HASHERS = [

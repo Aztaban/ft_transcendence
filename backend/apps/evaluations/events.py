@@ -109,3 +109,15 @@ def publish_cancelled_event(evaluation: EvaluationRequest, *, previous_status: s
     if previous_status == EvaluationRequest.Status.PENDING:
         recipients.extend(_eligible_hitchhiker_ids(evaluation.project_id))
     publish_evaluation_event(EvaluationEvent.CANCELLED, evaluation, user_ids=recipients)
+
+
+def publish_expired_event(
+    evaluation: EvaluationRequest, *, previous_status: str, previous_picker_id: int | None
+) -> None:
+    """Refresh former participants and queues affected by expiry (api-plan §9.3)."""
+    recipients = [evaluation.student_id]
+    if previous_picker_id is not None:
+        recipients.append(previous_picker_id)
+    if previous_status == EvaluationRequest.Status.PENDING:
+        recipients.extend(_eligible_hitchhiker_ids(evaluation.project_id))
+    publish_evaluation_event(EvaluationEvent.EXPIRED, evaluation, user_ids=recipients)

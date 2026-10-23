@@ -8,6 +8,7 @@ from django.test import Client
 from django.urls import reverse
 
 from apps.evaluations.models import EvaluationRequest, Project
+from apps.notifications.models import Notification
 
 pytestmark = pytest.mark.django_db
 NOW = datetime(2026, 10, 17, 12, tzinfo=timezone.utc)
@@ -127,6 +128,42 @@ def test_admin_saves_results_after_confirmed_evaluation(browser, evaluation, res
     assert evaluation.status == "confirmed"
     assert evaluation.starts_at == NOW - timedelta(hours=2)
     assert evaluation.ends_at == NOW - timedelta(hours=1)
+    assert list(
+        Notification.objects.order_by("recipient_id").values(
+            "recipient_id", "type", "payload", "target_url", "read_at"
+        )
+    ) == [
+        {
+            "recipient_id": evaluation.student_id,
+            "type": "evaluation.result_recorded",
+            "payload": {
+                "request_id": evaluation.pk,
+                "project": {
+                    "id": evaluation.project_id,
+                    "slug": "admin-results",
+                    "name": "Admin results",
+                },
+                "result": result,
+            },
+            "target_url": f"/evaluations/{evaluation.pk}",
+            "read_at": None,
+        },
+        {
+            "recipient_id": evaluation.picked_by_id,
+            "type": "evaluation.result_recorded",
+            "payload": {
+                "request_id": evaluation.pk,
+                "project": {
+                    "id": evaluation.project_id,
+                    "slug": "admin-results",
+                    "name": "Admin results",
+                },
+                "result": result,
+            },
+            "target_url": f"/evaluations/{evaluation.pk}",
+            "read_at": None,
+        },
+    ]
 
 
 @pytest.mark.parametrize("field", ["feedback", "completed_at"])
@@ -206,6 +243,7 @@ def test_admin_can_correct_or_clear_existing_results(browser, evaluation):
     assert cleared.status_code == 302
     evaluation.refresh_from_db()
     assert (evaluation.result, evaluation.feedback, evaluation.completed_at) == (None, "", None)
+    assert not Notification.objects.exists()
 
 
 def test_admin_result_update_publishes_after_commit(
@@ -222,8 +260,8 @@ def test_admin_result_update_publishes_after_commit(
         response = submit(browser, evaluation, result="passed")
         assert response.status_code == 302
         sender.assert_not_awaited()
-    assert len(callbacks) == 1
-    assert sender.await_args_list == [
+    assert len(callbacks) == 3
+    expected_events = [
         call(
             f"user_{user_id}",
             {
@@ -234,3 +272,73 @@ def test_admin_result_update_publishes_after_commit(
         )
         for user_id in sorted((evaluation.student_id, evaluation.picked_by_id))
     ]
+    expected_events.extend(
+        [
+            call(
+                f"user_{notification.recipient_id}",
+                {
+                    "type": "user.event",
+                    "event": "notification.created",
+                    "data": {"id": notification.pk},
+                },
+            )
+            for notification in Notification.objects.order_by("recipient_id")
+        ]
+    )
+    assert sender.await_args_list == expected_events
+
+
+def test_stale_admin_saves_do_not_duplicate_result_notifications(evaluation):
+    from types import SimpleNamespace
+
+    from django.contrib import admin
+
+    first = EvaluationRequest.objects.get(pk=evaluation.pk)
+    stale = EvaluationRequest.objects.get(pk=evaluation.pk)
+    first.result = "passed"
+    stale.result = "passed"
+    model_admin = admin.site._registry[EvaluationRequest]
+    form = SimpleNamespace(changed_data=["result"])
+    model_admin.save_model(None, first, form, change=True)
+    model_admin.save_model(None, stale, form, change=True)
+    assert Notification.objects.count() == 2
+    assert set(Notification.objects.values_list("recipient_id", flat=True)) == {
+        evaluation.student_id,
+        evaluation.picked_by_id,
+    }
+
+
+def test_result_notification_failure_rolls_back_save_and_partial_notifications(
+    browser, evaluation, monkeypatch, django_capture_on_commit_callbacks
+):
+    from apps.notifications.services import create_notification
+
+    def fail_after_write(**kwargs):
+        create_notification(**kwargs)
+        raise RuntimeError("Notification failure")
+
+    monkeypatch.setattr("apps.evaluations.notifications.create_notification", fail_after_write)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(RuntimeError, match="Notification failure"):
+            submit(browser, evaluation, result="passed")
+    evaluation.refresh_from_db()
+    assert evaluation.result is None
+    assert not Notification.objects.exists()
+    assert callbacks == []
+
+
+def test_result_save_rolls_back_with_outer_transaction(
+    browser, evaluation, django_capture_on_commit_callbacks
+):
+    from django.db import transaction
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with transaction.atomic():
+            response = submit(browser, evaluation, result="passed")
+            assert response.status_code == 302
+            assert Notification.objects.count() == 2
+            transaction.set_rollback(True)
+    evaluation.refresh_from_db()
+    assert evaluation.result is None
+    assert not Notification.objects.exists()
+    assert callbacks == []
