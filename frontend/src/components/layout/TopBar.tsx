@@ -1,4 +1,4 @@
-import { useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 
 import searchIcon from "../../assets/figma/search.svg";
@@ -25,6 +25,36 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
   const { unreadCount } = useNotificationCount();
   // The notification center under the bell (#272).
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLButtonElement>(null);
+
+  // An open notification center closes on Escape (focus back on the bell) or a click outside it.
+  useEffect(() => {
+    if (!isPanelOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsPanelOpen(false);
+        bellRef.current?.focus();
+      }
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!notificationsRef.current?.contains(event.target as Node)) {
+        setIsPanelOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("mousedown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [isPanelOpen]);
 
   return (
     <header className="topbar">
@@ -58,8 +88,9 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
 
         <LanguageSwitcher />
 
-        <div className="topbar__notifications">
+        <div ref={notificationsRef} className="topbar__notifications">
           <button
+            ref={bellRef}
             className="topbar__notification"
             type="button"
             aria-label={
@@ -79,7 +110,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
             )}
           </button>
 
-          {isPanelOpen && <NotificationPanel />}
+          {isPanelOpen && <NotificationPanel onClose={() => setIsPanelOpen(false)} />}
         </div>
 
         <PersonAvatar

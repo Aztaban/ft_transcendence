@@ -61,7 +61,8 @@
     "loading": "Loading notifications…",
     "empty": "No notifications yet.",
     "error": "Could not load your notifications.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "unread": "Unread"
   },
   "notifications": {
     "evaluation": {

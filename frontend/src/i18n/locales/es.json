@@ -61,7 +61,8 @@
     "loading": "Cargando notificaciones…",
     "empty": "Aún no hay notificaciones.",
     "error": "No se pudieron cargar tus notificaciones.",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "unread": "No leída"
   },
   "notifications": {
     "evaluation": {

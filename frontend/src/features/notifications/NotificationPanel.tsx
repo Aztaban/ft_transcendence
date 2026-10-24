@@ -1,24 +1,46 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 import { listNotifications } from "../../api/notifications";
 import type { Notification } from "../../types/notification";
+import { useLiveRefresh } from "../../websocket/LiveProvider";
+import { notificationText } from "./notificationText";
 import "../../styles/notifications.css";
 
+// When a notification arrived, in the user's local time and the current language.
+function formatCreatedAt(date: string, language: string) {
+  return new Date(date).toLocaleString(language, {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+interface NotificationPanelProps {
+  // Called when a notification's link is followed, so the panel closes.
+  onClose: () => void;
+}
+
 // The notification center that opens from the bell in the top bar (#272). It loads the newest
-// notifications every time it opens (GET /notifications/, api-plan §10.5).
-function NotificationPanel() {
-  const { t } = useTranslation();
+// notifications every time it opens (GET /notifications/, api-plan §10.5) and again on the
+// WebSocket event `notification.created` and after a reconnect (§9.3, §9.4). A notification with
+// a `target_url` links to that page.
+function NotificationPanel({ onClose }: NotificationPanelProps) {
+  const { t, i18n } = useTranslation();
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  // Raised by "Try again" to load the list once more.
+  // Raised to load the list once more: on "Try again" and on live events.
   const [reloadKey, setReloadKey] = useState(0);
+
+  const refresh = useCallback(() => setReloadKey((key) => key + 1), []);
+
+  useLiveRefresh(["notification.created"], refresh);
 
   useEffect(() => {
     // An older answer that arrives late must not overwrite a newer list.
     let active = true;
-
-    setStatus("loading");
 
     listNotifications()
       .then((page) => {
@@ -29,7 +51,8 @@ function NotificationPanel() {
       })
       .catch(() => {
         if (active) {
-          setStatus("error");
+          // A failed live refresh keeps the list that is already shown.
+          setStatus((current) => (current === "ready" ? current : "error"));
         }
       });
 
@@ -37,6 +60,11 @@ function NotificationPanel() {
       active = false;
     };
   }, [reloadKey]);
+
+  function retry() {
+    setStatus("loading");
+    refresh();
+  }
 
   return (
     <section
@@ -55,11 +83,7 @@ function NotificationPanel() {
           <p className="notification-panel__message" role="alert">
             {t("notificationPanel.error")}
           </p>
-          <button
-            className="notification-panel__retry"
-            type="button"
-            onClick={() => setReloadKey((key) => key + 1)}
-          >
+          <button className="notification-panel__retry" type="button" onClick={retry}>
             {t("notificationPanel.retry")}
           </button>
         </>
@@ -67,6 +91,51 @@ function NotificationPanel() {
 
       {status === "ready" && notifications.length === 0 && (
         <p className="notification-panel__message">{t("notificationPanel.empty")}</p>
+      )}
+
+      {status === "ready" && notifications.length > 0 && (
+        <ul className="notification-panel__list">
+          {notifications.map((notification) => {
+            const isUnread = notification.read_at === null;
+            const content = (
+              <>
+                {isUnread && (
+                  <span className="notification-panel__sr-only">
+                    {t("notificationPanel.unread")}
+                  </span>
+                )}
+                <span className="notification-panel__text">{notificationText(notification)}</span>
+                <time className="notification-panel__time" dateTime={notification.created_at}>
+                  {formatCreatedAt(notification.created_at, i18n.language)}
+                </time>
+              </>
+            );
+
+            return (
+              <li
+                key={notification.id}
+                className={[
+                  "notification-panel__item",
+                  isUnread ? "notification-panel__item--unread" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {notification.target_url ? (
+                  <Link
+                    className="notification-panel__entry"
+                    to={notification.target_url}
+                    onClick={onClose}
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  <div className="notification-panel__entry">{content}</div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );

@@ -62,7 +62,8 @@
     "loading": "Načítám oznámení…",
     "empty": "Zatím žádná oznámení.",
     "error": "Oznámení se nepodařilo načíst.",
-    "retry": "Zkusit znovu"
+    "retry": "Zkusit znovu",
+    "unread": "Nepřečteno"
   },
   "notifications": {
     "evaluation": {
