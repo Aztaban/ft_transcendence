@@ -48,5 +48,27 @@
     "reconnecting": "Reconectando…",
     "paused": "Las actualizaciones en vivo están en pausa. La página sigue funcionando.",
     "backOnline": "De nuevo en línea"
+  },
+  "notifications": {
+    "evaluation": {
+      "created": "Nueva solicitud de evaluación para {{project.name}}",
+      "slot_picked": "{{tutor.display_name}} eligió un horario para {{project.name}}: {{slot}}. Confírmalo, por favor",
+      "confirmed": "{{student.display_name}} confirmó la evaluación de {{project.name}}: {{slot}}",
+      "declined": "{{student.display_name}} rechazó tu horario para {{project.name}}",
+      "released": "{{tutor.display_name}} liberó tu solicitud de evaluación de {{project.name}}",
+      "cancelled": "{{cancelled_by.display_name}} canceló la evaluación de {{project.name}}"
+    },
+    "eligibility": {
+      "requested": "{{requester.display_name}} pidió evaluar nuevos proyectos",
+      "revoked": "Ya no puedes evaluar {{project.name}}"
+    },
+    "sc_message": {
+      "created": "Nuevo mensaje anónimo para el Consejo estudiantil"
+    },
+    "resource": {
+      "created": "{{owner.display_name}} compartió «{{title}}»",
+      "updated": "Tu recurso «{{title}}» fue editado",
+      "deleted": "Tu recurso «{{title}}» fue eliminado"
+    }
   }
 }

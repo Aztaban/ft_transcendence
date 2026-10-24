@@ -48,5 +48,27 @@
     "reconnecting": "Reconnecting…",
     "paused": "Live updates are paused. The page keeps working.",
     "backOnline": "Back online"
+  },
+  "notifications": {
+    "evaluation": {
+      "created": "New evaluation request for {{project.name}}",
+      "slot_picked": "{{tutor.display_name}} picked a slot for {{project.name}}: {{slot}}. Please confirm it",
+      "confirmed": "{{student.display_name}} confirmed the evaluation of {{project.name}}: {{slot}}",
+      "declined": "{{student.display_name}} declined your slot for {{project.name}}",
+      "released": "{{tutor.display_name}} released your evaluation request for {{project.name}}",
+      "cancelled": "{{cancelled_by.display_name}} cancelled the evaluation of {{project.name}}"
+    },
+    "eligibility": {
+      "requested": "{{requester.display_name}} asked to evaluate new projects",
+      "revoked": "You can no longer evaluate {{project.name}}"
+    },
+    "sc_message": {
+      "created": "New anonymous message for the Student Council"
+    },
+    "resource": {
+      "created": "{{owner.display_name}} shared \"{{title}}\"",
+      "updated": "Your resource \"{{title}}\" was edited",
+      "deleted": "Your resource \"{{title}}\" was deleted"
+    }
   }
 }

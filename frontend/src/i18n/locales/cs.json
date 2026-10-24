@@ -49,5 +49,27 @@
     "reconnecting": "Obnovuji spojení…",
     "paused": "Živé aktualizace jsou pozastavené. Stránka dál funguje.",
     "backOnline": "Opět online"
+  },
+  "notifications": {
+    "evaluation": {
+      "created": "Nová žádost o evaluaci projektu {{project.name}}",
+      "slot_picked": "Pro {{project.name}} je vybraný termín {{slot}} ({{tutor.display_name}}). Potvrďte ho prosím",
+      "confirmed": "Evaluace projektu {{project.name}} je potvrzená: {{slot}} ({{student.display_name}})",
+      "declined": "Váš termín pro {{project.name}} byl odmítnut ({{student.display_name}})",
+      "released": "Vaše žádost o evaluaci {{project.name}} byla uvolněna ({{tutor.display_name}})",
+      "cancelled": "Evaluace projektu {{project.name}} byla zrušena ({{cancelled_by.display_name}})"
+    },
+    "eligibility": {
+      "requested": "Nová žádost o oprávnění hodnotit projekty ({{requester.display_name}})",
+      "revoked": "Projekt {{project.name}} už nemůžete hodnotit"
+    },
+    "sc_message": {
+      "created": "Nová anonymní zpráva pro Studentskou radu"
+    },
+    "resource": {
+      "created": "{{owner.display_name}} sdílí materiál „{{title}}“",
+      "updated": "Váš materiál „{{title}}“ byl upraven",
+      "deleted": "Váš materiál „{{title}}“ byl smazán"
+    }
   }
 }
