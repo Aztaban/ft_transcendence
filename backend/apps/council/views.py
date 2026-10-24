@@ -8,18 +8,18 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
-from apps.accounts.models import Role
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
 from apps.core.throttling import SCMessageSendRateThrottle
 
 from .models import SCMessage
+from .permissions import CanReadCouncilInbox, IsCouncilOrNotFound
 from .serializers import (
     SCMessageCreatedSerializer,
     SCMessageCreateSerializer,
@@ -27,8 +27,6 @@ from .serializers import (
     SCMessageSerializer,
     SCMessageUpdateSerializer,
 )
-
-_COUNCIL_ROLES = frozenset({Role.Name.SC_MEMBER, Role.Name.ADMIN})
 
 
 def _create_sc_message(request):
@@ -44,18 +42,8 @@ def _create_sc_message(request):
     return Response(SCMessageCreatedSerializer(message).data, status=status.HTTP_201_CREATED)
 
 
-def _is_council(user):
-    """Whether the user may read the council inbox: SC Member or Admin (api-plan §10.6)."""
-    return user.roles.filter(name__in=_COUNCIL_ROLES).exists()
-
-
 def _list_sc_messages(request):
     """The council inbox: newest first, optionally only unread (api-plan §10.6)."""
-    if not _is_council(request.user):
-        raise PermissionDenied(
-            _("You do not have permission to perform this action."),
-            code="permission_denied",
-        )
     messages = SCMessage.objects.order_by("-created_at", "-pk")
     unread = request.query_params.get("unread")
     if unread == "true":
@@ -158,7 +146,7 @@ def _update_sc_message(request, pk):
     },
 )
 @api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, CanReadCouncilInbox])
 @throttle_classes([UserRateThrottle, SCMessageSendRateThrottle])
 def sc_message_list(request):
     """List the council inbox or send it a message (api-plan §10.6)."""
@@ -200,14 +188,12 @@ def sc_message_list(request):
     },
 )
 @api_view(["GET", "PATCH"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsCouncilOrNotFound])
 def sc_message_detail(request, pk):
     """Read one council message, or change its read state and note (api-plan §10.6).
 
     Anyone outside the council gets 404, so they cannot tell which messages exist (§5.5).
     """
-    if not _is_council(request.user):
-        raise NotFound()
     if request.method == "PATCH":
         return _update_sc_message(request, pk)
     message = get_object_or_404(SCMessage, pk=pk)
