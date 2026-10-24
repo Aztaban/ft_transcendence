@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.evaluations",
     "apps.notifications",
+    "apps.council",
 ]
 
 MIDDLEWARE = [
@@ -152,6 +153,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "user": "1000/hour",
         "auth": "10/minute",
+        "sc_message_send": "10/hour",
     },
     # Nginx is the one proxy in front of Django: the client IP is the last
     # X-Forwarded-For entry, so a forged header cannot pick its own IP.
@@ -168,6 +170,9 @@ ELIGIBILITY_REQUEST_MAX_PROJECTS = 50
 
 # Unpicked evaluation requests expire after this many days.
 EVALUATION_REQUEST_TTL_DAYS = 14
+
+# Student Council message body and discussion note (api-plan §10.6): max characters.
+SC_MESSAGE_MAX_LENGTH = 5000
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 CHANNEL_LAYERS = {
