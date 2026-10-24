@@ -56,10 +56,16 @@
       "confirmed": "{{student.display_name}} confirmed the evaluation of {{project.name}}: {{slot}}",
       "declined": "{{student.display_name}} declined your slot for {{project.name}}",
       "released": "{{tutor.display_name}} released your evaluation request for {{project.name}}",
-      "cancelled": "{{cancelled_by.display_name}} cancelled the evaluation of {{project.name}}"
+      "cancelled": "{{cancelled_by.display_name}} cancelled the evaluation of {{project.name}}",
+      "expired_pending": "Your evaluation request for {{project.name}} expired: nobody picked it",
+      "expired_awaiting_confirmation": "The evaluation of {{project.name}} expired before the slot was confirmed",
+      "result_recorded_passed": "Result for {{project.name}}: passed",
+      "result_recorded_failed": "Result for {{project.name}}: failed"
     },
     "eligibility": {
       "requested": "{{requester.display_name}} asked to evaluate new projects",
+      "decided_approved": "Your eligibility request was approved",
+      "decided_declined": "Your eligibility request was declined",
       "revoked": "You can no longer evaluate {{project.name}}"
     },
     "sc_message": {

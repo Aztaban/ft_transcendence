@@ -89,6 +89,50 @@ describe("notificationText", () => {
     expect(formatSlot).toHaveBeenCalledWith("2026-10-25T14:00:00Z", "2026-10-25T14:45:00Z");
   });
 
+  test("picks the sentence for the status value", () => {
+    expect(
+      [
+        notification("evaluation.expired", {
+          request_id: 17,
+          project: libft,
+          previous_status: "pending",
+        }),
+        notification("evaluation.expired", {
+          request_id: 17,
+          project: libft,
+          previous_status: "awaiting_confirmation",
+        }),
+        notification("evaluation.result_recorded", {
+          request_id: 17,
+          project: libft,
+          result: "passed",
+        }),
+        notification("evaluation.result_recorded", {
+          request_id: 17,
+          project: libft,
+          result: "failed",
+        }),
+        notification("eligibility.decided", {
+          request_id: 5,
+          decision: "approved",
+          review_note: "",
+        }),
+        notification("eligibility.decided", {
+          request_id: 5,
+          decision: "declined",
+          review_note: "",
+        }),
+      ].map(notificationText),
+    ).toEqual([
+      "Your evaluation request for Libft expired: nobody picked it",
+      "The evaluation of Libft expired before the slot was confirmed",
+      "Result for Libft: passed",
+      "Result for Libft: failed",
+      "Your eligibility request was approved",
+      "Your eligibility request was declined",
+    ]);
+  });
+
   test("uses the current language", async () => {
     await i18n.changeLanguage("cs");
 

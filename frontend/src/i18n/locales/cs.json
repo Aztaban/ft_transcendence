@@ -57,10 +57,16 @@
       "confirmed": "Evaluace projektu {{project.name}} je potvrzená: {{slot}} ({{student.display_name}})",
       "declined": "Váš termín pro {{project.name}} byl odmítnut ({{student.display_name}})",
       "released": "Vaše žádost o evaluaci {{project.name}} byla uvolněna ({{tutor.display_name}})",
-      "cancelled": "Evaluace projektu {{project.name}} byla zrušena ({{cancelled_by.display_name}})"
+      "cancelled": "Evaluace projektu {{project.name}} byla zrušena ({{cancelled_by.display_name}})",
+      "expired_pending": "Vaše žádost o evaluaci projektu {{project.name}} vypršela: nikdo si ji nevybral",
+      "expired_awaiting_confirmation": "Evaluace projektu {{project.name}} vypršela před potvrzením termínu",
+      "result_recorded_passed": "Výsledek evaluace projektu {{project.name}}: úspěch",
+      "result_recorded_failed": "Výsledek evaluace projektu {{project.name}}: neúspěch"
     },
     "eligibility": {
       "requested": "Nová žádost o oprávnění hodnotit projekty ({{requester.display_name}})",
+      "decided_approved": "Vaše žádost o oprávnění hodnotit byla schválena",
+      "decided_declined": "Vaše žádost o oprávnění hodnotit byla zamítnuta",
       "revoked": "Projekt {{project.name}} už nemůžete hodnotit"
     },
     "sc_message": {
