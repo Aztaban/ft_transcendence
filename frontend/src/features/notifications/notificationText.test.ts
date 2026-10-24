@@ -133,6 +133,20 @@ describe("notificationText", () => {
     ]);
   });
 
+  test("shows the role's label, never its raw name", () => {
+    expect(
+      [
+        notification("role.changed", { role: "tutor", action: "assigned" }),
+        notification("role.changed", { role: "sc_member", action: "revoked" }),
+        notification("account.updated", { fields: ["display_name"] }),
+      ].map(notificationText),
+    ).toEqual([
+      "You now have the role Hitchhiker",
+      "You no longer have the role Student Council",
+      "An administrator updated your account",
+    ]);
+  });
+
   test("uses the current language", async () => {
     await i18n.changeLanguage("cs");
 
@@ -141,5 +155,8 @@ describe("notificationText", () => {
         notification("evaluation.cancelled", { request_id: 17, project: libft, cancelled_by: bob }),
       ),
     ).toBe("Evaluace projektu Libft byla zrušena (Bob)");
+    expect(
+      notificationText(notification("role.changed", { role: "admin", action: "assigned" })),
+    ).toBe("Máte novou roli: Administrátor");
   });
 });

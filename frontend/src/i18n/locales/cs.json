@@ -50,6 +50,13 @@
     "paused": "Živé aktualizace jsou pozastavené. Stránka dál funguje.",
     "backOnline": "Opět online"
   },
+  "roles": {
+    "student": "Student",
+    "tutor": "Hitchhiker",
+    "head_tutor": "Head Tutor",
+    "sc_member": "Studentská rada",
+    "admin": "Administrátor"
+  },
   "notifications": {
     "evaluation": {
       "created": "Nová žádost o evaluaci projektu {{project.name}}",
@@ -68,6 +75,13 @@
       "decided_approved": "Vaše žádost o oprávnění hodnotit byla schválena",
       "decided_declined": "Vaše žádost o oprávnění hodnotit byla zamítnuta",
       "revoked": "Projekt {{project.name}} už nemůžete hodnotit"
+    },
+    "role": {
+      "changed_assigned": "Máte novou roli: {{roleLabel}}",
+      "changed_revoked": "Už nemáte roli: {{roleLabel}}"
+    },
+    "account": {
+      "updated": "Údaje vašeho účtu byly změněny"
     },
     "sc_message": {
       "created": "Nová anonymní zpráva pro Studentskou radu"

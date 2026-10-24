@@ -49,6 +49,13 @@
     "paused": "Live updates are paused. The page keeps working.",
     "backOnline": "Back online"
   },
+  "roles": {
+    "student": "Student",
+    "tutor": "Hitchhiker",
+    "head_tutor": "Head Tutor",
+    "sc_member": "Student Council",
+    "admin": "Admin"
+  },
   "notifications": {
     "evaluation": {
       "created": "New evaluation request for {{project.name}}",
@@ -67,6 +74,13 @@
       "decided_approved": "Your eligibility request was approved",
       "decided_declined": "Your eligibility request was declined",
       "revoked": "You can no longer evaluate {{project.name}}"
+    },
+    "role": {
+      "changed_assigned": "You now have the role {{roleLabel}}",
+      "changed_revoked": "You no longer have the role {{roleLabel}}"
+    },
+    "account": {
+      "updated": "An administrator updated your account"
     },
     "sc_message": {
       "created": "New anonymous message for the Student Council"

@@ -49,6 +49,13 @@
     "paused": "Las actualizaciones en vivo están en pausa. La página sigue funcionando.",
     "backOnline": "De nuevo en línea"
   },
+  "roles": {
+    "student": "Estudiante",
+    "tutor": "Hitchhiker",
+    "head_tutor": "Head Tutor",
+    "sc_member": "Consejo estudiantil",
+    "admin": "Administrador"
+  },
   "notifications": {
     "evaluation": {
       "created": "Nueva solicitud de evaluación para {{project.name}}",
@@ -67,6 +74,13 @@
       "decided_approved": "Tu solicitud de elegibilidad fue aprobada",
       "decided_declined": "Tu solicitud de elegibilidad fue rechazada",
       "revoked": "Ya no puedes evaluar {{project.name}}"
+    },
+    "role": {
+      "changed_assigned": "Ahora tienes el rol {{roleLabel}}",
+      "changed_revoked": "Ya no tienes el rol {{roleLabel}}"
+    },
+    "account": {
+      "updated": "Un administrador actualizó tu cuenta"
     },
     "sc_message": {
       "created": "Nuevo mensaje anónimo para el Consejo estudiantil"
