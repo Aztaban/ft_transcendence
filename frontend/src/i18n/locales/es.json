@@ -40,6 +40,8 @@
     "search": "Buscar",
     "searchPlaceholder": "buscar",
     "notifications": "Notificaciones",
+    "notificationsUnread_one": "Notificaciones, {{count}} sin leer",
+    "notificationsUnread_other": "Notificaciones, {{count}} sin leer",
     "userMenu": "Abrir menú de usuario"
   },
   "connection": {

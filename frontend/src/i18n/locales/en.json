@@ -40,6 +40,8 @@
     "search": "Search",
     "searchPlaceholder": "search",
     "notifications": "Notifications",
+    "notificationsUnread_one": "Notifications, {{count}} unread",
+    "notificationsUnread_other": "Notifications, {{count}} unread",
     "userMenu": "Open user menu"
   },
   "connection": {

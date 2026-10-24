@@ -9,11 +9,19 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// Every text path of a locale file, e.g. "nav.home".
+// i18next plural endings. Each language has its own set: Czech needs "_few", English does not.
+const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
+
+// Every text path of a locale file, e.g. "nav.home". The plural variants of a text count as one
+// path, e.g. "topbar.notificationsUnread" for its "_one", "_few" and "_other" variants.
 function keys(texts: object, prefix = ""): string[] {
-  return Object.entries(texts).flatMap(([key, value]) =>
-    typeof value === "object" ? keys(value, `${prefix}${key}.`) : [`${prefix}${key}`],
+  const paths = Object.entries(texts).flatMap(([key, value]) =>
+    typeof value === "object"
+      ? keys(value, `${prefix}${key}.`)
+      : [`${prefix}${key.replace(PLURAL_SUFFIX, "")}`],
   );
+
+  return [...new Set(paths)];
 }
 
 describe("locale files", () => {

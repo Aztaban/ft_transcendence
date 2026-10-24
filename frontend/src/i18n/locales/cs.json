@@ -40,6 +40,9 @@
     "search": "Hledat",
     "searchPlaceholder": "hledat",
     "notifications": "Oznámení",
+    "notificationsUnread_one": "Oznámení, {{count}} nepřečtené",
+    "notificationsUnread_few": "Oznámení, {{count}} nepřečtená",
+    "notificationsUnread_other": "Oznámení, {{count}} nepřečtených",
     "userMenu": "Otevřít uživatelské menu"
   },
   "connection": {
