@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import i18n from "../i18n";
-import { apiRequest } from "./client";
+import { ApiError, apiRequest, setUnauthorizedHandler } from "./client";
 import { updateCurrentUser } from "./users";
 
 afterEach(() => {
@@ -125,5 +125,25 @@ describe("apiRequest CSRF", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/users/me/");
     expect(fetchMock.mock.calls[0][1]?.method).toBe("PATCH");
     expect(csrfHeader(fetchMock.mock.calls[0])).toBe("cookie-token");
+  });
+
+  // #328: a 401 means the session ended on the server; the login form's own calls are left out.
+  test("reports a 401 to the session, except for the auth endpoints", async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ error: { code: "not_authenticated", message: "Log in." } }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+
+    await expect(apiRequest("/api/v1/users/me/")).rejects.toBeInstanceOf(ApiError);
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    await expect(apiRequest("/api/v1/auth/session/")).rejects.toBeInstanceOf(ApiError);
+    expect(handler).toHaveBeenCalledTimes(1);
+    setUnauthorizedHandler(null);
   });
 });
