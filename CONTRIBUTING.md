@@ -60,9 +60,6 @@ ft_transcendence/
 - Use `reverse("api:<name>")` in backend code and tests. Moving a declaration must
   preserve its public path, name, path parameters and view.
 
-See [the routing architecture](docs/architecture.md#31-backend-http-routing) for
-the routing layers and an example of how prefixes compose.
-
 ---
 
 ## 2. Git Workflow
