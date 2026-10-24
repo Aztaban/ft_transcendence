@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getUnreadCount } from "../api/notifications";
@@ -15,9 +15,16 @@ vi.mock("./AuthContext", () => ({
 }));
 
 function Probe() {
-  const { unreadCount } = useNotificationCount();
+  const { unreadCount, refresh } = useNotificationCount();
 
-  return <p>unread: {unreadCount}</p>;
+  return (
+    <>
+      <p>unread: {unreadCount}</p>
+      <button type="button" onClick={refresh}>
+        Refresh
+      </button>
+    </>
+  );
 }
 
 function renderWithSocket() {
@@ -96,6 +103,20 @@ describe("NotificationCountProvider", () => {
     expect(getUnreadCount).toHaveBeenCalledTimes(2);
   });
 
+  it("re-fetches the count when asked, e.g. after marking as read", async () => {
+    vi.mocked(getUnreadCount)
+      .mockResolvedValueOnce({ count: 3 })
+      .mockResolvedValueOnce({ count: 1 });
+
+    renderWithSocket();
+    await screen.findByText("unread: 3");
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+
+    expect(await screen.findByText("unread: 1")).toBeTruthy();
+    expect(getUnreadCount).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps the last count when the request fails", async () => {
     vi.mocked(getUnreadCount)
       .mockResolvedValueOnce({ count: 3 })
@@ -128,9 +149,12 @@ describe("NotificationCountProvider", () => {
     await waitFor(() => expect(screen.getByText("unread: 0")).toBeTruthy());
   });
 
-  it("is 0 without a provider", () => {
+  it("is 0 without a provider, and refresh does nothing", () => {
     render(<Probe />);
 
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+
     expect(screen.getByText("unread: 0")).toBeTruthy();
+    expect(getUnreadCount).not.toHaveBeenCalled();
   });
 });

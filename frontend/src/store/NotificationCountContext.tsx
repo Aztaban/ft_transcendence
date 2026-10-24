@@ -7,6 +7,9 @@ import { useAuth } from "./AuthContext";
 interface NotificationCountValue {
   // Unread notifications of the logged-in user (GET /notifications/unread-count/, api-plan §10.5).
   unreadCount: number;
+  // Loads the count again, e.g. right after notifications are marked as read (#274), since that
+  // sends no WebSocket event.
+  refresh: () => void;
 }
 
 const NotificationCountContext = createContext<NotificationCountValue | undefined>(undefined);
@@ -54,13 +57,13 @@ export function NotificationCountProvider({ children }: NotificationCountProvide
   }, [isAuthenticated, reloadKey]);
 
   return (
-    <NotificationCountContext.Provider value={{ unreadCount }}>
+    <NotificationCountContext.Provider value={{ unreadCount, refresh }}>
       {children}
     </NotificationCountContext.Provider>
   );
 }
 
-const noNotificationCount: NotificationCountValue = { unreadCount: 0 };
+const noNotificationCount: NotificationCountValue = { unreadCount: 0, refresh: () => {} };
 
 // Without a provider (e.g. in component tests) the count is 0, so no badge is shown.
 export function useNotificationCount(): NotificationCountValue {
