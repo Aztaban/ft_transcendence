@@ -56,6 +56,13 @@
     "sc_member": "Student Council",
     "admin": "Admin"
   },
+  "notificationPanel": {
+    "title": "Notifications",
+    "loading": "Loading notifications…",
+    "empty": "No notifications yet.",
+    "error": "Could not load your notifications.",
+    "retry": "Try again"
+  },
   "notifications": {
     "evaluation": {
       "created": "New evaluation request for {{project.name}}",

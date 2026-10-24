@@ -451,6 +451,12 @@
   align-items: center;
 }
 
+/* Holds the bell and the notification center, which opens under it. */
+.topbar__notifications {
+  position: relative;
+  margin-right: 23px;
+}
+
 .topbar__notification {
   position: relative;
   display: flex;
@@ -458,7 +464,6 @@
   height: 36px;
   align-items: center;
   justify-content: center;
-  margin-right: 23px;
   padding: 0;
   border: 0;
   border-radius: var(--radius-sm);
@@ -700,7 +705,7 @@
     margin-right: 0;
   }
 
-  .topbar__notification {
+  .topbar__notifications {
     margin-right: 10px;
   }
 

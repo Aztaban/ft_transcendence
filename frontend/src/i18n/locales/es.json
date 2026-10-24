@@ -56,6 +56,13 @@
     "sc_member": "Consejo estudiantil",
     "admin": "Administrador"
   },
+  "notificationPanel": {
+    "title": "Notificaciones",
+    "loading": "Cargando notificaciones…",
+    "empty": "Aún no hay notificaciones.",
+    "error": "No se pudieron cargar tus notificaciones.",
+    "retry": "Reintentar"
+  },
   "notifications": {
     "evaluation": {
       "created": "Nueva solicitud de evaluación para {{project.name}}",

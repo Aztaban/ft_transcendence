@@ -1,9 +1,10 @@
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 
 import searchIcon from "../../assets/figma/search.svg";
 import bellIcon from "../../assets/figma/bell.svg";
 import userChevron from "../../assets/figma/user-chevron.svg";
+import NotificationPanel from "../../features/notifications/NotificationPanel";
 import PersonAvatar from "../../features/people/PersonAvatar";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import { useNotificationCount } from "../../store/NotificationCountContext";
@@ -22,6 +23,8 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
   const { t } = useTranslation();
   // Unread notifications (§10.5); 0 until loaded and when logged out, and then no badge is shown.
   const { unreadCount } = useNotificationCount();
+  // The notification center under the bell (#272).
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   return (
     <header className="topbar">
@@ -55,22 +58,29 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
 
         <LanguageSwitcher />
 
-        <button
-          className="topbar__notification"
-          type="button"
-          aria-label={
-            unreadCount > 0
-              ? t("topbar.notificationsUnread", { count: unreadCount })
-              : t("topbar.notifications")
-          }
-        >
-          <img src={bellIcon} alt="" aria-hidden="true" />
-          {unreadCount > 0 && (
-            <span className="topbar__notification-badge">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
-        </button>
+        <div className="topbar__notifications">
+          <button
+            className="topbar__notification"
+            type="button"
+            aria-label={
+              unreadCount > 0
+                ? t("topbar.notificationsUnread", { count: unreadCount })
+                : t("topbar.notifications")
+            }
+            aria-expanded={isPanelOpen}
+            aria-controls="notification-panel"
+            onClick={() => setIsPanelOpen((open) => !open)}
+          >
+            <img src={bellIcon} alt="" aria-hidden="true" />
+            {unreadCount > 0 && (
+              <span className="topbar__notification-badge">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {isPanelOpen && <NotificationPanel />}
+        </div>
 
         <PersonAvatar
           className="topbar__avatar"
