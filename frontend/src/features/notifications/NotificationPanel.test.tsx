@@ -294,4 +294,35 @@ describe("NotificationPanel", () => {
     expect(listNotifications).toHaveBeenCalledTimes(1);
     expect(count.refresh).not.toHaveBeenCalled();
   });
+
+  it("loads the list again when another tab marked notifications as read", async () => {
+    vi.mocked(listNotifications)
+      .mockResolvedValueOnce(page([created]))
+      .mockResolvedValueOnce(page([{ ...created, read_at: "2026-10-24T10:00:00Z" }]));
+    const otherTab = new BroadcastChannel("notifications");
+
+    renderPanel();
+    await screen.findByText("Unread");
+
+    otherTab.postMessage("read");
+
+    await waitFor(() => expect(screen.queryByText("Unread")).toBeNull());
+    expect(listNotifications).toHaveBeenCalledTimes(2);
+    otherTab.close();
+  });
+
+  it("tells the other tabs after marking as read", async () => {
+    vi.mocked(listNotifications).mockResolvedValue(page([created]));
+    vi.mocked(markAllNotificationsRead).mockResolvedValue();
+    const otherTab = new BroadcastChannel("notifications");
+    const heard = vi.fn();
+
+    otherTab.onmessage = (event) => heard(event.data);
+    renderPanel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Mark all as read" }));
+
+    await waitFor(() => expect(heard).toHaveBeenCalledWith("read"));
+    otherTab.close();
+  });
 });

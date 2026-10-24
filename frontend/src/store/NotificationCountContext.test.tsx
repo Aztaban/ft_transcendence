@@ -117,6 +117,21 @@ describe("NotificationCountProvider", () => {
     expect(getUnreadCount).toHaveBeenCalledTimes(2);
   });
 
+  it("re-fetches the count when another tab marked notifications as read", async () => {
+    vi.mocked(getUnreadCount)
+      .mockResolvedValueOnce({ count: 3 })
+      .mockResolvedValueOnce({ count: 0 });
+    const otherTab = new BroadcastChannel("notifications");
+
+    renderWithSocket();
+    await screen.findByText("unread: 3");
+
+    otherTab.postMessage("read");
+
+    expect(await screen.findByText("unread: 0")).toBeTruthy();
+    otherTab.close();
+  });
+
   it("keeps the last count when the request fails", async () => {
     vi.mocked(getUnreadCount)
       .mockResolvedValueOnce({ count: 3 })
