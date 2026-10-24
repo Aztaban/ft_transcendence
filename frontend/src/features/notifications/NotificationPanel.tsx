@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { listNotifications } from "../../api/notifications";
+import { listNotifications, markNotificationRead } from "../../api/notifications";
+import { useNotificationCount } from "../../store/NotificationCountContext";
 import type { Notification } from "../../types/notification";
 import { useLiveRefresh } from "../../websocket/LiveProvider";
 import { notificationText } from "./notificationText";
@@ -26,13 +27,15 @@ interface NotificationPanelProps {
 // The notification center that opens from the bell in the top bar (#272). It loads the newest
 // notifications every time it opens (GET /notifications/, api-plan §10.5) and again on the
 // WebSocket event `notification.created` and after a reconnect (§9.3, §9.4). A notification with
-// a `target_url` links to that page.
+// a `target_url` links to that page. Clicking an unread one marks it as read (#274).
 function NotificationPanel({ onClose }: NotificationPanelProps) {
   const { t, i18n } = useTranslation();
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   // Raised to load the list once more: on "Try again" and on live events.
   const [reloadKey, setReloadKey] = useState(0);
+
+  const { refresh: refreshCount } = useNotificationCount();
 
   const refresh = useCallback(() => setReloadKey((key) => key + 1), []);
 
@@ -64,6 +67,25 @@ function NotificationPanel({ onClose }: NotificationPanelProps) {
   function retry() {
     setStatus("loading");
     refresh();
+  }
+
+  // POST /notifications/{id}/read/ (§10.5): the answer replaces the item, and the badge on the bell
+  // is loaded again. Already read ones need no request.
+  function markRead(notification: Notification) {
+    if (notification.read_at !== null) {
+      return;
+    }
+
+    markNotificationRead(notification.id)
+      .then((updated) => {
+        setNotifications((current) =>
+          current.map((item) => (item.id === updated.id ? updated : item)),
+        );
+        refreshCount();
+      })
+      .catch(() => {
+        // It stays unread; clicking it again tries once more.
+      });
   }
 
   return (
@@ -125,10 +147,21 @@ function NotificationPanel({ onClose }: NotificationPanelProps) {
                   <Link
                     className="notification-panel__entry"
                     to={notification.target_url}
-                    onClick={onClose}
+                    onClick={() => {
+                      markRead(notification);
+                      onClose();
+                    }}
                   >
                     {content}
                   </Link>
+                ) : isUnread ? (
+                  <button
+                    className="notification-panel__entry"
+                    type="button"
+                    onClick={() => markRead(notification)}
+                  >
+                    {content}
+                  </button>
                 ) : (
                   <div className="notification-panel__entry">{content}</div>
                 )}

@@ -65,8 +65,21 @@
   text-decoration: none;
 }
 
+/* An unread notification without a page is a button that only marks it as read (#274). */
+button.notification-panel__entry {
+  width: 100%;
+  border: 0;
+  border-left: 3px solid transparent;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 a.notification-panel__entry:hover,
-a.notification-panel__entry:focus-visible {
+a.notification-panel__entry:focus-visible,
+button.notification-panel__entry:hover,
+button.notification-panel__entry:focus-visible {
   background: #f0f2f2;
 }
 
