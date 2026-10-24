@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { listNotifications, markNotificationRead } from "../../api/notifications";
+import {
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "../../api/notifications";
 import { useNotificationCount } from "../../store/NotificationCountContext";
 import type { Notification } from "../../types/notification";
 import { useLiveRefresh } from "../../websocket/LiveProvider";
@@ -27,13 +31,16 @@ interface NotificationPanelProps {
 // The notification center that opens from the bell in the top bar (#272). It loads the newest
 // notifications every time it opens (GET /notifications/, api-plan §10.5) and again on the
 // WebSocket event `notification.created` and after a reconnect (§9.3, §9.4). A notification with
-// a `target_url` links to that page. Clicking an unread one marks it as read (#274).
+// a `target_url` links to that page. Clicking an unread one marks it as read, and "Mark all as
+// read" marks every one (#274).
 function NotificationPanel({ onClose }: NotificationPanelProps) {
   const { t, i18n } = useTranslation();
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   // Raised to load the list once more: on "Try again" and on live events.
   const [reloadKey, setReloadKey] = useState(0);
+  // True while "Mark all as read" waits for the server, so it cannot be sent twice.
+  const [isMarkingAll, setIsMarkingAll] = useState(false);
 
   const { refresh: refreshCount } = useNotificationCount();
 
@@ -88,13 +95,43 @@ function NotificationPanel({ onClose }: NotificationPanelProps) {
       });
   }
 
+  // POST /notifications/read-all/ (§10.5) answers 204 without a body, so the list is loaded again
+  // instead of guessing the new `read_at` values.
+  function markAllRead() {
+    setIsMarkingAll(true);
+
+    markAllNotificationsRead()
+      .then(() => {
+        refresh();
+        refreshCount();
+      })
+      .catch(() => {
+        // The list stays as it is; the button can be clicked again.
+      })
+      .finally(() => setIsMarkingAll(false));
+  }
+
+  const hasUnread = notifications.some((item) => item.read_at === null);
+
   return (
     <section
       id="notification-panel"
       className="notification-panel"
       aria-label={t("notificationPanel.title")}
     >
-      <h2 className="notification-panel__title">{t("notificationPanel.title")}</h2>
+      <div className="notification-panel__header">
+        <h2 className="notification-panel__title">{t("notificationPanel.title")}</h2>
+        {hasUnread && (
+          <button
+            className="notification-panel__mark-all"
+            type="button"
+            disabled={isMarkingAll}
+            onClick={markAllRead}
+          >
+            {t("notificationPanel.markAllRead")}
+          </button>
+        )}
+      </div>
 
       {status === "loading" && (
         <p className="notification-panel__message">{t("notificationPanel.loading")}</p>

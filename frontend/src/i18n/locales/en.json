@@ -62,7 +62,8 @@
     "empty": "No notifications yet.",
     "error": "Could not load your notifications.",
     "retry": "Try again",
-    "unread": "Unread"
+    "unread": "Unread",
+    "markAllRead": "Mark all as read"
   },
   "notifications": {
     "evaluation": {
