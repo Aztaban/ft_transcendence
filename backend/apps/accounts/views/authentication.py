@@ -4,6 +4,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError, transaction
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
@@ -33,7 +34,7 @@ from apps.core.throttling import AuthRateThrottle
 def _email_conflict_response():
     return error_response(
         "email_already_exists",
-        "An account with this email already exists.",
+        _("An account with this email already exists."),
         status.HTTP_409_CONFLICT,
     )
 
@@ -74,7 +75,7 @@ def register(request):
             return _email_conflict_response()
 
         return validation_error_response(
-            serializer.errors, "Please correct the registration fields."
+            serializer.errors, _("Please correct the registration fields.")
         )
 
     try:
@@ -88,7 +89,7 @@ def register(request):
     return Response(
         {
             **serializer.data,
-            "message": "Account created successfully.",
+            "message": _("Account created successfully."),
         },
         status=status.HTTP_201_CREATED,
     )
@@ -132,14 +133,18 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
-            return validation_error_response(serializer.errors, "Please correct the login fields.")
+            return validation_error_response(
+                serializer.errors, _("Please correct the login fields.")
+            )
 
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
         user = authenticate(request, email=email, password=password)
         if user is None:
             return error_response(
-                "invalid_credentials", "Invalid email or password.", status.HTTP_401_UNAUTHORIZED
+                "invalid_credentials",
+                _("Invalid email or password."),
+                status.HTTP_401_UNAUTHORIZED,
             )
 
         login(request, user)
@@ -148,7 +153,7 @@ class LoginView(APIView):
                 "id": user.id,
                 "email": user.email,
                 "display_name": user.display_name,
-                "message": "Logged in successfully.",
+                "message": _("Logged in successfully."),
             },
             status=status.HTTP_200_OK,
         )
