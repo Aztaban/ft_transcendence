@@ -1,6 +1,7 @@
 """Account oauth serializers."""
 
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 User = get_user_model()
@@ -31,7 +32,7 @@ class OAuth42IdentitySerializer(serializers.ModelSerializer):
 
     def validate_intra_id(self, value):
         if value <= 0:
-            raise serializers.ValidationError("42 user ID must be a positive integer.")
+            raise serializers.ValidationError(_("42 user ID must be a positive integer."))
         return value
 
 
@@ -56,7 +57,7 @@ class OAuth42UserCreationSerializer(serializers.ModelSerializer):
 
     def validate_intra_id(self, value):
         if value <= 0:
-            raise serializers.ValidationError("42 user ID must be a positive integer.")
+            raise serializers.ValidationError(_("42 user ID must be a positive integer."))
         return value
 
     def create(self, validated_data):

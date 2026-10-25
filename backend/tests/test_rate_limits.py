@@ -29,6 +29,7 @@ def test_rates_match_the_contract():
         "user": "1000/hour",
         "auth": "10/minute",
         "people_search": "60/minute",
+        "sc_message_send": "10/hour",
     }
 
 

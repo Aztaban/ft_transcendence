@@ -83,6 +83,7 @@ Python is formatted by black and isort, line length 100: fix with `black . && is
 - Change the state of shared rows (evaluation requests, eligibility reviews, council notes) with an atomic conditional update: `filter(pk=..., status=expected).update(...)`, then check the row count. Never read, modify, then `save()` (schema §4.2).
 - Create notifications and WebSocket events exactly as listed in api-plan §8.8 and §9.3. Push events with `transaction.on_commit`.
 - Wrap user-facing strings in `gettext`; responses are translated into the user's language (§5.5).
+When adding or changing a user-facing string, update backend/locale/*/LC_MESSAGES/django.po and compile the corresponding django.mo files in the same change.
 - Every model change comes with its migration, created with `python manage.py makemigrations` and committed.
 - Limits such as slot lengths, expiry times and upload sizes are settings, not literals scattered through the code.
 
