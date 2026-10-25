@@ -1,5 +1,6 @@
 """Recipient-owned notification API."""
 
+from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.authentication import SessionAuthentication
@@ -7,6 +8,7 @@ from rest_framework.generics import DestroyAPIView, GenericAPIView, ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.core.events import publish_user_event
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
 from apps.notifications.models import Notification
@@ -76,6 +78,11 @@ class NotificationUnreadCountView(OwnNotificationsMixin, GenericAPIView):
 
 
 class NotificationDeleteView(OwnNotificationsMixin, DestroyAPIView):
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        instance.delete()
+        publish_user_event(event="notification.updated", data={}, user_ids=[self.request.user.pk])
+
     @extend_schema(
         summary="Delete an own notification",
         parameters=[CSRF_HEADER],
@@ -102,11 +109,14 @@ class NotificationReadView(OwnNotificationsMixin, GenericAPIView):
             ),
         },
     )
+    @transaction.atomic
     def post(self, request, pk):
         now = timezone.now()
         # Only the first caller sets the timestamp; retries preserve it.
         self.get_queryset().filter(pk=pk, read_at__isnull=True).update(read_at=now, updated_at=now)
-        return Response(self.get_serializer(self.get_object()).data)
+        notification = self.get_object()
+        publish_user_event(event="notification.updated", data={}, user_ids=[request.user.pk])
+        return Response(self.get_serializer(notification).data)
 
 
 class NotificationReadAllView(OwnNotificationsMixin, GenericAPIView):
@@ -119,7 +129,9 @@ class NotificationReadAllView(OwnNotificationsMixin, GenericAPIView):
             **error_responses({401: ("not_authenticated",), 403: ("csrf_failed",)}),
         },
     )
+    @transaction.atomic
     def post(self, request):
         now = timezone.now()
         self.get_queryset().filter(read_at__isnull=True).update(read_at=now, updated_at=now)
+        publish_user_event(event="notification.updated", data={}, user_ids=[request.user.pk])
         return Response(status=204)

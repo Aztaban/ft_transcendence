@@ -28,6 +28,7 @@ def test_rates_match_the_contract():
     assert settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] == {
         "user": "1000/hour",
         "auth": "10/minute",
+        "sc_message_send": "10/hour",
     }
 
 
