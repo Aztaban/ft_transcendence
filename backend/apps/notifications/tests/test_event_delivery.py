@@ -185,7 +185,11 @@ def test_badge_refresh_reflects_read_and_delete_actions_on_every_session(partici
             for client in clients[:3]:
                 await database_sync_to_async(assert_count)(client, 2)
             await database_sync_to_async(change)(notification_id)
-            for client in clients[:3]:
+            for client, socket in zip(clients[:3], sockets[:3], strict=True):
+                assert await socket.receive_json_from(timeout=3) == {
+                    "event": "notification.updated",
+                    "data": {},
+                }
                 await database_sync_to_async(assert_count)(client, 0 if action == "read-all" else 1)
             await database_sync_to_async(assert_count)(clients[3], 1)
             for socket in sockets:
