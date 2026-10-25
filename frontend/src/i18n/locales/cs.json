@@ -95,9 +95,9 @@
       "created": "Nová anonymní zpráva pro Studentskou radu"
     },
     "resource": {
-      "created": "{{owner.display_name}} sdílí materiál „{{title}}“",
-      "updated": "Váš materiál „{{title}}“ byl upraven",
-      "deleted": "Váš materiál „{{title}}“ byl smazán"
+      "created": "{{owner.display_name}} sdílí dokument „{{title}}“",
+      "updated": "Váš dokument „{{title}}“ byl upraven",
+      "deleted": "Váš dokument „{{title}}“ byl smazán"
     }
   }
 }
