@@ -11,7 +11,6 @@ import { useNotificationCount } from "../../store/NotificationCountContext";
 import type { Notification } from "../../types/notification";
 import { useLiveRefresh } from "../../websocket/LiveProvider";
 import { notificationText } from "./notificationText";
-import { announceReadChange, useReadChanges } from "./readSync";
 import "../../styles/notifications.css";
 
 // When a notification arrived, in the user's local time and the current language.
@@ -31,9 +30,10 @@ interface NotificationPanelProps {
 
 // The notification center that opens from the bell in the top bar (#272). It loads the newest
 // notifications every time it opens (GET /notifications/, api-plan §10.5) and again on the
-// WebSocket event `notification.created` and after a reconnect (§9.3, §9.4). A notification with
-// a `target_url` links to that page. Clicking an unread one marks it as read, and "Mark all as
-// read" marks every one; the other tabs of this browser follow (#274).
+// WebSocket events `notification.created` and `notification.updated` and after a reconnect (§9.3,
+// §9.4). A notification with a `target_url` links to that page. Clicking an unread one marks it as
+// read, and "Mark all as read" marks every one; other tabs and devices follow through
+// `notification.updated` (#274).
 function NotificationPanel({ onClose }: NotificationPanelProps) {
   const { t, i18n } = useTranslation();
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
@@ -47,8 +47,7 @@ function NotificationPanel({ onClose }: NotificationPanelProps) {
 
   const refresh = useCallback(() => setReloadKey((key) => key + 1), []);
 
-  useLiveRefresh(["notification.created"], refresh);
-  useReadChanges(refresh);
+  useLiveRefresh(["notification.created", "notification.updated"], refresh);
 
   useEffect(() => {
     // An older answer that arrives late must not overwrite a newer list.
@@ -91,7 +90,6 @@ function NotificationPanel({ onClose }: NotificationPanelProps) {
           current.map((item) => (item.id === updated.id ? updated : item)),
         );
         refreshCount();
-        announceReadChange();
       })
       .catch(() => {
         // It stays unread; clicking it again tries once more.
@@ -107,7 +105,6 @@ function NotificationPanel({ onClose }: NotificationPanelProps) {
       .then(() => {
         refresh();
         refreshCount();
-        announceReadChange();
       })
       .catch(() => {
         // The list stays as it is; the button can be clicked again.
