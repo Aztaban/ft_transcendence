@@ -1,10 +1,8 @@
 # Database Schema
 
 **Status:** Approved for implementation (sections marked "?" excepted)
-**Status:** Approved for implementation (sections marked "?" excepted)
 **Owner:** rkravche, IT Architect
-**Last updated:** October 6, 2026
-**Last updated:** October 6, 2026
+**Last updated:** October 23, 2026
 
 ---
 
@@ -17,7 +15,7 @@ Once a model is merged to `main`, its migration is the source of truth for exact
 ### Conventions
 
 - Every table has `id BIGINT AUTO_INCREMENT` (`models.BigAutoField`) unless stated otherwise.
-- Every table has `created_at` and `updated_at` (`apps.core.models.TimeStampedModel`). They are omitted from the tables below.
+- Every table has `created_at` and `updated_at` (`apps.core.models.TimeStampedModel`), except the link table in §3.3. They are omitted from the tables below.
 - All tables are InnoDB. Datetime columns are `DATETIME(6)` holding UTC (`USE_TZ = True`).
 - The default collation is case-insensitive, so unique indexes on email and slugs reject case-variant duplicates. Emails are additionally normalized to lowercase by `UserManager.normalize_email`.
 - Enums are stored as `varchar` with Django `TextChoices`. Stored values are lowercase `snake_case` and are exactly the values the API sends.
@@ -73,7 +71,7 @@ The UI shows `tutor` as "Hitchhiker" and `sc_member` as "Student Council". The s
 
 Role rules (enforced in code, described in api-plan §5.8):
 
-- Every account receives `student` when it is created, through registration or first 42 login. `student` is never revoked. The migration that seeds the roles also gives `student` to every user that already exists.
+- Every account receives `student` when it is created, through registration or first 42 login. `student` is never revoked; only account deletion removes it, with every other role (§2.4). The migration that seeds the roles also gives `student` to every user that already exists.
 - `head_tutor` includes every `tutor` capability. Code that checks "is a Hitchhiker" accepts either role.
 - `admin` does not imply any other role.
 
@@ -84,7 +82,7 @@ Users are never removed with `DELETE FROM user`, because their rows are referenc
 - `status` = `deleted`, `email` = `deleted-<id>@deleted.invalid`, `display_name` = `Deleted user`
 - `intra_id`, `intra_login`, `avatar_file_id` = NULL; the avatar `file` row and its bytes are deleted
 - password set unusable; all `user_roles` rows deleted; all sessions of the user ended
-- the user's open evaluation requests (`pending`, `awaiting_confirmation`, `confirmed` in the future) are cancelled, with `cancelled_by` = the admin who deleted the account; slots they picked as a Hitchhiker are released (back to `pending`)
+- the user's evaluation requests that have not started (`pending`, `awaiting_confirmation`, or `confirmed` with `starts_at` in the future) are cancelled, with `cancelled_by` = the admin who deleted the account; slots they picked as a Hitchhiker that have not started are released (back to `pending`). Started evaluations are left as they are. The other party gets the notifications and events of an override cancel or release (api-plan §10.2)
 - their pending eligibility request, if any, is declined (`reviewed_by` = the admin); their `tutor_eligibility` rows are deleted
 - `sender_id` is set to NULL on the messages they sent to the Student Council
 - their notifications are deleted
@@ -127,7 +125,7 @@ Index: `(status, created_at)` for the review table.
 
 ### 3.3 tutor_eligibility_request_projects
 
-The many-to-many link `TutorEligibilityRequest.projects`, through the explicit model `TutorEligibilityRequestProject` so that a listed project cannot be deleted.
+The many-to-many link `TutorEligibilityRequest.projects`, through the explicit model `TutorEligibilityRequestProject` so that a listed project cannot be deleted. It has no `created_at` or `updated_at`: its rows are written once together with their request and never change.
 
 | Column | Type | Null | Notes |
 | --- | --- | --- | --- |
@@ -343,7 +341,7 @@ Append-only record of sensitive actions. Rows are never updated or deleted by th
 | action | varchar(64) | no | One of the actions in api-plan §10.9. |
 | target_type | varchar(32) | no | `user`, `evaluation_request`, `tutor_eligibility_request`, `tutor_eligibility`, `sc_message`, `file`. |
 | target_id | BIGINT | no | Id of the target row. Not an FK, so the log survives deletion of the target. |
-| reason | varchar(500) | no | Required for admin overrides and sender reveals; empty otherwise. |
+| reason | varchar(500) | no | Required for overrides, suspend, reactivate, account deletion, council message deletion and sender reveals; optional for eligibility revocation; empty otherwise (api-plan §10). |
 | metadata | json | no | Before/after values or other context. Never contains passwords or message bodies. |
 
 `updated_at` is unused on this table. Index: `(target_type, target_id)`, `(actor_id, created_at)`, `(action, created_at)`.
