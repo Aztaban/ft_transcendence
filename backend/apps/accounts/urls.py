@@ -2,8 +2,8 @@
 
 from django.urls import path
 
-from .people_search import PeopleSearchView
 from .views import authentication, oauth, profiles, roles
+from .views.people_search import PeopleSearchView
 
 urlpatterns = [
     path("search/people/", PeopleSearchView.as_view(), name="search-people"),
