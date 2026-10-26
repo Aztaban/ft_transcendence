@@ -12,6 +12,7 @@ import EligibilityReviewPage from "./pages/EligibilityReviewPage";
 import EvaluationPage from "./pages/EvaluationPage";
 import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
+import HitchhikersPage from "./pages/HitchhikersPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -132,6 +133,7 @@ function AuthenticatedApp() {
             </RoleGuard>
           }
         />
+        <Route path="/hitchhikers" element={<HitchhikersPage />} />
         <Route
           path="/council"
           element={
