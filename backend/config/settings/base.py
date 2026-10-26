@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.translation import gettext_lazy as _
 
 # config/settings/base.py -> backend/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -112,7 +114,15 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
-LANGUAGE_CODE = "en-us"
+# api-plan §5.5: Accept-Language is one of en, cs, es. LANGUAGE_CODE must be
+# in LANGUAGES, so the default is "en" rather than the previous "en-us".
+LANGUAGE_CODE = "en"
+LANGUAGES = [
+    ("en", _("English")),
+    ("cs", _("Czech")),
+    ("es", _("Spanish")),
+]
+LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
@@ -152,6 +162,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "user": "1000/hour",
         "auth": "10/minute",
+        "people_search": "60/minute",
         "sc_message_send": "10/hour",
     },
     # Nginx is the one proxy in front of Django: the client IP is the last

@@ -26,6 +26,18 @@ def test_session_middleware_precedes_authentication_middleware():
     )
 
 
+def test_locale_middleware_follows_session_and_limits_languages():
+    session_middleware = "django.contrib.sessions.middleware.SessionMiddleware"
+    locale_middleware = "django.middleware.locale.LocaleMiddleware"
+
+    assert settings.MIDDLEWARE.index(locale_middleware) == (
+        settings.MIDDLEWARE.index(session_middleware) + 1
+    )
+    assert settings.LANGUAGE_CODE == "en"
+    assert [code for code, _name in settings.LANGUAGES] == ["en", "cs", "es"]
+    assert settings.LOCALE_PATHS == [settings.BASE_DIR / "locale"]
+
+
 def test_drf_defaults_to_session_authentication_only():
     authenticators = APIView().get_authenticators()
 

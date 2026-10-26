@@ -21,10 +21,6 @@ function sendErrorMessage(error: unknown) {
       return i18n.t("council.errorThrottled");
     }
 
-    if (error.code === "not_authenticated") {
-      return i18n.t("council.errorSession");
-    }
-
     return error.fields?.body?.[0] ?? error.message;
   }
 
