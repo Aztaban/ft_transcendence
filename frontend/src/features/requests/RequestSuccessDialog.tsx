@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Trans, useTranslation } from "react-i18next";
 
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
 
@@ -8,6 +9,7 @@ interface RequestSuccessDialogProps {
 
 // Shown after a request is sent. Closes on a click outside the card or on Escape.
 function RequestSuccessDialog({ onClose }: RequestSuccessDialogProps) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,10 +40,10 @@ function RequestSuccessDialog({ onClose }: RequestSuccessDialogProps) {
         onClick={(event) => event.stopPropagation()}
       >
         <p id="request-dialog-title" className="request-dialog__title">
-          Your request is live and waiting for a <strong>HITCHHIKER!</strong>
+          <Trans i18nKey="createRequest.success" components={{ strong: <strong /> }} />
         </p>
         <img className="request-dialog__image" src={hitchhikersIcon} alt="" aria-hidden="true" />
-        <p className="request-dialog__hint">Click anywhere to close</p>
+        <p className="request-dialog__hint">{t("common.clickToClose")}</p>
       </div>
     </div>
   );

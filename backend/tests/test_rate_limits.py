@@ -1,4 +1,4 @@
-"""Rate limits (docs/api-plan.md §5.9)."""
+"""Rate limits."""
 
 import pytest
 from django.conf import settings
@@ -28,6 +28,8 @@ def test_rates_match_the_contract():
     assert settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] == {
         "user": "1000/hour",
         "auth": "10/minute",
+        "people_search": "60/minute",
+        "sc_message_send": "10/hour",
     }
 
 

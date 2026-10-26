@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 
 import { ApiError } from "../api/client";
@@ -13,6 +14,7 @@ type LoadState = "loading" | "ready" | "not-found" | "error";
 // (api-plan §8.6, §10.3), #168. Logged-out users never get here: the app sends them to the
 // login page first (#328).
 function ProjectDetailsPage() {
+  const { t } = useTranslation();
   const { slug = "" } = useParams();
   const [project, setProject] = useState<Project | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
@@ -42,20 +44,20 @@ function ProjectDetailsPage() {
   return (
     <section className="project-details">
       <Link className="project-details__back" to="/">
-        <span aria-hidden="true">‹</span> Back to home
+        <span aria-hidden="true">‹</span> {t("common.backToHome")}
       </Link>
 
       {loadState === "loading" && <div className="project-details__skeleton" aria-busy="true" />}
 
       {loadState === "not-found" && (
         <p className="project-details__error" role="alert">
-          This project does not exist or is not open for evaluations.
+          {t("project.notFound")}
         </p>
       )}
 
       {loadState === "error" && (
         <p className="project-details__error" role="alert">
-          Could not load the project. Please try again later.
+          {t("project.error")}
         </p>
       )}
 
@@ -67,7 +69,7 @@ function ProjectDetailsPage() {
             </span>
             <div>
               <h1>{project.name}</h1>
-              <p>Hitchhiker evaluation</p>
+              <p>{t("project.subtitle")}</p>
             </div>
           </header>
 

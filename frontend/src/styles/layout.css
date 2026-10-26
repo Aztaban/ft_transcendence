@@ -170,6 +170,13 @@
     transform 0.15s ease;
 }
 
+/* A label that is still too long ends with "…" instead of spilling out of the link. */
+.sidebar__nav-link > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sidebar__nav-link:hover {
   background: #303030;
   color: #ffffff;
@@ -573,11 +580,11 @@
 
 @media (max-width: 900px) {
   .sidebar {
-    width: 210px;
+    width: 236px;
   }
 
   .app-shell__main {
-    margin-left: 210px;
+    margin-left: 236px;
   }
 
   .sidebar__brand-name {
@@ -640,7 +647,7 @@
 /* Phones: the sidebar is a drawer that slides in from the left. */
 @media (max-width: 680px) {
   .sidebar {
-    width: min(280px, 86vw);
+    width: min(300px, 86vw);
     visibility: hidden;
     transform: translateX(-100%);
     transition:

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useConnectionStatus, useLiveRefresh } from "../../websocket/LiveProvider";
 import "../../styles/connection-status.css";
@@ -6,15 +7,11 @@ import "../../styles/connection-status.css";
 // How long "Back online" stays after the connection returns.
 export const BACK_ONLINE_MS = 2500;
 
-// English until i18n is set up (#305).
-const RECONNECTING_TEXT = "Reconnecting…";
-const PAUSED_TEXT = "Live updates are paused. The page keeps working.";
-const BACK_ONLINE_TEXT = "Back online";
-
 // The small "Reconnecting…" indicator of api-plan §9.4: shown while the WebSocket is lost; the
 // app keeps working over HTTP meanwhile. Nothing is shown while connecting for the first time or
 // after a logout, so it doesn't flash on every page load (#253).
 function ConnectionStatus() {
+  const { t } = useTranslation();
   const status = useConnectionStatus();
   const hasBeenOnline = useRef(false);
   // A timestamp rather than a boolean, so every reconnect restarts the "Back online" timer.
@@ -51,17 +48,20 @@ function ConnectionStatus() {
   return (
     <div className="connection-status" role="status" aria-live="polite">
       {status === "reconnecting" && (
-        <span className="connection-status__pill connection-status__pill--lost" title={PAUSED_TEXT}>
+        <span
+          className="connection-status__pill connection-status__pill--lost"
+          title={t("connection.paused")}
+        >
           <span className="connection-status__spinner" aria-hidden="true" />
-          <span className="connection-status__label">{RECONNECTING_TEXT}</span>
-          <span className="connection-status__sr-only">{PAUSED_TEXT}</span>
+          <span className="connection-status__label">{t("connection.reconnecting")}</span>
+          <span className="connection-status__sr-only">{t("connection.paused")}</span>
         </span>
       )}
 
       {status === "open" && reconnectedAt !== null && (
         <span className="connection-status__pill connection-status__pill--back">
           <span className="connection-status__dot" aria-hidden="true" />
-          <span className="connection-status__label">{BACK_ONLINE_TEXT}</span>
+          <span className="connection-status__label">{t("connection.backOnline")}</span>
         </span>
       )}
     </div>
