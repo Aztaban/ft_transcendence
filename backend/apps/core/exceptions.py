@@ -46,12 +46,33 @@ _DRF_CODES = {
 }
 
 
+def _flatten_messages(detail):
+    """Collect nested serializer messages in order, without exposing item indexes."""
+    if isinstance(detail, dict):
+        return [message for value in detail.values() for message in _flatten_messages(value)]
+    if isinstance(detail, (list, tuple)):
+        return [message for value in detail for message in _flatten_messages(value)]
+    return [str(detail)]
+
+
+def _normalize_fields(fields):
+    """Keep input field names and make each value a list of strings (§5.5)."""
+    if not isinstance(fields, dict):
+        fields = {api_settings.NON_FIELD_ERRORS_KEY: fields}
+    return {field: _flatten_messages(detail) for field, detail in fields.items()}
+
+
 def error_response(code, message, http_status, fields=None):
     """Build an error response in the contract's envelope."""
     error = {"code": code, "message": str(message)}
     if fields is not None:
-        error["fields"] = fields
+        error["fields"] = _normalize_fields(fields)
     return Response({"error": error}, status=http_status)
+
+
+def validation_error_response(errors, message):
+    """Preserve an endpoint's validation message using the shared field normalization."""
+    return error_response("validation_error", message, status.HTTP_400_BAD_REQUEST, errors)
 
 
 def _describe(exc):
@@ -100,6 +121,6 @@ def envelope_exception_handler(exc, context):
 
     error = {"code": code, "message": str(message)}
     if fields is not None:
-        error["fields"] = fields
+        error["fields"] = _normalize_fields(fields)
     response.data = {"error": error}
     return response

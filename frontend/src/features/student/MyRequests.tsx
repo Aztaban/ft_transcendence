@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { listEvaluationRequests } from "../../api/evaluationRequests";
+import { cancelEvaluationRequest, listEvaluationRequests } from "../../api/evaluationRequests";
+import i18n from "../../i18n";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../../utils/dateTime";
+import CancelRequestDialog from "./CancelRequestDialog";
+import { canCancel, cancelErrorMessage } from "./cancelRequest";
+import { EVALUATION_EVENTS } from "../../websocket/events";
+import { useLiveRefresh } from "../../websocket/LiveProvider";
 import "../../styles/my-requests.css";
 
 type LoadState = "loading" | "ready" | "error";
@@ -22,31 +28,38 @@ function projectInitials(name: string) {
 function statusLabel(request: EvaluationRequest): { label: string; tone: Tone } {
   switch (request.status) {
     case "pending":
-      return { label: "Waiting for a Hitchhiker", tone: "blue" };
+      return { label: i18n.t("status.waitingForHitchhiker"), tone: "blue" };
     case "awaiting_confirmation":
-      return { label: "Needs your confirmation", tone: "amber" };
+      return { label: i18n.t("status.needsConfirmation"), tone: "amber" };
     case "cancelled":
-      return { label: "Cancelled", tone: "grey" };
+      return { label: i18n.t("status.cancelled"), tone: "grey" };
     case "expired":
-      return { label: "Expired", tone: "grey" };
+      return { label: i18n.t("status.expired"), tone: "grey" };
   }
 
   if (!request.is_history) {
-    return { label: "Confirmed", tone: "teal" };
+    return { label: i18n.t("status.confirmed"), tone: "teal" };
   }
 
   if (request.result === "passed") {
-    return { label: "Passed", tone: "green" };
+    return { label: i18n.t("status.passed"), tone: "green" };
   }
 
   if (request.result === "failed") {
-    return { label: "Failed", tone: "red" };
+    return { label: i18n.t("status.failed"), tone: "red" };
   }
 
-  return { label: "Result pending", tone: "violet" };
+  return { label: i18n.t("status.resultPending"), tone: "violet" };
 }
 
-function RequestRow({ request }: { request: EvaluationRequest }) {
+interface RequestRowProps {
+  request: EvaluationRequest;
+  // Only active rows can be cancelled.
+  onCancel?: (request: EvaluationRequest) => void;
+}
+
+function RequestRow({ request, onCancel }: RequestRowProps) {
+  const { t } = useTranslation();
   const status = statusLabel(request);
 
   return (
@@ -60,13 +73,24 @@ function RequestRow({ request }: { request: EvaluationRequest }) {
         {request.starts_at && request.ends_at ? (
           <time dateTime={request.starts_at}>{formatSlot(request.starts_at, request.ends_at)}</time>
         ) : (
-          <p>Requested {formatTimeAgo(request.created_at)}</p>
+          <p>{t("common.requestedAgo", { time: formatTimeAgo(request.created_at) })}</p>
         )}
       </div>
 
       <span className={`my-requests__status my-requests__status--${status.tone}`}>
         {status.label}
       </span>
+
+      {onCancel && canCancel(request) && (
+        <button
+          className="my-requests__cancel"
+          type="button"
+          aria-label={t("myRequests.cancelAria", { project: request.project.name })}
+          onClick={() => onCancel(request)}
+        >
+          {t("common.cancel")}
+        </button>
+      )}
     </li>
   );
 }
@@ -78,10 +102,13 @@ interface RequestList {
   loadState: LoadState;
   isLoadingMore: boolean;
   loadMore: () => void;
+  // Loads the list again from its first page, e.g. after a cancel.
+  reload: () => void;
 }
 
 // One paginated list of the student's requests (§5.7): the first page on mount, then
-// "Show more" appends the next one.
+// "Show more" appends the next one. When one of the requests changes, or after a reconnect,
+// the list is loaded again from its first page in the background (§9, #255).
 function useRequestList(history: boolean): RequestList {
   const [requests, setRequests] = useState<EvaluationRequest[]>([]);
   const [total, setTotal] = useState(0);
@@ -89,9 +116,21 @@ function useRequestList(history: boolean): RequestList {
   const [hasMore, setHasMore] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Set by a live refresh: a failure then keeps the requests already shown.
+  const isLiveRefresh = useRef(false);
+
+  useLiveRefresh(EVALUATION_EVENTS, () => {
+    isLiveRefresh.current = true;
+    setPage(1);
+    setReloadKey((key) => key + 1);
+  });
 
   useEffect(() => {
     let active = true;
+    const inBackground = isLiveRefresh.current;
+
+    isLiveRefresh.current = false;
 
     listEvaluationRequests({ scope: "mine", history, page })
       .then((result) => {
@@ -104,7 +143,7 @@ function useRequestList(history: boolean): RequestList {
       })
       .catch(() => {
         if (active && page === 1) {
-          setLoadState("error");
+          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       })
       .finally(() => {
@@ -116,7 +155,7 @@ function useRequestList(history: boolean): RequestList {
     return () => {
       active = false;
     };
-  }, [history, page]);
+  }, [history, page, reloadKey]);
 
   return {
     requests,
@@ -128,10 +167,17 @@ function useRequestList(history: boolean): RequestList {
       setIsLoadingMore(true);
       setPage((current) => current + 1);
     },
+    reload: () => {
+      setPage(1);
+      setReloadKey((key) => key + 1);
+    },
   };
 }
 
+// `label` picks the text: "myRequests.showMoreActive" or "myRequests.showMorePast".
 function ShowMore({ list, label }: { list: RequestList; label: string }) {
+  const { t } = useTranslation();
+
   if (!list.hasMore) {
     return null;
   }
@@ -144,8 +190,8 @@ function ShowMore({ list, label }: { list: RequestList; label: string }) {
       onClick={list.loadMore}
     >
       {list.isLoadingMore
-        ? "Loading…"
-        : `Show more ${label} (${list.total - list.requests.length} left)`}
+        ? t("myRequests.loadingMore")
+        : t(label, { count: list.total - list.requests.length })}
     </button>
   );
 }
@@ -156,8 +202,40 @@ function ShowMore({ list, label }: { list: RequestList; label: string }) {
 // Each is loaded on its own, so an older active request is never pushed out by newer past ones.
 // TODO: link each row to /evaluations/{id} once that page (#507) is merged.
 function MyRequests() {
+  const { t } = useTranslation();
   const active = useRequestList(false);
   const past = useRequestList(true);
+  const [cancelling, setCancelling] = useState<EvaluationRequest | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const closeCancel = useCallback(() => {
+    setCancelling(null);
+    setCancelError("");
+  }, []);
+
+  // A cancelled request moves from the active list to the past one (api-plan §7.1, #595).
+  async function handleCancel() {
+    if (!cancelling) {
+      return;
+    }
+
+    setCancelError("");
+    setIsCancelling(true);
+
+    try {
+      await cancelEvaluationRequest(cancelling.id);
+      setNotice(t("myRequests.cancelled", { project: cancelling.project.name }));
+      setCancelling(null);
+      active.reload();
+      past.reload();
+    } catch (error) {
+      setCancelError(cancelErrorMessage(error));
+    } finally {
+      setIsCancelling(false);
+    }
+  }
 
   const loadState: LoadState =
     active.loadState === "error" || past.loadState === "error"
@@ -169,55 +247,78 @@ function MyRequests() {
 
   return (
     <section className="my-requests" aria-labelledby="my-requests-title">
-      <h2 id="my-requests-title">Your requests</h2>
+      <h2 id="my-requests-title">{t("myRequests.title")}</h2>
+
+      {notice && (
+        <p className="my-requests__notice" role="status">
+          {notice}
+        </p>
+      )}
 
       {loadState === "loading" && (
         <div className="my-requests__list" aria-busy="true">
           {[1, 2].map((placeholder) => (
             <div className="my-requests__skeleton" key={placeholder} />
           ))}
-          <span className="my-requests__sr-only">Loading your requests…</span>
+          <span className="my-requests__sr-only">{t("myRequests.loading")}</span>
         </div>
       )}
 
       {loadState === "error" && (
         <p className="my-requests__error" role="alert">
-          Could not load your requests. Please try again later.
+          {t("myRequests.error")}
         </p>
       )}
 
       {loadState === "ready" && isEmpty && (
-        <p className="my-requests__empty">You haven't requested an evaluation yet.</p>
+        <p className="my-requests__empty">{t("myRequests.empty")}</p>
       )}
 
       {loadState === "ready" && !isEmpty && (
         <>
           <div className="my-requests__group">
-            <h3>Active</h3>
+            <h3>{t("myRequests.active")}</h3>
             {active.requests.length === 0 ? (
-              <p className="my-requests__empty">No active requests.</p>
+              <p className="my-requests__empty">{t("myRequests.noActive")}</p>
             ) : (
               <ul className="my-requests__list">
                 {active.requests.map((request) => (
-                  <RequestRow request={request} key={request.id} />
+                  <RequestRow
+                    request={request}
+                    key={request.id}
+                    onCancel={(chosen) => {
+                      setNotice("");
+                      setCancelling(chosen);
+                    }}
+                  />
                 ))}
               </ul>
             )}
-            <ShowMore list={active} label="active requests" />
+            <ShowMore list={active} label="myRequests.showMoreActive" />
           </div>
 
           {past.requests.length > 0 && (
             <div className="my-requests__group">
-              <h3>Past</h3>
+              <h3>{t("myRequests.past")}</h3>
               <ul className="my-requests__list">
                 {past.requests.map((request) => (
                   <RequestRow request={request} key={request.id} />
                 ))}
               </ul>
-              <ShowMore list={past} label="past requests" />
+              <ShowMore list={past} label="myRequests.showMorePast" />
             </div>
           )}
         </>
+      )}
+
+      {cancelling && (
+        <CancelRequestDialog
+          request={cancelling}
+          isSubmitting={isCancelling}
+          error={cancelError}
+          onConfirm={handleCancel}
+          onClose={closeCancel}
+        />
       )}
     </section>
   );

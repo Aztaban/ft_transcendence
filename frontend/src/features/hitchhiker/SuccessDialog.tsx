@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
 
@@ -9,6 +10,7 @@ interface SuccessDialogProps {
 
 // Confirmation popup from the Figma; closes on a click outside the card or on Escape.
 function SuccessDialog({ children, onClose }: SuccessDialogProps) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,7 +44,7 @@ function SuccessDialog({ children, onClose }: SuccessDialogProps) {
           {children}
         </p>
         <img className="success-dialog__image" src={hitchhikersIcon} alt="" aria-hidden="true" />
-        <p className="success-dialog__hint">Click anywhere to close</p>
+        <p className="success-dialog__hint">{t("common.clickToClose")}</p>
       </div>
     </div>
   );

@@ -1,4 +1,7 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import i18n, { dateLocale } from "../../i18n";
 
 import {
   DEFAULT_DURATION,
@@ -17,13 +20,23 @@ export interface ChosenSlot {
   durationMinutes: number;
 }
 
+// Messages from a 400 `validation_error`, shown under the control they are about.
+export interface SlotFieldErrors {
+  start?: string;
+  duration?: string;
+}
+
 interface SlotPickerProps {
+  // Refreshed by the page while it stays open, so starts that became too soon are disabled.
   now: Date;
   onChange: (slot: ChosenSlot | null) => void;
+  errors?: SlotFieldErrors;
 }
 
 interface Choice {
-  dayIndex: number;
+  // The chosen day at local midnight. Kept as a date, not a position in the list, because the
+  // list moves on when the day changes while the page is open.
+  day: Date;
   hour: number | null;
   minute: number | null;
   duration: number;
@@ -31,14 +44,14 @@ interface Choice {
 
 function dayLabel(day: Date, index: number) {
   if (index === 0) {
-    return "Today";
+    return i18n.t("time.today");
   }
 
   if (index === 1) {
-    return "Tomorrow";
+    return i18n.t("time.tomorrow");
   }
 
-  return day.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  return day.toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" });
 }
 
 function twoDigits(value: number) {
@@ -46,16 +59,17 @@ function twoDigits(value: number) {
 }
 
 // Day, start time (15-minute steps) and duration for POST …/pick-slot/ (api-plan §7.1).
-function SlotPicker({ now, onChange }: SlotPickerProps) {
+function SlotPicker({ now, onChange, errors = {} }: SlotPickerProps) {
+  const { t } = useTranslation();
   const days = useMemo(() => upcomingDays(now), [now]);
-  const [choice, setChoice] = useState<Choice>({
-    dayIndex: 0,
+  const [choice, setChoice] = useState<Choice>(() => ({
+    day: upcomingDays(now)[0],
     hour: null,
     minute: null,
     duration: DEFAULT_DURATION,
-  });
+  }));
 
-  const day = days[choice.dayIndex];
+  const day = choice.day;
 
   function update(patch: Partial<Choice>) {
     const next = { ...choice, ...patch };
@@ -67,7 +81,7 @@ function SlotPicker({ now, onChange }: SlotPickerProps) {
       return;
     }
 
-    const start = slotStart(days[next.dayIndex], next.hour, next.minute);
+    const start = slotStart(next.day, next.hour, next.minute);
 
     onChange(
       isStartAllowed(start, now)
@@ -82,14 +96,14 @@ function SlotPicker({ now, onChange }: SlotPickerProps) {
   return (
     <div className="slot-picker">
       <fieldset className="slot-picker__group">
-        <legend>Day</legend>
+        <legend>{t("pickSlot.day")}</legend>
         <div className="slot-picker__options slot-picker__options--scroll">
           {days.map((option, index) => (
             <button
               className="slot-picker__option"
               type="button"
               key={option.toISOString()}
-              aria-pressed={choice.dayIndex === index}
+              aria-pressed={choice.day.getTime() === option.getTime()}
               disabled={
                 !SLOT_HOURS.some((hour) =>
                   SLOT_MINUTES.some((minute) =>
@@ -97,7 +111,7 @@ function SlotPicker({ now, onChange }: SlotPickerProps) {
                   ),
                 )
               }
-              onClick={() => update({ dayIndex: index, hour: null, minute: null })}
+              onClick={() => update({ day: option, hour: null, minute: null })}
             >
               {dayLabel(option, index)}
             </button>
@@ -105,8 +119,11 @@ function SlotPicker({ now, onChange }: SlotPickerProps) {
         </div>
       </fieldset>
 
-      <fieldset className="slot-picker__group">
-        <legend>Start time</legend>
+      <fieldset
+        className={`slot-picker__group${errors.start ? " slot-picker__group--error" : ""}`}
+        aria-describedby={errors.start ? "slot-start-error" : undefined}
+      >
+        <legend>{t("pickSlot.startTime")}</legend>
         <div className="slot-picker__options">
           {SLOT_HOURS.map((hour) => (
             <button
@@ -138,10 +155,19 @@ function SlotPicker({ now, onChange }: SlotPickerProps) {
             ))}
           </div>
         )}
+
+        {errors.start && (
+          <p id="slot-start-error" className="slot-picker__error">
+            {errors.start}
+          </p>
+        )}
       </fieldset>
 
-      <fieldset className="slot-picker__group">
-        <legend>Duration</legend>
+      <fieldset
+        className={`slot-picker__group${errors.duration ? " slot-picker__group--error" : ""}`}
+        aria-describedby={errors.duration ? "slot-duration-error" : undefined}
+      >
+        <legend>{t("common.duration")}</legend>
         <div className="slot-picker__options">
           {DURATION_OPTIONS.map((duration) => (
             <button
@@ -151,10 +177,16 @@ function SlotPicker({ now, onChange }: SlotPickerProps) {
               aria-pressed={choice.duration === duration}
               onClick={() => update({ duration })}
             >
-              {duration} min
+              {t("time.minutesShort", { count: duration })}
             </button>
           ))}
         </div>
+
+        {errors.duration && (
+          <p id="slot-duration-error" className="slot-picker__error">
+            {errors.duration}
+          </p>
+        )}
       </fieldset>
     </div>
   );

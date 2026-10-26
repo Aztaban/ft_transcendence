@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -11,6 +11,8 @@ import {
 import { makeRequest } from "../features/student/testUtils";
 import { RoleProvider, useRole } from "../store/RoleContext";
 import type { EvaluationRequest } from "../types/evaluation";
+import { LiveContext } from "../websocket/LiveProvider";
+import { FakeSocket, openLiveSocket } from "../websocket/testSocket";
 import PendingPage from "./PendingPage";
 
 vi.mock("../api/evaluationRequests", () => ({
@@ -65,6 +67,8 @@ function renderPage() {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  // The active workspace is kept for the tab; each test starts as a student.
+  sessionStorage.clear();
 });
 
 describe("PendingPage", () => {
@@ -210,5 +214,68 @@ describe("PendingPage", () => {
     expect(
       (screen.getByRole("button", { name: "Cancel push_swap" }) as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+});
+
+describe("PendingPage live", () => {
+  function renderLive() {
+    return render(
+      <MemoryRouter>
+        <LiveContext.Provider value={openLiveSocket()}>
+          <RoleProvider>
+            <PendingPage />
+          </RoleProvider>
+        </LiveContext.Provider>
+      </MemoryRouter>,
+    );
+  }
+
+  afterEach(() => {
+    FakeSocket.reset();
+  });
+
+  it("re-fetches in the background when an evaluation changes", async () => {
+    vi.mocked(listEvaluationRequests)
+      .mockResolvedValueOnce(page([scheduled(1, "push_swap", 26), scheduled(2, "minishell", 50)]))
+      .mockResolvedValueOnce(page([scheduled(1, "push_swap", 26)]));
+
+    renderLive();
+    await screen.findByRole("heading", { name: "minishell" });
+
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.cancelled",
+        data: { id: 2, status: "cancelled" },
+      }),
+    );
+
+    // The cards stay on screen while the new list loads (no loading skeleton).
+    expect(screen.queryByText("Loading evaluations…")).toBeNull();
+    expect(screen.getByRole("heading", { name: "minishell" })).toBeTruthy();
+
+    await vi.waitFor(() => expect(screen.queryByRole("heading", { name: "minishell" })).toBeNull());
+    expect(screen.getByRole("heading", { name: "push_swap" })).toBeTruthy();
+    expect(listEvaluationRequests).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the evaluations when a background refresh fails", async () => {
+    vi.mocked(listEvaluationRequests)
+      .mockResolvedValueOnce(page([scheduled(1, "push_swap", 26)]))
+      .mockRejectedValueOnce(new Error("network"));
+
+    renderLive();
+    await screen.findByRole("heading", { name: "push_swap" });
+
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.updated",
+        data: { id: 1, status: "confirmed" },
+      }),
+    );
+
+    await vi.waitFor(() => expect(listEvaluationRequests).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+    expect(screen.getByRole("heading", { name: "push_swap" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

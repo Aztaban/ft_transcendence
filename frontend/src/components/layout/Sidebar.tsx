@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink, useNavigate } from "react-router";
 
 import logo42 from "../../assets/figma/42.svg";
@@ -21,53 +22,61 @@ import { useRole, type AppRole } from "../../store/RoleContext";
 import { canReviewEligibility } from "../../utils/permissions";
 
 interface NavigationItem {
-  label: string;
+  // A key of the "nav" texts in src/i18n/locales.
+  labelKey: string;
   to: string;
   icon: string;
 }
 
 const navigationByRole: Record<AppRole, NavigationItem[]> = {
   STUDENT: [
-    { label: "Home", to: "/", icon: homeIcon },
-    { label: "Request", to: "/requests", icon: requestIcon },
-    { label: "Pending", to: "/pending", icon: pendingIcon },
-    { label: "History", to: "/history", icon: historyIcon },
-    { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
-    { label: "Profile", to: "/profile", icon: profileIcon },
-    { label: "Student Council", to: "/council", icon: councilIcon },
+    { labelKey: "nav.home", to: "/", icon: homeIcon },
+    { labelKey: "nav.request", to: "/requests", icon: requestIcon },
+    { labelKey: "nav.pending", to: "/pending", icon: pendingIcon },
+    { labelKey: "nav.history", to: "/history", icon: historyIcon },
+    { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
+    { labelKey: "nav.profile", to: "/profile", icon: profileIcon },
+    { labelKey: "nav.studentCouncil", to: "/council", icon: councilIcon },
   ],
 
   HITCHHIKER: [
-    { label: "Home", to: "/", icon: homeIcon },
-    { label: "Requests", to: "/requests", icon: requestIcon },
-    { label: "Pending", to: "/pending", icon: pendingIcon },
-    { label: "History", to: "/history", icon: historyIcon },
-    { label: "Student Council", to: "/council", icon: councilIcon },
-    { label: "Profile", to: "/profile", icon: profileIcon },
+    { labelKey: "nav.home", to: "/", icon: homeIcon },
+    { labelKey: "nav.requests", to: "/requests", icon: requestIcon },
+    { labelKey: "nav.pending", to: "/pending", icon: pendingIcon },
+    { labelKey: "nav.history", to: "/history", icon: historyIcon },
+    { labelKey: "nav.studentCouncil", to: "/council", icon: councilIcon },
+    { labelKey: "nav.profile", to: "/profile", icon: profileIcon },
   ],
 
   COUNCIL: [
-    { label: "Home", to: "/", icon: homeIcon },
-    { label: "Messages", to: "/council/messages", icon: councilIcon },
-    { label: "History", to: "/council/history", icon: historyIcon },
-    { label: "Hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
-    { label: "Council Profile", to: "/council", icon: profileIcon },
+    { labelKey: "nav.home", to: "/", icon: homeIcon },
+    { labelKey: "nav.messages", to: "/council/messages", icon: councilIcon },
+    { labelKey: "nav.history", to: "/council/history", icon: historyIcon },
+    { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
+    { labelKey: "nav.councilProfile", to: "/council", icon: profileIcon },
   ],
 };
 
 const eligibilityItem: NavigationItem = {
-  label: "Eligibility",
+  labelKey: "nav.eligibility",
   to: "/eligibility-requests",
   icon: hitchhikersIcon,
 };
 
-function Sidebar() {
+interface SidebarProps {
+  // Small screens only: the sidebar is a drawer that the top bar opens.
+  isOpen?: boolean;
+}
+
+function Sidebar({ isOpen = false }: SidebarProps) {
+  const { t } = useTranslation();
   const { activeRole, setActiveRole, availableRoles } = useRole();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
 
   // Head Tutors and Admins also review eligibility requests in the Hitchhiker workspace.
   const { roles: userRoles } = useCurrentUser();
@@ -75,6 +84,13 @@ function Sidebar() {
     activeRole === "HITCHHIKER" && canReviewEligibility(userRoles)
       ? [...navigationByRole.HITCHHIKER, eligibilityItem]
       : navigationByRole[activeRole];
+
+  // Opening the drawer moves the focus to its first link.
+  useEffect(() => {
+    if (isOpen) {
+      navRef.current?.querySelector("a")?.focus();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!logoutError) {
@@ -108,14 +124,17 @@ function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
+    <aside
+      id="app-sidebar"
+      className={["sidebar", isOpen ? "sidebar--open" : ""].filter(Boolean).join(" ")}
+    >
       <div className="sidebar__brand">
         <img className="sidebar__brand-logo" src={logo42} alt="42" />
         <span className="sidebar__brand-name">EVALS</span>
       </div>
 
       <div className="sidebar__middle">
-        <nav className="sidebar__nav" aria-label="Primary navigation">
+        <nav ref={navRef} className="sidebar__nav" aria-label={t("nav.primary")}>
           {visibleNavigation.map((item) => (
             <NavLink
               key={item.to}
@@ -131,7 +150,7 @@ function Sidebar() {
                 <img src={item.icon} alt="" aria-hidden="true" />
               </span>
 
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </NavLink>
           ))}
         </nav>
@@ -144,7 +163,7 @@ function Sidebar() {
             aria-expanded={isRoleMenuOpen}
             onClick={() => setIsRoleMenuOpen((open) => !open)}
           >
-            <span>{activeRole}</span>
+            <span>{t(`workspace.${activeRole}`)}</span>
 
             <img
               className={[
@@ -160,7 +179,7 @@ function Sidebar() {
           </button>
 
           {isRoleMenuOpen && (
-            <div className="sidebar__role-menu" role="listbox" aria-label="Select role">
+            <div className="sidebar__role-menu" role="listbox" aria-label={t("workspace.select")}>
               {availableRoles.map((role) => (
                 <button
                   key={role}
@@ -175,7 +194,7 @@ function Sidebar() {
                   aria-selected={activeRole === role}
                   onClick={() => selectRole(role)}
                 >
-                  {role}
+                  {t(`workspace.${role}`)}
                 </button>
               ))}
             </div>
@@ -192,22 +211,22 @@ function Sidebar() {
           onClick={() => void handleLogout()}
           disabled={isLoggingOut}
         >
-          <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
+          <span>{isLoggingOut ? t("sidebar.loggingOut") : t("sidebar.logout")}</span>
           <img src={logoutIcon} alt="" aria-hidden="true" />
         </button>
 
         {logoutError && (
           <div className="sidebar__logout-toast" role="alert">
-            Logout failed. Please try again.
+            {t("sidebar.logoutFailed")}
           </div>
         )}
 
-        <div className="sidebar__external" aria-label="External tools">
+        <div className="sidebar__external" aria-label={t("sidebar.externalTools")}>
           <a
             href="https://profile.intra.42.fr/"
             target="_blank"
             rel="noreferrer"
-            aria-label="Open 42 Intra"
+            aria-label={t("sidebar.openIntra")}
           >
             <img className="sidebar__external-intra" src={intraLogo} alt="42 Intra" />
           </a>
@@ -216,12 +235,17 @@ function Sidebar() {
             href="https://www.notion.so/"
             target="_blank"
             rel="noreferrer"
-            aria-label="Open Notion"
+            aria-label={t("sidebar.openNotion")}
           >
             <img className="sidebar__external-notion" src={notionLogo} alt="Notion" />
           </a>
 
-          <a href="https://slack.com/" target="_blank" rel="noreferrer" aria-label="Open Slack">
+          <a
+            href="https://slack.com/"
+            target="_blank"
+            rel="noreferrer"
+            aria-label={t("sidebar.openSlack")}
+          >
             <img className="sidebar__external-slack" src={slackLogo} alt="Slack" />
           </a>
         </div>

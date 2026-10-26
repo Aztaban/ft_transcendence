@@ -5,6 +5,8 @@ interface ScheduledEvaluationsProps {
   requests: EvaluationRequest[];
   // Who is looking: a student sees the Hitchhiker, a Hitchhiker sees the student.
   viewer: "student" | "hitchhiker";
+  // True during the first load: a skeleton instead of the empty state (#258).
+  isLoading?: boolean;
 }
 
 const texts = {
@@ -19,7 +21,7 @@ const texts = {
 };
 
 // Confirmed evaluations whose slot has not ended yet, for both dashboards (#209, #215).
-function ScheduledEvaluations({ requests, viewer }: ScheduledEvaluationsProps) {
+function ScheduledEvaluations({ requests, viewer, isLoading = false }: ScheduledEvaluationsProps) {
   const scheduled = requests.filter(
     (request) => request.status === "confirmed" && !request.is_history,
   );
@@ -29,7 +31,13 @@ function ScheduledEvaluations({ requests, viewer }: ScheduledEvaluationsProps) {
     <section className="dashboard__section dashboard__section--blue" aria-labelledby={titleId}>
       <h2 id={titleId}>{texts[viewer].title}</h2>
 
-      {scheduled.length === 0 ? (
+      {isLoading ? (
+        <div className="dashboard-requests" aria-busy="true">
+          <div className="dashboard-requests__skeleton" />
+          <div className="dashboard-requests__skeleton" />
+          <span className="dashboard-requests__sr-only">Loading scheduled evaluations…</span>
+        </div>
+      ) : scheduled.length === 0 ? (
         <div className="dashboard-empty">
           <div className="dashboard-empty__history-mark" aria-hidden="true">
             —

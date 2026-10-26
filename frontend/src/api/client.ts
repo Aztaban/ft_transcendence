@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 export interface ApiErrorFields {
   [field: string]: string[];
 }
@@ -58,8 +60,22 @@ async function getCsrfToken(): Promise<string> {
   return csrfToken;
 }
 
+// Called when an API answers 401 `not_authenticated`: the session ended on the server (it
+// expired, or the user logged out in another tab). The auth endpoints are left out: they answer
+// for the login form itself.
+let onUnauthorized: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorized = handler;
+}
+
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
+
+  // The backend answers its messages in this language (api-plan §5.5).
+  if (!headers.has("Accept-Language")) {
+    headers.set("Accept-Language", i18n.language || "en");
+  }
 
   if (!headers.has("Accept")) {
     headers.set("Accept", "application/json");
@@ -86,6 +102,10 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   }
 
   if (!response.ok) {
+    if (response.status === 401 && !path.startsWith("/api/v1/auth/")) {
+      onUnauthorized?.();
+    }
+
     const errorBody = body as ApiErrorPayload | undefined;
     const backendError = errorBody?.error;
 

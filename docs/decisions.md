@@ -16,9 +16,9 @@ I know MySQL well.
 
 When an admin removes someone's Tutor role, it takes effect on their very next click. With tokens they'd keep their access until the token expired.
 
-### 4. Two tutors can never claim the same slot
+### 4. Two tutors can never pick the same request
 
-The database itself has a uniqueness rule on the slot. Even if our code has a bug, the second claim is rejected by the database. That tutor gets a clear "this time is no longer available."
+Picking is one database update that only succeeds while the request is still `pending`. When two tutors press "pick" at the same moment, the database lets exactly one of them through; the other gets a clear "someone else was faster" (schema §4.2).
 
 ### 5. Real-time updates
 
@@ -36,11 +36,11 @@ The file goes into a folder; a database row remembers who owns it and who may se
 
 ### 8. Background jobs (Celery)
 
-Some work is too slow to make a user wait for it, like building a data export. Other work has no user at all — a clock decides it's time to expire old requests.
+Some work has no user at all: a clock decides it's time to expire old requests or delete old notifications (schema §9).
 
 ### 9. How frontend and backend agree
 
-They never call each other's code. They agree on a **shape of JSON**, written down once as a TypeScript type. Automated checks fail the build if the two sides drift apart.
+They never call each other's code. They agree on a **shape of JSON**, written down once in the API Plan (§8). The frontend's TypeScript types copy it field for field and are checked in review; generating them from the OpenAPI schema and failing CI on drift is the goal (api-plan §5.10).
 
 ### 10. One command to start everything
 
