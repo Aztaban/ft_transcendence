@@ -35,10 +35,6 @@ function submitErrorMessage(error: unknown) {
       return "You already have an active request for this project.";
     }
 
-    if (error.code === "not_authenticated") {
-      return "Your session has expired. Please log in again.";
-    }
-
     return error.fields?.project_id?.[0] ?? error.fields?.note?.[0] ?? error.message;
   }
 

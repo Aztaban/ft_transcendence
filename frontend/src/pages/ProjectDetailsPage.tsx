@@ -1,29 +1,23 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useParams } from "react-router";
+import { Link, useParams } from "react-router";
 
 import { ApiError } from "../api/client";
 import { getProject } from "../api/projects";
 import ProjectOverview, { projectInitials } from "../features/projects/ProjectOverview";
-import { useAuth } from "../store/AuthContext";
 import type { Project } from "../types/project";
 import "../styles/project-details.css";
 
-type LoadState = "loading" | "ready" | "not-found" | "error" | "logged-out";
+type LoadState = "loading" | "ready" | "not-found" | "error";
 
 // /projects/{slug}: a project's topics and info, from GET /api/v1/projects/{slug}/
-// (api-plan §8.6, §10.3), #168. The endpoint needs a session, so it is only called once the
-// session check says the user is logged in; otherwise the user goes to the login page.
+// (api-plan §8.6, §10.3), #168. Logged-out users never get here: the app sends them to the
+// login page first (#328).
 function ProjectDetailsPage() {
   const { slug = "" } = useParams();
-  const { isAuthenticated, isLoading: isSessionLoading } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
 
   useEffect(() => {
-    if (isSessionLoading || !isAuthenticated) {
-      return;
-    }
-
     let active = true;
 
     setLoadState("loading");
@@ -35,14 +29,7 @@ function ProjectDetailsPage() {
         }
       })
       .catch((error: unknown) => {
-        if (!active) {
-          return;
-        }
-
-        if (error instanceof ApiError && error.status === 401) {
-          // The session expired after the check (§5.6 `not_authenticated`).
-          setLoadState("logged-out");
-        } else {
+        if (active) {
           setLoadState(error instanceof ApiError && error.status === 404 ? "not-found" : "error");
         }
       });
@@ -50,11 +37,7 @@ function ProjectDetailsPage() {
     return () => {
       active = false;
     };
-  }, [slug, isSessionLoading, isAuthenticated]);
-
-  if (!isSessionLoading && (!isAuthenticated || loadState === "logged-out")) {
-    return <Navigate to="/login" replace />;
-  }
+  }, [slug]);
 
   return (
     <section className="project-details">
