@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import i18n from "../../i18n";
 import { RoleProvider } from "../../store/RoleContext";
 
 const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
@@ -108,6 +109,40 @@ describe("Sidebar role switcher", () => {
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
       "STUDENT",
       "COUNCIL",
+    ]);
+  });
+});
+
+describe("Sidebar language", () => {
+  test("shows the navigation in the chosen language", async () => {
+    currentUser.roles = ["student", "sc_member"];
+    currentUser.isLoaded = true;
+    await i18n.changeLanguage("cs");
+
+    renderSidebar();
+
+    const navigation = screen.getByRole("navigation", { name: "Hlavní navigace" });
+
+    expect(
+      within(navigation)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual([
+      "Domů",
+      "Žádost",
+      "Čekající",
+      "Historie",
+      "Hitchhikeři",
+      "Profil",
+      "Studentská rada",
+    ]);
+    expect(screen.getByRole("button", { name: "Odhlásit se" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "STUDENT",
+      "RADA",
     ]);
   });
 });
