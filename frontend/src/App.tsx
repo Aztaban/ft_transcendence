@@ -1,4 +1,6 @@
-import { Route, Routes } from "react-router";
+import { useEffect } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router";
+
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
@@ -17,7 +19,9 @@ import ProfilePage from "./pages/ProfilePage";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 import RegisterPage from "./pages/RegisterPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
+import { useAuth } from "./store/AuthContext";
 import { useRole } from "./store/RoleContext";
+import { takeReturnPath } from "./utils/loginReturn";
 import { routePermissions } from "./utils/permissions";
 
 // /requests by role: a student creates a request, a Hitchhiker sees the open requests to pick.
@@ -27,9 +31,40 @@ function RequestsRoute() {
   return activeRole === "HITCHHIKER" ? <HitchhikerRequestsPage /> : <CreateRequestPage />;
 }
 
+// Back from the 42 login, which always lands on "/" (api-plan §10.1): opens the page the user
+// wanted before logging in, kept by the Login page (#328).
+function ReturnAfterLogin() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const path = takeReturnPath();
+
+    if (path) {
+      navigate(path, { replace: true });
+    }
+  }, [navigate]);
+
+  return null;
+}
+
+// Every page except login and registration needs a session (#328). Nothing is rendered, and so
+// no API is called, until the session check has answered; logged out, the user goes to the login
+// page, which brings them back here afterwards.
 function AuthenticatedApp() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
   return (
     <BaseLayout>
+      <ReturnAfterLogin />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route

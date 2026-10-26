@@ -124,7 +124,6 @@
     "howConfirmText": "Acepta el horario o recházalo para esperar otro.",
     "tipText": "Abre «Detalles» en un proyecto para ver sus temas y sobre qué te evaluarán.",
     "errorActiveExists": "Ya tienes una solicitud activa para este proyecto.",
-    "errorSessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
     "errorGeneric": "No se pudo enviar tu solicitud. Inténtalo de nuevo.",
     "success": "¡Tu solicitud está publicada y esperando a un <strong>HITCHHIKER!</strong>"
   },

@@ -121,7 +121,6 @@
     "howConfirmText": "Accept the time, or decline it to wait for another one.",
     "tipText": "Open “Details” on a project to see its topics and what you will be tested on.",
     "errorActiveExists": "You already have an active request for this project.",
-    "errorSessionExpired": "Your session has expired. Please log in again.",
     "errorGeneric": "Could not send your request. Please try again.",
     "success": "Your request is live and waiting for a <strong>HITCHHIKER!</strong>"
   },

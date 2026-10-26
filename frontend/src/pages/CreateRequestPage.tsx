@@ -33,10 +33,6 @@ function submitErrorMessage(error: unknown) {
       return i18n.t("createRequest.errorActiveExists");
     }
 
-    if (error.code === "not_authenticated") {
-      return i18n.t("createRequest.errorSessionExpired");
-    }
-
     return error.fields?.project_id?.[0] ?? error.fields?.note?.[0] ?? error.message;
   }
 

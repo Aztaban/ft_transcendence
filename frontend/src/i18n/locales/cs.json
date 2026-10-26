@@ -127,7 +127,6 @@
     "howConfirmText": "Termín přijměte, nebo ho odmítněte a počkejte na jiný.",
     "tipText": "U projektu otevřete „Detaily“ a uvidíte jeho témata a z čeho budete zkoušeni.",
     "errorActiveExists": "Pro tento projekt už máte aktivní žádost.",
-    "errorSessionExpired": "Vaše přihlášení vypršelo. Přihlaste se prosím znovu.",
     "errorGeneric": "Žádost se nepodařilo odeslat. Zkuste to prosím znovu.",
     "success": "Vaše žádost je venku a čeká na <strong>HITCHHIKERA!</strong>"
   },
