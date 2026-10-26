@@ -23,8 +23,16 @@ describe("ProjectOverview", () => {
     expect(screen.getByText("Algorithm choice")).toBeTruthy();
   });
 
+  it("shows a new core project from its subject", () => {
+    render(<ProjectOverview project={project("fly-in", "Fly-In")} />);
+
+    expect(screen.getByText("Pathfinding", { selector: "li" })).toBeTruthy();
+    expect(screen.getAllByText("12.5%")).toHaveLength(8);
+    expect(screen.getByText("Turn count against the targets")).toBeTruthy();
+  });
+
   it("says when the topics of a project haven't been added yet", () => {
-    render(<ProjectOverview project={project("codexion", "Codexion")} />);
+    render(<ProjectOverview project={project("libft", "Libft")} />);
 
     expect(screen.getByText("Topics for this project haven't been added yet.")).toBeTruthy();
     expect(screen.getByText("Not added yet.")).toBeTruthy();
@@ -41,5 +49,14 @@ describe("topicIcon", () => {
     expect(topicIcon("Error handling")).toBe(topicIcon("Firewall"));
     expect(topicIcon("Stacks")).not.toBe(topicIcon("Error handling"));
     expect(topicIcon("Something new")).toBe(topicIcon("Another thing"));
+  });
+
+  it("has a real icon for every topic of every project", async () => {
+    const { topicIcon } = await import("./topicIcons");
+    const { projectContent } = await import("./projectContent");
+    const fallback = topicIcon("Something new");
+    const topics = Object.values(projectContent).flatMap((content) => content.topics);
+
+    expect(topics.filter((topic) => topicIcon(topic) === fallback)).toEqual([]);
   });
 });
