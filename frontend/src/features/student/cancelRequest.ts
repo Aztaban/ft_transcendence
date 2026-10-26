@@ -1,4 +1,5 @@
 import { ApiError } from "../../api/client";
+import i18n from "../../i18n";
 import type { EvaluationRequest } from "../../types/evaluation";
 
 const CANCELLABLE = ["pending", "awaiting_confirmation", "confirmed"];
@@ -16,19 +17,19 @@ export function canCancel(request: EvaluationRequest, now = new Date()) {
 export function cancelErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.code === "evaluation_already_started") {
-      return "This evaluation has already started, so it can't be cancelled.";
+      return i18n.t("cancelRequest.errorStarted");
     }
 
     if (error.code === "invalid_state_transition") {
-      return "This request can no longer be cancelled.";
+      return i18n.t("cancelRequest.errorInvalidState");
     }
 
     if (error.status === 404) {
-      return "This request no longer exists.";
+      return i18n.t("cancelRequest.errorGone");
     }
 
     return error.message;
   }
 
-  return "Could not cancel the request. Please try again.";
+  return i18n.t("cancelRequest.errorGeneric");
 }

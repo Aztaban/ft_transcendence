@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import { ApiError } from "../api/client";
 import { createEvaluationRequest } from "../api/evaluationRequests";
+import i18n from "../i18n";
 import ProjectSelect from "../features/projects/ProjectSelect";
 import InfoNotice from "../features/requests/InfoNotice";
 import RequestSuccessDialog from "../features/requests/RequestSuccessDialog";
@@ -13,18 +15,14 @@ import "../styles/create-request.css";
 // TODO(contract): the Figma flow has a middle step "Add your slots" (student availability).
 // api-plan §7.1 / §10.4 have no student availability yet, so it is left out until the team decides.
 const steps = [
-  { id: "project", title: "Select Project" },
-  { id: "confirm", title: "Confirm your request" },
+  { id: "project", titleKey: "createRequest.stepProject" },
+  { id: "confirm", titleKey: "createRequest.stepConfirm" },
 ] as const;
 
 type StepId = (typeof steps)[number]["id"];
 
 // The request lifecycle from the student's side (api-plan §7.1).
-const howItWorks = [
-  { title: "Choose a project", text: "Pick the project and add a note if you like." },
-  { title: "A Hitchhiker proposes a time", text: "An eligible Hitchhiker picks your request." },
-  { title: "You confirm", text: "Accept the time, or decline it to wait for another one." },
-];
+const howItWorks = ["Project", "Propose", "Confirm"];
 
 // api-plan §10.4: `note` is optional, up to 500 characters.
 const NOTE_MAX_LENGTH = 500;
@@ -32,17 +30,17 @@ const NOTE_MAX_LENGTH = 500;
 function submitErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.code === "active_request_exists") {
-      return "You already have an active request for this project.";
+      return i18n.t("createRequest.errorActiveExists");
     }
 
     if (error.code === "not_authenticated") {
-      return "Your session has expired. Please log in again.";
+      return i18n.t("createRequest.errorSessionExpired");
     }
 
     return error.fields?.project_id?.[0] ?? error.fields?.note?.[0] ?? error.message;
   }
 
-  return "Could not send your request. Please try again.";
+  return i18n.t("createRequest.errorGeneric");
 }
 
 // The chosen project and note are kept for this browser tab, so opening a project's "Details"
@@ -81,6 +79,7 @@ function writeDraft(draft: Draft | null) {
 }
 
 function CreateRequestPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [stepId, setStepId] = useState<StepId>("project");
   const [project, setProject] = useState<ProjectRef | null>(() => readDraft().project);
@@ -135,7 +134,7 @@ function CreateRequestPage() {
           <button
             className="create-request__back"
             type="button"
-            aria-label="Back to the previous step"
+            aria-label={t("createRequest.back")}
             disabled={isSubmitting}
             onClick={() => goToStep(steps[stepIndex - 1].id)}
           >
@@ -144,9 +143,15 @@ function CreateRequestPage() {
         )}
 
         <div>
-          <h1>{stepId === "confirm" ? "Confirmation" : "Create New Request"}</h1>
+          <h1>
+            {stepId === "confirm" ? t("createRequest.confirmTitle") : t("createRequest.title")}
+          </h1>
           <p className="create-request__step">
-            Step {stepIndex + 1} / {steps.length} · {step.title}
+            {t("createRequest.step", {
+              current: stepIndex + 1,
+              total: steps.length,
+              title: t(step.titleKey),
+            })}
           </p>
         </div>
       </header>
@@ -154,7 +159,7 @@ function CreateRequestPage() {
       <div
         className="create-request__progress"
         role="progressbar"
-        aria-label="Request progress"
+        aria-label={t("createRequest.progress")}
         aria-valuemin={1}
         aria-valuemax={steps.length}
         aria-valuenow={stepIndex + 1}
@@ -174,14 +179,14 @@ function CreateRequestPage() {
 
                 <div className="create-request__note">
                   <label htmlFor="request-note">
-                    Note for the Hitchhiker <span>(optional)</span>
+                    {t("createRequest.noteLabel")} <span>{t("createRequest.optional")}</span>
                   </label>
                   <textarea
                     id="request-note"
                     value={note}
                     maxLength={NOTE_MAX_LENGTH}
                     rows={3}
-                    placeholder="e.g. I'm free after 18:00 until 21:00 on Friday and Saturday."
+                    placeholder={t("createRequest.notePlaceholder")}
                     onChange={(event) => setNote(event.target.value)}
                   />
                   <span className="create-request__note-count" aria-live="polite">
@@ -191,14 +196,8 @@ function CreateRequestPage() {
               </div>
 
               <InfoNotice>
-                <p>
-                  Before requesting your evaluation, make sure the Hitchhiker evaluation is the last
-                  evaluation, after receiving two successful peer evaluations.
-                </p>
-                <p>
-                  If you request the Hitchhiker evaluation before meeting this requirement, your
-                  evaluation will fail immediately.
-                </p>
+                <p>{t("createRequest.lastEvaluation")}</p>
+                <p>{t("createRequest.failWarning")}</p>
               </InfoNotice>
 
               <div className="create-request__actions">
@@ -208,7 +207,7 @@ function CreateRequestPage() {
                   disabled={!project}
                   onClick={() => setStepId("confirm")}
                 >
-                  Next <span aria-hidden="true">→</span>
+                  {t("common.next")} <span aria-hidden="true">→</span>
                 </button>
               </div>
             </>
@@ -223,10 +222,10 @@ function CreateRequestPage() {
                   </span>
                   <h2>{project.name}</h2>
                 </div>
-                <p>A Hitchhiker who can evaluate this project will propose a time slot.</p>
+                <p>{t("createRequest.summary")}</p>
                 {note.trim() && (
                   <blockquote className="create-request__summary-note">
-                    <span>Your note</span>
+                    <span>{t("createRequest.yourNote")}</span>
                     <p>{note.trim()}</p>
                   </blockquote>
                 )}
@@ -236,12 +235,12 @@ function CreateRequestPage() {
                   disabled={isSubmitting}
                   onClick={() => goToStep("project")}
                 >
-                  Edit
+                  {t("common.edit")}
                 </button>
               </article>
 
               <InfoNotice>
-                <p>Your request will be visible to Hitchhikers who can evaluate this project.</p>
+                <p>{t("createRequest.visible")}</p>
               </InfoNotice>
 
               {submitError && (
@@ -257,7 +256,8 @@ function CreateRequestPage() {
                   disabled={isSubmitting}
                   onClick={handleSubmit}
                 >
-                  {isSubmitting ? "Sending…" : "Submit"} <span aria-hidden="true">✓</span>
+                  {isSubmitting ? t("common.sending") : t("common.submit")}{" "}
+                  <span aria-hidden="true">✓</span>
                 </button>
               </div>
             </>
@@ -266,20 +266,20 @@ function CreateRequestPage() {
 
         <aside className="create-request__aside">
           <section className="create-request__panel">
-            <h2>How it works</h2>
+            <h2>{t("common.howItWorks")}</h2>
             <ol className="create-request__steps">
               {howItWorks.map((item) => (
-                <li key={item.title}>
-                  <strong>{item.title}</strong>
-                  <span>{item.text}</span>
+                <li key={item}>
+                  <strong>{t(`createRequest.how${item}Title`)}</strong>
+                  <span>{t(`createRequest.how${item}Text`)}</span>
                 </li>
               ))}
             </ol>
           </section>
 
           <section className="create-request__panel create-request__panel--tip">
-            <h2>Tip</h2>
-            <p>Open “Details” on a project to see its topics and what you will be tested on.</p>
+            <h2>{t("common.tip")}</h2>
+            <p>{t("createRequest.tipText")}</p>
           </section>
         </aside>
       </div>
