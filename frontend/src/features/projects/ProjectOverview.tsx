@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import type { ProjectRef } from "../../types/project";
 import { projectContent } from "./projectContent";
 import TopicsChart from "./TopicsChart";
@@ -19,6 +21,7 @@ export function projectInitials(name: string) {
 // "Upcoming Evaluation Details"). Shared by /projects/{slug} (#168) and the scheduled
 // evaluation preview. Topics, tested items, duration and subject come from projectContent.ts.
 function ProjectOverview({ project }: ProjectOverviewProps) {
+  const { t } = useTranslation();
   const content = projectContent[project.slug];
   const id = (part: string) => `project-${project.slug}-${part}`;
 
@@ -28,27 +31,27 @@ function ProjectOverview({ project }: ProjectOverviewProps) {
         {content ? (
           <TopicsChart projectName={project.name} topics={content.topics} />
         ) : (
-          <p className="project-details__empty">Topics for this project haven't been added yet.</p>
+          <p className="project-details__empty">{t("project.noTopics")}</p>
         )}
       </section>
 
       <div className="project-details__grid">
         <section className="project-details__card" aria-labelledby={id("info")}>
-          <h2 id={id("info")}>Project Info</h2>
+          <h2 id={id("info")}>{t("project.info")}</h2>
           <dl className="project-details__info">
             {content?.durationMinutes && (
               <div>
-                <dt>Estimated duration</dt>
-                <dd>{content.durationMinutes} min</dd>
+                <dt>{t("project.estimatedDuration")}</dt>
+                <dd>{t("time.minutesShort", { count: content.durationMinutes })}</dd>
               </div>
             )}
             <div>
-              <dt>On campus</dt>
+              <dt>{t("project.onCampus")}</dt>
               <dd>42 Prague</dd>
             </div>
             <div>
-              <dt>Evaluated by</dt>
-              <dd>An eligible Hitchhiker</dd>
+              <dt>{t("project.evaluatedBy")}</dt>
+              <dd>{t("project.evaluatedByValue")}</dd>
             </div>
           </dl>
           {content?.subjectUrl && (
@@ -58,7 +61,7 @@ function ProjectOverview({ project }: ProjectOverviewProps) {
               target="_blank"
               rel="noreferrer"
             >
-              Subject PDF <span aria-hidden="true">↗</span>
+              {t("project.subject")} <span aria-hidden="true">↗</span>
             </a>
           )}
         </section>
@@ -67,7 +70,7 @@ function ProjectOverview({ project }: ProjectOverviewProps) {
           className="project-details__card project-details__card--tested"
           aria-labelledby={id("tested")}
         >
-          <h2 id={id("tested")}>What will you be tested on?</h2>
+          <h2 id={id("tested")}>{t("project.tested")}</h2>
           {content ? (
             <ul className="project-details__tested">
               {content.tested.map((item) => (
@@ -75,7 +78,7 @@ function ProjectOverview({ project }: ProjectOverviewProps) {
               ))}
             </ul>
           ) : (
-            <p className="project-details__empty">Not added yet.</p>
+            <p className="project-details__empty">{t("project.notAdded")}</p>
           )}
         </section>
       </div>

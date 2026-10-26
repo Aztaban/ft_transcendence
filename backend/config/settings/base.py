@@ -163,6 +163,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "user": "1000/hour",
         "auth": "10/minute",
+        "people_search": "60/minute",
         "sc_message_send": "10/hour",
     },
     # Nginx is the one proxy in front of Django: the client IP is the last

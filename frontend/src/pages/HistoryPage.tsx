@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { listEvaluationRequests, type EvaluationResultFilter } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
 import { projectInitials } from "../features/projects/ProjectOverview";
+import i18n, { dateLocale } from "../i18n";
 import { useRole } from "../store/RoleContext";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
 import type { ProjectRef } from "../types/project";
@@ -25,68 +27,78 @@ type HistoryFilter = "all" | "passed" | "failed" | "pending" | "cancelled" | "ex
 // (`status=confirmed&result=none`).
 const historyFilters: {
   value: HistoryFilter;
-  label: string;
+  // A key of the "history" or "status" texts.
+  labelKey: string;
   status?: EvaluationRequestStatus[];
   result?: EvaluationResultFilter[];
 }[] = [
-  { value: "all", label: "All" },
-  { value: "passed", label: "Passed", status: ["confirmed"], result: ["passed"] },
-  { value: "failed", label: "Failed", status: ["confirmed"], result: ["failed"] },
-  { value: "pending", label: "Result pending", status: ["confirmed"], result: ["none"] },
-  { value: "cancelled", label: "Cancelled", status: ["cancelled"] },
-  { value: "expired", label: "Expired", status: ["expired"] },
+  { value: "all", labelKey: "history.all" },
+  { value: "passed", labelKey: "status.passed", status: ["confirmed"], result: ["passed"] },
+  { value: "failed", labelKey: "status.failed", status: ["confirmed"], result: ["failed"] },
+  {
+    value: "pending",
+    labelKey: "status.resultPending",
+    status: ["confirmed"],
+    result: ["none"],
+  },
+  { value: "cancelled", labelKey: "status.cancelled", status: ["cancelled"] },
+  { value: "expired", labelKey: "status.expired", status: ["expired"] },
 ];
 
 const dateFormat: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" };
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString(undefined, dateFormat);
+  return new Date(date).toLocaleDateString(dateLocale(), dateFormat);
 }
 
 // Results are entered manually by the team in the Django admin; until then `result` is null.
 function outcome(request: EvaluationRequest): { label: string; tone: Tone } {
   if (request.status === "cancelled") {
-    return { label: "Cancelled", tone: "grey" };
+    return { label: i18n.t("status.cancelled"), tone: "grey" };
   }
 
   if (request.status === "expired") {
-    return { label: "Expired", tone: "grey" };
+    return { label: i18n.t("status.expired"), tone: "grey" };
   }
 
   if (request.result === "passed") {
-    return { label: "Passed", tone: "green" };
+    return { label: i18n.t("status.passed"), tone: "green" };
   }
 
   if (request.result === "failed") {
-    return { label: "Failed", tone: "red" };
+    return { label: i18n.t("status.failed"), tone: "red" };
   }
 
-  return { label: "Result pending", tone: "violet" };
+  return { label: i18n.t("status.resultPending"), tone: "violet" };
 }
 
 function otherPerson(request: EvaluationRequest, viewer: Viewer) {
   if (viewer === "student") {
-    return request.picked_by ? `Hitchhiker: ${request.picked_by.display_name}` : null;
+    return request.picked_by
+      ? i18n.t("history.hitchhiker", { name: request.picked_by.display_name })
+      : null;
   }
 
   // `student` can be null when the API hides it (R15, api-plan §8.7).
-  return request.student ? `Student: ${request.student.display_name}` : null;
+  return request.student ? i18n.t("history.student", { name: request.student.display_name }) : null;
 }
 
 // What happened and when, e.g. "Cancelled by dkolarov on 12 Oct 2026".
 function endNote(request: EvaluationRequest) {
   if (request.status === "cancelled" && request.cancelled_at) {
-    const by = request.cancelled_by ? ` by ${request.cancelled_by.display_name}` : "";
+    const date = formatDate(request.cancelled_at);
 
-    return `Cancelled${by} on ${formatDate(request.cancelled_at)}`;
+    return request.cancelled_by
+      ? i18n.t("history.cancelledBy", { name: request.cancelled_by.display_name, date })
+      : i18n.t("history.cancelledOn", { date });
   }
 
   if (request.status === "expired" && request.expired_at) {
-    return `Expired on ${formatDate(request.expired_at)}`;
+    return i18n.t("history.expiredOn", { date: formatDate(request.expired_at) });
   }
 
   if (request.completed_at) {
-    return `Result recorded on ${formatDate(request.completed_at)}`;
+    return i18n.t("history.resultOn", { date: formatDate(request.completed_at) });
   }
 
   return null;
@@ -96,6 +108,7 @@ function endNote(request: EvaluationRequest) {
 // GET /evaluation-requests/?history=true (§10.4), the student's own (`mine`) or the ones the
 // Hitchhiker picked (`picked`), with outcome and project filters and pages of 20.
 function HistoryPage() {
+  const { t } = useTranslation();
   const { activeRole } = useRole();
   const viewer: Viewer = activeRole === "HITCHHIKER" ? "hitchhiker" : "student";
   const [filter, setFilter] = useState<HistoryFilter>("all");
@@ -181,16 +194,14 @@ function HistoryPage() {
   return (
     <section className="history-page">
       <header className="history-page__header">
-        <h1>History</h1>
+        <h1>{t("history.title")}</h1>
         <p>
-          {viewer === "student"
-            ? "Your past evaluations and requests."
-            : "The evaluations you picked in the past."}
+          {viewer === "student" ? t("history.subtitleStudent") : t("history.subtitleHitchhiker")}
         </p>
       </header>
 
       <div className="history-page__filters">
-        <div className="history-page__chips" role="group" aria-label="Filter by outcome">
+        <div className="history-page__chips" role="group" aria-label={t("history.filterAria")}>
           {historyFilters.map((option) => (
             <button
               key={option.value}
@@ -206,13 +217,13 @@ function HistoryPage() {
                 setPage(1);
               }}
             >
-              {option.label}
+              {t(option.labelKey)}
             </button>
           ))}
         </div>
 
         <label className="history-page__project">
-          <span>Project</span>
+          <span>{t("history.project")}</span>
           <select
             value={project}
             onChange={(event) => {
@@ -220,7 +231,7 @@ function HistoryPage() {
               setPage(1);
             }}
           >
-            <option value="">All projects</option>
+            <option value="">{t("history.allProjects")}</option>
             {projects.map((item) => (
               <option key={item.id} value={item.slug}>
                 {item.name}
@@ -235,24 +246,20 @@ function HistoryPage() {
           {[1, 2, 3].map((placeholder) => (
             <div className="history-page__skeleton" key={placeholder} />
           ))}
-          <span className="history-page__sr-only">Loading history…</span>
+          <span className="history-page__sr-only">{t("history.loading")}</span>
         </div>
       )}
 
       {loadState === "error" && (
         <p className="history-page__error" role="alert">
-          Could not load your history. Please try again later.
+          {t("history.error")}
         </p>
       )}
 
       {loadState === "ready" && requests.length === 0 && (
         <div className="history-page__empty">
-          <h2>{isFiltered ? "Nothing matches these filters" : "No history yet"}</h2>
-          <p>
-            {isFiltered
-              ? "Try another outcome or project."
-              : "Your past evaluations will appear here."}
-          </p>
+          <h2>{isFiltered ? t("history.emptyFilteredTitle") : t("history.emptyTitle")}</h2>
+          <p>{isFiltered ? t("history.emptyFilteredText") : t("history.emptyText")}</p>
         </div>
       )}
 
@@ -282,7 +289,9 @@ function HistoryPage() {
                           {formatSlot(request.starts_at, request.ends_at)}
                         </time>
                       ) : (
-                        <span>Requested on {formatDate(request.created_at)}</span>
+                        <span>
+                          {t("history.requestedOn", { date: formatDate(request.created_at) })}
+                        </span>
                       )}
                       {person && <span>{person}</span>}
                     </p>
@@ -291,7 +300,7 @@ function HistoryPage() {
 
                     {request.feedback && (
                       <blockquote className="history-card__feedback">
-                        <span>Feedback</span>
+                        <span>{t("history.feedback")}</span>
                         <p>{request.feedback}</p>
                       </blockquote>
                     )}
@@ -302,23 +311,21 @@ function HistoryPage() {
           </ul>
 
           {pageCount > 1 && (
-            <nav className="history-page__pages" aria-label="History pages">
+            <nav className="history-page__pages" aria-label={t("history.pagesAria")}>
               <button
                 type="button"
                 disabled={page === 1}
                 onClick={() => setPage((current) => current - 1)}
               >
-                <span aria-hidden="true">‹</span> Previous
+                <span aria-hidden="true">‹</span> {t("common.previous")}
               </button>
-              <span aria-live="polite">
-                Page {page} of {pageCount}
-              </span>
+              <span aria-live="polite">{t("history.page", { page, count: pageCount })}</span>
               <button
                 type="button"
                 disabled={!hasNext}
                 onClick={() => setPage((current) => current + 1)}
               >
-                Next <span aria-hidden="true">›</span>
+                {t("common.next")} <span aria-hidden="true">›</span>
               </button>
             </nav>
           )}

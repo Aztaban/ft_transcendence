@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 
 import ProjectOverview from "../projects/ProjectOverview";
 import type { EvaluationRequest } from "../../types/evaluation";
@@ -15,6 +16,7 @@ interface PreviewDialogProps {
 // Figma "Upcoming Evaluation Details": when, how long until it starts, and the project's topics
 // and info (ProjectOverview from #168).
 function PreviewDialog({ evaluation, otherPerson, statusLabel, onClose }: PreviewDialogProps) {
+  const { t } = useTranslation();
   const cardRef = useDialog<HTMLDivElement>(onClose);
   const { starts_at: startsAt, ends_at: endsAt } = evaluation;
 
@@ -31,13 +33,13 @@ function PreviewDialog({ evaluation, otherPerson, statusLabel, onClose }: Previe
       >
         <header className="pending-preview__header">
           <div>
-            <p className="pending-preview__eyebrow">Upcoming evaluation details</p>
+            <p className="pending-preview__eyebrow">{t("pending.previewEyebrow")}</p>
             <h2 id="preview-dialog-title">{evaluation.project.name}</h2>
           </div>
           <button
             className="pending-dialog__close"
             type="button"
-            aria-label="Close"
+            aria-label={t("common.close")}
             onClick={onClose}
           >
             ×
@@ -47,11 +49,11 @@ function PreviewDialog({ evaluation, otherPerson, statusLabel, onClose }: Previe
         {startsAt && endsAt && (
           <dl className="pending-preview__facts">
             <div>
-              <dt>Status</dt>
+              <dt>{t("pending.status")}</dt>
               <dd>{statusLabel}</dd>
             </div>
             <div>
-              <dt>When</dt>
+              <dt>{t("pending.when")}</dt>
               <dd>
                 <time dateTime={startsAt}>
                   {formatDayHeading(startsAt)}, {formatTime(startsAt)}–{formatTime(endsAt)}
@@ -59,7 +61,7 @@ function PreviewDialog({ evaluation, otherPerson, statusLabel, onClose }: Previe
               </dd>
             </div>
             <div className="pending-preview__countdown">
-              <dt>Starts in</dt>
+              <dt>{t("pending.startsIn")}</dt>
               <dd>{formatStartsIn(startsAt)}</dd>
             </div>
             {otherPerson && (

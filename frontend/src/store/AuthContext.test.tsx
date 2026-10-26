@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 
+import { apiRequest } from "../api/client";
 import { AuthProvider, useAuth } from "./AuthContext";
 
 afterEach(() => {
@@ -121,4 +122,34 @@ test("endSession forgets the user without calling the API", async () => {
 
   expect(screen.getByText("Logged out")).toBeDefined();
   expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+// #328: a 401 from any other API means the server ended the session.
+test("forgets the user when an API answers 401", async () => {
+  const fetchMock = vi.spyOn(globalThis, "fetch");
+  fetchMock.mockResolvedValueOnce(
+    new Response(
+      JSON.stringify({
+        authenticated: true,
+        user: { id: 42, email: "student@example.com", display_name: "Student" },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  );
+  render(
+    <AuthProvider>
+      <SessionProbe />
+    </AuthProvider>,
+  );
+  expect(await screen.findByText("Student")).toBeDefined();
+
+  fetchMock.mockResolvedValueOnce(
+    new Response(JSON.stringify({ error: { code: "not_authenticated", message: "Log in." } }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+  await apiRequest("/api/v1/users/me/").catch(() => {});
+
+  expect(await screen.findByText("Logged out")).toBeDefined();
 });
