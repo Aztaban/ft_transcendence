@@ -151,7 +151,7 @@ const councilDashboard: DashboardDefinition = {
   ctaTitle: "STUDENT COUNCIL",
   ctaText: "Review anonymous messages sent to the council.",
   ctaLabel: "View Messages",
-  ctaTo: "/council/messages",
+  ctaTo: "/council/inbox",
   actionSymbol: "→",
   actionAriaLabel: "View council messages",
 };
