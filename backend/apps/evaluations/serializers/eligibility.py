@@ -65,6 +65,12 @@ class EligibilityRequestCreateSerializer(serializers.Serializer):
         return value
 
 
+class EligibilityRevokeSerializer(serializers.Serializer):
+    """Optional body for DELETE /projects/{slug}/eligibility/{tutor_id}/ (api-plan §10.3)."""
+
+    reason = serializers.CharField(required=False, allow_blank=True, max_length=500, default="")
+
+
 class EligibilityRequestReviewSerializer(serializers.Serializer):
     """Body for POST /tutor-eligibility-requests/{id}/review/ (api-plan §10.3)."""
 

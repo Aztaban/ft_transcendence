@@ -1,4 +1,4 @@
-"""Session-authenticated evaluation actions reach affected users through Redis (#246)."""
+"""Session-authenticated evaluation actions reach affected users through Redis."""
 
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
@@ -16,6 +16,8 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
+from apps.evaluations.tasks import expire_evaluation_requests
+from apps.notifications.models import Notification
 from config.asgi import application
 
 pytestmark = [
@@ -268,6 +270,12 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
             assert response.json() == expected_response
             if rollback:
                 transaction.set_rollback(True)
+        if not rollback and (
+            action in ("pick-slot", "confirm", "decline", "release")
+            or (action == "cancel" and picked)
+        ):
+            return Notification.objects.get().pk
+        return None
 
     def assert_committed_state():
         evaluation.refresh_from_db()
@@ -282,10 +290,23 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
         try:
             for _, communicator in connections:
                 assert await communicator.connect() == (True, None)
-            await database_sync_to_async(perform_action)()
+            notification_id = await database_sync_to_async(perform_action)()
             for user_id, communicator in connections:
                 if user_id in recipients:
                     assert await communicator.receive_json_from(timeout=3) == expected_event
+                notification_recipient = {
+                    "pick-slot": 7,
+                    "confirm": 42,
+                    "decline": 42,
+                    "release": 7,
+                }.get(action)
+                if action == "cancel" and picked:
+                    notification_recipient = 42
+                if not rollback and user_id == notification_recipient:
+                    assert await communicator.receive_json_from(timeout=3) == {
+                        "event": "notification.created",
+                        "data": {"id": notification_id},
+                    }
                 # Also detects duplicate pushes to a user with multiple roles.
                 assert await communicator.receive_nothing(timeout=0.1)
             await database_sync_to_async(assert_committed_state)()
@@ -293,6 +314,62 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
             for _, communicator in connections:
                 await communicator.disconnect()
             # Clean only this test's prefix, never the application's Redis keys.
+            await layer.flush()
+            await layer.close_pools()
+
+    async_to_sync(exercise)()
+
+
+@pytest.mark.parametrize("previous_status", ["pending", "awaiting_confirmation"])
+def test_expiry_job_delivers_events_to_participants_and_affected_queues(
+    participants, previous_status
+):
+    project, users, clients, student_device = participants
+    picked = previous_status == "awaiting_confirmation"
+    evaluation = EvaluationRequest.objects.create(
+        id=17,
+        student=users[7],
+        project=project,
+        status=previous_status,
+        picked_by=users[42] if picked else None,
+        starts_at=NOW - timedelta(minutes=1) if picked else None,
+        ends_at=NOW + timedelta(minutes=44) if picked else None,
+    )
+    EvaluationRequest.objects.filter(pk=17).update(created_at=NOW - timedelta(days=15))
+
+    def expire():
+        assert expire_evaluation_requests() == 1
+        evaluation.refresh_from_db()
+        assert evaluation.status == "expired"
+        assert evaluation.picked_by_id is None
+        assert evaluation.starts_at is None
+        assert evaluation.ends_at is None
+        return dict(Notification.objects.values_list("recipient_id", "pk"))
+
+    async def exercise():
+        layer = get_channel_layer()
+        sockets = [(user_id, socket(client)) for user_id, client in clients.items()]
+        sockets.append((7, socket(student_device)))
+        try:
+            for _, communicator in sockets:
+                assert await communicator.connect() == (True, None)
+            notification_ids = await database_sync_to_async(expire)()
+            assert set(notification_ids) == ({7, 42} if picked else {7})
+            for user_id, communicator in sockets:
+                if user_id in ({7, 42} if picked else {7, 42, 43}):
+                    assert await communicator.receive_json_from(timeout=3) == {
+                        "event": "evaluation.expired",
+                        "data": {"id": 17, "status": "expired"},
+                    }
+                if user_id in notification_ids:
+                    assert await communicator.receive_json_from(timeout=3) == {
+                        "event": "notification.created",
+                        "data": {"id": notification_ids[user_id]},
+                    }
+                assert await communicator.receive_nothing(timeout=0.1)
+        finally:
+            for _, communicator in sockets:
+                await communicator.disconnect()
             await layer.flush()
             await layer.close_pools()
 

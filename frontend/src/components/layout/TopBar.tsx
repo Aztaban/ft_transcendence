@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { useTranslation } from "react-i18next";
 
 import searchIcon from "../../assets/figma/search.svg";
 import bellIcon from "../../assets/figma/bell.svg";
@@ -17,6 +18,7 @@ interface TopBarProps {
 function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps) {
   // The logged-in user from GET /users/me/ (§8.2); `null` until it has answered.
   const { user } = useCurrentUser();
+  const { t } = useTranslation();
 
   return (
     <header className="topbar">
@@ -25,7 +27,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
         ref={menuButtonRef}
         className="topbar__menu"
         type="button"
-        aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+        aria-label={isMenuOpen ? t("topbar.closeMenu") : t("topbar.openMenu")}
         aria-controls="app-sidebar"
         aria-expanded={isMenuOpen}
         onClick={onMenuClick}
@@ -38,7 +40,11 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
       <label className="topbar__search">
         <img className="topbar__search-icon" src={searchIcon} alt="" aria-hidden="true" />
 
-        <input type="search" placeholder="search" aria-label="Search" />
+        <input
+          type="search"
+          placeholder={t("topbar.searchPlaceholder")}
+          aria-label={t("topbar.search")}
+        />
       </label>
 
       <div className="topbar__user">
@@ -46,7 +52,11 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
 
         <LanguageSwitcher />
 
-        <button className="topbar__notification" type="button" aria-label="Notifications">
+        <button
+          className="topbar__notification"
+          type="button"
+          aria-label={t("topbar.notifications")}
+        >
           <img src={bellIcon} alt="" aria-hidden="true" />
           <span className="topbar__notification-dot" />
         </button>
@@ -59,7 +69,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
 
         {user && <span className="topbar__username">{user.display_name}</span>}
 
-        <button className="topbar__user-menu" type="button" aria-label="Open user menu">
+        <button className="topbar__user-menu" type="button" aria-label={t("topbar.userMenu")}>
           <img src={userChevron} alt="" aria-hidden="true" />
         </button>
       </div>

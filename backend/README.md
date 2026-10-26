@@ -42,7 +42,7 @@ Redis/Celery use `REDIS_URL` by default. `CELERY_BROKER_URL` and
 - `GET /api/docs/` — Swagger UI
 - `GET /api/v1/users/me/` — own profile (includes email and assigned roles)
 - `GET /api/v1/users/{id}/` — public profile for authenticated users (`display_name`, `avatar_url`, `roles`; no email / intra_login / status)
-- `POST /api/v1/users/{id}/roles/` — assign role (Admin any; Head Tutor → tutor only)
+- `POST /api/v1/users/{id}/roles/` — assign role (rules in api-plan §5.8)
 - `DELETE /api/v1/users/{id}/roles/{role_id}/` — revoke role (Admin only)
 - `GET /api/v1/tutors/{id}/eligibility/` — approved projects for a hitchhiker (`[{id, slug, name}, …]`; empty until eligibility data exists)
 
@@ -55,5 +55,5 @@ Reusable checks live in `apps.accounts.permissions` (`HasRole`, `IsAdminRole`,
 | Endpoint | Who may call it |
 | --- | --- |
 | `GET /users/me/`, `GET /users/{id}/`, `GET /tutors/{id}/eligibility/` | Any authenticated user |
-| `POST /users/{id}/roles/` | Admin (any role) or Head Tutor (tutor role only; enforced in the view) |
+| `POST /users/{id}/roles/` | Admin (`tutor`, `head_tutor`, `sc_member`), Head Tutor (`tutor`), SC Member (`sc_member`); enforced in the view |
 | `DELETE /users/{id}/roles/{role_id}/` | Admin only |
