@@ -9,14 +9,39 @@ from apps.core.models import TimeStampedModel
 
 
 class AuditLogQuerySet(models.QuerySet):
-    """Rows are never updated or deleted, except actor clearing on user removal."""
+    """Rows are never updated or deleted."""
 
     def update(self, **kwargs):
-        # Deleting a user sets actor_id NULL (schema §8.1, ON DELETE SET NULL).
-        # Django applies that through QuerySet.update(actor=None). Nothing else may change.
-        if kwargs != {"actor": None}:
+        # User deletion still nulls actor_id. Django's collector writes SET NULL
+        # through UpdateQuery, not QuerySet.update() (schema §8.1).
+        raise ValidationError(_("Audit log rows cannot be updated."))
+
+    def bulk_update(self, objs, fields, batch_size=None):
+        # Django 5.1 reaches QuerySet.update() from here. Reject this entry
+        # point itself so a later Django that writes the SQL directly still cannot.
+        raise ValidationError(_("Audit log rows cannot be updated."))
+
+    def bulk_create(
+        self,
+        objs,
+        batch_size=None,
+        ignore_conflicts=False,
+        update_conflicts=False,
+        update_fields=None,
+        unique_fields=None,
+    ):
+        # MySQL applies update_conflicts as ON DUPLICATE KEY UPDATE, which does
+        # not pass through QuerySet.update().
+        if update_conflicts:
             raise ValidationError(_("Audit log rows cannot be updated."))
-        return super().update(**kwargs)
+        return super().bulk_create(
+            objs,
+            batch_size=batch_size,
+            ignore_conflicts=ignore_conflicts,
+            update_conflicts=update_conflicts,
+            update_fields=update_fields,
+            unique_fields=unique_fields,
+        )
 
     def delete(self):
         raise ValidationError(_("Audit log rows cannot be deleted."))
@@ -83,7 +108,10 @@ class AuditLog(TimeStampedModel):
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError(_("Audit log rows cannot be updated."))
-        super().save(*args, **kwargs)
+        if kwargs.get("force_update") or kwargs.get("update_fields") is not None:
+            raise ValidationError(_("Audit log rows cannot be updated."))
+        kwargs["force_insert"] = True
+        return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         raise ValidationError(_("Audit log rows cannot be deleted."))
