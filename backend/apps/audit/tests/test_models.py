@@ -3,7 +3,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import connection
+from django.db import IntegrityError, connection, transaction
 
 from apps.accounts.models import Role
 from apps.audit.models import AuditLog
@@ -101,6 +101,70 @@ def test_rows_cannot_be_updated_or_deleted(actor):
     assert AuditLog.objects.filter(pk=entry.pk).exists()
 
 
+def test_queryset_update_cannot_clear_the_actor_while_the_user_exists(actor):
+    entry = _entry(actor)
+
+    with pytest.raises(ValidationError):
+        AuditLog.objects.all().update(actor=None)
+
+    entry.refresh_from_db()
+    assert entry.actor_id == actor.pk
+
+
+def test_bulk_update_cannot_change_an_existing_row(actor):
+    entry = _entry(actor)
+    entry.reason = "rewritten"
+
+    with pytest.raises(ValidationError):
+        AuditLog.objects.bulk_update([entry], ["reason"])
+
+    entry.refresh_from_db()
+    assert entry.reason == ""
+
+
+def test_bulk_create_inserts_a_new_row(actor):
+    created = AuditLog.objects.bulk_create(
+        [
+            AuditLog(
+                actor=actor,
+                action=AuditLog.Action.ROLE_ASSIGNED,
+                target_type=AuditLog.TargetType.USER,
+                target_id=42,
+            )
+        ]
+    )
+
+    assert len(created) == 1
+    stored = AuditLog.objects.get()
+    assert stored.actor_id == actor.pk
+    assert stored.action == "role.assigned"
+    assert stored.target_id == 42
+    assert stored.reason == ""
+    assert stored.metadata == {}
+
+
+def test_bulk_create_update_conflicts_cannot_change_an_existing_row(actor):
+    entry = _entry(actor)
+    replacement = AuditLog(
+        pk=entry.pk,
+        actor=actor,
+        action=AuditLog.Action.ROLE_ASSIGNED,
+        target_type=AuditLog.TargetType.USER,
+        target_id=actor.pk,
+        reason="rewritten",
+    )
+
+    with pytest.raises(ValidationError):
+        AuditLog.objects.bulk_create(
+            [replacement],
+            update_conflicts=True,
+            update_fields=["reason"],
+        )
+
+    entry.refresh_from_db()
+    assert entry.reason == ""
+
+
 def test_deleting_the_actor_keeps_the_row_and_clears_the_actor(actor):
     entry = _entry(actor, target_id=actor.pk)
 
@@ -120,3 +184,37 @@ def test_database_has_the_schema_indexes():
     assert constraints["audit_log_target_idx"]["columns"] == ["target_type", "target_id"]
     assert constraints["audit_log_actor_created_idx"]["columns"] == ["actor_id", "created_at"]
     assert constraints["audit_log_action_created_idx"]["columns"] == ["action", "created_at"]
+
+
+def test_fresh_instance_cannot_update_existing_row(actor):
+    entry = _entry(actor)
+
+    replacement = AuditLog(
+        pk=entry.pk,
+        reason="rewritten",
+    )
+
+    with pytest.raises(ValidationError):
+        replacement.save(update_fields=["reason"])
+
+    entry.refresh_from_db()
+    assert entry.reason == ""
+
+
+def test_fresh_instance_cannot_overwrite_existing_pk(actor):
+    entry = _entry(actor)
+
+    replacement = AuditLog(
+        pk=entry.pk,
+        actor=actor,
+        action=AuditLog.Action.ROLE_ASSIGNED,
+        target_type=AuditLog.TargetType.USER,
+        target_id=actor.pk,
+        reason="rewritten",
+    )
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        replacement.save()
+
+    entry.refresh_from_db()
+    assert entry.reason == ""
