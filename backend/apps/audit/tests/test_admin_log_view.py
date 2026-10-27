@@ -196,6 +196,105 @@ def test_pagination_returns_the_contract_envelope(monkeypatch):
     }
 
 
+def ids(response):
+    return [row["id"] for row in response.json()["results"]]
+
+
+def test_filters_combine_and_keep_newest_first(monkeypatch):
+    client, admin = admin_client()
+    other = make_user("other@example.com", "Other")
+    match = create_entry(monkeypatch, NEWER, actor=admin, target_id=7)
+    create_entry(monkeypatch, OLDER, actor=admin, target_id=7)
+    create_entry(
+        monkeypatch,
+        NEWER,
+        actor=other,
+        action=AuditLog.Action.ROLE_REVOKED,
+        target_type=AuditLog.TargetType.SC_MESSAGE,
+        target_id=7,
+    )
+    create_entry(monkeypatch, NEWER, actor=admin, target_id=8)
+
+    response = client.get(
+        audit_log_url(),
+        {
+            "actor": admin.id,
+            "action": "role.assigned,role.revoked",
+            "target_type": "user",
+            "target_id": 7,
+            "from": "2026-10-09T11:00:00+02:00",
+            "to": "2026-10-09T09:00:00Z",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+    assert ids(response) == [match.id]
+
+
+def test_from_and_to_are_inclusive(monkeypatch):
+    client, _ = admin_client()
+    older = create_entry(monkeypatch, OLDER, target_id=1)
+    newer = create_entry(monkeypatch, NEWER, target_id=2)
+
+    response = client.get(
+        audit_log_url(),
+        {"from": "2026-10-09T08:00:00Z", "to": "2026-10-09T08:00:00Z"},
+    )
+
+    assert response.status_code == 200
+    assert ids(response) == [older.id]
+    assert newer.id not in ids(response)
+
+
+def test_pagination_keeps_the_filter(monkeypatch):
+    client, _ = admin_client()
+    create_entry(monkeypatch, OLDER, target_id=1)
+    create_entry(monkeypatch, NEWER, target_id=1)
+    create_entry(monkeypatch, NEWER, target_id=2)
+    url = audit_log_url()
+
+    response = client.get(url, {"target_id": 1, "page_size": 1})
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+    assert response.json()["next"] == f"http://testserver{url}?page=2&page_size=1&target_id=1"
+
+
+@pytest.mark.parametrize(
+    "params,field,message",
+    [
+        ({"actor": "nope"}, "actor", "A valid integer is required."),
+        ({"actor": 0}, "actor", "Ensure this value is greater than or equal to 1."),
+        ({"action": "role.assigned,nope"}, "action", '"nope" is not a valid choice.'),
+        ({"target_type": "missing"}, "target_type", '"missing" is not a valid choice.'),
+        ({"target_id": "x"}, "target_id", "A valid integer is required."),
+        (
+            {"from": "2026-10-09T08:00:00"},
+            "from",
+            "Datetime must include a timezone (Z or an offset).",
+        ),
+        (
+            {"to": "monday"},
+            "to",
+            "Datetime has wrong format. Use one of these formats instead: "
+            "YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z].",
+        ),
+    ],
+)
+def test_filter_validation(params, field, message):
+    client, _ = admin_client()
+    response = client.get(audit_log_url(), params)
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the highlighted fields.",
+            "fields": {field: [message]},
+        }
+    }
+
+
 def test_session_authentication_allows_an_admin():
     admin = make_user("admin@example.com", "Admin", Role.Name.ADMIN)
     client = APIClient(enforce_csrf_checks=True)
