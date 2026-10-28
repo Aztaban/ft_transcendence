@@ -71,10 +71,6 @@ function submitErrorMessage(error: unknown) {
       return "Only Hitchhikers can request to evaluate projects.";
     }
 
-    if (error.code === "not_authenticated") {
-      return "Your session has expired. Please log in again.";
-    }
-
     return error.fields?.project_ids?.[0] ?? error.message;
   }
 

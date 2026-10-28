@@ -2,6 +2,7 @@
 
 from django.contrib.auth import get_user_model, password_validation
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 User = get_user_model()
@@ -17,7 +18,7 @@ class RegistrationSerializer(serializers.Serializer):
         email = User.objects.normalize_email(value)
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError(
-                "An account with this email already exists.",
+                _("An account with this email already exists."),
                 code="unique",
             )
         return email

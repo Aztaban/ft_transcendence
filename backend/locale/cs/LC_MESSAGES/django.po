@@ -1,0 +1,254 @@
+# Czech translations for ft_transcendence API messages.
+# Copyright (C) 2026 ft_transcendence
+# This file is distributed under the same license as the ft_transcendence package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ft_transcendence\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-22 09:16+0000\n"
+"PO-Revision-Date: 2026-10-22 11:20+0200\n"
+"Last-Translator: ft_transcendence\n"
+"Language-Team: Czech\n"
+"Language: cs\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n == 1 && n % 1 == 0) ? 0 : (n >= 2 && n "
+"<= 4 && n % 1 == 0) ? 1: (n % 1 != 0 ) ? 2 : 3;\n"
+
+#: apps/accounts/serializers/authentication.py:21
+#: apps/accounts/views/authentication.py:37
+msgid "An account with this email already exists."
+msgstr "Účet s tímto e-mailem už existuje."
+
+#: apps/accounts/serializers/oauth.py:35 apps/accounts/serializers/oauth.py:60
+msgid "42 user ID must be a positive integer."
+msgstr "ID uživatele na 42 musí být kladné celé číslo."
+
+#: apps/accounts/serializers/roles.py:21
+msgid "Unknown role."
+msgstr "Neznámá role."
+
+#: apps/accounts/views/authentication.py:78
+msgid "Please correct the registration fields."
+msgstr "Opravte prosím pole registrace."
+
+#: apps/accounts/views/authentication.py:92
+msgid "Account created successfully."
+msgstr "Účet byl úspěšně vytvořen."
+
+#: apps/accounts/views/authentication.py:137
+msgid "Please correct the login fields."
+msgstr "Opravte prosím přihlašovací pole."
+
+#: apps/accounts/views/authentication.py:146
+msgid "Invalid email or password."
+msgstr "Neplatný e-mail nebo heslo."
+
+#: apps/accounts/views/authentication.py:156
+msgid "Logged in successfully."
+msgstr "Přihlášení proběhlo úspěšně."
+
+#: apps/accounts/views/profiles.py:68
+msgid "Please correct the profile fields."
+msgstr "Opravte prosím pole profilu."
+
+#: apps/accounts/views/roles.py:49
+msgid "You may not assign this role."
+msgstr "Tuto roli nemůžete přiřadit."
+
+#: apps/accounts/views/roles.py:86
+msgid "This role cannot be revoked."
+msgstr "Tuto roli nelze odebrat."
+
+#: apps/accounts/views/roles.py:90
+msgid "You cannot change your own roles."
+msgstr "Své vlastní role nemůžete měnit."
+
+#: apps/core/exceptions.py:23
+msgid "Please correct the highlighted fields."
+msgstr "Opravte prosím zvýrazněná pole."
+
+#: apps/core/exceptions.py:24
+msgid "Authentication required."
+msgstr "Je vyžadováno přihlášení."
+
+#: apps/core/exceptions.py:25
+msgid "CSRF verification failed. Reload the page and try again."
+msgstr "Ověření CSRF selhalo. Načtěte stránku znovu a zkuste to ještě jednou."
+
+#: apps/core/exceptions.py:26 apps/evaluations/views/eligibility.py:100
+#: apps/evaluations/views/eligibility.py:248
+msgid "You do not have permission to perform this action."
+msgstr "K této akci nemáte oprávnění."
+
+#: apps/core/exceptions.py:27
+msgid "Not found."
+msgstr "Nenalezeno."
+
+#: apps/core/exceptions.py:28
+msgid "Method not allowed."
+msgstr "Metoda není povolena."
+
+#: apps/core/exceptions.py:29
+msgid "The requested response format is not available."
+msgstr "Požadovaný formát odpovědi není k dispozici."
+
+#: apps/core/exceptions.py:30
+msgid "Unsupported media type."
+msgstr "Nepodporovaný typ obsahu."
+
+#: apps/core/exceptions.py:31
+msgid "Too many requests. Try again later."
+msgstr "Příliš mnoho požadavků. Zkuste to znovu později."
+
+#: apps/core/exceptions.py:32
+msgid "Something went wrong. Please try again."
+msgstr "Něco se pokazilo. Zkuste to prosím znovu."
+
+#: apps/evaluations/admin.py:61
+msgid ""
+"Results can only be entered for confirmed evaluations whose end time has "
+"passed."
+msgstr ""
+"Výsledky lze zadat jen u potvrzených hodnocení, jejichž čas konce už "
+"uplynul."
+
+#: apps/evaluations/permissions.py:18
+msgid "You are not eligible to evaluate this project."
+msgstr "Nejste způsobilí tento projekt hodnotit."
+
+#: apps/evaluations/permissions.py:24
+msgid "You cannot pick your own request."
+msgstr "Nemůžete si vybrat vlastní žádost."
+
+#: apps/evaluations/serializers/eligibility.py:59
+msgid "Project ids must be distinct."
+msgstr "ID projektů se nesmí opakovat."
+
+#: apps/evaluations/serializers/eligibility.py:63
+#, python-format
+msgid "Select at most %(max)s projects."
+msgstr "Vyberte nejvýše %(max)s projektů."
+
+#: apps/evaluations/serializers/requests.py:91
+msgid "Datetime must include a timezone (Z or an offset)."
+msgstr "Datum a čas musí obsahovat časové pásmo (Z nebo posun)."
+
+#: apps/evaluations/serializers/requests.py:110
+#, python-format
+msgid "Time must be on a %(minutes)s-minute boundary, with zero seconds."
+msgstr "Čas musí být na hranici %(minutes)s minut a mít nulové sekundy."
+
+#: apps/evaluations/serializers/requests.py:116
+#, python-format
+msgid "Duration must be between %(minimum)s and %(maximum)s minutes."
+msgstr "Délka musí být mezi %(minimum)s a %(maximum)s minutami."
+
+#: apps/evaluations/serializers/requests.py:123
+#, python-format
+msgid "Start time must be at least %(minutes)s minutes from now."
+msgstr "Začátek musí být nejméně %(minutes)s minut od teď."
+
+#: apps/evaluations/serializers/requests.py:129
+#, python-format
+msgid "Start time must be at most %(days)s days from now."
+msgstr "Začátek smí být nejvýše %(days)s dní od teď."
+
+#: apps/evaluations/serializers/requests.py:169
+msgid "End time must be after start time."
+msgstr "Čas konce musí být po čase začátku."
+
+#: apps/evaluations/serializers/requests.py:207
+msgid "Unknown project slug."
+msgstr "Neznámý slug projektu."
+
+#: apps/evaluations/services.py:26
+msgid "You already have an active request for this project."
+msgstr "Pro tento projekt už máte aktivní žádost."
+
+#: apps/evaluations/services.py:32
+msgid "Only pending requests can be edited."
+msgstr "Upravit lze jen čekající žádosti."
+
+#: apps/evaluations/services.py:38
+msgid "This request is no longer pending."
+msgstr "Tato žádost už není ve stavu čekání."
+
+#: apps/evaluations/services.py:44
+msgid "You already have an evaluation at that time."
+msgstr "V tom čase už hodnocení máte."
+
+#: apps/evaluations/services.py:50
+msgid "The student already has an evaluation at that time."
+msgstr "Student už v tom čase hodnocení má."
+
+#: apps/evaluations/services.py:56
+msgid "This evaluation has already started."
+msgstr "Toto hodnocení už začalo."
+
+#: apps/evaluations/services.py:99 apps/evaluations/services.py:110
+msgid "Only requests awaiting confirmation can be confirmed."
+msgstr "Potvrdit lze jen žádosti čekající na potvrzení."
+
+#: apps/evaluations/services.py:138
+msgid "Only requests awaiting confirmation can be declined."
+msgstr "Odmítnout lze jen žádosti čekající na potvrzení."
+
+#: apps/evaluations/services.py:155 apps/evaluations/services.py:160
+#: apps/evaluations/services.py:177
+msgid "Only active requests without a result can be cancelled."
+msgstr "Zrušit lze jen aktivní žádosti bez výsledku."
+
+#: apps/evaluations/services.py:189 apps/evaluations/services.py:196
+#: apps/evaluations/services.py:211
+msgid "Only picked requests without a result can be released."
+msgstr "Uvolnit lze jen vybrané žádosti bez výsledku."
+
+#: apps/evaluations/views/eligibility.py:73
+msgid "This field may not be blank."
+msgstr "Toto pole nesmí být prázdné."
+
+#: apps/evaluations/views/eligibility.py:79
+#, python-format
+msgid "Unknown status: %(value)s."
+msgstr "Neznámý stav: %(value)s."
+
+#: apps/evaluations/views/eligibility.py:86
+msgid "Ordering must be one of: created_at, -created_at."
+msgstr "Řazení musí být jedna z hodnot: created_at, -created_at."
+
+#: apps/evaluations/views/eligibility.py:115
+#, python-format
+msgid "Unknown or inactive project id(s): %(ids)s."
+msgstr "Neznámé nebo neaktivní ID projektu: %(ids)s."
+
+#: apps/evaluations/views/eligibility.py:129
+#, python-format
+msgid "Already eligible for: %(names)s."
+msgstr "Způsobilost už máte pro: %(names)s."
+
+#: apps/evaluations/views/eligibility.py:141
+msgid "You already have a pending eligibility request."
+msgstr "Už máte nevyřízenou žádost o způsobilost."
+
+#: apps/evaluations/views/eligibility.py:255
+msgid "You cannot review your own eligibility request."
+msgstr "Nemůžete posuzovat vlastní žádost o způsobilost."
+
+#: apps/evaluations/views/eligibility.py:278
+msgid "This eligibility request has already been reviewed."
+msgstr "Tato žádost o způsobilost už byla posouzena."
+
+#: config/settings/base.py:120
+msgid "English"
+msgstr "Angličtina"
+
+#: config/settings/base.py:121
+msgid "Czech"
+msgstr "Čeština"
+
+#: config/settings/base.py:122
+msgid "Spanish"
+msgstr "Španělština"

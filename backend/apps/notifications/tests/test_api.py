@@ -1,9 +1,12 @@
 """Notification API contracts, including idempotent read actions."""
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.urls import reverse
 from drf_spectacular.generators import SchemaGenerator
 from drf_spectacular.validation import validate_schema
@@ -59,6 +62,15 @@ def notifications(people):
     )
     Notification.objects.filter(pk__in=[41, 42]).update(created_at=CREATED)
     return first, second
+
+
+@pytest.fixture
+def event_sender(monkeypatch):
+    sender = AsyncMock()
+    monkeypatch.setattr(
+        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
+    )
+    return sender
 
 
 @pytest.mark.parametrize(
@@ -419,3 +431,89 @@ def test_read_actions_reject_get_without_changing_state(client, notifications, n
         "error": {"code": "method_not_allowed", "message": "Method not allowed."}
     }
     assert Notification.objects.get(pk=42).read_at is None
+
+
+@pytest.mark.parametrize(
+    "method,name,kwargs,repeats",
+    [
+        ("post", "notification-read", {"pk": 42}, 2),
+        ("post", "notification-read", {"pk": 41}, 1),
+        ("post", "notification-read-all", {}, 2),
+        ("delete", "notification-delete", {"pk": 42}, 1),
+    ],
+)
+def test_mutations_defer_exact_owner_event_until_commit_including_retries(
+    client,
+    people,
+    notifications,
+    event_sender,
+    django_capture_on_commit_callbacks,
+    method,
+    name,
+    kwargs,
+    repeats,
+):
+    for _ in range(repeats):
+        event_sender.reset_mock()
+        with django_capture_on_commit_callbacks(execute=True) as callbacks:
+            response = getattr(client, method)(reverse(f"api:{name}", kwargs=kwargs))
+            assert response.status_code == (200 if name == "notification-read" else 204)
+            event_sender.assert_not_awaited()
+        assert len(callbacks) == 1
+        event_sender.assert_awaited_once_with(
+            f"user_{people[0].pk}",
+            {"type": "user.event", "event": "notification.updated", "data": {}},
+        )
+    assert Notification.objects.get(pk=43).read_at is None
+
+
+def test_empty_read_all_still_sends_refresh_event(
+    client, people, event_sender, django_capture_on_commit_callbacks
+):
+    with django_capture_on_commit_callbacks(execute=True):
+        response = client.post(reverse("api:notification-read-all"))
+        assert response.status_code == 204
+        assert response.content == b""
+        event_sender.assert_not_awaited()
+    event_sender.assert_awaited_once_with(
+        f"user_{people[0].pk}",
+        {"type": "user.event", "event": "notification.updated", "data": {}},
+    )
+
+
+@pytest.mark.parametrize(
+    "method,name", [("post", "notification-read"), ("delete", "notification-delete")]
+)
+@pytest.mark.parametrize("pk", [43, 999])
+def test_missing_or_private_notification_sends_no_event(
+    client, notifications, event_sender, django_capture_on_commit_callbacks, method, name, pk
+):
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = getattr(client, method)(reverse(f"api:{name}", kwargs={"pk": pk}))
+    assert response.status_code == 404
+    assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
+    assert callbacks == []
+    event_sender.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "method,name,kwargs",
+    [
+        ("post", "notification-read", {"pk": 42}),
+        ("post", "notification-read-all", {}),
+        ("delete", "notification-delete", {"pk": 42}),
+    ],
+)
+def test_mutation_rollback_discards_changes_and_event(
+    client, notifications, event_sender, django_capture_on_commit_callbacks, method, name, kwargs
+):
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(RuntimeError, match="rollback"):
+            with transaction.atomic():
+                response = getattr(client, method)(reverse(f"api:{name}", kwargs=kwargs))
+                assert response.status_code == (200 if name == "notification-read" else 204)
+                raise RuntimeError("rollback")
+    assert callbacks == []
+    event_sender.assert_not_awaited()
+    assert Notification.objects.get(pk=42).read_at is None
+    assert Notification.objects.count() == 3
