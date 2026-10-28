@@ -374,7 +374,8 @@
     "empty": "Aún no hay notificaciones.",
     "error": "No se pudieron cargar tus notificaciones.",
     "retry": "Reintentar",
-    "unread": "No leída"
+    "unread": "No leída",
+    "markAllRead": "Marcar todo como leído"
   },
   "notifications": {
     "evaluation": {

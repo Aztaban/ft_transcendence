@@ -2,13 +2,27 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { listNotifications } from "../../api/notifications";
+import {
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "../../api/notifications";
 import type { Notification } from "../../types/notification";
 import { LiveContext } from "../../websocket/LiveProvider";
 import { FakeSocket, openLiveSocket } from "../../websocket/testSocket";
 import NotificationPanel from "./NotificationPanel";
 
-vi.mock("../../api/notifications", () => ({ listNotifications: vi.fn() }));
+vi.mock("../../api/notifications", () => ({
+  listNotifications: vi.fn(),
+  markAllNotificationsRead: vi.fn(),
+  markNotificationRead: vi.fn(),
+}));
+
+const count = vi.hoisted(() => ({ refresh: vi.fn() }));
+
+vi.mock("../../store/NotificationCountContext", () => ({
+  useNotificationCount: () => ({ unreadCount: 0, refresh: count.refresh }),
+}));
 
 const libft = { id: 4, slug: "libft", name: "Libft" };
 
@@ -120,7 +134,9 @@ describe("NotificationPanel", () => {
   });
 
   it("opens the notification's page and closes", async () => {
-    vi.mocked(listNotifications).mockResolvedValue(page([created]));
+    vi.mocked(listNotifications).mockResolvedValue(
+      page([{ ...created, read_at: deleted.read_at }]),
+    );
     const onClose = renderPanel();
 
     fireEvent.click(await screen.findByRole("link", { name: /New evaluation request for Libft/ }));
@@ -156,5 +172,140 @@ describe("NotificationPanel", () => {
     await waitFor(() => expect(listNotifications).toHaveBeenCalledTimes(2));
     expect(screen.getByText("New evaluation request for Libft")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("marks an unread notification as read when its page is opened", async () => {
+    vi.mocked(listNotifications).mockResolvedValue(page([created]));
+    vi.mocked(markNotificationRead).mockResolvedValue({
+      ...created,
+      read_at: "2026-10-24T10:00:00Z",
+    });
+    const onClose = renderPanel();
+
+    fireEvent.click(await screen.findByRole("link", { name: /New evaluation request for Libft/ }));
+
+    expect(markNotificationRead).toHaveBeenCalledWith(12);
+    expect(screen.getByText("Evaluation page")).toBeTruthy();
+    expect(onClose).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(count.refresh).toHaveBeenCalledTimes(1));
+  });
+
+  it("marks an unread notification without a page as read on a click", async () => {
+    const unreadDeleted: Notification = { ...deleted, read_at: null };
+
+    vi.mocked(listNotifications).mockResolvedValue(page([unreadDeleted]));
+    vi.mocked(markNotificationRead).mockResolvedValue(deleted);
+    renderPanel();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Your resource "Libft tips" was deleted/ }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("listitem").className).toBe("notification-panel__item"),
+    );
+    expect(markNotificationRead).toHaveBeenCalledWith(11);
+    expect(count.refresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: /Libft tips/ })).toBeNull();
+  });
+
+  it("sends nothing for a notification that is already read", async () => {
+    vi.mocked(listNotifications).mockResolvedValue(
+      page([{ ...created, read_at: deleted.read_at }]),
+    );
+    renderPanel();
+
+    fireEvent.click(await screen.findByRole("link", { name: /New evaluation request for Libft/ }));
+
+    expect(markNotificationRead).not.toHaveBeenCalled();
+    expect(count.refresh).not.toHaveBeenCalled();
+  });
+
+  it("keeps a notification unread when marking it fails", async () => {
+    const unreadDeleted: Notification = { ...deleted, read_at: null };
+
+    vi.mocked(listNotifications).mockResolvedValue(page([unreadDeleted]));
+    vi.mocked(markNotificationRead).mockRejectedValue(new Error("network"));
+    renderPanel();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Your resource "Libft tips" was deleted/ }),
+    );
+
+    await waitFor(() => expect(markNotificationRead).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("listitem").className).toBe(
+      "notification-panel__item notification-panel__item--unread",
+    );
+    expect(count.refresh).not.toHaveBeenCalled();
+  });
+
+  it("offers Mark all as read only when something is unread", async () => {
+    vi.mocked(listNotifications).mockResolvedValue(page([deleted]));
+
+    renderPanel();
+    await screen.findByText('Your resource "Libft tips" was deleted');
+
+    expect(screen.queryByRole("button", { name: "Mark all as read" })).toBeNull();
+  });
+
+  it("marks all as read, then loads the list and the badge again", async () => {
+    let finish = () => {};
+
+    vi.mocked(listNotifications)
+      .mockResolvedValueOnce(page([created, deleted]))
+      .mockResolvedValueOnce(page([{ ...created, read_at: "2026-10-24T10:00:00Z" }, deleted]));
+    vi.mocked(markAllNotificationsRead).mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    renderPanel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Mark all as read" }));
+
+    expect(
+      (screen.getByRole("button", { name: "Mark all as read" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    await act(async () => finish());
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Mark all as read" })).toBeNull(),
+    );
+    expect(markAllNotificationsRead).toHaveBeenCalledTimes(1);
+    expect(listNotifications).toHaveBeenCalledTimes(2);
+    expect(count.refresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Unread")).toBeNull();
+  });
+
+  it("keeps the list and enables the button again when marking all fails", async () => {
+    vi.mocked(listNotifications).mockResolvedValue(page([created]));
+    vi.mocked(markAllNotificationsRead).mockRejectedValue(new Error("network"));
+    renderPanel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Mark all as read" }));
+
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: "Mark all as read" }) as HTMLButtonElement).disabled,
+      ).toBe(false),
+    );
+    expect(screen.getByText("Unread")).toBeTruthy();
+    expect(listNotifications).toHaveBeenCalledTimes(1);
+    expect(count.refresh).not.toHaveBeenCalled();
+  });
+
+  it("loads the list again on notification.updated", async () => {
+    vi.mocked(listNotifications)
+      .mockResolvedValueOnce(page([created]))
+      .mockResolvedValueOnce(page([{ ...created, read_at: "2026-10-24T10:00:00Z" }]));
+
+    renderPanel();
+    await screen.findByText("Unread");
+
+    act(() => FakeSocket.latest().serverSend({ event: "notification.updated", data: {} }));
+
+    await waitFor(() => expect(screen.queryByText("Unread")).toBeNull());
+    expect(listNotifications).toHaveBeenCalledTimes(2);
   });
 });

@@ -378,7 +378,8 @@
     "empty": "Zatím žádná oznámení.",
     "error": "Oznámení se nepodařilo načíst.",
     "retry": "Zkusit znovu",
-    "unread": "Nepřečteno"
+    "unread": "Nepřečteno",
+    "markAllRead": "Označit vše jako přečtené"
   },
   "notifications": {
     "evaluation": {
