@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import historyIcon from "../assets/figma/history.svg";
@@ -14,6 +15,7 @@ import { useStudentRequests } from "../features/student/useStudentRequests";
 import { useRole, type AppRole } from "../store/RoleContext";
 import "../styles/dashboard.css";
 
+// Texts are keys of the "home" texts in src/i18n/locales; "—" is shown as it is.
 interface OverviewItem {
   value: string;
   label: string;
@@ -37,123 +39,123 @@ interface DashboardDefinition {
 }
 
 const studentDashboard: DashboardDefinition = {
-  greeting: "Welcome Back",
+  greeting: "home.greeting",
   overview: [
     {
       value: "—",
-      label: "Pending",
+      label: "home.pending",
       icon: pendingIcon,
       tone: "turquoise",
     },
     {
       value: "—",
-      label: "Completed",
+      label: "home.completed",
       icon: historyIcon,
       tone: "mint",
     },
     {
-      value: "Not scheduled",
-      label: "Next evaluation",
+      value: "home.notScheduled",
+      label: "home.nextEvaluation",
       icon: requestIcon,
       tone: "blue",
     },
     {
-      value: "Student",
-      label: "Workspace",
+      value: "home.workspaceStudent",
+      label: "home.workspace",
       icon: hitchhikersIcon,
       tone: "yellow",
     },
   ],
-  emptyTitle: "Upcoming Evaluations",
-  emptyStateTitle: "Nothing scheduled yet",
-  emptyStateText: "Future evaluations will appear here.",
-  historyTitle: "History",
-  ctaTitle: "NEED AN EVALUATION?",
-  ctaText: "Create a new request and add your available time slots.",
-  ctaLabel: "New Request",
+  emptyTitle: "home.upcoming",
+  emptyStateTitle: "pending.emptyTitle",
+  emptyStateText: "home.futureEvaluations",
+  historyTitle: "home.history",
+  ctaTitle: "home.ctaStudentTitle",
+  ctaText: "home.ctaStudentText",
+  ctaLabel: "home.ctaStudentLabel",
   ctaTo: "/requests",
   actionSymbol: "+",
-  actionAriaLabel: "Create new request",
+  actionAriaLabel: "home.ctaStudentAria",
 };
 
 const hitchhikerDashboard: DashboardDefinition = {
-  greeting: "Welcome Back",
+  greeting: "home.greeting",
   overview: [
     {
       value: "—",
-      label: "Open requests",
+      label: "home.openRequests",
       icon: requestIcon,
       tone: "turquoise",
     },
     {
       value: "—",
-      label: "Awaiting confirmation",
+      label: "home.awaitingConfirmation",
       icon: pendingIcon,
       tone: "blue",
     },
     {
       value: "—",
-      label: "Evaluations done",
+      label: "home.evaluationsDone",
       icon: historyIcon,
       tone: "mint",
     },
     {
-      value: "Hitchhiker",
-      label: "Workspace",
+      value: "home.workspaceHitchhiker",
+      label: "home.workspace",
       icon: hitchhikersIcon,
       tone: "yellow",
     },
   ],
-  emptyTitle: "Upcoming Evaluations",
-  emptyStateTitle: "Nothing scheduled yet",
-  emptyStateText: "Evaluations you pick and students confirm will appear here.",
-  historyTitle: "History",
-  ctaTitle: "READY TO EVALUATE?",
-  ctaText: "Browse open requests for your projects and pick a time slot.",
-  ctaLabel: "Open Requests",
+  emptyTitle: "home.upcoming",
+  emptyStateTitle: "pending.emptyTitle",
+  emptyStateText: "home.pickedEvaluations",
+  historyTitle: "home.history",
+  ctaTitle: "home.ctaHitchhikerTitle",
+  ctaText: "home.ctaHitchhikerText",
+  ctaLabel: "home.ctaHitchhikerLabel",
   ctaTo: "/requests",
   actionSymbol: "→",
-  actionAriaLabel: "Browse open requests",
+  actionAriaLabel: "home.ctaHitchhikerAria",
 };
 
 const councilDashboard: DashboardDefinition = {
-  greeting: "Welcome Back",
+  greeting: "home.greeting",
   overview: [
     {
       value: "—",
-      label: "New messages",
+      label: "home.newMessages",
       icon: requestIcon,
       tone: "turquoise",
     },
     {
       value: "—",
-      label: "History",
+      label: "home.history",
       icon: historyIcon,
       tone: "mint",
     },
     {
       value: "—",
-      label: "Hitchhikers",
+      label: "home.hitchhikers",
       icon: hitchhikersIcon,
       tone: "blue",
     },
     {
-      value: "Council",
-      label: "Workspace",
+      value: "home.workspaceCouncil",
+      label: "home.workspace",
       icon: pendingIcon,
       tone: "yellow",
     },
   ],
-  emptyTitle: "Messages",
-  emptyStateTitle: "No messages yet",
-  emptyStateText: "New anonymous messages will appear here.",
-  historyTitle: "History",
-  ctaTitle: "STUDENT COUNCIL",
-  ctaText: "Review anonymous messages sent to the council.",
-  ctaLabel: "View Messages",
+  emptyTitle: "home.messages",
+  emptyStateTitle: "home.noMessages",
+  emptyStateText: "home.messagesText",
+  historyTitle: "home.history",
+  ctaTitle: "home.ctaCouncilTitle",
+  ctaText: "home.ctaCouncilText",
+  ctaLabel: "home.ctaCouncilLabel",
   ctaTo: "/council/inbox",
   actionSymbol: "→",
-  actionAriaLabel: "View council messages",
+  actionAriaLabel: "home.ctaCouncilAria",
 };
 
 const dashboards: Record<AppRole, DashboardDefinition> = {
@@ -165,12 +167,13 @@ const dashboards: Record<AppRole, DashboardDefinition> = {
 // The student's request boxes, filled from the API (#507). They show skeletons during the first
 // load, and only the error when it fails, never empty states that may not be true (#258).
 function StudentRequestSections() {
+  const { t } = useTranslation();
   const { requests, isLoading, hasError } = useStudentRequests();
 
   if (hasError) {
     return (
       <p className="dashboard__load-error" role="alert">
-        Could not load your requests. Please try again later.
+        {t("myRequests.error")}
       </p>
     );
   }
@@ -187,12 +190,13 @@ function StudentRequestSections() {
 // The Hitchhiker's boxes, filled from the API: the open queue and the picked requests (#61).
 // Skeletons during the first load, only the error when it fails (#258).
 function HitchhikerRequestSections() {
+  const { t } = useTranslation();
   const { openRequests, pickedRequests, isLoading, hasError } = useHitchhikerRequests();
 
   if (hasError) {
     return (
       <p className="dashboard__load-error" role="alert">
-        Could not load your requests. Please try again later.
+        {t("myRequests.error")}
       </p>
     );
   }
@@ -208,18 +212,19 @@ function HitchhikerRequestSections() {
 }
 
 function HomePage() {
+  const { t } = useTranslation();
   const { activeRole } = useRole();
   const dashboard = dashboards[activeRole];
 
   return (
     <section className="dashboard">
       <header className="dashboard__header">
-        <h1>{dashboard.greeting}</h1>
+        <h1>{t(dashboard.greeting)}</h1>
       </header>
 
       <section className="dashboard__section dashboard__overview-section">
         <div className="dashboard__section-heading">
-          <h2>Overview</h2>
+          <h2>{t("home.overview")}</h2>
         </div>
 
         <div className="dashboard-overview">
@@ -232,8 +237,8 @@ function HomePage() {
                 <img src={item.icon} alt="" aria-hidden="true" />
               </div>
 
-              <strong>{item.value}</strong>
-              <span>{item.label}</span>
+              <strong>{item.value === "—" ? item.value : t(item.value)}</strong>
+              <span>{t(item.label)}</span>
             </article>
           ))}
         </div>
@@ -244,30 +249,30 @@ function HomePage() {
         {activeRole === "HITCHHIKER" && <HitchhikerRequestSections />}
         {activeRole === "COUNCIL" && (
           <section className="dashboard__section">
-            <h2>{dashboard.emptyTitle}</h2>
+            <h2>{t(dashboard.emptyTitle)}</h2>
 
             <div className="dashboard-empty">
               <Link
                 className="dashboard-empty__add"
                 to={dashboard.ctaTo}
-                aria-label={dashboard.actionAriaLabel}
+                aria-label={t(dashboard.actionAriaLabel)}
               >
                 {dashboard.actionSymbol}
               </Link>
-              <h3>{dashboard.emptyStateTitle}</h3>
-              <p>{dashboard.emptyStateText}</p>
+              <h3>{t(dashboard.emptyStateTitle)}</h3>
+              <p>{t(dashboard.emptyStateText)}</p>
             </div>
           </section>
         )}
 
         {activeRole === "COUNCIL" && (
           <section className="dashboard__section">
-            <h2>{dashboard.historyTitle}</h2>
+            <h2>{t(dashboard.historyTitle)}</h2>
 
             <div className="dashboard-empty">
               <div className="dashboard-empty__history-mark">—</div>
-              <h3>No history yet</h3>
-              <p>Your recent activity will appear here.</p>
+              <h3>{t("home.noHistory")}</h3>
+              <p>{t("home.activityText")}</p>
             </div>
           </section>
         )}
@@ -275,13 +280,13 @@ function HomePage() {
 
       <section className="dashboard-cta">
         <div>
-          <h2>{dashboard.ctaTitle}</h2>
-          <p>{dashboard.ctaText}</p>
+          <h2>{t(dashboard.ctaTitle)}</h2>
+          <p>{t(dashboard.ctaText)}</p>
         </div>
 
         <Link className="dashboard-cta__button" to={dashboard.ctaTo}>
           <span>{dashboard.actionSymbol}</span>
-          {dashboard.ctaLabel}
+          {t(dashboard.ctaLabel)}
         </Link>
       </section>
     </section>

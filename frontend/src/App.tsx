@@ -14,10 +14,12 @@ import EligibilityReviewPage from "./pages/EligibilityReviewPage";
 import EvaluationPage from "./pages/EvaluationPage";
 import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
+import HitchhikersPage from "./pages/HitchhikersPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import PendingPage from "./pages/PendingPage";
+import PersonProfilePage from "./pages/PersonProfilePage";
 import PickSlotPage from "./pages/PickSlotPage";
 import ProfilePage from "./pages/ProfilePage";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
@@ -134,6 +136,8 @@ function AuthenticatedApp() {
             </RoleGuard>
           }
         />
+        <Route path="/hitchhikers" element={<HitchhikersPage />} />
+        <Route path="/people/:id" element={<PersonProfilePage />} />
         <Route
           path="/council"
           element={
