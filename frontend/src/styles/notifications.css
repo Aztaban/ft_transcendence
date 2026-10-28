@@ -1,0 +1,137 @@
+/* The notification center under the bell (#272). The top bar is sticky, so the panel scrolls on
+   its own when the list is long. */
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(480px, calc(100vh - var(--topbar-height) - 24px));
+  overflow-y: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* The title, and "Mark all as read" on the right when something is unread (#274). */
+.notification-panel__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.notification-panel__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.notification-panel__mark-all {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-dark);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notification-panel__mark-all:hover,
+.notification-panel__mark-all:focus-visible {
+  text-decoration: underline;
+}
+
+.notification-panel__mark-all:disabled {
+  color: var(--color-text-secondary);
+  cursor: default;
+  text-decoration: none;
+}
+
+.notification-panel__message {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.notification-panel__retry {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent-dark);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notification-panel__retry:hover {
+  background: #e6f8f8;
+}
+
+.notification-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notification-panel__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+/* An unread notification without a page is a button that only marks it as read (#274). */
+button.notification-panel__entry {
+  width: 100%;
+  border: 0;
+  border-left: 3px solid transparent;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+a.notification-panel__entry:hover,
+a.notification-panel__entry:focus-visible,
+button.notification-panel__entry:hover,
+button.notification-panel__entry:focus-visible {
+  background: #f0f2f2;
+}
+
+/* Unread: an accent bar and a light tint, like the badge on the bell. */
+.notification-panel__item--unread .notification-panel__entry {
+  border-left-color: var(--color-accent);
+  background: #effafa;
+  font-weight: 600;
+}
+
+.notification-panel__time {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.notification-panel__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

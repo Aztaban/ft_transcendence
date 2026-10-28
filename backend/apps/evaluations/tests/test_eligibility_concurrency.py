@@ -3,6 +3,8 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from threading import Barrier
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -13,6 +15,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
+from apps.notifications.models import Notification
 
 pytestmark = pytest.mark.django_db(transaction=True)
 NOW = datetime(2026, 10, 17, 12, tzinfo=timezone.utc)
@@ -23,6 +26,10 @@ PASSWORD = "EligibilityPassword123!"
 def actors(monkeypatch, empty_project_catalog):
     assert connection.vendor == "mysql", "These tests require real MySQL row locking."
     monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
+    monkeypatch.setattr(
+        "apps.core.events.get_channel_layer",
+        lambda: SimpleNamespace(group_send=AsyncMock()),
+    )
     for name in Role.Name.values:
         Role.objects.get_or_create(name=name)
     users = []
@@ -129,6 +136,9 @@ def test_competing_submissions_create_only_one_pending_request(actors, monkeypat
     assert list(pending.projects.order_by("id").values_list("id", flat=True)) == [801, 802]
     assert TutorEligibilityRequest.projects.through.objects.count() == 2
     assert TutorEligibility.objects.count() == 0
+    assert list(Notification.objects.values("recipient_id", "type")) == [
+        {"recipient_id": 702, "type": "eligibility.requested"}
+    ]
 
 
 @pytest.mark.parametrize(
@@ -196,6 +206,13 @@ def test_competing_reviews_have_one_winner_and_consistent_grants(actors, monkeyp
     )
     existing.refresh_from_db()
     assert existing.granted_by_request_id is None
+    assert list(Notification.objects.values("recipient_id", "type", "payload")) == [
+        {
+            "recipient_id": 701,
+            "type": "eligibility.decided",
+            "payload": {"request_id": pending.pk, "decision": decision, "review_note": note},
+        }
+    ]
     grants = list(
         TutorEligibility.objects.order_by("project_id").values_list(
             "tutor_id", "project_id", "granted_by_request_id"
@@ -250,6 +267,7 @@ def test_failed_grant_creation_rolls_back_review_and_partial_grants(actors, monk
         "",
     )
     assert TutorEligibility.objects.count() == 0
+    assert not Notification.objects.exists()
     assert list(pending.projects.order_by("id").values_list("id", flat=True)) == [801, 802]
 
     # The rolled-back request remains reviewable and grants both projects on retry.
@@ -263,6 +281,7 @@ def test_failed_grant_creation_rolls_back_review_and_partial_grants(actors, monk
     assert retried.status_code == 200
     pending.refresh_from_db()
     assert pending.status == "approved"
+    assert Notification.objects.filter(type="eligibility.decided", recipient_id=701).count() == 1
     assert list(
         TutorEligibility.objects.order_by("project_id").values_list(
             "tutor_id", "project_id", "granted_by_request_id"

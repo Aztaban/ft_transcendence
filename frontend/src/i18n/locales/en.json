@@ -40,6 +40,8 @@
     "search": "Search",
     "searchPlaceholder": "search",
     "notifications": "Notifications",
+    "notificationsUnread_one": "Notifications, {{count}} unread",
+    "notificationsUnread_other": "Notifications, {{count}} unread",
     "userMenu": "Open user menu"
   },
   "connection": {
@@ -362,6 +364,50 @@
     "head_tutor": "Head Tutor",
     "sc_member": "Student Council",
     "admin": "Admin"
+  },
+  "notificationPanel": {
+    "title": "Notifications",
+    "loading": "Loading notifications…",
+    "empty": "No notifications yet.",
+    "error": "Could not load your notifications.",
+    "retry": "Try again",
+    "unread": "Unread",
+    "markAllRead": "Mark all as read"
+  },
+  "notifications": {
+    "evaluation": {
+      "created": "New evaluation request for {{project.name}}",
+      "slot_picked": "{{tutor.display_name}} picked a slot for {{project.name}}: {{slot}}. Please confirm it",
+      "confirmed": "{{student.display_name}} confirmed the evaluation of {{project.name}}: {{slot}}",
+      "declined": "{{student.display_name}} declined your slot for {{project.name}}",
+      "released": "{{tutor.display_name}} released your evaluation request for {{project.name}}",
+      "cancelled": "{{cancelled_by.display_name}} cancelled the evaluation of {{project.name}}",
+      "expired_pending": "Your evaluation request for {{project.name}} expired: nobody picked it",
+      "expired_awaiting_confirmation": "The evaluation of {{project.name}} expired before the slot was confirmed",
+      "result_recorded_passed": "Result for {{project.name}}: passed",
+      "result_recorded_failed": "Result for {{project.name}}: failed"
+    },
+    "eligibility": {
+      "requested": "{{requester.display_name}} asked to evaluate new projects",
+      "decided_approved": "Your eligibility request was approved",
+      "decided_declined": "Your eligibility request was declined",
+      "revoked": "You can no longer evaluate {{project.name}}"
+    },
+    "role": {
+      "changed_assigned": "You now have the role {{roleLabel}}",
+      "changed_revoked": "You no longer have the role {{roleLabel}}"
+    },
+    "account": {
+      "updated": "An administrator updated your account"
+    },
+    "sc_message": {
+      "created": "New anonymous message for the Student Council"
+    },
+    "resource": {
+      "created": "{{owner.display_name}} shared \"{{title}}\"",
+      "updated": "Your resource \"{{title}}\" was edited",
+      "deleted": "Your resource \"{{title}}\" was deleted"
+    }
   },
   "home": {
     "greeting": "Welcome Back",

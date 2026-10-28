@@ -22,6 +22,7 @@ export interface LiveEventData {
   "eligibility.revoked": { project_id: number };
   "role.changed": Record<string, never>;
   "notification.created": { id: number };
+  "notification.updated": Record<string, never>;
   "session.ended": Record<string, never>;
 }
 
@@ -45,6 +46,7 @@ export const LIVE_EVENT_NAMES: readonly LiveEventName[] = [
   "eligibility.revoked",
   "role.changed",
   "notification.created",
+  "notification.updated",
   "session.ended",
 ];
 
