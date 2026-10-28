@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { cancelEvaluationRequest, listEvaluationRequests } from "../../api/evaluationRequests";
+import i18n from "../../i18n";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../../utils/dateTime";
 import CancelRequestDialog from "./CancelRequestDialog";
@@ -26,28 +28,28 @@ function projectInitials(name: string) {
 function statusLabel(request: EvaluationRequest): { label: string; tone: Tone } {
   switch (request.status) {
     case "pending":
-      return { label: "Waiting for a Hitchhiker", tone: "blue" };
+      return { label: i18n.t("status.waitingForHitchhiker"), tone: "blue" };
     case "awaiting_confirmation":
-      return { label: "Needs your confirmation", tone: "amber" };
+      return { label: i18n.t("status.needsConfirmation"), tone: "amber" };
     case "cancelled":
-      return { label: "Cancelled", tone: "grey" };
+      return { label: i18n.t("status.cancelled"), tone: "grey" };
     case "expired":
-      return { label: "Expired", tone: "grey" };
+      return { label: i18n.t("status.expired"), tone: "grey" };
   }
 
   if (!request.is_history) {
-    return { label: "Confirmed", tone: "teal" };
+    return { label: i18n.t("status.confirmed"), tone: "teal" };
   }
 
   if (request.result === "passed") {
-    return { label: "Passed", tone: "green" };
+    return { label: i18n.t("status.passed"), tone: "green" };
   }
 
   if (request.result === "failed") {
-    return { label: "Failed", tone: "red" };
+    return { label: i18n.t("status.failed"), tone: "red" };
   }
 
-  return { label: "Result pending", tone: "violet" };
+  return { label: i18n.t("status.resultPending"), tone: "violet" };
 }
 
 interface RequestRowProps {
@@ -57,6 +59,7 @@ interface RequestRowProps {
 }
 
 function RequestRow({ request, onCancel }: RequestRowProps) {
+  const { t } = useTranslation();
   const status = statusLabel(request);
 
   return (
@@ -70,7 +73,7 @@ function RequestRow({ request, onCancel }: RequestRowProps) {
         {request.starts_at && request.ends_at ? (
           <time dateTime={request.starts_at}>{formatSlot(request.starts_at, request.ends_at)}</time>
         ) : (
-          <p>Requested {formatTimeAgo(request.created_at)}</p>
+          <p>{t("common.requestedAgo", { time: formatTimeAgo(request.created_at) })}</p>
         )}
       </div>
 
@@ -82,10 +85,10 @@ function RequestRow({ request, onCancel }: RequestRowProps) {
         <button
           className="my-requests__cancel"
           type="button"
-          aria-label={`Cancel the ${request.project.name} request`}
+          aria-label={t("myRequests.cancelAria", { project: request.project.name })}
           onClick={() => onCancel(request)}
         >
-          Cancel
+          {t("common.cancel")}
         </button>
       )}
     </li>
@@ -171,7 +174,10 @@ function useRequestList(history: boolean): RequestList {
   };
 }
 
+// `label` picks the text: "myRequests.showMoreActive" or "myRequests.showMorePast".
 function ShowMore({ list, label }: { list: RequestList; label: string }) {
+  const { t } = useTranslation();
+
   if (!list.hasMore) {
     return null;
   }
@@ -184,8 +190,8 @@ function ShowMore({ list, label }: { list: RequestList; label: string }) {
       onClick={list.loadMore}
     >
       {list.isLoadingMore
-        ? "Loading…"
-        : `Show more ${label} (${list.total - list.requests.length} left)`}
+        ? t("myRequests.loadingMore")
+        : t(label, { count: list.total - list.requests.length })}
     </button>
   );
 }
@@ -196,6 +202,7 @@ function ShowMore({ list, label }: { list: RequestList; label: string }) {
 // Each is loaded on its own, so an older active request is never pushed out by newer past ones.
 // TODO: link each row to /evaluations/{id} once that page (#507) is merged.
 function MyRequests() {
+  const { t } = useTranslation();
   const active = useRequestList(false);
   const past = useRequestList(true);
   const [cancelling, setCancelling] = useState<EvaluationRequest | null>(null);
@@ -219,7 +226,7 @@ function MyRequests() {
 
     try {
       await cancelEvaluationRequest(cancelling.id);
-      setNotice(`Your ${cancelling.project.name} request was cancelled.`);
+      setNotice(t("myRequests.cancelled", { project: cancelling.project.name }));
       setCancelling(null);
       active.reload();
       past.reload();
@@ -240,7 +247,7 @@ function MyRequests() {
 
   return (
     <section className="my-requests" aria-labelledby="my-requests-title">
-      <h2 id="my-requests-title">Your requests</h2>
+      <h2 id="my-requests-title">{t("myRequests.title")}</h2>
 
       {notice && (
         <p className="my-requests__notice" role="status">
@@ -253,26 +260,26 @@ function MyRequests() {
           {[1, 2].map((placeholder) => (
             <div className="my-requests__skeleton" key={placeholder} />
           ))}
-          <span className="my-requests__sr-only">Loading your requests…</span>
+          <span className="my-requests__sr-only">{t("myRequests.loading")}</span>
         </div>
       )}
 
       {loadState === "error" && (
         <p className="my-requests__error" role="alert">
-          Could not load your requests. Please try again later.
+          {t("myRequests.error")}
         </p>
       )}
 
       {loadState === "ready" && isEmpty && (
-        <p className="my-requests__empty">You haven't requested an evaluation yet.</p>
+        <p className="my-requests__empty">{t("myRequests.empty")}</p>
       )}
 
       {loadState === "ready" && !isEmpty && (
         <>
           <div className="my-requests__group">
-            <h3>Active</h3>
+            <h3>{t("myRequests.active")}</h3>
             {active.requests.length === 0 ? (
-              <p className="my-requests__empty">No active requests.</p>
+              <p className="my-requests__empty">{t("myRequests.noActive")}</p>
             ) : (
               <ul className="my-requests__list">
                 {active.requests.map((request) => (
@@ -287,18 +294,18 @@ function MyRequests() {
                 ))}
               </ul>
             )}
-            <ShowMore list={active} label="active requests" />
+            <ShowMore list={active} label="myRequests.showMoreActive" />
           </div>
 
           {past.requests.length > 0 && (
             <div className="my-requests__group">
-              <h3>Past</h3>
+              <h3>{t("myRequests.past")}</h3>
               <ul className="my-requests__list">
                 {past.requests.map((request) => (
                   <RequestRow request={request} key={request.id} />
                 ))}
               </ul>
-              <ShowMore list={past} label="past requests" />
+              <ShowMore list={past} label="myRequests.showMorePast" />
             </div>
           )}
         </>

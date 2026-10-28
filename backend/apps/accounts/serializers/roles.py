@@ -1,5 +1,6 @@
 """Account roles serializers."""
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from apps.accounts.models import Role
@@ -17,5 +18,5 @@ class RoleAssignSerializer(serializers.Serializer):
 
     def validate_role(self, value):
         if not Role.objects.filter(name=value).exists():
-            raise serializers.ValidationError("Unknown role.")
+            raise serializers.ValidationError(_("Unknown role."))
         return value

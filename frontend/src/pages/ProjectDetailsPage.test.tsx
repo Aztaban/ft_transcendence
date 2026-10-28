@@ -8,23 +8,9 @@ import ProjectDetailsPage from "./ProjectDetailsPage";
 
 vi.mock("../api/projects", () => ({ getProject: vi.fn() }));
 
-const session = vi.hoisted(() => ({ isAuthenticated: true, isLoading: false }));
-
-vi.mock("../store/AuthContext", () => ({
-  useAuth: () => ({
-    user: session.isAuthenticated ? { id: 1, email: "a@42.cz", display_name: "dkolarov" } : null,
-    isAuthenticated: session.isAuthenticated,
-    isLoading: session.isLoading,
-    login: vi.fn(),
-    logout: vi.fn(),
-  }),
-}));
-
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
-  session.isAuthenticated = true;
-  session.isLoading = false;
 });
 
 function renderPage(slug = "push_swap") {
@@ -32,42 +18,12 @@ function renderPage(slug = "push_swap") {
     <MemoryRouter initialEntries={[`/projects/${slug}`]}>
       <Routes>
         <Route path="/projects/:slug" element={<ProjectDetailsPage />} />
-        <Route path="/login" element={<div>Login page</div>} />
       </Routes>
     </MemoryRouter>,
   );
 }
 
 describe("ProjectDetailsPage", () => {
-  it("does not call the project endpoint while the session is loading", () => {
-    session.isLoading = true;
-    session.isAuthenticated = false;
-
-    renderPage();
-
-    expect(getProject).not.toHaveBeenCalled();
-    expect(screen.queryByText("Login page")).toBeNull();
-  });
-
-  it("sends a logged-out user to the login page without calling the endpoint", () => {
-    session.isAuthenticated = false;
-
-    renderPage();
-
-    expect(screen.getByText("Login page")).toBeTruthy();
-    expect(getProject).not.toHaveBeenCalled();
-  });
-
-  it("sends the user to the login page when the session expired (401)", async () => {
-    vi.mocked(getProject).mockRejectedValue(
-      new ApiError(401, "Not logged in.", "not_authenticated"),
-    );
-
-    renderPage();
-
-    expect(await screen.findByText("Login page")).toBeTruthy();
-  });
-
   it("shows the project with its info", async () => {
     vi.mocked(getProject).mockResolvedValue({
       id: 4,

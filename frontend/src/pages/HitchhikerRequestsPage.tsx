@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { listEvaluationRequests } from "../api/evaluationRequests";
+import { DURATION_OPTIONS } from "../features/hitchhiker/slotRules";
 import type { EvaluationRequest } from "../types/evaluation";
 import { formatTimeAgo } from "../utils/dateTime";
 import { OPEN_QUEUE_EVENTS } from "../websocket/events";
@@ -13,11 +15,14 @@ type SortOrder = "newest" | "oldest";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
-const steps = [
-  { title: "Pick a request", text: "Choose a student waiting on a project you can evaluate." },
-  { title: "Propose a slot", text: "Suggest a time between 15 and 120 minutes long." },
-  { title: "Student confirms", text: "Once confirmed, it moves to your upcoming evaluations." },
-];
+// The texts are "hitchhikerRequests.how<Step>Title" and "hitchhikerRequests.how<Step>Text".
+const steps = ["Pick", "Propose", "Confirm"];
+
+// For the "Propose a slot" step: the shortest and longest slot (api-plan §7.1).
+const slotLength = {
+  min: DURATION_OPTIONS[0],
+  max: DURATION_OPTIONS[DURATION_OPTIONS.length - 1],
+};
 
 // "minishell" → "MI", "RAG against the machine" → "RA"
 function projectInitials(name: string) {
@@ -35,6 +40,7 @@ function isWaitingLong(request: EvaluationRequest, now: number) {
 // are eligible for, from GET /evaluation-requests/?scope=open (api-plan §10.4). It re-fetches
 // in the background when the queue changes or after a reconnect (§9, #255).
 function HitchhikerRequestsPage() {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState<EvaluationRequest[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
@@ -106,22 +112,22 @@ function HitchhikerRequestsPage() {
   return (
     <section className="hitchhiker-requests">
       <header className="hitchhiker-requests__header">
-        <h1>Requests</h1>
-        <p>Students waiting for a Hitchhiker on projects you can evaluate.</p>
+        <h1>{t("hitchhikerRequests.title")}</h1>
+        <p>{t("hitchhikerRequests.subtitle")}</p>
       </header>
 
       {hasRequests && (
         <dl className="hitchhiker-requests__stats">
           <div className="hitchhiker-requests__stat">
-            <dt>Open requests</dt>
+            <dt>{t("hitchhikerRequests.statOpen")}</dt>
             <dd>{requests.length}</dd>
           </div>
           <div className="hitchhiker-requests__stat">
-            <dt>Projects</dt>
+            <dt>{t("hitchhikerRequests.statProjects")}</dt>
             <dd>{projectCounts.length}</dd>
           </div>
           <div className="hitchhiker-requests__stat">
-            <dt>Longest wait</dt>
+            <dt>{t("hitchhikerRequests.statWait")}</dt>
             <dd>{oldestRequest ? formatTimeAgo(oldestRequest.created_at) : "—"}</dd>
           </div>
         </dl>
@@ -134,7 +140,7 @@ function HitchhikerRequestsPage() {
               <div
                 className="hitchhiker-requests__chips"
                 role="group"
-                aria-label="Filter by project"
+                aria-label={t("hitchhikerRequests.filterAria")}
               >
                 <button
                   className="hitchhiker-requests__chip"
@@ -142,7 +148,7 @@ function HitchhikerRequestsPage() {
                   aria-pressed={activeFilter === null}
                   onClick={() => setProjectFilter(null)}
                 >
-                  All <span>{requests.length}</span>
+                  {t("hitchhikerRequests.all")} <span>{requests.length}</span>
                 </button>
                 {projectCounts.map(([name, count]) => (
                   <button
@@ -158,13 +164,13 @@ function HitchhikerRequestsPage() {
               </div>
 
               <label className="hitchhiker-requests__sort">
-                Sort
+                {t("hitchhikerRequests.sort")}
                 <select
                   value={sortOrder}
                   onChange={(event) => setSortOrder(event.target.value as SortOrder)}
                 >
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
+                  <option value="newest">{t("hitchhikerRequests.newest")}</option>
+                  <option value="oldest">{t("hitchhikerRequests.oldest")}</option>
                 </select>
               </label>
             </div>
@@ -175,20 +181,22 @@ function HitchhikerRequestsPage() {
               {[1, 2, 3].map((placeholder) => (
                 <div className="hitchhiker-requests__skeleton" key={placeholder} />
               ))}
-              <span className="hitchhiker-requests__sr-only">Loading requests…</span>
+              <span className="hitchhiker-requests__sr-only">
+                {t("hitchhikerRequests.loading")}
+              </span>
             </div>
           )}
 
           {loadState === "error" && (
             <p className="hitchhiker-requests__error" role="alert">
-              Could not load the requests. Please try again later.
+              {t("hitchhikerRequests.error")}
             </p>
           )}
 
           {loadState === "ready" && requests.length === 0 && (
             <div className="hitchhiker-requests__empty">
-              <h2>No open requests</h2>
-              <p>New requests for projects you can evaluate will appear here.</p>
+              <h2>{t("hitchhikerRequests.emptyTitle")}</h2>
+              <p>{t("hitchhikerRequests.emptyText")}</p>
             </div>
           )}
 
@@ -202,23 +210,25 @@ function HitchhikerRequestsPage() {
 
                   <div className="hitchhiker-requests__project">
                     <h2>{request.project.name}</h2>
-                    <p>Requested {formatTimeAgo(request.created_at)}</p>
+                    <p>{t("common.requestedAgo", { time: formatTimeAgo(request.created_at) })}</p>
                     {isWaitingLong(request, now) && (
-                      <span className="hitchhiker-requests__tag">Waiting a while</span>
+                      <span className="hitchhiker-requests__tag">
+                        {t("hitchhikerRequests.waitingLong")}
+                      </span>
                     )}
                   </div>
 
-                  <p className="hitchhiker-requests__note">
-                    {request.note || "No note from the student."}
-                  </p>
+                  <p className="hitchhiker-requests__note">{request.note || t("common.noNote")}</p>
 
                   <div className="hitchhiker-requests__action">
                     <Link
                       className="hitchhiker-requests__review"
                       to={`/requests/${request.id}`}
-                      aria-label={`Review the ${request.project.name} request`}
+                      aria-label={t("hitchhikerRequests.reviewAria", {
+                        project: request.project.name,
+                      })}
                     >
-                      Review
+                      {t("hitchhikerRequests.review")}
                     </Link>
                   </div>
                 </li>
@@ -229,27 +239,27 @@ function HitchhikerRequestsPage() {
 
         <aside className="hitchhiker-requests__aside">
           <section className="hitchhiker-requests__panel">
-            <h2>How it works</h2>
+            <h2>{t("common.howItWorks")}</h2>
             <ol className="hitchhiker-requests__steps">
               {steps.map((step) => (
-                <li key={step.title}>
-                  <strong>{step.title}</strong>
-                  <span>{step.text}</span>
+                <li key={step}>
+                  <strong>{t(`hitchhikerRequests.how${step}Title`)}</strong>
+                  <span>{t(`hitchhikerRequests.how${step}Text`, slotLength)}</span>
                 </li>
               ))}
             </ol>
           </section>
 
           <section className="hitchhiker-requests__panel hitchhiker-requests__panel--tip">
-            <h2>Tip</h2>
-            <p>Requests marked “Waiting a while” have been open for more than a day.</p>
+            <h2>{t("common.tip")}</h2>
+            <p>{t("hitchhikerRequests.tipText")}</p>
           </section>
 
           <section className="hitchhiker-requests__panel hitchhiker-requests__panel--projects">
-            <h2>Your projects</h2>
-            <p>You only see requests for projects you are approved to evaluate.</p>
+            <h2>{t("hitchhikerRequests.projectsTitle")}</h2>
+            <p>{t("hitchhikerRequests.projectsText")}</p>
             <Link className="hitchhiker-requests__projects-link" to="/eligibility-requests/new">
-              Request more projects <span aria-hidden="true">→</span>
+              {t("hitchhikerRequests.projectsLink")} <span aria-hidden="true">→</span>
             </Link>
           </section>
         </aside>

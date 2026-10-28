@@ -2,6 +2,7 @@
 
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -64,7 +65,7 @@ class MeView(APIView):
         serializer = ProfileUpdateSerializer(instance=request.user, data=request.data, partial=True)
         if not serializer.is_valid():
             return validation_error_response(
-                serializer.errors, "Please correct the profile fields."
+                serializer.errors, _("Please correct the profile fields.")
             )
 
         serializer.save()

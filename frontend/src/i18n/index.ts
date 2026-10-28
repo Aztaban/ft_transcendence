@@ -47,6 +47,14 @@ export function changeLanguage(language: Language) {
   void i18n.changeLanguage(language);
 }
 
+// Dates and times follow the chosen language. English uses the British style: 24-hour clock and
+// the day before the month, as in Prague.
+const DATE_LOCALES: Record<Language, string> = { en: "en-GB", cs: "cs-CZ", es: "es-ES" };
+
+export function dateLocale() {
+  return DATE_LOCALES[isLanguage(i18n.resolvedLanguage) ? i18n.resolvedLanguage : "en"];
+}
+
 const initialLanguage = detectLanguage();
 
 document.documentElement.lang = initialLanguage;
