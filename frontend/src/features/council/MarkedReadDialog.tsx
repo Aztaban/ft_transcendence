@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
 
@@ -40,7 +40,7 @@ function MarkedReadDialog({ onClose }: MarkedReadDialogProps) {
         onClick={(event) => event.stopPropagation()}
       >
         <p id="marked-read-title" className="marked-read__title">
-          <Trans i18nKey="council.markedReadTitle" components={{ strong: <strong /> }} />
+          {t("council.markedReadTitle")}
         </p>
         <img className="marked-read__image" src={hitchhikersIcon} alt="" aria-hidden="true" />
         <p className="message-sent__hint">{t("council.clickToClose")}</p>

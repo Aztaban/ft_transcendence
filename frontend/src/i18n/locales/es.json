@@ -364,14 +364,10 @@
     "messages": "Mensajes",
     "newCount": "{{count}} nuevos",
     "inboxSubtitle": "Nuevos mensajes anónimos de tus compañeros.",
-    "tabsAria": "Mensajes del consejo",
-    "tabNew": "Nuevos",
-    "tabHistory": "Historial",
     "loadingMessages": "Cargando mensajes…",
     "loadMessagesError": "No se pudieron cargar los mensajes. Inténtalo más tarde.",
     "caughtUp": "¡Todo al día!",
-    "caughtUpText": "No hay mensajes nuevos. Los que ya has leído están en el Historial.",
-    "openHistory": "Abrir Historial",
+    "caughtUpText": "No hay mensajes nuevos.",
     "newListAria": "Mensajes nuevos",
     "messageNumber": "Mensaje n.º {{id}}",
     "newPill": "Nuevo",
@@ -413,7 +409,7 @@
     "notePlaceholder": "p. ej. Reenviado al encargado del edificio.",
     "saved": "Guardado ✓",
     "saveNote": "Guardar nota",
-    "markedReadTitle": "Hecho. ¡Ahora encontrarás el mensaje en el <strong>Historial</strong>!"
+    "markedReadTitle": "Hecho. El mensaje se ha marcado como leído."
   },
   "roles": {
     "student": "Estudiante",

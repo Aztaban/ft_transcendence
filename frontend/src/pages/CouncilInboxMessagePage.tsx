@@ -46,6 +46,9 @@ function CouncilInboxMessagePage() {
   const [readError, setReadError] = useState("");
   const [isMarkedRead, setIsMarkedRead] = useState(false);
   const [note, setNote] = useState("");
+  // The note and version the draft is based on. Saving sends this version, so a colleague's newer
+  // note (which "Mark as read/unread" can bring in) gives 409 instead of being overwritten.
+  const [noteBase, setNoteBase] = useState({ text: "", version: 0 });
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteStatus, setNoteStatus] = useState<"" | "saved" | "conflict">("");
   const [noteError, setNoteError] = useState("");
@@ -59,6 +62,7 @@ function CouncilInboxMessagePage() {
         if (active) {
           setMessage(result);
           setNote(result.discussion_note);
+          setNoteBase({ text: result.discussion_note, version: result.discussion_note_version });
           setLoadState("ready");
         }
       })
@@ -85,6 +89,11 @@ function CouncilInboxMessagePage() {
       const updated = await setSCMessageRead(message.id, isRead);
 
       setMessage(updated);
+      // Without unsaved changes, show the current note; a draft keeps its base for the conflict check.
+      if (note === noteBase.text) {
+        setNote(updated.discussion_note);
+        setNoteBase({ text: updated.discussion_note, version: updated.discussion_note_version });
+      }
       setIsMarkedRead(isRead);
     } catch (error) {
       setReadError(actionErrorMessage(error));
@@ -103,16 +112,20 @@ function CouncilInboxMessagePage() {
     setIsSavingNote(true);
 
     try {
-      const updated = await saveSCMessageNote(message.id, note, message.discussion_note_version);
+      const updated = await saveSCMessageNote(message.id, note, noteBase.version);
 
       setMessage(updated);
       setNote(updated.discussion_note);
+      setNoteBase({ text: updated.discussion_note, version: updated.discussion_note_version });
       setNoteStatus("saved");
     } catch (error) {
       if (error instanceof ApiError && error.code === "edit_conflict") {
         // Load the note the other member saved (and its version); keep this draft to merge.
         try {
-          setMessage(await getSCMessage(message.id));
+          const current = await getSCMessage(message.id);
+
+          setMessage(current);
+          setNoteBase({ text: current.discussion_note, version: current.discussion_note_version });
           setNoteStatus("conflict");
         } catch (reloadError) {
           setNoteError(actionErrorMessage(reloadError));
@@ -127,7 +140,7 @@ function CouncilInboxMessagePage() {
 
   const isRead = message?.read_at != null;
   const isBusy = isUpdatingRead || isSavingNote;
-  const noteChanged = message !== null && note !== message.discussion_note;
+  const noteChanged = message !== null && note !== noteBase.text;
 
   return (
     <section className="council-message">
@@ -137,7 +150,7 @@ function CouncilInboxMessagePage() {
           type="button"
           aria-label={t("council.backToMessages")}
           disabled={isBusy}
-          onClick={() => navigate(isRead ? "/council/history" : "/council/inbox")}
+          onClick={() => navigate("/council/inbox")}
         >
           ‹
         </button>

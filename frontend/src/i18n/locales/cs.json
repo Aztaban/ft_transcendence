@@ -368,14 +368,10 @@
     "messages": "Zprávy",
     "newCount": "nové: {{count}}",
     "inboxSubtitle": "Nové anonymní zprávy od spolužáků.",
-    "tabsAria": "Zprávy rady",
-    "tabNew": "Nové",
-    "tabHistory": "Historie",
     "loadingMessages": "Načítám zprávy…",
     "loadMessagesError": "Zprávy se nepodařilo načíst. Zkuste to prosím později.",
     "caughtUp": "Vše přečteno!",
-    "caughtUpText": "Nejsou tu žádné nové zprávy. Přečtené najdete v Historii.",
-    "openHistory": "Otevřít Historii",
+    "caughtUpText": "Nejsou tu žádné nové zprávy.",
     "newListAria": "Nové zprávy",
     "messageNumber": "Zpráva č. {{id}}",
     "newPill": "Nová",
@@ -417,7 +413,7 @@
     "notePlaceholder": "např. Předáno správci budovy.",
     "saved": "Uloženo ✓",
     "saveNote": "Uložit poznámku",
-    "markedReadTitle": "Hotovo. Zprávu teď najdete v <strong>Historii</strong>!"
+    "markedReadTitle": "Hotovo. Zpráva je označená jako přečtená."
   },
   "roles": {
     "student": "Student",

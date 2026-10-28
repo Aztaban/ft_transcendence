@@ -361,14 +361,10 @@
     "messages": "Messages",
     "newCount": "{{count}} new",
     "inboxSubtitle": "New anonymous messages from your peers.",
-    "tabsAria": "Council messages",
-    "tabNew": "New",
-    "tabHistory": "History",
     "loadingMessages": "Loading messages…",
     "loadMessagesError": "Could not load the messages. Please try again later.",
     "caughtUp": "All caught up!",
-    "caughtUpText": "There are no new messages. The ones you have read are in the History.",
-    "openHistory": "Open History",
+    "caughtUpText": "There are no new messages.",
     "newListAria": "New messages",
     "messageNumber": "Message #{{id}}",
     "newPill": "New",
@@ -410,7 +406,7 @@
     "notePlaceholder": "e.g. Forwarded to the building manager.",
     "saved": "Saved ✓",
     "saveNote": "Save note",
-    "markedReadTitle": "Done. You can now find the message in the <strong>History</strong> list!"
+    "markedReadTitle": "Done. The message is marked as read."
   },
   "roles": {
     "student": "Student",

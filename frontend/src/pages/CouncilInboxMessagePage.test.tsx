@@ -36,7 +36,6 @@ function renderPage() {
       <Routes>
         <Route path="/council/inbox/:id" element={<CouncilInboxMessagePage />} />
         <Route path="/council/inbox" element={<div>Messages page</div>} />
-        <Route path="/council/history" element={<div>History page</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -73,7 +72,7 @@ describe("CouncilInboxMessagePage", () => {
 
     expect(
       await screen.findByRole("dialog", {
-        name: "Done. You can now find the message in the History list!",
+        name: "Done. The message is marked as read.",
       }),
     ).toBeTruthy();
     expect(setSCMessageRead).toHaveBeenCalledWith(3, true);
@@ -99,14 +98,38 @@ describe("CouncilInboxMessagePage", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("goes back to the list the message is in", async () => {
+  it("goes back to the messages, also from a read message", async () => {
     vi.mocked(getSCMessage).mockResolvedValue(read);
     renderPage();
     await screen.findByText(read.body);
 
     fireEvent.click(button("Back to the messages"));
 
-    expect(screen.getByText("History page")).toBeTruthy();
+    expect(screen.getByText("Messages page")).toBeTruthy();
+  });
+
+  it("does not overwrite a colleague's note brought in by marking the message unread", async () => {
+    vi.mocked(getSCMessage).mockResolvedValue({ ...read, discussion_note: "Old note" });
+    vi.mocked(setSCMessageRead).mockResolvedValue({
+      ...unread,
+      discussion_note: "Colleague's note",
+      discussion_note_version: 5,
+    });
+    vi.mocked(saveSCMessageNote).mockRejectedValue(
+      new ApiError(409, "Someone else saved the note.", "edit_conflict"),
+    );
+    renderPage();
+    await screen.findByText(read.body);
+
+    fireEvent.change(noteBox(), { target: { value: "My note" } });
+    fireEvent.click(button("Mark as unread"));
+    await screen.findByText("Not read by the council yet");
+    fireEvent.click(button("Save note"));
+
+    // Saved against the version the draft started from, so the server answers 409.
+    await screen.findByText("Another council member saved the note in the meantime.");
+    expect(saveSCMessageNote).toHaveBeenCalledWith(3, "My note", 4);
+    expect(noteBox().value).toBe("My note");
   });
 
   it("saves the council note with the version it was loaded at", async () => {

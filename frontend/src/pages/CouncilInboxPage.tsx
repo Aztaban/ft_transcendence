@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
@@ -36,11 +36,29 @@ function CouncilInboxPage() {
   // Set by a live refresh: a failure then keeps the messages already shown.
   const isLiveRefresh = useRef(false);
 
-  useLiveRefresh(["notification.created"], () => {
+  // Reloads the first page in the background, keeping what is shown if that fails.
+  const refreshInBackground = useCallback(() => {
     isLiveRefresh.current = true;
     setPage(1);
     setReloadKey((key) => key + 1);
-  });
+  }, []);
+
+  useLiveRefresh(["notification.created"], refreshInBackground);
+
+  // Read state changes by colleagues send no event: catch up when the tab is shown again (§9.3).
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        refreshInBackground();
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshInBackground]);
 
   useEffect(() => {
     let active = true;
@@ -97,15 +115,6 @@ function CouncilInboxPage() {
         </div>
       </header>
 
-      <nav className="council-tabs" aria-label={t("council.tabsAria")}>
-        <span className="council-tabs__tab council-tabs__tab--active" aria-current="page">
-          {t("council.tabNew")}
-        </span>
-        <Link className="council-tabs__tab" to="/council/history">
-          {t("council.tabHistory")}
-        </Link>
-      </nav>
-
       <div className="council-layout">
         <div className="council-message__body">
           {loadState === "loading" && (
@@ -130,9 +139,6 @@ function CouncilInboxPage() {
               </span>
               <h2>{t("council.caughtUp")}</h2>
               <p>{t("council.caughtUpText")}</p>
-              <Link className="council-button council-button--small" to="/council/history">
-                {t("council.openHistory")} <span aria-hidden="true">→</span>
-              </Link>
             </div>
           )}
 
