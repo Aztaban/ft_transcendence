@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router";
 
 import { AuthProvider } from "./store/AuthContext";
 import { CurrentUserProvider } from "./store/CurrentUserContext";
+import { NotificationCountProvider } from "./store/NotificationCountContext";
 import App from "./App";
 import "./i18n";
 import { RoleProvider } from "./store/RoleContext";
@@ -18,9 +19,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <LiveProvider>
           <CurrentUserProvider>
-            <RoleProvider>
-              <App />
-            </RoleProvider>
+            <NotificationCountProvider>
+              <RoleProvider>
+                <App />
+              </RoleProvider>
+            </NotificationCountProvider>
           </CurrentUserProvider>
         </LiveProvider>
       </AuthProvider>

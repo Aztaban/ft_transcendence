@@ -6,6 +6,7 @@ import bellIcon from "../../assets/figma/bell.svg";
 import userChevron from "../../assets/figma/user-chevron.svg";
 import PersonAvatar from "../../features/people/PersonAvatar";
 import { useCurrentUser } from "../../store/CurrentUserContext";
+import { useNotificationCount } from "../../store/NotificationCountContext";
 import ConnectionStatus from "./ConnectionStatus";
 import LanguageSwitcher from "./LanguageSwitcher";
 
@@ -19,6 +20,8 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
   // The logged-in user from GET /users/me/ (§8.2); `null` until it has answered.
   const { user } = useCurrentUser();
   const { t } = useTranslation();
+  // Unread notifications (§10.5); 0 until loaded and when logged out, and then no badge is shown.
+  const { unreadCount } = useNotificationCount();
 
   return (
     <header className="topbar">
@@ -55,10 +58,18 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
         <button
           className="topbar__notification"
           type="button"
-          aria-label={t("topbar.notifications")}
+          aria-label={
+            unreadCount > 0
+              ? t("topbar.notificationsUnread", { count: unreadCount })
+              : t("topbar.notifications")
+          }
         >
           <img src={bellIcon} alt="" aria-hidden="true" />
-          <span className="topbar__notification-dot" />
+          {unreadCount > 0 && (
+            <span className="topbar__notification-badge">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
         </button>
 
         <PersonAvatar
