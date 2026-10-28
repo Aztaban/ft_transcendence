@@ -360,5 +360,55 @@
     "sentDelivered": "Tu mensaje anónimo se ha entregado.",
     "sentNoReply": "Los miembros del consejo no pueden responderte directamente porque tu identidad está oculta.",
     "clickToClose": "Haz clic en cualquier sitio para cerrar"
+  },
+  "roles": {
+    "student": "Estudiante",
+    "tutor": "Hitchhiker",
+    "head_tutor": "Head Tutor",
+    "sc_member": "Consejo estudiantil",
+    "admin": "Administrador"
+  },
+  "notificationPanel": {
+    "title": "Notificaciones",
+    "loading": "Cargando notificaciones…",
+    "empty": "Aún no hay notificaciones.",
+    "error": "No se pudieron cargar tus notificaciones.",
+    "retry": "Reintentar",
+    "unread": "No leída"
+  },
+  "notifications": {
+    "evaluation": {
+      "created": "Nueva solicitud de evaluación para {{project.name}}",
+      "slot_picked": "{{tutor.display_name}} eligió un horario para {{project.name}}: {{slot}}. Confírmalo, por favor",
+      "confirmed": "{{student.display_name}} confirmó la evaluación de {{project.name}}: {{slot}}",
+      "declined": "{{student.display_name}} rechazó tu horario para {{project.name}}",
+      "released": "{{tutor.display_name}} liberó tu solicitud de evaluación de {{project.name}}",
+      "cancelled": "{{cancelled_by.display_name}} canceló la evaluación de {{project.name}}",
+      "expired_pending": "Tu solicitud de evaluación de {{project.name}} caducó: nadie la eligió",
+      "expired_awaiting_confirmation": "La evaluación de {{project.name}} caducó antes de confirmar el horario",
+      "result_recorded_passed": "Resultado de {{project.name}}: aprobado",
+      "result_recorded_failed": "Resultado de {{project.name}}: suspendido"
+    },
+    "eligibility": {
+      "requested": "{{requester.display_name}} pidió evaluar nuevos proyectos",
+      "decided_approved": "Tu solicitud de elegibilidad fue aprobada",
+      "decided_declined": "Tu solicitud de elegibilidad fue rechazada",
+      "revoked": "Ya no puedes evaluar {{project.name}}"
+    },
+    "role": {
+      "changed_assigned": "Ahora tienes el rol {{roleLabel}}",
+      "changed_revoked": "Ya no tienes el rol {{roleLabel}}"
+    },
+    "account": {
+      "updated": "Un administrador actualizó tu cuenta"
+    },
+    "sc_message": {
+      "created": "Nuevo mensaje anónimo para el Consejo estudiantil"
+    },
+    "resource": {
+      "created": "{{owner.display_name}} compartió «{{title}}»",
+      "updated": "Tu recurso «{{title}}» fue editado",
+      "deleted": "Tu recurso «{{title}}» fue eliminado"
+    }
   }
 }
