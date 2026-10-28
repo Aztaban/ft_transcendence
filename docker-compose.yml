@@ -16,7 +16,8 @@ services:
       timeout: 5s
       retries: 10
     ports:
-      - "3306:3306"
+      # Loopback only: for local debugging tools, never reachable from the network.
+      - "127.0.0.1:3306:3306"
     networks:
       - transcendence_net
 
