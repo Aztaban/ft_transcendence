@@ -11,7 +11,9 @@ services:
       - mysql_data:/var/lib/mysql
       - ./db-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      # TCP, not the socket: MySQL's temporary first-start server answers on the socket
+      # only, so a socket ping would report healthy before the database is ready.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -49,6 +51,13 @@ services:
     # a network-reachable plain-HTTP backend could forge X-Forwarded-Proto.
     ports:
       - "127.0.0.1:8000:8000"
+    # Healthy once migrations ran and /health/ answers; nginx and Celery wait for it.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=4)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
     depends_on:
       db:
         condition: service_healthy
@@ -88,9 +97,7 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
+      backend:
         condition: service_healthy
     networks:
       - transcendence_net
@@ -107,9 +114,7 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
+      backend:
         condition: service_healthy
     networks:
       - transcendence_net
@@ -123,8 +128,10 @@ services:
       - "80:80"
       - "443:443"
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
     networks:
       - transcendence_net
 
