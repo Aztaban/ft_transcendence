@@ -13,14 +13,16 @@ The backend refuses to start with an empty `DJANGO_SECRET_KEY` or the example
 value `change-me-in-dev`. If your `.env` predates this, replace the key with
 `openssl rand -hex 32`.
 
-This starts four services:
+This starts seven services:
 
 | Service  | URL                                            | Notes |
 |----------|-------------------------------------------------|-------|
 | frontend | http://localhost:5173                           | Vite dev server, live reload |
 | backend  | http://localhost:8000                           | Django dev server, live reload |
-| db       | internal only (`db:3306`)                       | MySQL 8.4 |
+| nginx    | https://localhost                               | TLS reverse proxy; use this one |
+| db       | localhost:3306                                  | MySQL 8.4 |
 | redis    | internal only (`redis:6379`)                    | |
+| celery_worker, celery_beat | internal only                 | Background jobs |
 
 Check `http://localhost:8000/health/` — it verifies both the MySQL and Redis
 connections and returns `{"status": "ok", "db": "ok", "redis": "ok"}` once

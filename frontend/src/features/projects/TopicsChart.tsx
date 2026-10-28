@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 
 import { topicIcon } from "./topicIcons";
 
@@ -34,6 +35,7 @@ function formatShare(count: number) {
 // "Project topics" pie from the Figma: one equal slice per topic, an icon inside each slice,
 // labels around it. Slices pop in one after another; a slice slides out on hover.
 function TopicsChart({ projectName, topics }: TopicsChartProps) {
+  const { t } = useTranslation();
   const step = (2 * Math.PI) / topics.length;
   const share = formatShare(topics.length);
 
@@ -41,7 +43,7 @@ function TopicsChart({ projectName, topics }: TopicsChartProps) {
     <figure className="topics-chart">
       <figcaption>
         <strong>{projectName}</strong>
-        <span>Project topics</span>
+        <span>{t("project.topics")}</span>
       </figcaption>
 
       <svg className="topics-chart__svg" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-hidden="true">
