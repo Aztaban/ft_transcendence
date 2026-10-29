@@ -3,7 +3,6 @@
 from datetime import datetime, timezone
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.fields import DateTimeField
@@ -14,7 +13,6 @@ from apps.council.models import SCMessage
 
 pytestmark = pytest.mark.django_db
 
-User = get_user_model()
 PASSWORD = "secret"
 DETAIL = "api:sc-message-detail"
 INVALID = "Please correct the highlighted fields."
@@ -28,21 +26,11 @@ def api_client():
 
 
 @pytest.fixture
-def make_user():
-    def _make(email, roles=()):
-        user = User.objects.create_user(
-            email=email, password=PASSWORD, display_name=email.split("@")[0]
-        )
-        user.roles.set(Role.objects.filter(name__in=roles))
-        return user
-
-    return _make
-
-
-@pytest.fixture
 def council(api_client, make_user):
     """An API client logged in as an SC Member."""
-    api_client.force_authenticate(user=make_user("council@example.com", (Role.Name.SC_MEMBER,)))
+    api_client.force_authenticate(
+        user=make_user("council@example.com", roles=(Role.Name.SC_MEMBER,))
+    )
     return api_client
 
 
@@ -226,7 +214,7 @@ def test_update_rejects_an_invalid_body(council, data, fields):
 
 def test_update_is_open_to_admins(api_client, make_user):
     message = SCMessage.objects.create(body="The fridge is broken.")
-    api_client.force_authenticate(user=make_user("admin@example.com", (Role.Name.ADMIN,)))
+    api_client.force_authenticate(user=make_user("admin@example.com", roles=(Role.Name.ADMIN,)))
 
     response = update(api_client, message.id, {"is_read": True})
 
@@ -248,7 +236,7 @@ def test_update_of_a_missing_message_is_not_found(council):
 def test_update_is_hidden_outside_the_council(api_client, make_user, roles):
     # 404, not 403: an existing message looks exactly like a missing one (§5.5).
     message = SCMessage.objects.create(body="The fridge is broken.")
-    api_client.force_authenticate(user=make_user("anna@example.com", roles))
+    api_client.force_authenticate(user=make_user("anna@example.com", roles=roles))
     note = {"is_read": True, "discussion_note": "Mine now.", "discussion_note_version": 0}
 
     existing = update(api_client, message.id, note)
@@ -273,7 +261,7 @@ def test_update_needs_a_session(api_client):
 
 
 def test_update_through_session_needs_csrf(make_user):
-    member = make_user("council@example.com", (Role.Name.SC_MEMBER,))
+    member = make_user("council@example.com", roles=(Role.Name.SC_MEMBER,))
     message = SCMessage.objects.create(body="The fridge is broken.")
     browser = APIClient(enforce_csrf_checks=True)
     browser.get(reverse("api:session"), HTTP_HOST="localhost")

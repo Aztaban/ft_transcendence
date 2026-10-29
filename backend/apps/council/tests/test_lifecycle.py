@@ -8,7 +8,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.fields import DateTimeField
@@ -20,7 +19,6 @@ from apps.notifications.models import Notification
 
 pytestmark = pytest.mark.django_db
 
-User = get_user_model()
 LIST = "api:sc-message-list"
 DETAIL = "api:sc-message-detail"
 BODY = "The fridge is broken again."
@@ -37,19 +35,6 @@ CONFLICT = {
         "message": "Someone else saved the note since you loaded it. Reload it and try again.",
     }
 }
-
-
-@pytest.fixture
-def make_user():
-    def _make(email, roles=()):
-        user = User.objects.create_user(
-            email=email, password="secret", display_name=email.split("@")[0]
-        )
-        if roles:
-            user.roles.add(*Role.objects.filter(name__in=roles))
-        return user
-
-    return _make
 
 
 @pytest.fixture
@@ -91,8 +76,8 @@ def test_a_message_moves_from_send_to_a_shared_note(
     make_user, group_send, django_capture_on_commit_callbacks
 ):
     anna = make_user("anna@example.com")
-    ada = make_user("ada@example.com", (Role.Name.SC_MEMBER,))
-    admin = make_user("admin@example.com", (Role.Name.ADMIN,))
+    ada = make_user("ada@example.com", roles=(Role.Name.SC_MEMBER,))
+    admin = make_user("admin@example.com", roles=(Role.Name.ADMIN,))
     student = client_for(anna)
     council = client_for(ada)
     admin_client = client_for(admin)

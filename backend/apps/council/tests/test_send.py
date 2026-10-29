@@ -1,7 +1,6 @@
 """POST /api/v1/sc-messages/: send an anonymous message (api-plan §10.6, §5.9)."""
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.fields import DateTimeField
@@ -11,7 +10,6 @@ from apps.council.models import SCMessage
 
 pytestmark = pytest.mark.django_db
 
-User = get_user_model()
 PASSWORD = "secret"
 SEND = "api:sc-message-list"
 INVALID = "Please correct the highlighted fields."
@@ -20,16 +18,6 @@ INVALID = "Please correct the highlighted fields."
 @pytest.fixture
 def api_client():
     return APIClient()
-
-
-@pytest.fixture
-def make_user():
-    def _make(email):
-        return User.objects.create_user(
-            email=email, password=PASSWORD, display_name=email.split("@")[0]
-        )
-
-    return _make
 
 
 def iso(dt):

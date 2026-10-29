@@ -3,7 +3,6 @@
 from datetime import datetime, timezone
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.fields import DateTimeField
@@ -14,7 +13,6 @@ from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityR
 
 pytestmark = pytest.mark.django_db
 
-User = get_user_model()
 PASSWORD = "secret"
 REVIEW = "api:tutor-eligibility-requests-review"
 
@@ -27,22 +25,6 @@ FORBIDDEN_REVIEWERS = (Role.Name.STUDENT, Role.Name.TUTOR)
 @pytest.fixture
 def api_client():
     return APIClient()
-
-
-@pytest.fixture
-def make_user():
-    def _make(email, display_name=None, roles=(), **extra):
-        user = User.objects.create_user(
-            email=email,
-            password=PASSWORD,
-            display_name=display_name or email.split("@")[0],
-            **extra,
-        )
-        if roles:
-            user.roles.set(Role.objects.filter(name__in=roles))
-        return user
-
-    return _make
 
 
 def iso(dt):
