@@ -1,7 +1,7 @@
-"""One message, from send through the shared note (api-plan §8.8, §8.10, §10.6).
+"""One message, from send through moderation (api-plan §8.8, §8.10, §10.6).
 
 Keeps the pieces several people edit on one path: sending, the council notification,
-who may see the inbox, read state, and the note version.
+who may see the inbox, read state, the note version, revealing the sender, and deletion.
 """
 
 from types import SimpleNamespace
@@ -15,6 +15,7 @@ from rest_framework.fields import DateTimeField
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
+from apps.audit.models import AuditLog
 from apps.council.models import SCMessage
 from apps.notifications.models import Notification
 
@@ -23,6 +24,7 @@ pytestmark = pytest.mark.django_db
 User = get_user_model()
 LIST = "api:sc-message-list"
 DETAIL = "api:sc-message-detail"
+REVEAL = "api:sc-message-reveal-sender"
 BODY = "The fridge is broken again."
 NOT_FOUND = {"error": {"code": "not_found", "message": "Not found."}}
 FORBIDDEN = {
@@ -87,7 +89,7 @@ def page(message):
     return {"count": 1, "next": None, "previous": None, "results": [shown(message)]}
 
 
-def test_a_message_moves_from_send_to_a_shared_note(
+def test_a_message_moves_from_send_through_moderation(
     make_user, group_send, django_capture_on_commit_callbacks
 ):
     anna = make_user("anna@example.com")
@@ -195,3 +197,84 @@ def test_a_message_moves_from_send_to_a_shared_note(
     assert message.read_at == read_at
     assert message.discussion_note == "Building manager replied."
     assert message.discussion_note_version == 2
+
+    # Only an Admin may look up the sender, and the inbox still hides them (api-plan §10.6).
+    council_reveal = council.post(
+        reverse(REVEAL, args=[message.id]), {"reason": "Investigating abuse."}, format="json"
+    )
+    student_reveal = student.post(
+        reverse(REVEAL, args=[message.id]), {"reason": "Investigating abuse."}, format="json"
+    )
+    revealed = admin_client.post(
+        reverse(REVEAL, args=[message.id]), {"reason": "Investigating abuse."}, format="json"
+    )
+    message.refresh_from_db()
+    assert council_reveal.status_code == status.HTTP_403_FORBIDDEN
+    assert council_reveal.json() == FORBIDDEN
+    assert student_reveal.status_code == status.HTTP_404_NOT_FOUND
+    assert student_reveal.json() == NOT_FOUND
+    assert revealed.status_code == status.HTTP_200_OK
+    assert revealed.json() == {
+        "sender": {"id": anna.id, "display_name": "anna", "email": "anna@example.com"}
+    }
+    assert message.sender_id == anna.id
+    assert council.get(reverse(DETAIL, args=[message.id])).json() == shown(message)
+
+    council_delete = council.delete(
+        reverse(DETAIL, args=[message.id]), {"reason": "Abusive content."}, format="json"
+    )
+    student_delete = student.delete(
+        reverse(DETAIL, args=[message.id]), {"reason": "Abusive content."}, format="json"
+    )
+    removed = admin_client.delete(
+        reverse(DETAIL, args=[message.id]), {"reason": "Abusive content."}, format="json"
+    )
+    assert council_delete.status_code == status.HTTP_403_FORBIDDEN
+    assert council_delete.json() == FORBIDDEN
+    assert student_delete.status_code == status.HTTP_404_NOT_FOUND
+    assert student_delete.json() == NOT_FOUND
+    assert removed.status_code == status.HTTP_204_NO_CONTENT
+    assert removed.content == b""
+    assert not SCMessage.objects.filter(pk=message.id).exists()
+    assert council.get(reverse(LIST)).json() == {
+        "count": 0,
+        "next": None,
+        "previous": None,
+        "results": [],
+    }
+    assert list(
+        Notification.objects.order_by("recipient_id").values(
+            "recipient_id", "type", "payload", "target_url", "read_at"
+        )
+    ) == [
+        {
+            "recipient_id": ada.id,
+            "type": "sc_message.created",
+            "payload": {"message_id": message.id},
+            "target_url": f"/council/inbox/{message.id}",
+            "read_at": None,
+        }
+    ]
+    assert group_send.await_count == 1
+    assert list(
+        AuditLog.objects.order_by("id").values(
+            "actor_id", "action", "target_type", "target_id", "reason", "metadata"
+        )
+    ) == [
+        {
+            "actor_id": admin.id,
+            "action": "sc_message.sender_revealed",
+            "target_type": "sc_message",
+            "target_id": message.id,
+            "reason": "Investigating abuse.",
+            "metadata": {},
+        },
+        {
+            "actor_id": admin.id,
+            "action": "sc_message.deleted",
+            "target_type": "sc_message",
+            "target_id": message.id,
+            "reason": "Abusive content.",
+            "metadata": {},
+        },
+    ]
