@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import type { EvaluationRequest } from "../../types/evaluation";
@@ -14,6 +15,7 @@ function needsConfirmation(request: EvaluationRequest) {
 }
 
 function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
+  const { t } = useTranslation();
   // Requests waiting for the student's answer are listed first.
   const openRequests = requests
     .filter((request) => request.status === "pending" || needsConfirmation(request))
@@ -24,21 +26,21 @@ function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
       className="dashboard__section dashboard__section--teal"
       aria-labelledby="open-requests-title"
     >
-      <h2 id="open-requests-title">Open Requests</h2>
+      <h2 id="open-requests-title">{t("dashboard.openRequests")}</h2>
 
       {isLoading ? (
         <div className="dashboard-requests" aria-busy="true">
           <div className="dashboard-requests__skeleton" />
           <div className="dashboard-requests__skeleton" />
-          <span className="dashboard-requests__sr-only">Loading your requests…</span>
+          <span className="dashboard-requests__sr-only">{t("myRequests.loading")}</span>
         </div>
       ) : openRequests.length === 0 ? (
         <div className="dashboard-empty">
           <div className="dashboard-empty__history-mark" aria-hidden="true">
             —
           </div>
-          <h3>No open requests</h3>
-          <p>Your active evaluation requests will appear here.</p>
+          <h3>{t("hitchhikerRequests.emptyTitle")}</h3>
+          <p>{t("dashboard.studentOpenEmpty")}</p>
         </div>
       ) : (
         <div className="dashboard-requests">
@@ -56,18 +58,24 @@ function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
 
                 {needsConfirmation(request) && request.starts_at && request.ends_at ? (
                   <p>
-                    {request.picked_by?.display_name} proposed{" "}
-                    <time dateTime={request.starts_at}>
-                      {formatSlot(request.starts_at, request.ends_at)}
-                    </time>
+                    <Trans
+                      i18nKey="dashboard.proposed"
+                      values={{
+                        name: request.picked_by?.display_name ?? "",
+                        slot: formatSlot(request.starts_at, request.ends_at),
+                      }}
+                      components={{ time: <time dateTime={request.starts_at} /> }}
+                    />
                   </p>
                 ) : (
-                  <p>Evaluation request</p>
+                  <p>{t("dashboard.evaluationRequest")}</p>
                 )}
               </div>
 
               <span className="dashboard-request__status">
-                {needsConfirmation(request) ? "Needs your confirmation" : "Pending"}
+                {needsConfirmation(request)
+                  ? t("status.needsConfirmation")
+                  : t("dashboard.pending")}
               </span>
 
               {/* The student answers on /evaluations/{id}, the page the notification opens (§8.8). */}
@@ -76,9 +84,11 @@ function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
                   <Link
                     className="dashboard-request__review"
                     to={`/evaluations/${request.id}`}
-                    aria-label={`Review the ${request.project.name} proposal`}
+                    aria-label={t("dashboard.reviewProposalAria", {
+                      project: request.project.name,
+                    })}
                   >
-                    Review proposal <span aria-hidden="true">→</span>
+                    {t("dashboard.reviewProposal")} <span aria-hidden="true">→</span>
                   </Link>
                 </div>
               )}

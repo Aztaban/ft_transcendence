@@ -40,6 +40,8 @@
     "search": "Search",
     "searchPlaceholder": "search",
     "notifications": "Notifications",
+    "notificationsUnread_one": "Notifications, {{count}} unread",
+    "notificationsUnread_other": "Notifications, {{count}} unread",
     "userMenu": "Open user menu"
   },
   "connection": {
@@ -355,5 +357,167 @@
     "sentDelivered": "Your anonymous message has been delivered.",
     "sentNoReply": "The council members cannot reply to you directly because your identity is hidden.",
     "clickToClose": "Click anywhere to close"
+  },
+  "roles": {
+    "student": "Student",
+    "tutor": "Hitchhiker",
+    "head_tutor": "Head Tutor",
+    "sc_member": "Student Council",
+    "admin": "Admin"
+  },
+  "notificationPanel": {
+    "title": "Notifications",
+    "loading": "Loading notifications…",
+    "empty": "No notifications yet.",
+    "error": "Could not load your notifications.",
+    "retry": "Try again",
+    "unread": "Unread",
+    "markAllRead": "Mark all as read"
+  },
+  "notifications": {
+    "evaluation": {
+      "created": "New evaluation request for {{project.name}}",
+      "slot_picked": "{{tutor.display_name}} picked a slot for {{project.name}}: {{slot}}. Please confirm it",
+      "confirmed": "{{student.display_name}} confirmed the evaluation of {{project.name}}: {{slot}}",
+      "declined": "{{student.display_name}} declined your slot for {{project.name}}",
+      "released": "{{tutor.display_name}} released your evaluation request for {{project.name}}",
+      "cancelled": "{{cancelled_by.display_name}} cancelled the evaluation of {{project.name}}",
+      "expired_pending": "Your evaluation request for {{project.name}} expired: nobody picked it",
+      "expired_awaiting_confirmation": "The evaluation of {{project.name}} expired before the slot was confirmed",
+      "result_recorded_passed": "Result for {{project.name}}: passed",
+      "result_recorded_failed": "Result for {{project.name}}: failed"
+    },
+    "eligibility": {
+      "requested": "{{requester.display_name}} asked to evaluate new projects",
+      "decided_approved": "Your eligibility request was approved",
+      "decided_declined": "Your eligibility request was declined",
+      "revoked": "You can no longer evaluate {{project.name}}"
+    },
+    "role": {
+      "changed_assigned": "You now have the role {{roleLabel}}",
+      "changed_revoked": "You no longer have the role {{roleLabel}}"
+    },
+    "account": {
+      "updated": "An administrator updated your account"
+    },
+    "sc_message": {
+      "created": "New anonymous message for the Student Council"
+    },
+    "resource": {
+      "created": "{{owner.display_name}} shared \"{{title}}\"",
+      "updated": "Your resource \"{{title}}\" was edited",
+      "deleted": "Your resource \"{{title}}\" was deleted"
+    }
+  },
+  "home": {
+    "greeting": "Welcome Back",
+    "overview": "Overview",
+    "pending": "Pending",
+    "completed": "Completed",
+    "nextEvaluation": "Next evaluation",
+    "notScheduled": "Not scheduled",
+    "workspace": "Workspace",
+    "workspaceStudent": "Student",
+    "workspaceHitchhiker": "Hitchhiker",
+    "workspaceCouncil": "Council",
+    "openRequests": "Open requests",
+    "awaitingConfirmation": "Awaiting confirmation",
+    "evaluationsDone": "Evaluations done",
+    "newMessages": "New messages",
+    "history": "History",
+    "hitchhikers": "Hitchhikers",
+    "upcoming": "Upcoming Evaluations",
+    "futureEvaluations": "Future evaluations will appear here.",
+    "pickedEvaluations": "Evaluations you pick and students confirm will appear here.",
+    "messages": "Messages",
+    "noMessages": "No messages yet",
+    "messagesText": "New anonymous messages will appear here.",
+    "noHistory": "No history yet",
+    "activityText": "Your recent activity will appear here.",
+    "ctaStudentTitle": "NEED AN EVALUATION?",
+    "ctaStudentText": "Create a new request and add your available time slots.",
+    "ctaStudentLabel": "New Request",
+    "ctaStudentAria": "Create new request",
+    "ctaHitchhikerTitle": "READY TO EVALUATE?",
+    "ctaHitchhikerText": "Browse open requests for your projects and pick a time slot.",
+    "ctaHitchhikerLabel": "Open Requests",
+    "ctaHitchhikerAria": "Browse open requests",
+    "ctaCouncilTitle": "STUDENT COUNCIL",
+    "ctaCouncilText": "Review anonymous messages sent to the council.",
+    "ctaCouncilLabel": "View Messages",
+    "ctaCouncilAria": "View council messages"
+  },
+  "dashboard": {
+    "openRequests": "Open Requests",
+    "studentOpenEmpty": "Your active evaluation requests will appear here.",
+    "proposed": "{{name}} proposed <time>{{slot}}</time>",
+    "evaluationRequest": "Evaluation request",
+    "pending": "Pending",
+    "reviewProposal": "Review proposal",
+    "reviewProposalAria": "Review the {{project}} proposal",
+    "awaitingTitle": "Awaiting Confirmation",
+    "loadingProposed": "Loading proposed slots…",
+    "nothingWaiting": "Nothing waiting",
+    "awaitingEmpty": "Slots you propose will wait here until the student confirms them.",
+    "proposedTo": "Proposed to {{name}}",
+    "theStudent": "the student",
+    "waitingForStudent": "Waiting for student",
+    "loadingHistory": "Loading your history…",
+    "with": "With {{name}}",
+    "loadingOpen": "Loading open requests…",
+    "queueEmpty": "Requests for projects you can evaluate will appear here.",
+    "anonymousStudent": "Anonymous student",
+    "requestedBy": "{{name}} · Requested {{time}}",
+    "open": "Open",
+    "loadingScheduled": "Loading scheduled evaluations…",
+    "scheduledStudentEmpty": "Your confirmed evaluations will appear here."
+  },
+  "welcome": {
+    "title": "Welcome Hitchhiker",
+    "subtitle": "Please, mark all the projects you can evaluate",
+    "projects": "Projects",
+    "selected": "{{count}} selected",
+    "notNow": "Not now",
+    "sentTitle": "Form sent!",
+    "sentText": "Your form has been sent to the Head Tutors. Once they approve your projects, you will be notified and can start picking slots.",
+    "thanks": "Thank you!",
+    "errorPending": "You already have a request waiting for review.",
+    "errorPermission": "Only Hitchhikers can request to evaluate projects."
+  },
+  "profile": {
+    "languageNames": {
+      "en": "English",
+      "cs": "Czech",
+      "es": "Spanish"
+    },
+    "nameRequired": "Display name is required.",
+    "nameTooLong": "Display name must be {{max}} characters or fewer.",
+    "updated": "Profile updated.",
+    "saveError": "Unable to save profile changes.",
+    "settingsUpdated": "Settings updated.",
+    "settingsError": "Unable to save settings.",
+    "email": "Email",
+    "language": "Language",
+    "signsInWith": "Signs in with",
+    "intraAccount": "42 account · {{login}}",
+    "emailPassword": "Email and password",
+    "roles_one": "Role",
+    "roles_other": "Roles",
+    "rolesAria": "Roles",
+    "loading": "Loading profile...",
+    "unavailable": "Profile information is currently unavailable.",
+    "eyebrow": "Your profile",
+    "edit": "Edit profile",
+    "editTitle": "Edit your profile",
+    "displayName": "Display name",
+    "saving": "Saving...",
+    "saveChanges": "Save changes",
+    "accountDetails": "Account details",
+    "preferences": "Preferences",
+    "languageHint": "Choose the language used across the application.",
+    "saveSettings": "Save settings"
+  },
+  "notFound": {
+    "text": "Page not found."
   }
 }

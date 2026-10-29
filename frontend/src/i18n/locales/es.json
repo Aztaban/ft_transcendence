@@ -40,6 +40,8 @@
     "search": "Buscar",
     "searchPlaceholder": "buscar",
     "notifications": "Notificaciones",
+    "notificationsUnread_one": "Notificaciones, {{count}} sin leer",
+    "notificationsUnread_other": "Notificaciones, {{count}} sin leer",
     "userMenu": "Abrir menú de usuario"
   },
   "connection": {
@@ -358,5 +360,168 @@
     "sentDelivered": "Tu mensaje anónimo se ha entregado.",
     "sentNoReply": "Los miembros del consejo no pueden responderte directamente porque tu identidad está oculta.",
     "clickToClose": "Haz clic en cualquier sitio para cerrar"
+  },
+  "roles": {
+    "student": "Estudiante",
+    "tutor": "Hitchhiker",
+    "head_tutor": "Head Tutor",
+    "sc_member": "Consejo estudiantil",
+    "admin": "Administrador"
+  },
+  "notificationPanel": {
+    "title": "Notificaciones",
+    "loading": "Cargando notificaciones…",
+    "empty": "Aún no hay notificaciones.",
+    "error": "No se pudieron cargar tus notificaciones.",
+    "retry": "Reintentar",
+    "unread": "No leída",
+    "markAllRead": "Marcar todo como leído"
+  },
+  "notifications": {
+    "evaluation": {
+      "created": "Nueva solicitud de evaluación para {{project.name}}",
+      "slot_picked": "{{tutor.display_name}} eligió un horario para {{project.name}}: {{slot}}. Confírmalo, por favor",
+      "confirmed": "{{student.display_name}} confirmó la evaluación de {{project.name}}: {{slot}}",
+      "declined": "{{student.display_name}} rechazó tu horario para {{project.name}}",
+      "released": "{{tutor.display_name}} liberó tu solicitud de evaluación de {{project.name}}",
+      "cancelled": "{{cancelled_by.display_name}} canceló la evaluación de {{project.name}}",
+      "expired_pending": "Tu solicitud de evaluación de {{project.name}} caducó: nadie la eligió",
+      "expired_awaiting_confirmation": "La evaluación de {{project.name}} caducó antes de confirmar el horario",
+      "result_recorded_passed": "Resultado de {{project.name}}: aprobado",
+      "result_recorded_failed": "Resultado de {{project.name}}: suspendido"
+    },
+    "eligibility": {
+      "requested": "{{requester.display_name}} pidió evaluar nuevos proyectos",
+      "decided_approved": "Tu solicitud de elegibilidad fue aprobada",
+      "decided_declined": "Tu solicitud de elegibilidad fue rechazada",
+      "revoked": "Ya no puedes evaluar {{project.name}}"
+    },
+    "role": {
+      "changed_assigned": "Ahora tienes el rol {{roleLabel}}",
+      "changed_revoked": "Ya no tienes el rol {{roleLabel}}"
+    },
+    "account": {
+      "updated": "Un administrador actualizó tu cuenta"
+    },
+    "sc_message": {
+      "created": "Nuevo mensaje anónimo para el Consejo estudiantil"
+    },
+    "resource": {
+      "created": "{{owner.display_name}} compartió «{{title}}»",
+      "updated": "Tu recurso «{{title}}» fue editado",
+      "deleted": "Tu recurso «{{title}}» fue eliminado"
+    }
+  },
+  "home": {
+    "greeting": "Bienvenido de nuevo",
+    "overview": "Resumen",
+    "pending": "Pendientes",
+    "completed": "Completadas",
+    "nextEvaluation": "Próxima evaluación",
+    "notScheduled": "Sin programar",
+    "workspace": "Espacio de trabajo",
+    "workspaceStudent": "Estudiante",
+    "workspaceHitchhiker": "Hitchhiker",
+    "workspaceCouncil": "Consejo",
+    "openRequests": "Solicitudes abiertas",
+    "awaitingConfirmation": "Esperando confirmación",
+    "evaluationsDone": "Evaluaciones hechas",
+    "newMessages": "Mensajes nuevos",
+    "history": "Historial",
+    "hitchhikers": "Hitchhikers",
+    "upcoming": "Próximas evaluaciones",
+    "futureEvaluations": "Las próximas evaluaciones aparecerán aquí.",
+    "pickedEvaluations": "Las evaluaciones que tomes y los estudiantes confirmen aparecerán aquí.",
+    "messages": "Mensajes",
+    "noMessages": "Todavía no hay mensajes",
+    "messagesText": "Los nuevos mensajes anónimos aparecerán aquí.",
+    "noHistory": "Todavía no hay historial",
+    "activityText": "Tu actividad reciente aparecerá aquí.",
+    "ctaStudentTitle": "¿NECESITAS UNA EVALUACIÓN?",
+    "ctaStudentText": "Crea una nueva solicitud y añade tus horarios disponibles.",
+    "ctaStudentLabel": "Nueva solicitud",
+    "ctaStudentAria": "Crear nueva solicitud",
+    "ctaHitchhikerTitle": "¿LISTO PARA EVALUAR?",
+    "ctaHitchhikerText": "Consulta las solicitudes abiertas de tus proyectos y elige un horario.",
+    "ctaHitchhikerLabel": "Solicitudes abiertas",
+    "ctaHitchhikerAria": "Ver solicitudes abiertas",
+    "ctaCouncilTitle": "CONSEJO ESTUDIANTIL",
+    "ctaCouncilText": "Revisa los mensajes anónimos enviados al consejo.",
+    "ctaCouncilLabel": "Ver mensajes",
+    "ctaCouncilAria": "Ver mensajes del consejo"
+  },
+  "dashboard": {
+    "openRequests": "Solicitudes abiertas",
+    "studentOpenEmpty": "Tus solicitudes de evaluación activas aparecerán aquí.",
+    "proposed": "{{name}} propuso <time>{{slot}}</time>",
+    "evaluationRequest": "Solicitud de evaluación",
+    "pending": "Pendiente",
+    "reviewProposal": "Ver propuesta",
+    "reviewProposalAria": "Ver la propuesta de {{project}}",
+    "awaitingTitle": "Esperando confirmación",
+    "loadingProposed": "Cargando horarios propuestos…",
+    "nothingWaiting": "Nada en espera",
+    "awaitingEmpty": "Los horarios que propongas esperarán aquí hasta que el estudiante los confirme.",
+    "proposedTo": "Propuesto a {{name}}",
+    "theStudent": "el estudiante",
+    "waitingForStudent": "Esperando al estudiante",
+    "loadingHistory": "Cargando tu historial…",
+    "with": "Con {{name}}",
+    "loadingOpen": "Cargando solicitudes abiertas…",
+    "queueEmpty": "Las solicitudes de proyectos que puedes evaluar aparecerán aquí.",
+    "anonymousStudent": "Estudiante anónimo",
+    "requestedBy": "{{name}} · Solicitado {{time}}",
+    "open": "Abierta",
+    "loadingScheduled": "Cargando evaluaciones programadas…",
+    "scheduledStudentEmpty": "Tus evaluaciones confirmadas aparecerán aquí."
+  },
+  "welcome": {
+    "title": "Bienvenido, Hitchhiker",
+    "subtitle": "Marca todos los proyectos que puedes evaluar",
+    "projects": "Proyectos",
+    "selected": "{{count}} seleccionados",
+    "notNow": "Ahora no",
+    "sentTitle": "¡Formulario enviado!",
+    "sentText": "Tu formulario se ha enviado a los tutores principales. Cuando aprueben tus proyectos, te avisaremos y podrás empezar a tomar horarios.",
+    "thanks": "¡Gracias!",
+    "errorPending": "Ya tienes una solicitud esperando revisión.",
+    "errorPermission": "Solo los Hitchhikers pueden solicitar evaluar proyectos."
+  },
+  "profile": {
+    "languageNames": {
+      "en": "Inglés",
+      "cs": "Checo",
+      "es": "Español"
+    },
+    "nameRequired": "El nombre visible es obligatorio.",
+    "nameTooLong": "El nombre visible puede tener como máximo {{max}} caracteres.",
+    "updated": "Perfil actualizado.",
+    "saveError": "No se pudieron guardar los cambios del perfil.",
+    "settingsUpdated": "Ajustes actualizados.",
+    "settingsError": "No se pudieron guardar los ajustes.",
+    "email": "Correo electrónico",
+    "language": "Idioma",
+    "signsInWith": "Inicia sesión con",
+    "intraAccount": "Cuenta de 42 · {{login}}",
+    "emailPassword": "Correo y contraseña",
+    "roles_one": "Rol",
+    "roles_many": "Roles",
+    "roles_other": "Roles",
+    "rolesAria": "Roles",
+    "loading": "Cargando perfil…",
+    "unavailable": "La información del perfil no está disponible ahora mismo.",
+    "eyebrow": "Tu perfil",
+    "edit": "Editar perfil",
+    "editTitle": "Edita tu perfil",
+    "displayName": "Nombre visible",
+    "saving": "Guardando…",
+    "saveChanges": "Guardar cambios",
+    "accountDetails": "Datos de la cuenta",
+    "preferences": "Preferencias",
+    "languageHint": "Elige el idioma de toda la aplicación.",
+    "saveSettings": "Guardar ajustes"
+  },
+  "notFound": {
+    "text": "Página no encontrada."
   }
 }

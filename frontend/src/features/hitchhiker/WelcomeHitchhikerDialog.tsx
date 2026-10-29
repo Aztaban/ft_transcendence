@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../api/client";
 import { createEligibilityRequest } from "../../api/eligibility";
 import { listProjects } from "../../api/projects";
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
+import i18n from "../../i18n";
 import type { ProjectRef } from "../../types/project";
 import "../../styles/welcome-hitchhiker.css";
 
@@ -27,23 +29,24 @@ function projectInitials(name: string) {
 function submitErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.code === "eligibility_request_pending") {
-      return "You already have a request waiting for review.";
+      return i18n.t("welcome.errorPending");
     }
 
     if (error.code === "permission_denied") {
-      return "Only Hitchhikers can request to evaluate projects.";
+      return i18n.t("welcome.errorPermission");
     }
 
     return error.fields?.project_ids?.[0] ?? error.message;
   }
 
-  return "Could not send your request. Please try again.";
+  return i18n.t("createRequest.errorGeneric");
 }
 
 // Figma "Welcome Hitchhiker" popup, shown the first time a Hitchhiker opens their workspace
 // (#169). Sends one eligibility request (api-plan §7.2, §10.3), then shows "Form sent!".
 // Projects can be added later from /eligibility-requests/new.
 function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>("form");
   const [projects, setProjects] = useState<ProjectRef[]>([]);
@@ -133,15 +136,12 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
             <span className="welcome-dialog__done" aria-hidden="true">
               ✓
             </span>
-            <h2 id="welcome-sent-title">Form sent!</h2>
-            <p>
-              Your form has been sent to the Head Tutors. Once they approve your projects, you will
-              be notified and can start picking slots.
-            </p>
-            <p>Thank you!</p>
+            <h2 id="welcome-sent-title">{t("welcome.sentTitle")}</h2>
+            <p>{t("welcome.sentText")}</p>
+            <p>{t("welcome.thanks")}</p>
           </div>
           <img className="welcome-dialog__image" src={hitchhikersIcon} alt="" aria-hidden="true" />
-          <p className="welcome-dialog__hint">Click anywhere to close</p>
+          <p className="welcome-dialog__hint">{t("common.clickToClose")}</p>
         </div>
       </div>
     );
@@ -159,18 +159,18 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
         tabIndex={-1}
       >
         <img className="welcome-dialog__logo" src={hitchhikersIcon} alt="" aria-hidden="true" />
-        <h2 id="welcome-title">Welcome Hitchhiker</h2>
+        <h2 id="welcome-title">{t("welcome.title")}</h2>
         <p id="welcome-subtitle" className="welcome-dialog__subtitle">
-          Please, mark all the projects you can evaluate
+          {t("welcome.subtitle")}
         </p>
 
         {loadError ? (
           <p className="welcome-dialog__error" role="alert">
-            Could not load the projects. Please try again later.
+            {t("projectSelect.error")}
           </p>
         ) : (
           <fieldset className="welcome-dialog__projects" aria-busy={projects.length === 0}>
-            <legend className="welcome-dialog__sr-only">Projects</legend>
+            <legend className="welcome-dialog__sr-only">{t("welcome.projects")}</legend>
             {projects.map((project, index) => (
               <label
                 className={
@@ -205,10 +205,10 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
 
         <div className="welcome-dialog__actions">
           <span className="welcome-dialog__count" aria-live="polite">
-            {selectedIds.length} selected
+            {t("welcome.selected", { count: selectedIds.length })}
           </span>
           <button className="welcome-dialog__later" type="button" onClick={onClose}>
-            Not now
+            {t("welcome.notNow")}
           </button>
           <button
             className="welcome-dialog__submit"
@@ -216,7 +216,7 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
             disabled={selectedIds.length === 0 || isSubmitting}
             onClick={handleSubmit}
           >
-            {isSubmitting ? "Sending…" : "Submit"}
+            {isSubmitting ? t("common.sending") : t("common.submit")}
           </button>
         </div>
       </div>
