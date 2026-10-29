@@ -11,8 +11,10 @@ import {
   declineEvaluationRequest,
   getEvaluationRequest,
 } from "../api/evaluationRequests";
+import { projectInitials } from "../features/projects/ProjectOverview";
 import CancelRequestDialog from "../features/student/CancelRequestDialog";
 import { canCancel, cancelErrorMessage } from "../features/student/cancelRequest";
+import useDialog from "../hooks/useDialog";
 import i18n, { dateLocale } from "../i18n";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
@@ -32,14 +34,6 @@ const statusInfo: Record<EvaluationRequestStatus, { labelKey: string; tone: stri
   cancelled: { labelKey: "status.cancelled", tone: "muted" },
   expired: { labelKey: "status.expired", tone: "muted" },
 };
-
-// "minishell" → "MI", "RAG against the machine" → "RA"
-function projectInitials(name: string) {
-  return name
-    .replace(/[^a-z0-9]/gi, "")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 function formatDay(iso: string) {
   return new Date(iso).toLocaleDateString(dateLocale(), {

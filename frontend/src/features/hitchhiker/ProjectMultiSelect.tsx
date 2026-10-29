@@ -3,6 +3,7 @@ import { Link } from "react-router";
 
 import { listProjects } from "../../api/projects";
 import type { ProjectRef } from "../../types/project";
+import { projectInitials } from "../projects/ProjectOverview";
 
 interface ProjectMultiSelectProps {
   value: ProjectRef[];
@@ -10,14 +11,6 @@ interface ProjectMultiSelectProps {
 }
 
 type LoadState = "loading" | "ready" | "error";
-
-// "minishell" → "MI", "RAG against the machine" → "RA"
-function projectInitials(name: string) {
-  return name
-    .replace(/[^a-z0-9]/gi, "")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 // Project picker for the eligibility request (#170, #171), filled from GET /api/v1/projects/.
 // Native checkboxes styled as tiles. "Details" sits outside each label, so opening a project

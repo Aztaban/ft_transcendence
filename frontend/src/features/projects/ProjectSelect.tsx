@@ -4,6 +4,7 @@ import { Link } from "react-router";
 
 import { listProjects } from "../../api/projects";
 import type { ProjectRef } from "../../types/project";
+import { projectInitials } from "./ProjectOverview";
 import "../../styles/project-select.css";
 
 interface ProjectSelectProps {
@@ -12,14 +13,6 @@ interface ProjectSelectProps {
 }
 
 type LoadState = "loading" | "ready" | "error";
-
-// "minishell" → "MI", "RAG against the machine" → "RA"
-function projectInitials(name: string) {
-  return name
-    .replace(/[^a-z0-9]/gi, "")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 // Project picker for "Create New Request – step 1" (Figma), filled from GET /api/v1/projects/.
 // Native radio buttons styled as tiles, so arrow keys and screen readers work.
