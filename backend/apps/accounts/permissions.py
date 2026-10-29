@@ -52,6 +52,9 @@ class IsAdminRole(HasRole):
     role_name = Role.Name.ADMIN
 
 
+# "Hitchhiker" means either of these roles (api-plan §5.8).
+HITCHHIKER_ROLES = (Role.Name.TUTOR, Role.Name.HEAD_TUTOR)
+
 # Who may assign which role through the API (api-plan §5.8). `student` is given at
 # account creation and `admin` only in the Django admin, so neither is listed.
 ASSIGNABLE_BY = {
