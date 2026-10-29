@@ -20,17 +20,24 @@ jobs:
       # The one-command start the subject requires, checked end to end through nginx.
       - run: docker compose up -d
       - name: Smoke test through nginx
-        run: |
-          wait_for() {
-            for _ in $(seq 60); do curl -fsk -o /dev/null "$1" && return 0; sleep 5; done
-            echo "No answer from $1"; return 1
-          }
-          wait_for https://localhost/health/
-          health=$(curl -fsk https://localhost/health/)
-          echo "$health"
-          grep -q '"status": "ok"' <<< "$health"
-          curl -fsk -o /dev/null https://localhost/api/v1/
-          wait_for https://localhost/
+        run: scripts/smoke-test.sh
+      - name: Logs on failure
+        if: failure()
+        run: docker compose ps && docker compose logs --tail=200
+      - run: docker compose down -v
+        if: always()
+
+  # The production profile (`make prod`): built frontend, Daphne, DEBUG off.
+  docker-prod:
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker-compose.prod.yml
+    steps:
+      - uses: actions/checkout@v4
+      - run: make env
+      - run: docker compose up -d --build
+      - name: Smoke test through nginx
+        run: scripts/smoke-test.sh prod
       - name: Logs on failure
         if: failure()
         run: docker compose ps && docker compose logs --tail=200
