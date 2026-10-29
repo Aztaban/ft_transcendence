@@ -53,3 +53,7 @@ jobs:
       - run: black --check .
       - run: isort --check .
       - run: pytest
+      # Production settings load and pass Django's deployment checks (warnings are printed).
+      - run: python manage.py check --deploy
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.prod
