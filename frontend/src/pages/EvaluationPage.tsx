@@ -82,23 +82,7 @@ function answerErrorMessage(error: unknown) {
 // Rendered into <body>, so it is centered on the screen and above the sidebar and top bar.
 function AcceptedDialog({ project, onClose }: { project: string; onClose: () => void }) {
   const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    cardRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
+  const cardRef = useDialog<HTMLDivElement>(onClose);
 
   return createPortal(
     <div className="evaluation-dialog" data-testid="evaluation-dialog-backdrop" onClick={onClose}>

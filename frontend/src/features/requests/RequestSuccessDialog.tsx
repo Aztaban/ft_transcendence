@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
+import useDialog from "../../hooks/useDialog";
 
 interface RequestSuccessDialogProps {
   onClose: () => void;
@@ -10,23 +10,7 @@ interface RequestSuccessDialogProps {
 // Shown after a request is sent. Closes on a click outside the card or on Escape.
 function RequestSuccessDialog({ onClose }: RequestSuccessDialogProps) {
   const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    cardRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
+  const cardRef = useDialog<HTMLDivElement>(onClose);
 
   return (
     <div className="request-dialog" data-testid="request-dialog-backdrop" onClick={onClose}>

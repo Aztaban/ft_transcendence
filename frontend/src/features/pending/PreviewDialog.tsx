@@ -1,10 +1,10 @@
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import useDialog from "../../hooks/useDialog";
 import ProjectOverview from "../projects/ProjectOverview";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatDayHeading, formatStartsIn, formatTime } from "../../utils/dateTime";
-import useDialog from "./useDialog";
 
 interface PreviewDialogProps {
   evaluation: EvaluationRequest;
