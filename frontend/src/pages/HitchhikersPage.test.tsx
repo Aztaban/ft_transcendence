@@ -101,6 +101,9 @@ describe("HitchhikersPage", () => {
     expect(within(card).getByText("born2beroot")).toBeTruthy();
     expect(within(card).getByText("push_swap")).toBeTruthy();
     expect(within(card).getByText("2 projects")).toBeTruthy();
+    expect(within(card).getByRole("link", { name: "Psimcak" }).getAttribute("href")).toBe(
+      "/people/7",
+    );
 
     const lenkaCard = await findCard("Lenka Husarova");
 

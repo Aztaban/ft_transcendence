@@ -340,6 +340,52 @@
     transform 0.2s ease;
 }
 
+.hitchhiker-card {
+  position: relative;
+}
+
+/* The name's link covers the whole card. */
+.hitchhiker-card__link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hitchhiker-card__link::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  content: "";
+}
+
+.hitchhiker-card__link:focus-visible {
+  outline: none;
+}
+
+.hitchhiker-card:focus-within {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+.hitchhiker-card__more {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  color: #00797b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.hitchhiker-card:hover .hitchhiker-card__more,
+.hitchhiker-card:focus-within .hitchhiker-card__more {
+  opacity: 1;
+  transform: none;
+}
+
 .hitchhiker-card:hover {
   border-color: rgba(0, 186, 188, 0.45);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);

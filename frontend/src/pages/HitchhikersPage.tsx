@@ -8,6 +8,8 @@ import searchIcon from "../assets/figma/search.svg";
 import { ApiError } from "../api/client";
 import { countPeople, searchPeople, type PeopleOrdering } from "../api/people";
 import { listProjects } from "../api/projects";
+import PersonAvatar from "../features/people/PersonAvatar";
+import { roleBadges } from "../features/people/roleBadges";
 import { useRole } from "../store/RoleContext";
 import type { PersonResult } from "../types/people";
 import type { ProjectRef } from "../types/project";
@@ -41,45 +43,6 @@ function searchErrorMessage(error: unknown) {
   }
 
   return "Could not load the Hitchhikers. Please try again.";
-}
-
-// Every result is a Hitchhiker; Head Tutor replaces that badge, Student Council comes on top.
-function roleBadges(person: PersonResult) {
-  const names = person.roles.map((role) => role.name);
-  const badges: string[] = [];
-
-  if (names.includes("head_tutor")) {
-    badges.push("Head Tutor");
-  } else if (names.includes("tutor")) {
-    badges.push("Hitchhiker");
-  }
-
-  if (names.includes("sc_member")) {
-    badges.push("Student Council");
-  }
-
-  return badges;
-}
-
-// "Lenka Husarova" → "LH", "dkolarov" → "DK".
-function initials(name: string) {
-  const words = name.trim().split(/\s+/);
-  const letters = words.length > 1 ? words[0][0] + words[1][0] : name.trim().slice(0, 2);
-
-  return letters.toUpperCase();
-}
-
-function Avatar({ person }: { person: PersonResult }) {
-  if (person.avatar_url) {
-    return <img className="hitchhiker-card__avatar" src={person.avatar_url} alt="" />;
-  }
-
-  // `null` means the default avatar (§8.2).
-  return (
-    <span className="hitchhiker-card__avatar hitchhiker-card__avatar--initials" aria-hidden="true">
-      {initials(person.display_name)}
-    </span>
-  );
 }
 
 // Sidebar "Hitchhikers" (#45, Figma "Hitchhikers"): find a Hitchhiker for an evaluation with
@@ -424,14 +387,27 @@ function HitchhikersPage() {
               style={{ "--index": index % 20 } as CSSProperties}
             >
               <div className="hitchhiker-card__person">
-                <Avatar person={person} />
-                <h2>{person.display_name}</h2>
+                <PersonAvatar
+                  className="hitchhiker-card__avatar"
+                  name={person.display_name}
+                  avatarUrl={person.avatar_url}
+                />
+                <h2>
+                  {/* Covers the whole card (::after), so the card opens the profile (#10). */}
+                  <Link className="hitchhiker-card__link" to={`/people/${person.id}`}>
+                    {person.display_name}
+                  </Link>
+                </h2>
                 <ul className="hitchhiker-card__badges" aria-label="Roles">
-                  {roleBadges(person).map((badge) => (
+                  {roleBadges(person.roles).map((badge) => (
                     <li key={badge}>{badge}</li>
                   ))}
                 </ul>
               </div>
+
+              <span className="hitchhiker-card__more" aria-hidden="true">
+                View profile →
+              </span>
 
               <div className="hitchhiker-card__projects">
                 <div className="hitchhiker-card__projects-head">
