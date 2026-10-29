@@ -40,3 +40,23 @@ Development Compose overrides that command with Daphne's Django `runserver`,
 which retains auto-reload. The Channels Redis layer shares `REDIS_URL` with
 Celery; Redis holds transient messages, while application state stays in MySQL.
 Rebuild the backend image after dependency changes: `docker compose build backend`.
+
+## Production profile
+
+```bash
+make prod        # docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
+make prod-down
+```
+
+`docker-compose.prod.yml` layers on the dev file and needs Docker Compose 2.24
+or newer. Compared with `make up`:
+
+- Django runs with `config.settings.prod` (DEBUG off) under Daphne, without
+  auto-reload. The code comes from the images, not from bind mounts.
+- The backend applies migrations and runs `collectstatic` on every start;
+  Celery and nginx wait until it is healthy.
+- The `frontend` container builds the bundle once and exits. nginx serves it
+  and Django's static files from `https://localhost`; there is no Vite server.
+
+`scripts/smoke-test.sh` checks a running stack (`scripts/smoke-test.sh prod`
+for this profile); CI runs it against both.
