@@ -16,6 +16,9 @@ class RegistrationSerializer(serializers.Serializer):
 
     def validate_email(self, value):
         email = User.objects.normalize_email(value)
+        # Emails are not verified, so a password account could take a student's 42 email first.
+        if email.endswith(("@42prague.com", ".42prague.com")):
+            raise serializers.ValidationError(_("Use 42 login for a 42 Prague email."))
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError(
                 _("An account with this email already exists."),

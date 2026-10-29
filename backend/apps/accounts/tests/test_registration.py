@@ -191,6 +191,26 @@ def test_register_rejects_invalid_email():
     assert get_user_model().objects.count() == 0
 
 
+@pytest.mark.parametrize("email", ["victim@student.42prague.com", "Staff@42Prague.COM"])
+def test_register_refuses_42_prague_emails(email):
+    response = APIClient().post(
+        reverse("api:register"),
+        registration_payload(email=email),
+        format="json",
+        HTTP_HOST="localhost",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the registration fields.",
+            "fields": {"email": ["Use 42 login for a 42 Prague email."]},
+        }
+    }
+    assert get_user_model().objects.count() == 0
+
+
 @pytest.mark.parametrize("display_name", ["", " " * 8, "x" * 65])
 def test_register_rejects_invalid_display_name(display_name):
     client = APIClient()
