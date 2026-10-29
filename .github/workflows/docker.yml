@@ -14,5 +14,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cp .env.example .env
+      # Same .env a developer gets: random secret key (the backend refuses the example one).
+      - run: make env
       - run: docker compose build
+      # The one-command start the subject requires, checked end to end through nginx.
+      - run: docker compose up -d
+      - name: Smoke test through nginx
+        run: |
+          wait_for() {
+            for _ in $(seq 60); do curl -fsk -o /dev/null "$1" && return 0; sleep 5; done
+            echo "No answer from $1"; return 1
+          }
+          wait_for https://localhost/health/
+          health=$(curl -fsk https://localhost/health/)
+          echo "$health"
+          grep -q '"status": "ok"' <<< "$health"
+          curl -fsk -o /dev/null https://localhost/api/v1/
+          wait_for https://localhost/
+      - name: Logs on failure
+        if: failure()
+        run: docker compose ps && docker compose logs --tail=200
+      - run: docker compose down -v
+        if: always()

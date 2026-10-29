@@ -23,3 +23,5 @@ jobs:
       - run: npm run format
       - run: npx tsc --noEmit
       - run: npm test
+      # The production bundle, which no other step builds.
+      - run: npm run build
