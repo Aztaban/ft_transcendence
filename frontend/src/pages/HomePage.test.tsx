@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import i18n from "../i18n";
 import { RoleProvider, useRole, type AppRole } from "../store/RoleContext";
 import HomePage from "./HomePage";
 
@@ -112,5 +113,18 @@ describe("HomePage", () => {
     );
     expect(screen.queryByText("No open requests")).toBeNull();
     expect(screen.queryByText("No history yet")).toBeNull();
+  });
+});
+
+describe("HomePage in another language", () => {
+  it("shows the student dashboard in Czech", async () => {
+    await i18n.changeLanguage("cs");
+    renderHomeAs("STUDENT");
+
+    expect(screen.getByRole("heading", { name: "Vítejte zpět" })).toBeTruthy();
+    expect(screen.getByText("POTŘEBUJETE HODNOCENÍ?")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Otevřené žádosti" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Čekající hodnocení" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Nová žádost/ })).toBeTruthy();
   });
 });
