@@ -11,7 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 def health(request):
-    """Report whether the core services answer. Details stay in the log, not the response."""
+    """Report whether the core services answer. Details stay in the log, not the response.
+
+    503 when the database or Redis is down, so a monitor or healthcheck sees the failure.
+    """
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
@@ -38,5 +41,6 @@ def health(request):
             "db": db_status,
             "redis": redis_status,
             "celery": celery_status,
-        }
+        },
+        status=200 if status == "ok" else 503,
     )
