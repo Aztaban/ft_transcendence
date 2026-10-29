@@ -29,7 +29,7 @@ connections and returns `{"status": "ok", "db": "ok", "redis": "ok"}` once
 everything is wired up correctly. The frontend's landing page calls this
 same endpoint on load.
 
-Nginx fronts everything on `https://localhost` (self-signed cert, auto-generated on first run — browser will warn, that's expected in dev). Port 80 redirects to 443. Direct ports 8000/5173 stay open too for quick debugging, but use `https://localhost` to log in: the session and CSRF cookies are `Secure`, so browsers drop them over plain HTTP.
+Nginx fronts everything on `https://localhost` (self-signed cert, auto-generated on first run — browser will warn, that's expected in dev). Port 80 redirects to 443. Direct ports 8000/5173 stay open on this machine only (127.0.0.1) for quick debugging, but use `https://localhost` to log in: the session and CSRF cookies are `Secure`, so browsers drop them over plain HTTP.
 
 Other commands: `make down`, `make build`, `make logs`.
 
