@@ -10,6 +10,7 @@ from rest_framework.fields import DateTimeField
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
+from apps.audit.models import AuditLog
 from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
 
 pytestmark = pytest.mark.django_db
@@ -202,6 +203,20 @@ def test_approve_creates_eligibility_rows(api_client, make_user, reviewer_role):
     )
     assert [row.project_id for row in rows] == [libft.id, zebra.id]
     assert all(row.granted_by_request_id == pending.id for row in rows)
+    assert list(
+        AuditLog.objects.values(
+            "actor_id", "action", "target_type", "target_id", "reason", "metadata"
+        )
+    ) == [
+        {
+            "actor_id": reviewer.id,
+            "action": "eligibility.reviewed",
+            "target_type": "tutor_eligibility_request",
+            "target_id": pending.id,
+            "reason": "",
+            "metadata": {"decision": "approved"},
+        }
+    ]
 
 
 @pytest.mark.parametrize("reviewer_role", REVIEWERS)
@@ -225,6 +240,20 @@ def test_decline_does_not_create_eligibility_rows(api_client, make_user, reviewe
     assert pending.status == TutorEligibilityRequest.Status.DECLINED
     assert pending.reviewed_by_id == reviewer.id
     assert TutorEligibility.objects.filter(tutor=tutor).count() == 0
+    assert list(
+        AuditLog.objects.values(
+            "actor_id", "action", "target_type", "target_id", "reason", "metadata"
+        )
+    ) == [
+        {
+            "actor_id": reviewer.id,
+            "action": "eligibility.reviewed",
+            "target_type": "tutor_eligibility_request",
+            "target_id": pending.id,
+            "reason": "",
+            "metadata": {"decision": "declined"},
+        }
+    ]
 
 
 @pytest.mark.parametrize(
@@ -262,6 +291,7 @@ def test_already_reviewed_returns_409(api_client, make_user, prior_status):
             "message": "This eligibility request has already been reviewed.",
         }
     }
+    assert not AuditLog.objects.exists()
 
 
 def test_review_note_of_500_characters_succeeds(api_client, make_user):
@@ -349,6 +379,10 @@ def test_review_through_session_needs_csrf(api_client, make_user):
         format="json",
         HTTP_HOST="localhost",
     )
+    assert without.status_code == status.HTTP_403_FORBIDDEN
+    assert without.json()["error"]["code"] == "csrf_failed"
+    assert not AuditLog.objects.exists()
+
     with_token = browser.post(
         review_url(pending.id),
         {"decision": "approved"},
@@ -356,7 +390,18 @@ def test_review_through_session_needs_csrf(api_client, make_user):
         HTTP_HOST="localhost",
         HTTP_X_CSRFTOKEN=browser.cookies["csrftoken"].value,
     )
-
-    assert without.status_code == status.HTTP_403_FORBIDDEN
-    assert without.json()["error"]["code"] == "csrf_failed"
     assert with_token.status_code == status.HTTP_200_OK
+    assert list(
+        AuditLog.objects.values(
+            "actor_id", "action", "target_type", "target_id", "reason", "metadata"
+        )
+    ) == [
+        {
+            "actor_id": head.id,
+            "action": "eligibility.reviewed",
+            "target_type": "tutor_eligibility_request",
+            "target_id": pending.id,
+            "reason": "",
+            "metadata": {"decision": "approved"},
+        }
+    ]
