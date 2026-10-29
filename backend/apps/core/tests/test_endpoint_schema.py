@@ -278,7 +278,7 @@ def test_root_and_shared_error_component_shapes(schema):
                 415: "unsupported_media_type",
             },
         ),
-        ("admin/audit-log/", "get", {403: "permission_denied"}),
+        ("admin/audit-log/", "get", {400: "validation_error", 403: "permission_denied"}),
     ],
 )
 def test_remaining_implemented_operations_document_relevant_errors(schema, path, method, errors):
@@ -343,6 +343,38 @@ def test_pagination_keys_are_required_even_when_links_are_null(schema, path):
         ),
         ("evaluation-requests/", "result", ["passed", "failed", "none"]),
         ("tutor-eligibility-requests/", "status", ["pending", "approved", "declined"]),
+        (
+            "admin/audit-log/",
+            "action",
+            [
+                "role.assigned",
+                "role.revoked",
+                "user.updated",
+                "user.suspended",
+                "user.reactivated",
+                "user.deleted",
+                "eligibility.reviewed",
+                "eligibility.revoked",
+                "evaluation.released_by_override",
+                "evaluation.cancelled_by_override",
+                "sc_message.sender_revealed",
+                "sc_message.deleted",
+                "file.updated_by_moderator",
+                "file.deleted_by_moderator",
+            ],
+        ),
+        (
+            "admin/audit-log/",
+            "target_type",
+            [
+                "user",
+                "evaluation_request",
+                "tutor_eligibility_request",
+                "tutor_eligibility",
+                "sc_message",
+                "file",
+            ],
+        ),
     ],
 )
 def test_multi_value_filters_use_comma_separated_query_encoding(schema, path, name, values):
@@ -377,7 +409,21 @@ def test_pick_slot_schema_describes_timezone_grid_order_and_timing_limits(schema
 def test_audit_log_schema_matches_the_admin_entry(schema):
     operation = schema["paths"]["/api/v1/admin/audit-log/"]["get"]
     assert operation["security"] == [{"cookieAuth": []}]
-    assert {parameter["name"] for parameter in operation["parameters"]} == {"page", "page_size"}
+    parameters = {parameter["name"]: parameter for parameter in operation["parameters"]}
+    assert set(parameters) == {
+        "page",
+        "page_size",
+        "actor",
+        "action",
+        "target_type",
+        "target_id",
+        "from",
+        "to",
+    }
+    assert parameters["actor"]["schema"]["type"] == "integer"
+    assert parameters["target_id"]["schema"]["type"] == "integer"
+    assert parameters["from"]["schema"]["format"] == "date-time"
+    assert parameters["to"]["schema"]["format"] == "date-time"
     page_ref = operation["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
     page = schema["components"]["schemas"][page_ref.rsplit("/", 1)[1]]
     entry_ref = page["properties"]["results"]["items"]["$ref"]
