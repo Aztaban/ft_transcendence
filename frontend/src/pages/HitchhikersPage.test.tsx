@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/client";
 import { countPeople, searchPeople } from "../api/people";
 import { listProjects } from "../api/projects";
+import i18n from "../i18n";
 import type { PersonResult } from "../types/people";
 import HitchhikersPage from "./HitchhikersPage";
 
@@ -323,5 +324,20 @@ describe("HitchhikersPage", () => {
     expect(vi.mocked(searchPeople).mock.calls.map(([params]) => params?.page)).toEqual([1, 2, 2]);
     expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("HitchhikersPage in another language", () => {
+  it("shows the search, the role pills and the counts in Czech", async () => {
+    await i18n.changeLanguage("cs");
+    renderPage();
+
+    const card = await findCard("Psimcak");
+
+    expect(screen.getByRole("heading", { level: 1, name: "Hitchhikeři" })).toBeTruthy();
+    expect(screen.getByPlaceholderText("Hledat podle jména")).toBeTruthy();
+    expect(within(card).getByText("2 projekty")).toBeTruthy();
+    expect(within(await findCard("Lenka Husarova")).getByText("Studentská rada")).toBeTruthy();
+    expect(screen.getByText("2 Hitchhikeři")).toBeTruthy();
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
@@ -9,6 +10,7 @@ import { ApiError } from "../api/client";
 import { countPeople, searchPeople, type PeopleOrdering } from "../api/people";
 import { listProjects } from "../api/projects";
 import PersonAvatar from "../features/people/PersonAvatar";
+import i18n from "../i18n";
 import { roleBadges } from "../features/people/roleBadges";
 import { useRole } from "../store/RoleContext";
 import type { PersonResult } from "../types/people";
@@ -28,27 +30,29 @@ const MAX_QUERY_LENGTH = 64;
 // Waits for a pause in typing, so a search is not sent for every letter (60 a minute, §5.9).
 const SEARCH_DELAY_MS = 300;
 
+// The label is a key of the "hitchhikers" texts.
 const orderings: { value: PeopleOrdering; label: string }[] = [
-  { value: "display_name", label: "Name A–Z" },
-  { value: "-display_name", label: "Name Z–A" },
+  { value: "display_name", label: "sortAz" },
+  { value: "-display_name", label: "sortZa" },
 ];
 
 function searchErrorMessage(error: unknown) {
   if (error instanceof ApiError && error.code === "throttled") {
-    return "Too many searches in a short time. Wait a moment and try again.";
+    return i18n.t("hitchhikers.errorThrottled");
   }
 
   if (error instanceof ApiError && error.code === "validation_error") {
     return error.fields?.q?.[0] ?? error.message;
   }
 
-  return "Could not load the Hitchhikers. Please try again.";
+  return i18n.t("hitchhikers.errorLoad");
 }
 
 // Sidebar "Hitchhikers" (#45, Figma "Hitchhikers"): find a Hitchhiker for an evaluation with
 // GET /search/people/?role=tutor (§10.8), by name and project, sorted by name, 20 at a time.
 // The filters live in the URL (?q=&project=&ordering=).
 function HitchhikersPage() {
+  const { t } = useTranslation();
   const { activeRole } = useRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
@@ -207,20 +211,20 @@ function HitchhikersPage() {
   const isFiltered = searchTerm !== undefined || project !== "";
   const projectName = projects?.find((item) => item.slug === project)?.name ?? project;
   const tiles = [
-    { label: "Hitchhikers", value: overview?.hitchhikers, icon: hitchhikersIcon },
-    { label: "Head Tutors", value: overview?.headTutors, icon: profileIcon },
-    { label: "Projects to evaluate", value: projects?.length, icon: requestIcon },
+    { label: t("nav.hitchhikers"), value: overview?.hitchhikers, icon: hitchhikersIcon },
+    { label: t("hitchhikers.tileHeadTutors"), value: overview?.headTutors, icon: profileIcon },
+    { label: t("hitchhikers.tileProjects"), value: projects?.length, icon: requestIcon },
   ];
   const isTooShort = text.trim().length > 0 && text.trim().length < MIN_QUERY_LENGTH;
 
   return (
     <section className="hitchhikers">
       <header className="hitchhikers__header">
-        <h1>Hitchhikers</h1>
-        <p>Find a Hitchhiker for your next evaluation, old and new core.</p>
+        <h1>{t("nav.hitchhikers")}</h1>
+        <p>{t("hitchhikers.subtitle")}</p>
       </header>
 
-      <ul className="hitchhikers__overview" aria-label="Overview">
+      <ul className="hitchhikers__overview" aria-label={t("hitchhikers.overviewAria")}>
         {tiles.map((tile, index) => (
           <li
             className="hitchhikers__tile"
@@ -236,20 +240,17 @@ function HitchhikersPage() {
         ))}
       </ul>
 
-      <aside className="hitchhikers__how" aria-label="How it works">
+      <aside className="hitchhikers__how" aria-label={t("common.howItWorks")}>
         <span className="hitchhikers__how-icon" aria-hidden="true">
           i
         </span>
         <div>
-          <strong>How it works</strong>
-          <p>
-            You can&apos;t book a specific Hitchhiker. Create a request, and any Hitchhiker who can
-            evaluate the project can pick it and propose a time.
-          </p>
+          <strong>{t("common.howItWorks")}</strong>
+          <p>{t("hitchhikers.howText")}</p>
         </div>
         {activeRole === "STUDENT" && (
           <Link className="hitchhikers__how-link" to="/requests">
-            Create a request <span aria-hidden="true">→</span>
+            {t("hitchhikers.createRequest")} <span aria-hidden="true">→</span>
           </Link>
         )}
       </aside>
@@ -261,20 +262,20 @@ function HitchhikersPage() {
             type="search"
             value={text}
             maxLength={MAX_QUERY_LENGTH}
-            placeholder="Search by name"
-            aria-label="Search Hitchhikers by name"
+            placeholder={t("hitchhikers.searchPlaceholder")}
+            aria-label={t("hitchhikers.searchAria")}
             aria-describedby="hitchhikers-search-hint"
             onChange={(event) => setText(event.target.value)}
           />
         </label>
 
         <label className="hitchhikers__select">
-          <span>Project</span>
+          <span>{t("hitchhikers.project")}</span>
           <select
             value={project}
             onChange={(event) => applyFilters({ project: event.target.value })}
           >
-            <option value="">All projects</option>
+            <option value="">{t("hitchhikers.allProjects")}</option>
             {(projects ?? []).map((item) => (
               <option key={item.id} value={item.slug}>
                 {item.name}
@@ -284,7 +285,7 @@ function HitchhikersPage() {
         </label>
 
         <label className="hitchhikers__select">
-          <span>Sort</span>
+          <span>{t("hitchhikers.sort")}</span>
           <select
             value={ordering}
             onChange={(event) =>
@@ -295,7 +296,7 @@ function HitchhikersPage() {
           >
             {orderings.map((item) => (
               <option key={item.value} value={item.value}>
-                {item.label}
+                {t(`hitchhikers.${item.label}`)}
               </option>
             ))}
           </select>
@@ -304,20 +305,20 @@ function HitchhikersPage() {
 
       <div className="hitchhikers__summary">
         <p className="hitchhikers__status" id="hitchhikers-search-hint" aria-live="polite">
-          {isTooShort && `Type at least ${MIN_QUERY_LENGTH} characters to search by name.`}
-          {!isTooShort && isSearching && loadState === "ready" && "Searching…"}
+          {isTooShort && t("hitchhikers.tooShort", { min: MIN_QUERY_LENGTH })}
+          {!isTooShort && isSearching && loadState === "ready" && t("hitchhikers.searching")}
           {!isTooShort &&
             !isSearching &&
             loadState === "ready" &&
             total > 0 &&
-            `${total} ${total === 1 ? "Hitchhiker" : "Hitchhikers"}`}
+            t("hitchhikers.total", { count: total })}
         </p>
 
         {searchTerm && (
           <button
             className="hitchhikers__chip"
             type="button"
-            aria-label={`Remove the name filter "${searchTerm}"`}
+            aria-label={t("hitchhikers.removeName", { term: searchTerm })}
             onClick={() => {
               setText("");
               applyFilters({ q: "" });
@@ -331,7 +332,7 @@ function HitchhikersPage() {
           <button
             className="hitchhikers__chip"
             type="button"
-            aria-label={`Remove the project filter ${projectName}`}
+            aria-label={t("hitchhikers.removeProject", { name: projectName })}
             onClick={() => applyFilters({ project: "" })}
           >
             {projectName} <span aria-hidden="true">×</span>
@@ -344,7 +345,7 @@ function HitchhikersPage() {
           {[1, 2, 3].map((placeholder) => (
             <div className="hitchhikers__skeleton" key={placeholder} />
           ))}
-          <span className="hitchhikers__sr-only">Loading Hitchhikers…</span>
+          <span className="hitchhikers__sr-only">{t("hitchhikers.loading")}</span>
         </div>
       )}
 
@@ -352,22 +353,18 @@ function HitchhikersPage() {
         <div className="hitchhikers__error" role="alert">
           <p>{errorMessage}</p>
           <button type="button" onClick={retry}>
-            Try again
+            {t("common.tryAgain")}
           </button>
         </div>
       )}
 
       {loadState === "ready" && people.length === 0 && (
         <div className="hitchhikers__empty">
-          <h2>{isFiltered ? "No Hitchhikers found" : "No Hitchhikers yet"}</h2>
-          <p>
-            {isFiltered
-              ? "Try another name or project."
-              : "Hitchhikers appear here once a Head Tutor approves them."}
-          </p>
+          <h2>{isFiltered ? t("hitchhikers.emptyFilteredTitle") : t("hitchhikers.emptyTitle")}</h2>
+          <p>{isFiltered ? t("hitchhikers.emptyFilteredText") : t("hitchhikers.emptyText")}</p>
           {isFiltered && (
             <button type="button" onClick={clearFilters}>
-              Clear filters
+              {t("hitchhikers.clearFilters")}
             </button>
           )}
         </div>
@@ -398,24 +395,23 @@ function HitchhikersPage() {
                     {person.display_name}
                   </Link>
                 </h2>
-                <ul className="hitchhiker-card__badges" aria-label="Roles">
+                <ul className="hitchhiker-card__badges" aria-label={t("hitchhikers.rolesAria")}>
                   {roleBadges(person.roles).map((badge) => (
-                    <li key={badge}>{badge}</li>
+                    <li key={badge}>{t(`roles.${badge}`)}</li>
                   ))}
                 </ul>
               </div>
 
               <span className="hitchhiker-card__more" aria-hidden="true">
-                View profile →
+                {t("hitchhikers.viewProfile")} →
               </span>
 
               <div className="hitchhiker-card__projects">
                 <div className="hitchhiker-card__projects-head">
-                  <h3>Can evaluate</h3>
+                  <h3>{t("hitchhikers.canEvaluate")}</h3>
                   {person.eligible_projects.length > 0 && (
                     <span className="hitchhiker-card__count">
-                      {person.eligible_projects.length}{" "}
-                      {person.eligible_projects.length === 1 ? "project" : "projects"}
+                      {t("hitchhikers.projectCount", { count: person.eligible_projects.length })}
                     </span>
                   )}
                 </div>
@@ -434,7 +430,7 @@ function HitchhikersPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p>No projects yet.</p>
+                  <p>{t("hitchhikers.noProjects")}</p>
                 )}
               </div>
             </li>
@@ -444,7 +440,7 @@ function HitchhikersPage() {
 
       {loadState === "ready" && moreFailed && (
         <p className="hitchhikers__more-error" role="alert">
-          Could not load more Hitchhikers. Please try again.
+          {t("hitchhikers.moreError")}
         </p>
       )}
 
@@ -455,7 +451,9 @@ function HitchhikersPage() {
           disabled={isLoadingMore}
           onClick={showMore}
         >
-          {isLoadingMore ? "Loading…" : `Show more (${total - people.length} left)`}
+          {isLoadingMore
+            ? t("hitchhikers.loadingMore")
+            : t("hitchhikers.showMore", { left: total - people.length })}
         </button>
       )}
     </section>
