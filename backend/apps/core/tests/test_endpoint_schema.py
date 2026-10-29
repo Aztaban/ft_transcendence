@@ -279,6 +279,26 @@ def test_root_and_shared_error_component_shapes(schema):
             },
         ),
         ("admin/audit-log/", "get", {400: "validation_error", 403: "permission_denied"}),
+        (
+            "sc-messages/{id}/",
+            "delete",
+            {
+                400: "validation_error",
+                403: "permission_denied csrf_failed",
+                404: "not_found",
+                415: "unsupported_media_type",
+            },
+        ),
+        (
+            "sc-messages/{id}/reveal-sender/",
+            "post",
+            {
+                400: "validation_error",
+                403: "permission_denied csrf_failed",
+                404: "not_found",
+                415: "unsupported_media_type",
+            },
+        ),
     ],
 )
 def test_remaining_implemented_operations_document_relevant_errors(schema, path, method, errors):
@@ -477,3 +497,36 @@ def test_audit_log_schema_matches_the_admin_entry(schema):
     }
     assert entry["properties"]["created_at"]["format"] == "date-time"
     assert entry["properties"]["reason"]["type"] == "string"
+
+
+def _component(schema, ref):
+    return schema["components"]["schemas"][ref.rsplit("/", 1)[1]]
+
+
+def test_council_moderation_schema_matches_the_contract(schema):
+    delete = schema["paths"]["/api/v1/sc-messages/{id}/"]["delete"]
+    assert delete["security"] == [{"cookieAuth": []}]
+    assert "content" not in delete["responses"]["204"]
+    reason = _component(
+        schema, delete["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+    )
+    assert reason["required"] == ["reason"]
+    assert reason["properties"]["reason"]["minLength"] == 1
+    assert reason["properties"]["reason"]["maxLength"] == 500
+
+    reveal = schema["paths"]["/api/v1/sc-messages/{id}/reveal-sender/"]["post"]
+    assert reveal["security"] == [{"cookieAuth": []}]
+    reveal_reason = _component(
+        schema, reveal["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+    )
+    assert reveal_reason["properties"]["reason"]["minLength"] == 10
+    assert reveal_reason["properties"]["reason"]["maxLength"] == 500
+    body = _component(
+        schema, reveal["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    )
+    assert body["required"] == ["sender"]
+    sender_schema = body["properties"]["sender"]
+    assert sender_schema["nullable"] is True
+    sender = _component(schema, sender_schema["allOf"][0]["$ref"])
+    assert set(sender["required"]) == {"id", "display_name", "email"}
+    assert set(sender["properties"]) == {"id", "display_name", "email"}
