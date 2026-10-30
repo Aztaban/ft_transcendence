@@ -191,6 +191,19 @@ describe("LoginPage", () => {
     expect(alert.textContent).toBe("42 login failed. Please try again.");
   });
 
+  test.each(["toString", "constructor", "__proto__"])(
+    "shows the generic error for ?oauth=%s instead of crashing",
+    async (code) => {
+      mockAnonymousSession(mockFetch());
+
+      renderLoginPage(`/login?oauth=${code}`);
+
+      expect((await screen.findByRole("alert")).textContent).toBe(
+        "42 login failed. Please try again.",
+      );
+    },
+  );
+
   test("removes the oauth error code from the URL but keeps the message", async () => {
     mockAnonymousSession(mockFetch());
 

@@ -32,7 +32,10 @@ function getOAuthErrorKey(code: string | null) {
     return "";
   }
 
-  return OAUTH_ERROR_KEYS[code] ?? "auth.oauthFailed";
+  // Own keys only: `?oauth=toString` must not find the object's built-in properties.
+  return Object.prototype.hasOwnProperty.call(OAUTH_ERROR_KEYS, code)
+    ? OAUTH_ERROR_KEYS[code]
+    : "auth.oauthFailed";
 }
 
 // `registeredEmail`: set by RegisterPage after a successful registration (#522).
