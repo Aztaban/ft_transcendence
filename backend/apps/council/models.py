@@ -5,7 +5,7 @@ from apps.core.models import TimeStampedModel
 
 
 class SCMessage(TimeStampedModel):
-    """Storage for anonymous message sent to student council"""
+    """Anonymous messages sent to the Student Council."""
 
     id = models.BigAutoField(primary_key=True)
     # Stored only for abuse investigation; never returned by the API except by the

@@ -7,6 +7,7 @@ import { getTutorEligibility } from "../api/eligibility";
 import { listEvaluationRequests } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
 import { getPublicUser } from "../api/users";
+import i18n from "../i18n";
 import { makeRequest } from "../features/student/testUtils";
 import type { EvaluationRequest } from "../types/evaluation";
 import type { PublicUser } from "../types/people";
@@ -354,5 +355,21 @@ describe("PersonProfilePage", () => {
     expect(screen.getByRole("link", { name: "Hitchhikers" }).getAttribute("href")).toBe(
       "/hitchhikers",
     );
+  });
+});
+
+describe("PersonProfilePage in another language", () => {
+  it("shows the profile, its roles and the projects in Spanish", async () => {
+    await i18n.changeLanguage("es");
+    renderPage();
+    await findProfile();
+
+    const roles = screen.getByRole("list", { name: "Roles" });
+
+    expect(texts(roles, "listitem")).toEqual(["Head Tutor", "Consejo estudiantil"]);
+    expect(await screen.findByText("2 de 4 proyectos")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "push_swap, puede evaluar" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "cpp09, no puede evaluar" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Buscar más Hitchhikers" })).toBeTruthy();
   });
 });

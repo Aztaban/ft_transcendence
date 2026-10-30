@@ -61,7 +61,7 @@ def test_health_hides_failure_details(monkeypatch):
 
     response = Client().get("/health/")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json() == {
         "status": "error",
         "db": "error",
@@ -82,3 +82,64 @@ def test_celery_app_is_exposed():
     from config import celery_app
 
     assert celery_app.main == "config"
+
+
+class DownRedis:
+    def ping(self):
+        raise ConnectionError("Connection refused")
+
+
+class NoHeartbeatRedis(DummyRedis):
+    def get(self, key):
+        assert key == "celery_heartbeat"
+        return None
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"])
+def test_health_is_503_when_redis_is_down(monkeypatch):
+    monkeypatch.setattr("config.views.connection", DummyConnection())
+    monkeypatch.setattr("config.views.redis.from_url", lambda _url: DownRedis())
+
+    response = Client().get("/health/")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "status": "error",
+        "db": "ok",
+        "redis": "error",
+        "celery": "unavailable",
+    }
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"])
+def test_health_stays_200_without_a_celery_heartbeat(monkeypatch):
+    """Celery is reported, but the API works without it."""
+    monkeypatch.setattr("config.views.connection", DummyConnection())
+    monkeypatch.setattr("config.views.redis.from_url", lambda _url: NoHeartbeatRedis())
+
+    response = Client().get("/health/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ok",
+        "db": "ok",
+        "redis": "ok",
+        "celery": "no heartbeat yet",
+    }
+
+
+@override_settings(HEALTH_CELERY_HEARTBEAT_TTL_SECONDS=60)
+def test_heartbeat_expires(monkeypatch):
+    from config.celery import heartbeat
+
+    calls = []
+
+    class RecordingRedis:
+        def set(self, *args, **kwargs):
+            calls.append((args, kwargs))
+
+    monkeypatch.setattr("redis.from_url", lambda _url: RecordingRedis())
+
+    heartbeat()
+
+    assert calls == [(("celery_heartbeat", "1"), {"ex": 60})]

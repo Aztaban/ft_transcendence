@@ -41,7 +41,7 @@ What the application does to stay secure, and what it deliberately leaves out. W
 
 ## Secrets and configuration
 
-- `.env` is git-ignored; `make env` creates it from `.env.example` with a random `DJANGO_SECRET_KEY`. The backend refuses to start with the example key or an empty one. The 42 client secret and the database passwords exist only in `.env`.
+- `.env` is git-ignored; `make env` creates it from `.env.example` with a random `DJANGO_SECRET_KEY` and random MySQL passwords; MySQL listens on 127.0.0.1 only. The backend refuses to start with the example key or an empty one. The 42 client secret and the database passwords exist only in `.env`.
 - `DJANGO_SETTINGS_MODULE` in `.env` selects `config.settings.dev` (debug on, for development) or `config.settings.prod`. Nothing in the images depends on the settings; they are read at start.
 
 ## Information exposure

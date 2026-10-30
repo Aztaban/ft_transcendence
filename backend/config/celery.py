@@ -17,4 +17,7 @@ def heartbeat():
     import redis
     from django.conf import settings
 
-    redis.from_url(settings.REDIS_URL).set("celery_heartbeat", "1")
+    # Expires, so /health/ stops reporting Celery as up once the worker or beat dies.
+    redis.from_url(settings.REDIS_URL).set(
+        "celery_heartbeat", "1", ex=settings.HEALTH_CELERY_HEARTBEAT_TTL_SECONDS
+    )
