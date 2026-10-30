@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
 
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
@@ -11,6 +12,7 @@ import { listProjects } from "../api/projects";
 import { getPublicUser } from "../api/users";
 import PersonAvatar from "../features/people/PersonAvatar";
 import { isHitchhiker, roleBadges } from "../features/people/roleBadges";
+import i18n, { dateLocale } from "../i18n";
 import { useAuth } from "../store/AuthContext";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import { useRole } from "../store/RoleContext";
@@ -24,9 +26,9 @@ import "../styles/person-profile.css";
 type LoadState = "loading" | "ready" | "not-found" | "error" | "logged-out";
 type Tone = "green" | "red" | "teal" | "amber" | "violet" | "grey";
 
+// The title is the role's label (`roles.<role>`), the text a key of the "person" texts.
 interface RoleCard {
   role: UserRole["name"];
-  title: string;
   text: string;
   icon: string;
 }
@@ -36,20 +38,17 @@ interface RoleCard {
 const roleCards: RoleCard[] = [
   {
     role: "head_tutor",
-    title: "Head Tutor",
-    text: "Evaluates students, and reviews which projects each Hitchhiker can evaluate.",
+    text: "headTutorText",
     icon: profileIcon,
   },
   {
     role: "tutor",
-    title: "Hitchhiker",
-    text: "Evaluates students on the projects marked above. You can't book a specific Hitchhiker: create a request, and any Hitchhiker who can evaluate the project can pick it.",
+    text: "tutorText",
     icon: hitchhikersIcon,
   },
   {
     role: "sc_member",
-    title: "Student Council",
-    text: "Represents the students of 42 Prague. You can send the Student Council an anonymous message.",
+    text: "councilText",
     icon: councilIcon,
   },
 ];
@@ -65,34 +64,34 @@ function cardsFor(person: PublicUser) {
 // The outcome shown on "Your evaluations with …", like the History cards.
 function outcome(request: EvaluationRequest, now: Date): { label: string; tone: Tone } {
   if (request.status === "cancelled") {
-    return { label: "Cancelled", tone: "grey" };
+    return { label: i18n.t("status.cancelled"), tone: "grey" };
   }
 
   if (request.status === "expired") {
-    return { label: "Expired", tone: "grey" };
+    return { label: i18n.t("status.expired"), tone: "grey" };
   }
 
   if (request.status === "awaiting_confirmation") {
-    return { label: "Needs your answer", tone: "amber" };
+    return { label: i18n.t("status.needsAnswer"), tone: "amber" };
   }
 
   if (request.status === "pending") {
-    return { label: "In the queue", tone: "grey" };
+    return { label: i18n.t("status.inQueue"), tone: "grey" };
   }
 
   if (request.result === "passed") {
-    return { label: "Passed", tone: "green" };
+    return { label: i18n.t("status.passed"), tone: "green" };
   }
 
   if (request.result === "failed") {
-    return { label: "Failed", tone: "red" };
+    return { label: i18n.t("status.failed"), tone: "red" };
   }
 
   if (request.starts_at && new Date(request.starts_at).getTime() > now.getTime()) {
-    return { label: "Upcoming", tone: "teal" };
+    return { label: i18n.t("person.upcoming"), tone: "teal" };
   }
 
-  return { label: "Result pending", tone: "violet" };
+  return { label: i18n.t("status.resultPending"), tone: "violet" };
 }
 
 function dateParts(iso: string) {
@@ -100,7 +99,7 @@ function dateParts(iso: string) {
 
   return {
     day: date.getDate(),
-    month: date.toLocaleDateString(undefined, { month: "short" }),
+    month: date.toLocaleDateString(dateLocale(), { month: "short" }),
   };
 }
 
@@ -111,6 +110,7 @@ function dateParts(iso: string) {
 // for a student, their own requests this Hitchhiker picked (GET /evaluation-requests/, §10.4).
 // Users have no bio (R10).
 function PersonProfilePage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const personId = Number(id);
   const location = useLocation();
@@ -288,33 +288,33 @@ function PersonProfilePage() {
     <section className="person-profile">
       {canGoBack ? (
         <button className="person-profile__back" type="button" onClick={() => navigate(-1)}>
-          <span aria-hidden="true">‹</span> Back
+          <span aria-hidden="true">‹</span> {t("person.back")}
         </button>
       ) : (
         <Link className="person-profile__back" to="/hitchhikers">
-          <span aria-hidden="true">‹</span> Hitchhikers
+          <span aria-hidden="true">‹</span> {t("nav.hitchhikers")}
         </Link>
       )}
 
       {loadState === "loading" && (
         <div className="person-profile__skeleton" aria-busy="true">
-          <span className="person-profile__sr-only">Loading the profile…</span>
+          <span className="person-profile__sr-only">{t("person.loading")}</span>
         </div>
       )}
 
       {loadState === "not-found" && (
         <div className="person-profile__message" role="alert">
-          <h1>Profile not found</h1>
-          <p>This person does not exist or is no longer available.</p>
-          <Link to="/hitchhikers">Find a Hitchhiker</Link>
+          <h1>{t("person.notFoundTitle")}</h1>
+          <p>{t("person.notFoundText")}</p>
+          <Link to="/hitchhikers">{t("person.findHitchhiker")}</Link>
         </div>
       )}
 
       {loadState === "error" && (
         <div className="person-profile__message person-profile__message--error" role="alert">
-          <p>Could not load this profile. Please try again.</p>
+          <p>{t("person.error")}</p>
           <button type="button" onClick={() => setRetryKey((key) => key + 1)}>
-            Try again
+            {t("common.tryAgain")}
           </button>
         </div>
       )}
@@ -334,9 +334,9 @@ function PersonProfilePage() {
                 <p className="person-profile__campus">
                   <span aria-hidden="true">📍</span> 42 Prague
                 </p>
-                <ul className="person-profile__roles" aria-label="Roles">
-                  {(badges.length > 0 ? badges : ["Student"]).map((badge) => (
-                    <li key={badge}>{badge}</li>
+                <ul className="person-profile__roles" aria-label={t("hitchhikers.rolesAria")}>
+                  {(badges.length > 0 ? badges : ["student"]).map((badge) => (
+                    <li key={badge}>{t(`roles.${badge}`)}</li>
                   ))}
                 </ul>
               </div>
@@ -345,15 +345,18 @@ function PersonProfilePage() {
             {hitchhiker && percent !== null && eligible && allProjects && (
               <div className="person-profile__level">
                 <div className="person-profile__level-text">
-                  <span>Can evaluate</span>
+                  <span>{t("hitchhikers.canEvaluate")}</span>
                   <strong>
-                    {eligible.length} of {allProjects.length} projects
+                    {t("person.ofProjects", {
+                      eligible: eligible.length,
+                      total: allProjects.length,
+                    })}
                   </strong>
                 </div>
                 <div
                   className="person-profile__level-bar"
                   role="progressbar"
-                  aria-label="Projects they can evaluate"
+                  aria-label={t("person.levelAria")}
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={percent}
@@ -364,56 +367,54 @@ function PersonProfilePage() {
               </div>
             )}
 
-            <nav className="person-profile__actions" aria-label="Actions">
+            <nav className="person-profile__actions" aria-label={t("person.actionsAria")}>
               {showsTogether && (
                 <Link
                   className="person-profile__action person-profile__action--primary"
                   to="/requests"
                 >
-                  Create a request <span aria-hidden="true">→</span>
+                  {t("hitchhikers.createRequest")} <span aria-hidden="true">→</span>
                 </Link>
               )}
               {isMe && (
                 <Link className="person-profile__action" to="/profile">
-                  Edit your profile
+                  {t("person.editProfile")}
                 </Link>
               )}
               <Link className="person-profile__action" to="/hitchhikers">
-                Find more Hitchhikers
+                {t("person.findMore")}
               </Link>
               {canCopy && (
                 <button className="person-profile__action" type="button" onClick={copyLink}>
-                  {isCopied ? "Link copied ✓" : "Copy profile link"}
+                  {isCopied ? t("person.copied") : t("person.copyLink")}
                 </button>
               )}
             </nav>
           </header>
 
-          {isMe && (
-            <p className="person-profile__me">This is how other students see your profile.</p>
-          )}
+          {isMe && <p className="person-profile__me">{t("person.me")}</p>}
 
           {hitchhiker && (
             <section className="person-profile__strip" aria-labelledby="person-profile-projects">
               <div className="person-profile__strip-head">
-                <h2 id="person-profile-projects">Projects</h2>
+                <h2 id="person-profile-projects">{t("person.projects")}</h2>
                 <span className="person-profile__legend">
-                  <span aria-hidden="true">✓</span> can evaluate
+                  <span aria-hidden="true">✓</span> {t("person.legend")}
                 </span>
               </div>
 
               {eligible === null && !projectsFailed && (
                 <div className="person-profile__strip-skeleton" aria-busy="true">
-                  <span className="person-profile__sr-only">Loading the projects…</span>
+                  <span className="person-profile__sr-only">{t("person.loadingProjects")}</span>
                 </div>
               )}
 
               {projectsFailed && (
-                <p className="person-profile__strip-note">Could not load the projects.</p>
+                <p className="person-profile__strip-note">{t("person.projectsError")}</p>
               )}
 
               {eligible?.length === 0 && (
-                <p className="person-profile__strip-note">No projects yet.</p>
+                <p className="person-profile__strip-note">{t("hitchhikers.noProjects")}</p>
               )}
 
               {eligible && eligible.length > 0 && (
@@ -430,7 +431,9 @@ function PersonProfilePage() {
                               : "person-profile__segment"
                           }
                           to={`/projects/${project.slug}`}
-                          aria-label={`${project.name}, ${on ? "can evaluate" : "cannot evaluate"}`}
+                          aria-label={t(on ? "person.segmentCan" : "person.segmentCannot", {
+                            project: project.name,
+                          })}
                         >
                           <span aria-hidden="true">{on ? "✓" : "–"}</span>
                           {project.name}
@@ -447,7 +450,7 @@ function PersonProfilePage() {
             {cards.length > 0 && (
               <section className="person-profile__panel" aria-labelledby="person-profile-roles">
                 <div className="person-profile__panel-head">
-                  <h2 id="person-profile-roles">Roles</h2>
+                  <h2 id="person-profile-roles">{t("person.roles")}</h2>
                 </div>
                 <ul className="person-profile__cards">
                   {cards.map((card, index) => (
@@ -460,8 +463,8 @@ function PersonProfilePage() {
                         <img src={card.icon} alt="" aria-hidden="true" />
                       </span>
                       <div>
-                        <h3>{card.title}</h3>
-                        <p>{card.text}</p>
+                        <h3>{t(`roles.${card.role}`)}</h3>
+                        <p>{t(`person.${card.text}`)}</p>
                       </div>
                     </li>
                   ))}
@@ -472,25 +475,27 @@ function PersonProfilePage() {
             {showsTogether && (
               <section className="person-profile__panel" aria-labelledby="person-profile-together">
                 <div className="person-profile__panel-head">
-                  <h2 id="person-profile-together">Your evaluations with {person.display_name}</h2>
+                  <h2 id="person-profile-together">
+                    {t("person.together", { name: person.display_name })}
+                  </h2>
                   <Link className="person-profile__panel-link" to="/history">
-                    Your history
+                    {t("person.yourHistory")}
                   </Link>
                 </div>
 
                 {together === null && !togetherFailed && (
                   <div className="person-profile__rows-skeleton" aria-busy="true">
-                    <span className="person-profile__sr-only">Loading your evaluations…</span>
+                    <span className="person-profile__sr-only">{t("person.loadingTogether")}</span>
                   </div>
                 )}
 
                 {togetherFailed && (
-                  <p className="person-profile__note">Could not load your evaluations.</p>
+                  <p className="person-profile__note">{t("person.togetherError")}</p>
                 )}
 
                 {together?.length === 0 && (
                   <p className="person-profile__note">
-                    No evaluations with {person.display_name} yet.
+                    {t("person.togetherEmpty", { name: person.display_name })}
                   </p>
                 )}
 
@@ -515,7 +520,7 @@ function PersonProfilePage() {
                               <span>
                                 {request.starts_at && request.ends_at
                                   ? formatSlot(request.starts_at, request.ends_at)
-                                  : "No slot yet"}
+                                  : t("person.noSlot")}
                               </span>
                             </span>
                             <span className="person-profile__outcome">{result.label}</span>
