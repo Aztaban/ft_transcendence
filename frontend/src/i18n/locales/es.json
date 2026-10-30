@@ -410,7 +410,9 @@
     "notePlaceholder": "p. ej. Reenviado al encargado del edificio.",
     "saved": "Guardado ✓",
     "saveNote": "Guardar nota",
-    "markedReadTitle": "Hecho. El mensaje se ha marcado como leído."
+    "markedReadTitle": "Hecho. El mensaje se ha marcado como leído.",
+    "loadMoreError": "No se pudieron cargar más mensajes. Inténtalo de nuevo.",
+    "saveNoteFirst": "Guarda la nota antes de marcar el mensaje como leído."
   },
   "roles": {
     "student": "Estudiante",

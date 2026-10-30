@@ -168,9 +168,11 @@ function AuthenticatedApp() {
         <Route
           path="/council/inbox/:id"
           element={
+            // The `sc_message.created` notification links here from any workspace (§8.8).
             <RoleGuard
               allowedRoles={routePermissions.councilMessages}
               fallback={<UnauthorizedPage />}
+              switchWorkspace
             >
               <CouncilInboxMessagePage />
             </RoleGuard>

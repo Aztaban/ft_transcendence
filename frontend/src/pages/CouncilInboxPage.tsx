@@ -28,9 +28,11 @@ function CouncilInboxPage() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<SCMessage[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  // The last page that is actually shown; "Show more" loads the one after it (§5.7).
+  const [loadedPage, setLoadedPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [moreFailed, setMoreFailed] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [reloadKey, setReloadKey] = useState(0);
   // Set by a live refresh: a failure then keeps the messages already shown.
@@ -39,7 +41,6 @@ function CouncilInboxPage() {
   // Reloads the first page in the background, keeping what is shown if that fails.
   const refreshInBackground = useCallback(() => {
     isLiveRefresh.current = true;
-    setPage(1);
     setReloadKey((key) => key + 1);
   }, []);
 
@@ -66,30 +67,55 @@ function CouncilInboxPage() {
 
     isLiveRefresh.current = false;
 
-    listSCMessages({ unread: true, page })
+    // Always the first page: a refresh replaces the list, and only a successful answer does, so
+    // a failed background refresh keeps the shown list and its page count together.
+    listSCMessages({ unread: true, page: 1 })
       .then((result) => {
         if (active) {
-          setMessages((current) => (page === 1 ? result.results : [...current, ...result.results]));
+          setMessages(result.results);
+          setLoadedPage(1);
           setTotal(result.count);
           setHasMore(result.next !== null);
+          setMoreFailed(false);
           setLoadState("ready");
         }
       })
       .catch(() => {
-        if (active && page === 1) {
-          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
-        }
-      })
-      .finally(() => {
         if (active) {
-          setIsLoadingMore(false);
+          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
 
     return () => {
       active = false;
     };
-  }, [page, reloadKey]);
+  }, [reloadKey]);
+
+  // The page after the last one shown. The page count moves on only when it arrived; a failure
+  // shows an error and the next click asks for the same page again.
+  async function showMore() {
+    const next = loadedPage + 1;
+
+    setIsLoadingMore(true);
+    setMoreFailed(false);
+
+    try {
+      const result = await listSCMessages({ unread: true, page: next });
+
+      // A message that moved between pages (new ones arrive on top) is not shown twice.
+      setMessages((current) => [
+        ...current,
+        ...result.results.filter((message) => current.every((shown) => shown.id !== message.id)),
+      ]);
+      setLoadedPage(next);
+      setTotal(result.count);
+      setHasMore(result.next !== null);
+    } catch {
+      setMoreFailed(true);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
 
   const now = new Date();
 
@@ -179,16 +205,19 @@ function CouncilInboxPage() {
                 ))}
               </ul>
 
+              {moreFailed && (
+                <p className="council-error" role="alert">
+                  {t("council.loadMoreError")}
+                </p>
+              )}
+
               {hasMore && (
                 <div className="council-actions council-actions--center">
                   <button
                     className="council-more"
                     type="button"
                     disabled={isLoadingMore}
-                    onClick={() => {
-                      setIsLoadingMore(true);
-                      setPage((current) => current + 1);
-                    }}
+                    onClick={showMore}
                   >
                     {isLoadingMore
                       ? t("council.loadingMore")

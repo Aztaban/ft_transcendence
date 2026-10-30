@@ -407,7 +407,9 @@
     "notePlaceholder": "e.g. Forwarded to the building manager.",
     "saved": "Saved ✓",
     "saveNote": "Save note",
-    "markedReadTitle": "Done. The message is marked as read."
+    "markedReadTitle": "Done. The message is marked as read.",
+    "loadMoreError": "Could not load more messages. Please try again.",
+    "saveNoteFirst": "Save the note before marking the message as read."
   },
   "roles": {
     "student": "Student",

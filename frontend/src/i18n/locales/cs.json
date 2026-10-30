@@ -414,7 +414,9 @@
     "notePlaceholder": "např. Předáno správci budovy.",
     "saved": "Uloženo ✓",
     "saveNote": "Uložit poznámku",
-    "markedReadTitle": "Hotovo. Zpráva je označená jako přečtená."
+    "markedReadTitle": "Hotovo. Zpráva je označená jako přečtená.",
+    "loadMoreError": "Další zprávy se nepodařilo načíst. Zkuste to prosím znovu.",
+    "saveNoteFirst": "Před označením zprávy jako přečtené uložte poznámku."
   },
   "roles": {
     "student": "Student",

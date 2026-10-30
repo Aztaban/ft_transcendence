@@ -184,6 +184,21 @@ describe("CouncilInboxMessagePage", () => {
     expect(saveSCMessageNote).toHaveBeenLastCalledWith(3, "Merged.", 5);
   });
 
+  it("asks to save the note before marking the message read, so the draft is not lost", async () => {
+    vi.mocked(getSCMessage).mockResolvedValue(unread);
+    renderPage();
+    await screen.findByText(unread.body);
+
+    fireEvent.change(noteBox(), { target: { value: "Draft" } });
+
+    expect(button("Mark as read").disabled).toBe(true);
+    expect(screen.getByText("Save the note before marking the message as read.")).toBeTruthy();
+
+    fireEvent.change(noteBox(), { target: { value: "" } });
+
+    expect(button("Mark as read").disabled).toBe(false);
+  });
+
   it("explains when the message does not exist", async () => {
     vi.mocked(getSCMessage).mockRejectedValue(new ApiError(404, "Not found.", "not_found"));
 

@@ -220,6 +220,11 @@ function CouncilInboxMessagePage() {
                   ? t("council.markedReadOn", { date: formatDate(message.read_at) })
                   : t("council.notReadYet")}
               </p>
+              {!isRead && noteChanged && (
+                <p className="council-read-state" id="council-save-note-first">
+                  {t("council.saveNoteFirst")}
+                </p>
+              )}
               {isRead ? (
                 <button
                   className="council-more"
@@ -230,10 +235,13 @@ function CouncilInboxMessagePage() {
                   {t("council.markUnread")}
                 </button>
               ) : (
+                // Marking it read opens the popup, which goes back to the inbox: with an unsaved note
+                // the draft would be lost, so the note is saved (or undone) first.
                 <button
                   className="council-button"
                   type="button"
-                  disabled={isBusy}
+                  disabled={isBusy || noteChanged}
+                  aria-describedby={noteChanged ? "council-save-note-first" : undefined}
                   onClick={() => updateRead(true)}
                 >
                   {isUpdatingRead ? t("council.saving") : t("council.markRead")}{" "}
