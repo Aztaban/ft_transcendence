@@ -15,9 +15,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.accounts.models import Role
+from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
-from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
