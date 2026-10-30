@@ -3,7 +3,7 @@
 from collections.abc import Iterable
 from enum import StrEnum
 
-from apps.accounts.models import Role
+from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.core.events import publish_user_event
 from apps.evaluations.models import EvaluationRequest, TutorEligibility
 
@@ -36,7 +36,7 @@ def _eligible_hitchhiker_ids(project_id: int):
         TutorEligibility.objects.filter(
             project_id=project_id,
             tutor__status="active",
-            tutor__roles__name__in=(Role.Name.TUTOR, Role.Name.HEAD_TUTOR),
+            tutor__roles__name__in=HITCHHIKER_ROLES,
         )
         .values_list("tutor_id", flat=True)
         .distinct()

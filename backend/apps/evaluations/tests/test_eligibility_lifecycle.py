@@ -1,7 +1,6 @@
 """Permission/lifecycle coverage for Hitchhiker eligibility (#182, api-plan §7.2, §10.3)."""
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -11,7 +10,6 @@ from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityR
 
 pytestmark = pytest.mark.django_db
 
-User = get_user_model()
 LIST = "api:tutor-eligibility-requests-list"
 REVIEW = "api:tutor-eligibility-requests-review"
 ELIGIBILITY = "api:tutors-eligibility"
@@ -20,22 +18,6 @@ ELIGIBILITY = "api:tutors-eligibility"
 @pytest.fixture
 def api_client():
     return APIClient()
-
-
-@pytest.fixture
-def make_user():
-    def _make(email, display_name=None, roles=(), **extra):
-        user = User.objects.create_user(
-            email=email,
-            password="secret",
-            display_name=display_name or email.split("@")[0],
-            **extra,
-        )
-        if roles:
-            user.roles.set(Role.objects.filter(name__in=roles))
-        return user
-
-    return _make
 
 
 def test_lifecycle_approve_grants_eligibility(api_client, make_user):
