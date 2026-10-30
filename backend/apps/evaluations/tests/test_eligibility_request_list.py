@@ -23,22 +23,6 @@ def api_client():
     return APIClient()
 
 
-@pytest.fixture
-def make_user():
-    def _make(email, display_name=None, roles=(), **extra):
-        user = User.objects.create_user(
-            email=email,
-            password="secret",
-            display_name=display_name or email.split("@")[0],
-            **extra,
-        )
-        if roles:
-            user.roles.set(Role.objects.filter(name__in=roles))
-        return user
-
-    return _make
-
-
 def iso(dt):
     return DateTimeField().to_representation(dt)
 

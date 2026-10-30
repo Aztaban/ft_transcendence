@@ -1,7 +1,8 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
+import useDialog from "../../hooks/useDialog";
 
 interface SuccessDialogProps {
   children: ReactNode;
@@ -11,23 +12,7 @@ interface SuccessDialogProps {
 // Confirmation popup from the Figma; closes on a click outside the card or on Escape.
 function SuccessDialog({ children, onClose }: SuccessDialogProps) {
   const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    cardRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
+  const cardRef = useDialog<HTMLDivElement>(onClose);
 
   return (
     <div className="success-dialog" data-testid="success-dialog-backdrop" onClick={onClose}>

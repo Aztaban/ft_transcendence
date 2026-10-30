@@ -2,9 +2,9 @@ import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
+import useDialog from "../../hooks/useDialog";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatDayHeading, formatTime } from "../../utils/dateTime";
-import useDialog from "./useDialog";
 
 export type PendingViewer = "student" | "hitchhiker";
 

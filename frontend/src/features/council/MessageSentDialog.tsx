@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+
+import useDialog from "../../hooks/useDialog";
 
 interface MessageSentDialogProps {
   onClose: () => void;
@@ -8,23 +9,7 @@ interface MessageSentDialogProps {
 // Figma "Message Sent". Closes on a click outside the card or on Escape.
 function MessageSentDialog({ onClose }: MessageSentDialogProps) {
   const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    cardRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
+  const cardRef = useDialog<HTMLDivElement>(onClose);
 
   return (
     <div className="message-sent" data-testid="message-sent-backdrop" onClick={onClose}>

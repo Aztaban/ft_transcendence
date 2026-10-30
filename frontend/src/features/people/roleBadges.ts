@@ -1,23 +1,24 @@
 import type { UserRole } from "../../types/user";
 
-// Role pills for people search results and public profiles. "Head Tutor" replaces "Hitchhiker"
-// (a Head Tutor is also a Hitchhiker), "Student Council" comes on top. Students get no pill.
+// Role pills for people search results and public profiles, as role names to show with
+// `roles.<name>`. "Head Tutor" replaces "Hitchhiker" (a Head Tutor is also a Hitchhiker),
+// "Student Council" comes on top. Students get no pill.
 export function roleBadges(roles: UserRole[]) {
   const names = roles.map((role) => role.name);
-  const badges: string[] = [];
+  const badges: UserRole["name"][] = [];
 
   if (names.includes("head_tutor")) {
-    badges.push("Head Tutor");
+    badges.push("head_tutor");
   } else if (names.includes("tutor")) {
-    badges.push("Hitchhiker");
+    badges.push("tutor");
   }
 
   if (names.includes("sc_member")) {
-    badges.push("Student Council");
+    badges.push("sc_member");
   }
 
   if (names.includes("admin")) {
-    badges.push("Admin");
+    badges.push("admin");
   }
 
   return badges;

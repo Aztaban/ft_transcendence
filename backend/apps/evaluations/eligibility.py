@@ -1,9 +1,7 @@
 """Tutor project eligibility lookups (api-plan §10.3, schema §3.4)."""
 
-from apps.accounts.models import Role
+from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.evaluations.models import TutorEligibility
-
-_HITCHHIKER_ROLES = (Role.Name.TUTOR, Role.Name.HEAD_TUTOR)
 
 
 def list_approved_projects_for_tutor(tutor) -> list[dict]:
@@ -12,7 +10,7 @@ def list_approved_projects_for_tutor(tutor) -> list[dict]:
     Each item matches api-plan ProjectRef: {id, slug, name}, sorted by name.
     Empty for non-Hitchhikers and for Hitchhikers with no eligibility rows.
     """
-    if not tutor.roles.filter(name__in=_HITCHHIKER_ROLES).exists():
+    if not tutor.roles.filter(name__in=HITCHHIKER_ROLES).exists():
         return []
 
     rows = (

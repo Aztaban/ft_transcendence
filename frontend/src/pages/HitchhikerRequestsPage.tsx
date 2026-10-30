@@ -4,6 +4,7 @@ import { Link } from "react-router";
 
 import { listEvaluationRequests } from "../api/evaluationRequests";
 import { DURATION_OPTIONS } from "../features/hitchhiker/slotRules";
+import { projectInitials } from "../features/projects/ProjectOverview";
 import type { EvaluationRequest } from "../types/evaluation";
 import { formatTimeAgo } from "../utils/dateTime";
 import { OPEN_QUEUE_EVENTS } from "../websocket/events";
@@ -23,14 +24,6 @@ const slotLength = {
   min: DURATION_OPTIONS[0],
   max: DURATION_OPTIONS[DURATION_OPTIONS.length - 1],
 };
-
-// "minishell" → "MI", "RAG against the machine" → "RA"
-function projectInitials(name: string) {
-  return name
-    .replace(/[^a-z0-9]/gi, "")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 function isWaitingLong(request: EvaluationRequest, now: number) {
   return now - new Date(request.created_at).getTime() > ONE_DAY;

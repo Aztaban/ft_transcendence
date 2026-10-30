@@ -9,11 +9,11 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
 from apps.evaluations.models import EvaluationRequest, TutorEligibility
 from apps.evaluations.permissions import (
-    HITCHHIKER_ROLES,
     OVERRIDE_ROLES,
     CanPickSlot,
     CanReleaseSlot,
@@ -164,10 +164,34 @@ def visible_evaluation_requests(user):
     return queryset.filter(visible)
 
 
-class EvaluationRequestDetailView(EvaluationRequestBaseView):
+# One request; anyone who may not see it gets 404 (api-plan §8.7). A comment, not a docstring:
+# drf-spectacular would publish a docstring as the endpoints' description.
+class EvaluationRequestObjectView(EvaluationRequestBaseView):
     def get_queryset(self):
         return visible_evaluation_requests(self.request.user)
 
+
+def transition_schema(*conflicts, description=None):
+    """OpenAPI of a transition without a body that answers the updated request (§10.4)."""
+    return extend_schema(
+        description=description,
+        parameters=[CSRF_HEADER],
+        request=None,
+        responses={
+            200: EvaluationRequestSerializer,
+            **error_responses(
+                {
+                    401: ("not_authenticated",),
+                    403: ("permission_denied", "csrf_failed"),
+                    404: ("not_found",),
+                    409: conflicts,
+                }
+            ),
+        },
+    )
+
+
+class EvaluationRequestDetailView(EvaluationRequestObjectView):
     @extend_schema(
         responses={
             200: EvaluationRequestSerializer,
@@ -202,121 +226,56 @@ class EvaluationRequestDetailView(EvaluationRequestBaseView):
         return Response(self.get_serializer(evaluation).data)
 
 
-class EvaluationRequestConfirmView(EvaluationRequestBaseView):
+class EvaluationRequestConfirmView(EvaluationRequestObjectView):
     """POST /evaluation-requests/{id}/confirm/ (api-plan §10.4)."""
 
-    def get_queryset(self):
-        return visible_evaluation_requests(self.request.user)
-
-    @extend_schema(
-        parameters=[CSRF_HEADER],
-        request=None,
-        responses={
-            200: EvaluationRequestSerializer,
-            **error_responses(
-                {
-                    401: ("not_authenticated",),
-                    403: ("permission_denied", "csrf_failed"),
-                    404: ("not_found",),
-                    409: ("invalid_state_transition", "evaluation_already_started"),
-                }
-            ),
-        },
-    )
+    @transition_schema("invalid_state_transition", "evaluation_already_started")
     def post(self, request, pk):
         evaluation = confirm_request(self.get_object())
         return Response(self.get_serializer(evaluation).data)
 
 
-class EvaluationRequestDeclineView(EvaluationRequestBaseView):
+class EvaluationRequestDeclineView(EvaluationRequestObjectView):
     """POST /evaluation-requests/{id}/decline/."""
 
-    def get_queryset(self):
-        return visible_evaluation_requests(self.request.user)
-
-    @extend_schema(
-        parameters=[CSRF_HEADER],
-        request=None,
-        responses={
-            200: EvaluationRequestSerializer,
-            **error_responses(
-                {
-                    401: ("not_authenticated",),
-                    403: ("permission_denied", "csrf_failed"),
-                    404: ("not_found",),
-                    409: ("invalid_state_transition",),
-                }
-            ),
-        },
-    )
+    @transition_schema("invalid_state_transition")
     def post(self, request, pk):
         evaluation = decline_request(self.get_object())
         return Response(self.get_serializer(evaluation).data)
 
 
-class EvaluationRequestCancelView(EvaluationRequestBaseView):
+class EvaluationRequestCancelView(EvaluationRequestObjectView):
     """The owning student's POST /evaluation-requests/{id}/cancel/."""
 
-    def get_queryset(self):
-        return visible_evaluation_requests(self.request.user)
-
-    @extend_schema(
+    @transition_schema(
+        "invalid_state_transition",
+        "evaluation_already_started",
         description="Cancel your own evaluation request before its slot starts.",
-        parameters=[CSRF_HEADER],
-        request=None,
-        responses={
-            200: EvaluationRequestSerializer,
-            **error_responses(
-                {
-                    401: ("not_authenticated",),
-                    403: ("permission_denied", "csrf_failed"),
-                    404: ("not_found",),
-                    409: ("invalid_state_transition", "evaluation_already_started"),
-                }
-            ),
-        },
     )
     def post(self, request, pk):
         evaluation = cancel_request(self.get_object())
         return Response(self.get_serializer(evaluation).data)
 
 
-class EvaluationRequestReleaseView(EvaluationRequestBaseView):
+class EvaluationRequestReleaseView(EvaluationRequestObjectView):
     """The picking Hitchhiker's POST /evaluation-requests/{id}/release/."""
 
     permission_classes = [IsAuthenticated, CanReleaseSlot]
 
-    def get_queryset(self):
-        return visible_evaluation_requests(self.request.user)
-
-    @extend_schema(
+    @transition_schema(
+        "invalid_state_transition",
+        "evaluation_already_started",
         description="Release a slot you picked before it starts, returning the request to pending.",
-        parameters=[CSRF_HEADER],
-        request=None,
-        responses={
-            200: EvaluationRequestSerializer,
-            **error_responses(
-                {
-                    401: ("not_authenticated",),
-                    403: ("permission_denied", "csrf_failed"),
-                    404: ("not_found",),
-                    409: ("invalid_state_transition", "evaluation_already_started"),
-                }
-            ),
-        },
     )
     def post(self, request, pk):
         evaluation = release_slot(self.get_object(), request.user)
         return Response(self.get_serializer(evaluation).data)
 
 
-class EvaluationRequestPickSlotView(EvaluationRequestBaseView):
+class EvaluationRequestPickSlotView(EvaluationRequestObjectView):
     """POST /evaluation-requests/{id}/pick-slot/."""
 
     permission_classes = [IsAuthenticated, CanPickSlot]
-
-    def get_queryset(self):
-        return visible_evaluation_requests(self.request.user)
 
     @extend_schema(
         parameters=[CSRF_HEADER],

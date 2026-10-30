@@ -1,7 +1,6 @@
 """GET /api/v1/sc-messages/ and /sc-messages/{id}/: the council inbox (api-plan §10.6, §8.10)."""
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -13,7 +12,6 @@ from apps.council.models import SCMessage
 
 pytestmark = pytest.mark.django_db
 
-User = get_user_model()
 LIST = "api:sc-message-list"
 DETAIL = "api:sc-message-detail"
 NOT_FOUND = {"error": {"code": "not_found", "message": "Not found."}}
@@ -25,21 +23,11 @@ def api_client():
 
 
 @pytest.fixture
-def make_user():
-    def _make(email, roles=()):
-        user = User.objects.create_user(
-            email=email, password="secret", display_name=email.split("@")[0]
-        )
-        user.roles.set(Role.objects.filter(name__in=roles))
-        return user
-
-    return _make
-
-
-@pytest.fixture
 def council(api_client, make_user):
     """An API client logged in as an SC Member."""
-    api_client.force_authenticate(user=make_user("council@example.com", (Role.Name.SC_MEMBER,)))
+    api_client.force_authenticate(
+        user=make_user("council@example.com", roles=(Role.Name.SC_MEMBER,))
+    )
     return api_client
 
 
@@ -83,7 +71,7 @@ def test_list_shows_the_council_every_message_newest_first_without_the_sender(co
 
 def test_list_is_open_to_admins(api_client, make_user):
     message = SCMessage.objects.create(body="The fridge is broken.")
-    api_client.force_authenticate(user=make_user("admin@example.com", (Role.Name.ADMIN,)))
+    api_client.force_authenticate(user=make_user("admin@example.com", roles=(Role.Name.ADMIN,)))
 
     response = api_client.get(reverse(LIST))
 
@@ -154,7 +142,7 @@ def test_list_needs_a_session(api_client):
 )
 def test_list_is_forbidden_outside_the_council(api_client, make_user, roles):
     SCMessage.objects.create(body="The fridge is broken.")
-    api_client.force_authenticate(user=make_user("anna@example.com", roles))
+    api_client.force_authenticate(user=make_user("anna@example.com", roles=roles))
 
     response = api_client.get(reverse(LIST))
 
@@ -211,7 +199,7 @@ def test_detail_of_a_missing_message_is_not_found(council):
 def test_detail_is_hidden_outside_the_council(api_client, make_user, roles):
     # 404, not 403: an existing message looks exactly like a missing one (§5.5).
     message = SCMessage.objects.create(body="The fridge is broken.")
-    api_client.force_authenticate(user=make_user("anna@example.com", roles))
+    api_client.force_authenticate(user=make_user("anna@example.com", roles=roles))
 
     existing = api_client.get(reverse(DETAIL, args=[message.id]))
     missing = api_client.get(reverse(DETAIL, args=[message.id + 1]))

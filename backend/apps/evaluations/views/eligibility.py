@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from apps.accounts.models import Role
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
+from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
@@ -62,8 +63,6 @@ _ELIGIBILITY_REQUEST_STATUSES = frozenset(TutorEligibilityRequest.Status.values)
 
 _ELIGIBILITY_REQUEST_SEE_ALL = frozenset({Role.Name.HEAD_TUTOR, Role.Name.ADMIN})
 
-_HITCHHIKER_ROLES = frozenset({Role.Name.TUTOR, Role.Name.HEAD_TUTOR})
-
 
 def _list_eligibility_requests(request):
     projects = Prefetch("projects", queryset=Project.objects.order_by("name"))
@@ -103,7 +102,7 @@ def _list_eligibility_requests(request):
 
 def _create_eligibility_request(request):
     """Submit one eligibility request (api-plan §10.3)."""
-    if not request.user.roles.filter(name__in=_HITCHHIKER_ROLES).exists():
+    if not request.user.roles.filter(name__in=HITCHHIKER_ROLES).exists():
         raise PermissionDenied(
             _("You do not have permission to perform this action."),
             code="permission_denied",

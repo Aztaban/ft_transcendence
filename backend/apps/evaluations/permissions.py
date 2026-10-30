@@ -5,10 +5,10 @@ from rest_framework.exceptions import APIException
 from rest_framework.permissions import BasePermission
 
 from apps.accounts.models import Role
+from apps.accounts.permissions import HITCHHIKER_ROLES
 
 from .models import TutorEligibility
 
-HITCHHIKER_ROLES = (Role.Name.TUTOR, Role.Name.HEAD_TUTOR)
 OVERRIDE_ROLES = (Role.Name.HEAD_TUTOR, Role.Name.ADMIN)
 
 
