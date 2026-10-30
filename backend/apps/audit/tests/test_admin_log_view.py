@@ -3,7 +3,6 @@
 from datetime import datetime, timezone
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -27,17 +26,8 @@ def audit_log_url():
     return reverse("api:admin-audit-log")
 
 
-def make_user(email, display_name, *roles):
-    user = get_user_model().objects.create_user(
-        email=email, password=PASSWORD, display_name=display_name
-    )
-    if roles:
-        user.roles.add(*Role.objects.filter(name__in=roles))
-    return user
-
-
-def admin_client():
-    admin = make_user("admin@example.com", "Admin", Role.Name.ADMIN)
+def admin_client(make_user):
+    admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
     client = APIClient()
     client.force_authenticate(admin)
     return client, admin
@@ -82,8 +72,8 @@ def test_missing_session_returns_contract_error():
     "role",
     [Role.Name.STUDENT, Role.Name.TUTOR, Role.Name.HEAD_TUTOR, Role.Name.SC_MEMBER],
 )
-def test_non_admin_roles_are_denied(role):
-    user = make_user(f"{role}@example.com", role, role)
+def test_non_admin_roles_are_denied(make_user, role):
+    user = make_user(f"{role}@example.com", role, (role,))
     client = APIClient()
     client.force_authenticate(user)
     response = client.get(audit_log_url())
@@ -91,15 +81,15 @@ def test_non_admin_roles_are_denied(role):
     assert response.json() == DENIED
 
 
-def test_admin_sees_an_empty_log():
-    client, _ = admin_client()
+def test_admin_sees_an_empty_log(make_user):
+    client, _ = admin_client(make_user)
     response = client.get(audit_log_url())
     assert response.status_code == 200
     assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
 
 
-def test_entries_match_the_contract_and_newest_created_at_comes_first(monkeypatch):
-    client, _ = admin_client()
+def test_entries_match_the_contract_and_newest_created_at_comes_first(make_user, monkeypatch):
+    client, _ = admin_client(make_user)
     actor = make_user("actor@example.com", "Ada")
     deleted_actor = make_user("gone@example.com", "Gone")
     older = create_entry(monkeypatch, OLDER, actor=actor, reason="kept for review")
@@ -157,8 +147,8 @@ def test_entries_match_the_contract_and_newest_created_at_comes_first(monkeypatc
     }
 
 
-def test_same_timestamp_orders_by_newest_id(monkeypatch):
-    client, _ = admin_client()
+def test_same_timestamp_orders_by_newest_id(make_user, monkeypatch):
+    client, _ = admin_client(make_user)
     first = create_entry(monkeypatch, NEWER, target_id=1)
     second = create_entry(monkeypatch, NEWER, target_id=2)
     first.refresh_from_db()
@@ -171,8 +161,8 @@ def test_same_timestamp_orders_by_newest_id(monkeypatch):
     assert [row["id"] for row in response.json()["results"]] == [second.id, first.id]
 
 
-def test_pagination_returns_the_contract_envelope(monkeypatch):
-    client, _ = admin_client()
+def test_pagination_returns_the_contract_envelope(make_user, monkeypatch):
+    client, _ = admin_client(make_user)
     older = create_entry(monkeypatch, OLDER, target_id=1)
     newer = create_entry(monkeypatch, NEWER, target_id=2)
     url = audit_log_url()
@@ -200,8 +190,8 @@ def ids(response):
     return [row["id"] for row in response.json()["results"]]
 
 
-def test_filters_combine_and_keep_newest_first(monkeypatch):
-    client, admin = admin_client()
+def test_filters_combine_and_keep_newest_first(make_user, monkeypatch):
+    client, admin = admin_client(make_user)
     other = make_user("other@example.com", "Other")
     match = create_entry(monkeypatch, NEWER, actor=admin, target_id=7)
     create_entry(monkeypatch, OLDER, actor=admin, target_id=7)
@@ -232,8 +222,8 @@ def test_filters_combine_and_keep_newest_first(monkeypatch):
     assert ids(response) == [match.id]
 
 
-def test_from_and_to_are_inclusive(monkeypatch):
-    client, _ = admin_client()
+def test_from_and_to_are_inclusive(make_user, monkeypatch):
+    client, _ = admin_client(make_user)
     older = create_entry(monkeypatch, OLDER, target_id=1)
     newer = create_entry(monkeypatch, NEWER, target_id=2)
 
@@ -247,8 +237,8 @@ def test_from_and_to_are_inclusive(monkeypatch):
     assert newer.id not in ids(response)
 
 
-def test_pagination_keeps_the_filter(monkeypatch):
-    client, _ = admin_client()
+def test_pagination_keeps_the_filter(make_user, monkeypatch):
+    client, _ = admin_client(make_user)
     create_entry(monkeypatch, OLDER, target_id=1)
     create_entry(monkeypatch, NEWER, target_id=1)
     create_entry(monkeypatch, NEWER, target_id=2)
@@ -282,8 +272,8 @@ def test_pagination_keeps_the_filter(monkeypatch):
         ),
     ],
 )
-def test_filter_validation(params, field, message):
-    client, _ = admin_client()
+def test_filter_validation(make_user, params, field, message):
+    client, _ = admin_client(make_user)
     response = client.get(audit_log_url(), params)
     assert response.status_code == 400
     assert response.json() == {
@@ -295,8 +285,8 @@ def test_filter_validation(params, field, message):
     }
 
 
-def test_session_authentication_allows_an_admin():
-    admin = make_user("admin@example.com", "Admin", Role.Name.ADMIN)
+def test_session_authentication_allows_an_admin(make_user):
+    admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
     client = APIClient(enforce_csrf_checks=True)
     assert client.login(email=admin.email, password=PASSWORD)
     response = client.get(audit_log_url())

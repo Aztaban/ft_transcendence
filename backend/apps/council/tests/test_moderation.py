@@ -1,7 +1,6 @@
 """DELETE a council message and reveal its sender (api-plan §10.6, §5.5)."""
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.fields import DateTimeField
@@ -13,7 +12,6 @@ from apps.council.models import SCMessage
 
 pytestmark = pytest.mark.django_db
 
-User = get_user_model()
 PASSWORD = "secret"
 DETAIL = "api:sc-message-detail"
 REVEAL = "api:sc-message-reveal-sender"
@@ -31,21 +29,6 @@ INVALID = "Please correct the highlighted fields."
 @pytest.fixture
 def api_client():
     return APIClient()
-
-
-@pytest.fixture
-def make_user():
-    def _make(email, display_name=None, roles=()):
-        user = User.objects.create_user(
-            email=email,
-            password=PASSWORD,
-            display_name=display_name or email.split("@")[0],
-        )
-        if roles:
-            user.roles.add(*Role.objects.filter(name__in=roles))
-        return user
-
-    return _make
 
 
 def message_from(sender, body="The fridge is broken."):
