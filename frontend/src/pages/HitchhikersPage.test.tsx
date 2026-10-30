@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -339,5 +339,24 @@ describe("HitchhikersPage in another language", () => {
     expect(within(card).getByText("2 projekty")).toBeTruthy();
     expect(within(await findCard("Lenka Husarova")).getByText("Studentská rada")).toBeTruthy();
     expect(screen.getByText("2 Hitchhikeři")).toBeTruthy();
+  });
+
+  it("shows the error in the language chosen after it happened", async () => {
+    vi.mocked(searchPeople).mockRejectedValue(
+      new ApiError(429, "Request was throttled.", "throttled"),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText("Too many searches in a short time. Wait a moment and try again."),
+    ).toBeTruthy();
+
+    await act(async () => {
+      await i18n.changeLanguage("cs");
+    });
+
+    expect(
+      screen.getByText("Příliš mnoho hledání v krátké době. Chvíli počkejte a zkuste to znovu."),
+    ).toBeTruthy();
   });
 });

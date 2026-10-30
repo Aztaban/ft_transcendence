@@ -70,7 +70,8 @@ function HitchhikersPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [errorMessage, setErrorMessage] = useState("");
+  // The error itself, turned into text when rendering, so it follows a language switch.
+  const [searchError, setSearchError] = useState<unknown>(null);
   // A new search while results are shown keeps them, dimmed, until the answer arrives.
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -133,7 +134,7 @@ function HitchhikersPage() {
       .catch((error) => {
         if (active) {
           if (page === 1) {
-            setErrorMessage(searchErrorMessage(error));
+            setSearchError(error);
             setLoadState("error");
           } else {
             setMoreFailed(true);
@@ -210,10 +211,26 @@ function HitchhikersPage() {
 
   const isFiltered = searchTerm !== undefined || project !== "";
   const projectName = projects?.find((item) => item.slug === project)?.name ?? project;
+  // A fixed id as the key, so a language switch does not re-mount (and re-animate) the tiles.
   const tiles = [
-    { label: t("nav.hitchhikers"), value: overview?.hitchhikers, icon: hitchhikersIcon },
-    { label: t("hitchhikers.tileHeadTutors"), value: overview?.headTutors, icon: profileIcon },
-    { label: t("hitchhikers.tileProjects"), value: projects?.length, icon: requestIcon },
+    {
+      id: "hitchhikers",
+      label: t("nav.hitchhikers"),
+      value: overview?.hitchhikers,
+      icon: hitchhikersIcon,
+    },
+    {
+      id: "headTutors",
+      label: t("hitchhikers.tileHeadTutors"),
+      value: overview?.headTutors,
+      icon: profileIcon,
+    },
+    {
+      id: "projects",
+      label: t("hitchhikers.tileProjects"),
+      value: projects?.length,
+      icon: requestIcon,
+    },
   ];
   const isTooShort = text.trim().length > 0 && text.trim().length < MIN_QUERY_LENGTH;
 
@@ -228,7 +245,7 @@ function HitchhikersPage() {
         {tiles.map((tile, index) => (
           <li
             className="hitchhikers__tile"
-            key={tile.label}
+            key={tile.id}
             style={{ "--index": index } as CSSProperties}
           >
             <span className="hitchhikers__tile-icon">
@@ -351,7 +368,7 @@ function HitchhikersPage() {
 
       {loadState === "error" && (
         <div className="hitchhikers__error" role="alert">
-          <p>{errorMessage}</p>
+          <p>{searchErrorMessage(searchError)}</p>
           <button type="button" onClick={retry}>
             {t("common.tryAgain")}
           </button>
