@@ -278,6 +278,27 @@ def test_root_and_shared_error_component_shapes(schema):
                 415: "unsupported_media_type",
             },
         ),
+        ("admin/audit-log/", "get", {400: "validation_error", 403: "permission_denied"}),
+        (
+            "sc-messages/{id}/",
+            "delete",
+            {
+                400: "validation_error",
+                403: "permission_denied csrf_failed",
+                404: "not_found",
+                415: "unsupported_media_type",
+            },
+        ),
+        (
+            "sc-messages/{id}/reveal-sender/",
+            "post",
+            {
+                400: "validation_error",
+                403: "permission_denied csrf_failed",
+                404: "not_found",
+                415: "unsupported_media_type",
+            },
+        ),
     ],
 )
 def test_remaining_implemented_operations_document_relevant_errors(schema, path, method, errors):
@@ -318,7 +339,9 @@ def test_own_profile_requires_a_session_in_schema(schema):
         assert operation["security"] == [{"cookieAuth": []}]
 
 
-@pytest.mark.parametrize("path", ["evaluation-requests/", "tutor-eligibility-requests/"])
+@pytest.mark.parametrize(
+    "path", ["evaluation-requests/", "tutor-eligibility-requests/", "admin/audit-log/"]
+)
 def test_pagination_keys_are_required_even_when_links_are_null(schema, path):
     response = schema["paths"][f"/api/v1/{path}"]["get"]["responses"]["200"]
     reference = response["content"]["application/json"]["schema"]["$ref"]
@@ -340,6 +363,38 @@ def test_pagination_keys_are_required_even_when_links_are_null(schema, path):
         ),
         ("evaluation-requests/", "result", ["passed", "failed", "none"]),
         ("tutor-eligibility-requests/", "status", ["pending", "approved", "declined"]),
+        (
+            "admin/audit-log/",
+            "action",
+            [
+                "role.assigned",
+                "role.revoked",
+                "user.updated",
+                "user.suspended",
+                "user.reactivated",
+                "user.deleted",
+                "eligibility.reviewed",
+                "eligibility.revoked",
+                "evaluation.released_by_override",
+                "evaluation.cancelled_by_override",
+                "sc_message.sender_revealed",
+                "sc_message.deleted",
+                "file.updated_by_moderator",
+                "file.deleted_by_moderator",
+            ],
+        ),
+        (
+            "admin/audit-log/",
+            "target_type",
+            [
+                "user",
+                "evaluation_request",
+                "tutor_eligibility_request",
+                "tutor_eligibility",
+                "sc_message",
+                "file",
+            ],
+        ),
     ],
 )
 def test_multi_value_filters_use_comma_separated_query_encoding(schema, path, name, values):
@@ -369,3 +424,109 @@ def test_pick_slot_schema_describes_timezone_grid_order_and_timing_limits(schema
     assert "between 30 minutes and 14 days from now, inclusive" in start
     assert "after starts_at" in end
     assert "between 15 and 120 minutes, inclusive" in end
+
+
+def test_audit_log_schema_matches_the_admin_entry(schema):
+    operation = schema["paths"]["/api/v1/admin/audit-log/"]["get"]
+    assert operation["security"] == [{"cookieAuth": []}]
+    parameters = {parameter["name"]: parameter for parameter in operation["parameters"]}
+    assert set(parameters) == {
+        "page",
+        "page_size",
+        "actor",
+        "action",
+        "target_type",
+        "target_id",
+        "from",
+        "to",
+    }
+    assert parameters["actor"]["schema"]["type"] == "integer"
+    assert parameters["target_id"]["schema"]["type"] == "integer"
+    assert parameters["from"]["schema"]["format"] == "date-time"
+    assert parameters["to"]["schema"]["format"] == "date-time"
+    page_ref = operation["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    page = schema["components"]["schemas"][page_ref.rsplit("/", 1)[1]]
+    entry_ref = page["properties"]["results"]["items"]["$ref"]
+    entry = schema["components"]["schemas"][entry_ref.rsplit("/", 1)[1]]
+    assert set(entry["required"]) == {
+        "id",
+        "actor",
+        "action",
+        "target_type",
+        "target_id",
+        "reason",
+        "metadata",
+        "created_at",
+    }
+    assert set(entry["properties"]) == set(entry["required"])
+    actor = entry["properties"]["actor"]
+    assert actor["nullable"] is True
+    assert actor["allOf"] == [{"$ref": "#/components/schemas/UserRef"}]
+    assert entry["properties"]["action"]["allOf"] == [{"$ref": "#/components/schemas/ActionEnum"}]
+    assert entry["properties"]["target_type"]["allOf"] == [
+        {"$ref": "#/components/schemas/TargetTypeEnum"}
+    ]
+    assert schema["components"]["schemas"]["ActionEnum"]["enum"] == [
+        "role.assigned",
+        "role.revoked",
+        "user.updated",
+        "user.suspended",
+        "user.reactivated",
+        "user.deleted",
+        "eligibility.reviewed",
+        "eligibility.revoked",
+        "evaluation.released_by_override",
+        "evaluation.cancelled_by_override",
+        "sc_message.sender_revealed",
+        "sc_message.deleted",
+        "file.updated_by_moderator",
+        "file.deleted_by_moderator",
+    ]
+    assert schema["components"]["schemas"]["TargetTypeEnum"]["enum"] == [
+        "user",
+        "evaluation_request",
+        "tutor_eligibility_request",
+        "tutor_eligibility",
+        "sc_message",
+        "file",
+    ]
+    assert entry["properties"]["metadata"] == {
+        "type": "object",
+        "additionalProperties": {},
+        "readOnly": True,
+    }
+    assert entry["properties"]["created_at"]["format"] == "date-time"
+    assert entry["properties"]["reason"]["type"] == "string"
+
+
+def _component(schema, ref):
+    return schema["components"]["schemas"][ref.rsplit("/", 1)[1]]
+
+
+def test_council_moderation_schema_matches_the_contract(schema):
+    delete = schema["paths"]["/api/v1/sc-messages/{id}/"]["delete"]
+    assert delete["security"] == [{"cookieAuth": []}]
+    assert "content" not in delete["responses"]["204"]
+    reason = _component(
+        schema, delete["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+    )
+    assert reason["required"] == ["reason"]
+    assert reason["properties"]["reason"]["minLength"] == 1
+    assert reason["properties"]["reason"]["maxLength"] == 500
+
+    reveal = schema["paths"]["/api/v1/sc-messages/{id}/reveal-sender/"]["post"]
+    assert reveal["security"] == [{"cookieAuth": []}]
+    reveal_reason = _component(
+        schema, reveal["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+    )
+    assert reveal_reason["properties"]["reason"]["minLength"] == 10
+    assert reveal_reason["properties"]["reason"]["maxLength"] == 500
+    body = _component(
+        schema, reveal["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    )
+    assert body["required"] == ["sender"]
+    sender_schema = body["properties"]["sender"]
+    assert sender_schema["nullable"] is True
+    sender = _component(schema, sender_schema["allOf"][0]["$ref"])
+    assert set(sender["required"]) == {"id", "display_name", "email"}
+    assert set(sender["properties"]) == {"id", "display_name", "email"}

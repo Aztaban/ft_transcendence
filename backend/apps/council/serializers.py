@@ -65,3 +65,29 @@ class SCMessagePageSerializer(serializers.Serializer):
     next = serializers.CharField(allow_null=True)
     previous = serializers.CharField(allow_null=True)
     results = SCMessageSerializer(many=True)
+
+
+class SCMessageDeleteSerializer(serializers.Serializer):
+    """Body for DELETE /sc-messages/{id}/ (api-plan §10.6)."""
+
+    reason = serializers.CharField(min_length=1, max_length=500)
+
+
+class SCMessageRevealSerializer(serializers.Serializer):
+    """Body for POST /sc-messages/{id}/reveal-sender/ (api-plan §10.6)."""
+
+    reason = serializers.CharField(min_length=10, max_length=500)
+
+
+class SCMessageSenderSerializer(serializers.Serializer):
+    """The sender, returned only by the audited reveal endpoint (api-plan §10.6)."""
+
+    id = serializers.IntegerField(read_only=True)
+    display_name = serializers.CharField(read_only=True)
+    email = serializers.EmailField(read_only=True)
+
+
+class SCMessageRevealResponseSerializer(serializers.Serializer):
+    """200 body of reveal-sender. ``sender`` is null when the account was deleted."""
+
+    sender = SCMessageSenderSerializer(allow_null=True, read_only=True)

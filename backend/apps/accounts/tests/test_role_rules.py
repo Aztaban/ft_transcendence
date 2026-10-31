@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
+from apps.audit.models import AuditLog
 
 pytestmark = pytest.mark.django_db
 PASSWORD = "RoleRulesPassword123!"
@@ -51,6 +52,23 @@ def revoke(client, target, role_name):
     )
 
 
+def assert_role_audit(actor, action, target, role):
+    assert list(
+        AuditLog.objects.values(
+            "actor_id", "action", "target_type", "target_id", "reason", "metadata"
+        )
+    ) == [
+        {
+            "actor_id": actor.id,
+            "action": action,
+            "target_type": "user",
+            "target_id": target.id,
+            "reason": "",
+            "metadata": {"role": role},
+        }
+    ]
+
+
 # --- assignment matrix ------------------------------------------------------------------
 
 ALLOWED = [
@@ -80,6 +98,7 @@ def test_role_can_be_assigned_by(actor_role, role):
 
     assert response.status_code == status.HTTP_200_OK
     assert target.has_role(role)
+    assert_role_audit(actor, "role.assigned", target, role)
 
 
 @pytest.mark.parametrize(("actor_role", "role"), FORBIDDEN)
@@ -92,6 +111,7 @@ def test_role_cannot_be_assigned_by(actor_role, role):
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == ROLE_NOT_ASSIGNABLE
     assert not target.has_role(role)
+    assert not AuditLog.objects.exists()
 
 
 @pytest.mark.parametrize("actor_role", [STUDENT, TUTOR])
@@ -108,6 +128,7 @@ def test_users_who_assign_nothing_are_denied(actor_role):
             "message": "You do not have permission to perform this action.",
         }
     }
+    assert not AuditLog.objects.exists()
 
 
 def test_assigning_a_role_the_user_already_has_is_a_no_op():
@@ -118,6 +139,7 @@ def test_assigning_a_role_the_user_already_has_is_a_no_op():
 
     assert response.status_code == status.HTTP_200_OK
     assert target.roles.filter(name=TUTOR).count() == 1
+    assert not AuditLog.objects.exists()
 
 
 # --- revocation -----------------------------------------------------------------------
@@ -135,6 +157,7 @@ def test_student_and_admin_roles_are_not_revocable(role):
         "error": {"code": "role_not_revocable", "message": "This role cannot be revoked."}
     }
     assert target.has_role(role)
+    assert not AuditLog.objects.exists()
 
 
 def test_admin_cannot_revoke_their_own_roles():
@@ -147,6 +170,7 @@ def test_admin_cannot_revoke_their_own_roles():
         "error": {"code": "cannot_modify_self", "message": "You cannot change your own roles."}
     }
     assert admin.has_role(TUTOR)
+    assert not AuditLog.objects.exists()
 
 
 def test_revoking_a_role_the_user_does_not_hold_is_204():
@@ -156,6 +180,7 @@ def test_revoking_a_role_the_user_does_not_hold_is_204():
     response = revoke(client_for(admin), target, TUTOR)
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not AuditLog.objects.exists()
 
 
 # --- error envelope -------------------------------------------------------------------
@@ -171,6 +196,7 @@ def test_unknown_role_name_is_a_validation_error():
     error = response.json()["error"]
     assert error["code"] == "validation_error"
     assert list(error["fields"]) == ["role"]
+    assert not AuditLog.objects.exists()
 
 
 def test_unknown_user_is_a_404_in_the_envelope():
@@ -184,6 +210,7 @@ def test_unknown_user_is_a_404_in_the_envelope():
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
+    assert not AuditLog.objects.exists()
 
 
 # --- through a real browser session, with CSRF enforced -------------------------------
@@ -214,11 +241,13 @@ def test_assign_through_a_session_needs_the_csrf_token():
     url = reverse("api:users-assign-role", kwargs={"user_id": target.id})
 
     without = browser.post(url, {"role": TUTOR}, format="json", HTTP_HOST="localhost")
-    with_token = browser.post(url, {"role": TUTOR}, format="json", **csrf_header(browser))
-
     assert without.status_code == status.HTTP_403_FORBIDDEN
     assert without.json()["error"]["code"] == "csrf_failed"
+    assert not AuditLog.objects.exists()
+
+    with_token = browser.post(url, {"role": TUTOR}, format="json", **csrf_header(browser))
     assert with_token.status_code == status.HTTP_200_OK
+    assert_role_audit(admin, "role.assigned", target, TUTOR)
 
 
 def test_revoke_through_a_session_needs_the_csrf_token():
@@ -229,9 +258,11 @@ def test_revoke_through_a_session_needs_the_csrf_token():
     url = reverse("api:users-revoke-role", kwargs={"user_id": target.id, "role_id": role.id})
 
     without = browser.delete(url, HTTP_HOST="localhost")
-    with_token = browser.delete(url, **csrf_header(browser))
-
     assert without.status_code == status.HTTP_403_FORBIDDEN
     assert without.json()["error"]["code"] == "csrf_failed"
+    assert not AuditLog.objects.exists()
+
+    with_token = browser.delete(url, **csrf_header(browser))
     assert with_token.status_code == status.HTTP_204_NO_CONTENT
     assert not target.has_role(TUTOR)
+    assert_role_audit(admin, "role.revoked", target, TUTOR)

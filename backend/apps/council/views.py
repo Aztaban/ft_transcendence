@@ -13,6 +13,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
+from apps.audit.models import AuditLog
+from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
@@ -20,11 +22,14 @@ from apps.core.throttling import SCMessageSendRateThrottle
 
 from .models import SCMessage
 from .notifications import notify_sc_message_created
-from .permissions import CanReadCouncilInbox, IsCouncilOrNotFound
+from .permissions import CanAccessCouncilMessage, CanModerateCouncilMessage, CanReadCouncilInbox
 from .serializers import (
     SCMessageCreatedSerializer,
     SCMessageCreateSerializer,
+    SCMessageDeleteSerializer,
     SCMessagePageSerializer,
+    SCMessageRevealResponseSerializer,
+    SCMessageRevealSerializer,
     SCMessageSerializer,
     SCMessageUpdateSerializer,
 )
@@ -89,6 +94,62 @@ def _update_sc_message(request, pk):
                 SCMessage.objects.filter(pk=message.pk).update(read_at=None, updated_at=now)
     message.refresh_from_db()
     return Response(SCMessageSerializer(message).data)
+
+
+def _not_found():
+    return error_response("not_found", _("Not found."), status.HTTP_404_NOT_FOUND)
+
+
+def _lock_message(pk):
+    return SCMessage.objects.select_for_update().select_related("sender").filter(pk=pk).first()
+
+
+def _delete_sc_message(request, pk):
+    """Remove one message. The audit row survives because target_id is not a foreign key."""
+    with transaction.atomic():
+        message = _lock_message(pk)
+        if message is None:
+            return _not_found()
+        serializer = SCMessageDeleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        record_audit(
+            actor=request.user,
+            action=AuditLog.Action.SC_MESSAGE_DELETED,
+            target_type=AuditLog.TargetType.SC_MESSAGE,
+            target_id=message.pk,
+            reason=serializer.validated_data["reason"],
+        )
+        message.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _reveal_sender(request, pk):
+    """Return the sender once, and always leave an audit row for that lookup (§10.6)."""
+    with transaction.atomic():
+        message = _lock_message(pk)
+        if message is None:
+            return _not_found()
+        serializer = SCMessageRevealSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        record_audit(
+            actor=request.user,
+            action=AuditLog.Action.SC_MESSAGE_SENDER_REVEALED,
+            target_type=AuditLog.TargetType.SC_MESSAGE,
+            target_id=message.pk,
+            reason=serializer.validated_data["reason"],
+        )
+        sender = message.sender
+    if sender is None:
+        payload = {"sender": None}
+    else:
+        payload = {
+            "sender": {
+                "id": sender.id,
+                "display_name": sender.display_name,
+                "email": sender.email,
+            }
+        }
+    return Response(SCMessageRevealResponseSerializer(payload).data)
 
 
 @extend_schema(
@@ -188,14 +249,89 @@ def sc_message_list(request):
         ),
     },
 )
-@api_view(["GET", "PATCH"])
-@permission_classes([IsAuthenticated, IsCouncilOrNotFound])
+@extend_schema(
+    methods=["DELETE"],
+    auth=[{"cookieAuth": []}],
+    summary="Delete an abusive Student Council message",
+    parameters=[CSRF_HEADER],
+    request=SCMessageDeleteSerializer,
+    responses={
+        204: None,
+        **error_responses(
+            {
+                400: ("validation_error",),
+                401: ("not_authenticated",),
+                403: ("permission_denied", "csrf_failed"),
+                404: ("not_found",),
+                415: ("unsupported_media_type",),
+            }
+        ),
+    },
+)
+@api_view(["GET", "PATCH", "DELETE"])
+@permission_classes([IsAuthenticated, CanAccessCouncilMessage])
 def sc_message_detail(request, pk):
-    """Read one council message, or change its read state and note (api-plan §10.6).
+    """Read one council message, change its read state and note, or delete it (api-plan §10.6).
 
     Anyone outside the council gets 404, so they cannot tell which messages exist (§5.5).
+    Deleting is admin only. An SC Member, who can already read the message, gets 403.
     """
     if request.method == "PATCH":
         return _update_sc_message(request, pk)
+    if request.method == "DELETE":
+        return _delete_sc_message(request, pk)
     message = get_object_or_404(SCMessage, pk=pk)
     return Response(SCMessageSerializer(message).data)
+
+
+@extend_schema(
+    auth=[{"cookieAuth": []}],
+    summary="Reveal who sent a Student Council message",
+    parameters=[CSRF_HEADER],
+    request=SCMessageRevealSerializer,
+    responses={
+        200: SCMessageRevealResponseSerializer,
+        **error_responses(
+            {
+                400: ("validation_error",),
+                401: ("not_authenticated",),
+                403: ("permission_denied", "csrf_failed"),
+                404: ("not_found",),
+                415: ("unsupported_media_type",),
+            }
+        ),
+    },
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, CanModerateCouncilMessage])
+def sc_message_reveal_sender(request, pk):
+    """Look up the sender of one message. Every lookup is audited (api-plan §10.6)."""
+    return _reveal_sender(request, pk)
+
+
+_ExtendedSchema = sc_message_detail.cls.kwargs["schema"]
+
+
+class _DeleteBodySchema(_ExtendedSchema):
+    """drf-spectacular omits a body on DELETE. This endpoint requires ``reason`` (§10.6)."""
+
+    def _get_request_body(self, direction="request"):
+        if self.method != "DELETE":
+            return super()._get_request_body(direction)
+        # Keep DELETE while the annotation is resolved, then pass the body guard.
+        request_serializer = self.get_request_serializer()
+        resolve_request = self.get_request_serializer
+        self.get_request_serializer = lambda: request_serializer
+        self.method = "POST"
+        try:
+            return super()._get_request_body(direction)
+        finally:
+            self.method = "DELETE"
+            self.get_request_serializer = resolve_request
+
+
+sc_message_detail.cls.kwargs["schema"] = _DeleteBodySchema
+for _method_name in sc_message_detail.cls.http_method_names:
+    _handler = getattr(sc_message_detail.cls, _method_name)
+    if getattr(_handler, "kwargs", {}).get("schema") is _ExtendedSchema:
+        _handler.kwargs["schema"] = _DeleteBodySchema

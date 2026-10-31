@@ -32,3 +32,33 @@ class IsCouncilOrNotFound(BasePermission):
         if not is_council(request.user):
             raise NotFound()
         return True
+
+
+def _moderate_or_hide(user):
+    """Admin may moderate a message. An SC Member already sees it, so the refusal is 403.
+
+    Everyone else gets 404, the same answer as a missing message (§5.5, §10.6).
+    """
+    if user.has_role(Role.Name.ADMIN):
+        return True
+    if user.has_role(Role.Name.SC_MEMBER):
+        return False
+    raise NotFound()
+
+
+class CanAccessCouncilMessage(BasePermission):
+    """GET and PATCH stay with the council. DELETE is the admin moderation action."""
+
+    def has_permission(self, request, view):
+        if request.method == "DELETE":
+            return _moderate_or_hide(request.user)
+        if is_council(request.user):
+            return True
+        raise NotFound()
+
+
+class CanModerateCouncilMessage(BasePermission):
+    """Admin-only action on one message: 403 for the council, 404 for everyone else."""
+
+    def has_permission(self, request, view):
+        return _moderate_or_hide(request.user)

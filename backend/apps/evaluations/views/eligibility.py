@@ -16,6 +16,8 @@ from rest_framework.response import Response
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import HITCHHIKER_ROLES
+from apps.audit.models import AuditLog
+from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
@@ -299,9 +301,15 @@ def tutor_eligibility_request_review(request, request_id):
             )
 
         eligibility_request.refresh_from_db()
+        record_audit(
+            actor=request.user,
+            action=AuditLog.Action.ELIGIBILITY_REVIEWED,
+            target_type=AuditLog.TargetType.TUTOR_ELIGIBILITY_REQUEST,
+            target_id=eligibility_request.pk,
+            metadata={"decision": decision},
+        )
         notify_eligibility_decided(eligibility_request)
 
-    # TODO(audit): eligibility.reviewed.
     return Response(EligibilityRequestSerializer(eligibility_request).data)
 
 
@@ -334,11 +342,6 @@ def revoke_tutor_eligibility(request, slug, tutor_id):
 
     serializer = EligibilityRevokeSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    # TODO(audit): eligibility.revoked (#343). The audit log model is not on this
-    # branch (issue #53).
-    # After it exists, write target_type tutor_eligibility, target_id of the deleted row,
-    # actor request.user and serializer.validated_data["reason"] in this transaction.
-    # The reason is validated and then discarded.
 
     with transaction.atomic():
         # The notification insert locks the tutor. Pick already holds that user
@@ -354,6 +357,13 @@ def revoke_tutor_eligibility(request, slug, tutor_id):
         if eligibility is None:
             return error_response("not_found", _("Not found."), status.HTTP_404_NOT_FOUND)
         project = eligibility.project
+        record_audit(
+            actor=request.user,
+            action=AuditLog.Action.ELIGIBILITY_REVOKED,
+            target_type=AuditLog.TargetType.TUTOR_ELIGIBILITY,
+            target_id=eligibility.pk,
+            reason=serializer.validated_data["reason"],
+        )
         eligibility.delete()
         notify_eligibility_revoked(project, tutor_id)
 
