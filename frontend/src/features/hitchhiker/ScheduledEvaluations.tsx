@@ -50,7 +50,7 @@ function ScheduledEvaluations({ requests, viewer, isLoading = false }: Scheduled
           <p>{t(texts[viewer].empty)}</p>
         </div>
       ) : (
-        <div className="dashboard-requests">
+        <div className="dashboard-requests" role="group" tabIndex={0} aria-labelledby={titleId}>
           {scheduled.map((request) => {
             const otherPerson = viewer === "student" ? request.picked_by : request.student;
 

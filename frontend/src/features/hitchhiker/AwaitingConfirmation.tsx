@@ -36,7 +36,12 @@ function AwaitingConfirmation({ requests, isLoading = false }: AwaitingConfirmat
           <p>{t("dashboard.awaitingEmpty")}</p>
         </div>
       ) : (
-        <div className="dashboard-requests">
+        <div
+          className="dashboard-requests"
+          role="group"
+          tabIndex={0}
+          aria-labelledby="awaiting-confirmation-title"
+        >
           {awaitingRequests.map((request) => (
             <article className="dashboard-request" key={request.id}>
               <div>

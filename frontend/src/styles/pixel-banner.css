@@ -1,0 +1,573 @@
+/* The Home banner's pixel scenes. Steps keep the movement as jumpy as the pixels. */
+
+.pixel-banner {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-height: 400px;
+  aspect-ratio: 19 / 5;
+  background: #141a22;
+}
+
+.pixel-banner__scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pixel-banner--paused * {
+  animation-play-state: paused !important;
+}
+
+.pixel-banner__pause {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #111111;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111111;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.pixel-banner__pause:hover {
+  background: #eef1f1;
+}
+
+.pixel-banner__pause:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.pixel-rocket__stars--far {
+  animation: pixel-rocket-stars 16s linear infinite;
+}
+
+.pixel-rocket__stars--near {
+  animation: pixel-rocket-stars 7s linear infinite;
+}
+
+.pixel-rocket__rocket {
+  animation: pixel-rocket-rocket 16s steps(40) infinite;
+}
+
+.pixel-rocket__rock {
+  transform: translateX(-40px);
+  animation: pixel-rocket-rock 16s steps(44) infinite;
+}
+
+.pixel-rocket__mug {
+  transform: translateX(-40px);
+  animation: pixel-rocket-mug 16s steps(44) infinite;
+}
+
+.pixel-rocket__duck {
+  transform: translateX(-40px);
+  animation: pixel-rocket-duck 16s steps(44) infinite;
+}
+
+.pixel-rocket__planet {
+  transform: translate(148px, 10px);
+  animation: pixel-rocket-planet 16s steps(30) infinite;
+}
+
+.pixel-rocket__flag {
+  transform: translate(167px, 1px);
+  animation: pixel-rocket-flag 16s step-end infinite;
+}
+
+@keyframes pixel-rocket-stars {
+  to {
+    transform: translateX(-190px);
+  }
+}
+
+/* Up for the duck, then down under the space rock and the mug. */
+@keyframes pixel-rocket-rocket {
+  0%,
+  8% {
+    transform: translate(-130px, 0);
+  }
+
+  14%,
+  24% {
+    transform: translate(0, -9px);
+  }
+
+  27% {
+    transform: translate(0, 0);
+  }
+
+  36%,
+  46% {
+    transform: translate(0, 6px);
+  }
+
+  58% {
+    transform: translate(0, 0);
+  }
+
+  74%,
+  96% {
+    transform: translate(36px, 0);
+  }
+
+  100% {
+    transform: translate(110px, 0);
+  }
+}
+
+@keyframes pixel-rocket-rock {
+  0%,
+  16% {
+    transform: translateX(200px);
+  }
+
+  38%,
+  100% {
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes pixel-rocket-mug {
+  0%,
+  30% {
+    transform: translateX(200px);
+  }
+
+  54%,
+  100% {
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes pixel-rocket-duck {
+  0%,
+  10% {
+    transform: translateX(200px);
+  }
+
+  34%,
+  100% {
+    transform: translateX(-30px);
+  }
+}
+
+@keyframes pixel-rocket-planet {
+  0%,
+  56% {
+    transform: translate(200px, 10px);
+  }
+
+  74%,
+  100% {
+    transform: translate(148px, 10px);
+  }
+}
+
+@keyframes pixel-rocket-flag {
+  0% {
+    opacity: 0;
+  }
+
+  78%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Runs for as long as a scene; its end changes the scene. */
+.pixel-banner__clock {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  animation: pixel-banner-clock 1s linear;
+}
+
+@keyframes pixel-banner-clock {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Two frames that take turns: a flame, a hand, a thumb */
+.pixel-blink {
+  animation: pixel-blink 0.3s step-end infinite;
+}
+
+.pixel-blink--slow {
+  animation-duration: 0.8s;
+}
+
+.pixel-blink--second {
+  animation-name: pixel-blink-second;
+  opacity: 0;
+}
+
+@keyframes pixel-blink {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes pixel-blink-second {
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Road trip */
+
+.pixel-road__car {
+  transform: translateX(200px);
+  animation: pixel-road-car 14s steps(34) infinite;
+}
+
+.pixel-road__car--second {
+  animation-name: pixel-road-car-second;
+}
+
+@keyframes pixel-road-car {
+  0%,
+  6% {
+    transform: translateX(200px);
+  }
+
+  20%,
+  100% {
+    transform: translateX(-40px);
+  }
+}
+
+@keyframes pixel-road-car-second {
+  0%,
+  27% {
+    transform: translateX(200px);
+  }
+
+  38%,
+  100% {
+    transform: translateX(-40px);
+  }
+}
+
+.pixel-road__saucer {
+  animation: pixel-road-saucer 14s steps(30) infinite;
+}
+
+@keyframes pixel-road-saucer {
+  0%,
+  44% {
+    transform: translate(120px, -20px);
+  }
+
+  54%,
+  74% {
+    transform: translate(0, 0);
+  }
+
+  82%,
+  100% {
+    transform: translate(-150px, -24px);
+  }
+}
+
+.pixel-road__hiker {
+  animation: pixel-road-hiker 14s steps(20) infinite;
+}
+
+@keyframes pixel-road-hiker {
+  0%,
+  56% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate(0, -18px);
+  }
+
+  73%,
+  100% {
+    opacity: 0;
+    transform: translate(0, -18px);
+  }
+}
+
+.pixel-road__dots {
+  opacity: 0;
+  animation: pixel-road-dots 14s step-end infinite;
+}
+
+@keyframes pixel-road-dots {
+  0% {
+    opacity: 0;
+  }
+
+  21% {
+    opacity: 1;
+  }
+
+  27% {
+    opacity: 0;
+  }
+
+  39% {
+    opacity: 1;
+  }
+
+  44% {
+    opacity: 0;
+  }
+}
+
+.pixel-road__question {
+  opacity: 0;
+  animation: pixel-road-question 14s step-end infinite;
+}
+
+@keyframes pixel-road-question {
+  0% {
+    opacity: 0;
+  }
+
+  47% {
+    opacity: 1;
+  }
+
+  55% {
+    opacity: 0;
+  }
+}
+
+.pixel-road__beam {
+  opacity: 0;
+  animation: pixel-road-beam 14s step-end infinite;
+}
+
+@keyframes pixel-road-beam {
+  0% {
+    opacity: 0;
+  }
+
+  56% {
+    opacity: 1;
+  }
+
+  73% {
+    opacity: 0;
+  }
+}
+
+/* Segfault */
+
+.pixel-desk__prompt {
+  opacity: 0;
+  animation: pixel-desk-prompt 14s step-end infinite;
+}
+
+@keyframes pixel-desk-prompt {
+  0% {
+    opacity: 1;
+  }
+
+  30% {
+    opacity: 0;
+  }
+
+  54% {
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 0;
+  }
+}
+
+.pixel-desk__crash {
+  opacity: 0;
+  animation: pixel-desk-crash 14s step-end infinite;
+}
+
+@keyframes pixel-desk-crash {
+  0% {
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  54% {
+    opacity: 0;
+  }
+}
+
+.pixel-desk__pass {
+  opacity: 0;
+  animation: pixel-desk-pass 14s step-end infinite;
+}
+
+@keyframes pixel-desk-pass {
+  0% {
+    opacity: 0;
+  }
+
+  70% {
+    opacity: 1;
+  }
+}
+
+.pixel-desk__typing {
+  opacity: 0;
+  animation: pixel-desk-typing 14s step-end infinite;
+}
+
+@keyframes pixel-desk-typing {
+  0% {
+    opacity: 1;
+  }
+
+  33% {
+    opacity: 0;
+  }
+
+  54% {
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 0;
+  }
+}
+
+.pixel-desk__head-down {
+  opacity: 0;
+  animation: pixel-desk-head-down 14s step-end infinite;
+}
+
+@keyframes pixel-desk-head-down {
+  0% {
+    opacity: 0;
+  }
+
+  33% {
+    opacity: 1;
+  }
+
+  54% {
+    opacity: 0;
+  }
+}
+
+.pixel-desk__cheering {
+  opacity: 0;
+  animation: pixel-desk-cheering 14s step-end infinite;
+}
+
+@keyframes pixel-desk-cheering {
+  0% {
+    opacity: 0;
+  }
+
+  70% {
+    opacity: 1;
+  }
+}
+
+.pixel-desk__rain {
+  opacity: 0;
+  animation: pixel-desk-rain 14s step-end infinite;
+}
+
+@keyframes pixel-desk-rain {
+  0% {
+    opacity: 0;
+  }
+
+  36% {
+    opacity: 1;
+  }
+
+  54% {
+    opacity: 0;
+  }
+}
+
+.pixel-desk__confetti {
+  opacity: 0;
+  animation: pixel-desk-confetti 14s step-end infinite;
+}
+
+@keyframes pixel-desk-confetti {
+  0% {
+    opacity: 0;
+  }
+
+  70% {
+    opacity: 1;
+  }
+}
+
+.pixel-desk__confetti rect {
+  animation: pixel-desk-fall 1.4s steps(14) infinite;
+}
+
+@keyframes pixel-desk-fall {
+  to {
+    transform: translateY(56px);
+  }
+}
+
+.pixel-desk__steam {
+  animation: pixel-desk-rise 1.2s step-end infinite;
+}
+
+@keyframes pixel-desk-rise {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.pixel-desk__drops {
+  animation: pixel-desk-drops 0.4s step-end infinite;
+}
+
+@keyframes pixel-desk-drops {
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+/* One still frame: the rocket beside planet 42. Without the clock the scene stays. */
+@media (prefers-reduced-motion: reduce) {
+  .pixel-banner * {
+    animation: none;
+  }
+
+  .pixel-blink--second {
+    opacity: 0;
+  }
+
+  .pixel-banner__pause {
+    display: none;
+  }
+}
