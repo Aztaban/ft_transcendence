@@ -673,7 +673,7 @@
     "noAccount": "Don't have an account?",
     "createAccount": "Create one",
     "haveAccount": "Already have an account?",
-    "logIn": "Log in"
+    "goToLogin": "Log in"
   },
   "validation": {
     "displayNameRequired": "Display name is required.",

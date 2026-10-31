@@ -677,7 +677,7 @@
     "noAccount": "¿No tienes cuenta?",
     "createAccount": "Crea una",
     "haveAccount": "¿Ya tienes cuenta?",
-    "logIn": "Inicia sesión"
+    "goToLogin": "Inicia sesión"
   },
   "validation": {
     "displayNameRequired": "El nombre visible es obligatorio.",

@@ -101,6 +101,7 @@ describe("RegisterPage link to Login", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "Log in" }));
 
-    expect(screen.getByText(/^Login page for/)).toBeTruthy();
+    expect(screen.getByText("Login page for")).toBeTruthy();
+    expect(registerUser).not.toHaveBeenCalled();
   });
 });

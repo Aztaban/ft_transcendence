@@ -684,7 +684,7 @@
     "noAccount": "Nemáte účet?",
     "createAccount": "Vytvořte si ho",
     "haveAccount": "Už máte účet?",
-    "logIn": "Přihlaste se"
+    "goToLogin": "Přihlaste se"
   },
   "validation": {
     "displayNameRequired": "Zobrazované jméno je povinné.",
