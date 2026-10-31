@@ -37,6 +37,8 @@ function CouncilInboxPage() {
   const [reloadKey, setReloadKey] = useState(0);
   // Set by a live refresh: a failure then keeps the messages already shown.
   const isLiveRefresh = useRef(false);
+  // Counts the times the list was replaced, so "Show more" can drop a page asked for before that.
+  const listVersion = useRef(0);
 
   // Reloads the first page in the background, keeping what is shown if that fails.
   const refreshInBackground = useCallback(() => {
@@ -72,6 +74,7 @@ function CouncilInboxPage() {
     listSCMessages({ unread: true, page: 1 })
       .then((result) => {
         if (active) {
+          listVersion.current += 1;
           setMessages(result.results);
           setLoadedPage(1);
           setTotal(result.count);
@@ -92,15 +95,21 @@ function CouncilInboxPage() {
   }, [reloadKey]);
 
   // The page after the last one shown. The page count moves on only when it arrived; a failure
-  // shows an error and the next click asks for the same page again.
+  // shows an error and the next click asks for the same page again. A refresh that replaced the
+  // list meanwhile wins: the old answer is dropped, or the pages in between would be skipped.
   async function showMore() {
     const next = loadedPage + 1;
+    const version = listVersion.current;
 
     setIsLoadingMore(true);
     setMoreFailed(false);
 
     try {
       const result = await listSCMessages({ unread: true, page: next });
+
+      if (version !== listVersion.current) {
+        return;
+      }
 
       // A message that moved between pages (new ones arrive on top) is not shown twice.
       setMessages((current) => [
