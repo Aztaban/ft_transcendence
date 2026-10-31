@@ -680,5 +680,185 @@
     "passwordRequired": "Password is required.",
     "passwordTooShort": "Password must contain at least {{min}} characters.",
     "passwordNumeric": "Password cannot contain only numbers."
+  },
+  "legal": {
+    "copyright": "© transcendence 2026",
+    "footerLabel": "Legal",
+    "lastUpdated": "Last updated: {{date}}",
+    "back": "Back to the application",
+    "privacy": {
+      "title": "Privacy Policy",
+      "intro": "This page explains what 42 Prague Evaluations stores about you, why it does, and who can see it.",
+      "sections": [
+        {
+          "title": "Who runs this application",
+          "text": [
+            "42 Prague Evaluations is a student project, built by students of 42 Prague for the ft_transcendence project. It helps students request evaluations, and it helps Hitchhikers (tutors) offer a time for them."
+          ]
+        },
+        {
+          "title": "What we store",
+          "text": ["We store only what the application needs to work:"],
+          "items": [
+            "Account: your email address, display name, language, roles and account status. Your password is stored only as a secure hash (Argon2), never as plain text.",
+            "42 login: if you log in with 42, we also store your 42 user ID and 42 login. We receive these and your email address from 42. We never see your 42 password.",
+            "Evaluations: your requests, the project, your optional note, the proposed times, who picked the request, any cancellation, and the result and feedback once they are recorded.",
+            "Hitchhiker eligibility: your requests, the projects they list, who reviewed them and the review note.",
+            "Notifications: the messages the application sends you.",
+            "Student Council messages: the text you send and your account as its sender. The sender is stored only to investigate abuse.",
+            "Audit log: a record of sensitive actions, such as role changes and account suspensions, with who did them, when and why.",
+            "Technical logs: our servers record requests, including IP addresses, to keep the service running and to limit abuse."
+          ]
+        },
+        {
+          "title": "Why we use it",
+          "text": ["We use your data for these purposes only:"],
+          "items": [
+            "To organize evaluations between students and Hitchhikers.",
+            "To let Head Tutors decide who can evaluate which projects.",
+            "To send you notifications about what happens to your requests.",
+            "To pass your messages to the Student Council.",
+            "To keep the application secure and to investigate abuse."
+          ]
+        },
+        {
+          "title": "Who can see it",
+          "text": [],
+          "items": [
+            "Logged-in users can see your display name and roles. If you are a Hitchhiker, they can also see the projects you can evaluate. Your email address, 42 login and language stay private.",
+            "While your evaluation request is pending, Hitchhikers see it without your name. The Hitchhiker who picks it then sees who you are.",
+            "Head Tutors and Administrators can see evaluation and eligibility requests in order to manage them.",
+            "Student Council members read your messages but never see who sent them. Only an Administrator can reveal a sender, only to investigate abuse, and only by giving a reason. Every reveal is written to the audit log.",
+            "Administrators can see and manage accounts."
+          ]
+        },
+        {
+          "title": "Sharing with others",
+          "text": [
+            "We do not sell your data, show advertising or use analytics tools. We share nothing with other companies. When you choose to continue with 42, you log in on the 42 website, where the terms of 42 apply."
+          ]
+        },
+        {
+          "title": "Cookies and browser storage",
+          "text": [
+            "We use only what the application needs. There are no tracking or advertising cookies, so there is nothing to accept."
+          ],
+          "items": [
+            "The sessionid cookie keeps you logged in. Scripts on the page cannot read it.",
+            "The csrftoken cookie protects your actions against forged requests.",
+            "Local storage remembers your language on this device.",
+            "Session storage keeps your active workspace, unfinished forms and the page to return to after login. It is cleared when you close the tab."
+          ]
+        },
+        {
+          "title": "How long we keep it",
+          "text": [],
+          "items": [
+            "Notifications are deleted automatically after 90 days.",
+            "Accounts stay until they are deleted.",
+            "Evaluation history is kept, because it also belongs to the other person involved.",
+            "Student Council messages stay until they are removed by moderation.",
+            "The audit log is kept, and the application never changes or deletes its entries."
+          ]
+        },
+        {
+          "title": "Your choices",
+          "text": [
+            "You can change your display name and language on your profile. You cannot download your data or delete your account yourself. To find out what we hold about you, correct it, or delete your account, contact an Administrator.",
+            "When an account is deleted, your name, email address and 42 details are removed, and you appear as “Deleted user”. Your roles and notifications are deleted, and your link to any Student Council messages is removed. Past evaluations stay under that name, because they are part of the other person’s history."
+          ]
+        },
+        {
+          "title": "Security",
+          "text": [
+            "Connections use HTTPS, passwords are hashed, and every permission is checked on the server. No system is perfectly secure, so please use a password you do not use anywhere else."
+          ]
+        },
+        {
+          "title": "Changes and contact",
+          "text": [
+            "If this policy changes, we update the date at the top of this page. If you have a question, talk to a Head Tutor or an Administrator."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "intro": "By creating an account or using 42 Prague Evaluations, you accept these terms.",
+      "sections": [
+        {
+          "title": "The service",
+          "text": [
+            "42 Prague Evaluations is a student project that helps 42 Prague students organize their evaluations. It does not replace the 42 intranet, and nothing recorded here changes your official 42 record."
+          ]
+        },
+        {
+          "title": "Your account",
+          "text": [],
+          "items": [
+            "Give true information, and use only your own account.",
+            "Keep your password private. You are responsible for what happens under your account.",
+            "Tell an Administrator if you think someone else has used your account."
+          ]
+        },
+        {
+          "title": "Roles",
+          "text": [
+            "Every account starts as a student. The Hitchhiker, Head Tutor, Student Council and Administrator roles are given by people authorized to do so, and they can be taken away."
+          ]
+        },
+        {
+          "title": "Evaluations",
+          "text": [],
+          "items": [
+            "A student requests an evaluation, a Hitchhiker proposes a time, and the student confirms it.",
+            "Once a time is confirmed, be there on time. If you cannot make it, cancel as early as you can.",
+            "Evaluate and be evaluated honestly and respectfully.",
+            "A pending request expires after 14 days. A proposed time expires if it is not confirmed before it starts.",
+            "Head Tutors and Administrators can cancel or release an evaluation when that is needed."
+          ]
+        },
+        {
+          "title": "Hitchhiker eligibility",
+          "text": [
+            "A Hitchhiker can evaluate a project only after a Head Tutor or Administrator approves it. Approval can be revoked. Evaluations that are already arranged stay in place."
+          ]
+        },
+        {
+          "title": "Student Council messages",
+          "text": [
+            "The Student Council cannot see who wrote a message and cannot reply to it. Use this channel respectfully. If a message is abusive, an Administrator can reveal its sender to investigate."
+          ]
+        },
+        {
+          "title": "Acceptable use",
+          "text": ["You must not:"],
+          "items": [
+            "Harass, threaten or insult other people.",
+            "Publish other people’s personal data.",
+            "Try to reach data or actions that are not meant for you, or get around permissions.",
+            "Attack or overload the application, or flood it with automated requests."
+          ]
+        },
+        {
+          "title": "Suspension and deletion",
+          "text": [
+            "An Administrator can suspend or delete an account that breaks these terms, and must record the reason. A suspended account cannot log in."
+          ]
+        },
+        {
+          "title": "No guarantees",
+          "text": [
+            "This is a student project, provided as it is. We try to keep it working, but we cannot promise that it will always be available, free of errors, or that no data will be lost. As far as the law allows, we are not responsible for losses caused by using it."
+          ]
+        },
+        {
+          "title": "Privacy, changes and contact",
+          "text": [
+            "The Privacy Policy explains how we handle your data. If these terms change, we update the date at the top of this page, and by continuing to use the application you accept the new terms. If you have a question, talk to a Head Tutor or an Administrator."
+          ]
+        }
+      ]
+    }
   }
 }

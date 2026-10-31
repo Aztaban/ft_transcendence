@@ -316,7 +316,9 @@
    ========================================================= */
 
 .app-shell__main {
+  display: flex;
   min-height: 100vh;
+  flex-direction: column;
   margin-left: var(--sidebar-width);
 }
 
@@ -583,9 +585,71 @@
 
 .app-shell__content {
   width: 100%;
-  min-height: calc(100vh - var(--topbar-height));
+  flex: 1;
   padding: 48px 32px;
   background: var(--color-background);
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.public-layout {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.public-layout > main {
+  min-height: 0;
+  flex: 1;
+}
+
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-8);
+  padding: var(--space-5) var(--space-6);
+  border-top: 3px solid var(--color-accent);
+  border-bottom: 3px solid var(--color-accent);
+  background: transparent;
+  color: #000000;
+  text-align: center;
+}
+
+.app-footer__copyright {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.app-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-6);
+}
+
+.app-footer__links a {
+  color: #000000;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent-dark);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.app-footer__links a:hover {
+  text-decoration-thickness: 3px;
+}
+
+.app-footer__links a:focus-visible {
+  outline: 2px solid var(--color-accent-dark);
+  outline-offset: 3px;
 }
 
 /* =========================================================

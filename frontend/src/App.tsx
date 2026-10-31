@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router"
 
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
+import PublicLayout from "./components/layout/PublicLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
 import CouncilInboxMessagePage from "./pages/CouncilInboxMessagePage";
 import CouncilInboxPage from "./pages/CouncilInboxPage";
@@ -16,6 +17,7 @@ import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
 import HitchhikersPage from "./pages/HitchhikersPage";
 import HomePage from "./pages/HomePage";
+import LegalPage from "./pages/LegalPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import PendingPage from "./pages/PendingPage";
@@ -53,7 +55,7 @@ function ReturnAfterLogin() {
   return null;
 }
 
-// Every page except login and registration needs a session (#328). Nothing is rendered, and so
+// Every page except login, registration and the legal pages needs a session (#328). Nothing is rendered, and so
 // no API is called, until the session check has answered; logged out, the user goes to the login
 // page, which brings them back here afterwards.
 function AuthenticatedApp() {
@@ -189,8 +191,38 @@ function AuthenticatedApp() {
 function App() {
   return (
     <Routes>
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/register"
+        element={
+          <PublicLayout>
+            <RegisterPage />
+          </PublicLayout>
+        }
+      />
+      <Route
+        path="/login"
+        element={
+          <PublicLayout>
+            <LoginPage />
+          </PublicLayout>
+        }
+      />
+      <Route
+        path="/privacy"
+        element={
+          <PublicLayout>
+            <LegalPage kind="privacy" />
+          </PublicLayout>
+        }
+      />
+      <Route
+        path="/terms"
+        element={
+          <PublicLayout>
+            <LegalPage kind="terms" />
+          </PublicLayout>
+        }
+      />
       <Route path="*" element={<AuthenticatedApp />} />
     </Routes>
   );

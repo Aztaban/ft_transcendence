@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -63,6 +63,21 @@ describe("logged in", () => {
     expect(screen.getByText("Page not found.")).toBeDefined();
   });
 
+  test("links to both legal pages inside the application", async () => {
+    renderAt("/");
+
+    const footer = within(await screen.findByRole("contentinfo"));
+
+    expect(footer.getByText("© transcendence 2026")).toBeDefined();
+
+    expect(footer.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toBe(
+      "/privacy",
+    );
+    expect(footer.getByRole("link", { name: "Terms of Service" }).getAttribute("href")).toBe(
+      "/terms",
+    );
+  });
+
   test("renders the application shell around every route", async () => {
     const { container } = renderAt("/");
     await screen.findByRole("heading", { name: "Welcome Back" });
@@ -76,6 +91,32 @@ describe("logged out", () => {
   beforeEach(() => {
     vi.mocked(getSession).mockResolvedValue({ authenticated: false, user: null });
   });
+
+  test.each([
+    ["/privacy", "Privacy Policy"],
+    ["/terms", "Terms of Service"],
+  ])("opens %s without a session", async (path, title) => {
+    const { container } = renderAt(path);
+
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeDefined();
+    expect(container.querySelector(".sidebar")).toBeNull();
+  });
+
+  test.each(["/login", "/register", "/privacy", "/terms"])(
+    "links to both legal pages from %s",
+    async (path) => {
+      renderAt(path);
+
+      const footer = within(await screen.findByRole("contentinfo"));
+
+      expect(footer.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toBe(
+        "/privacy",
+      );
+      expect(footer.getByRole("link", { name: "Terms of Service" }).getAttribute("href")).toBe(
+        "/terms",
+      );
+    },
+  );
 
   test("sends every page to the login page without calling its APIs", async () => {
     const { container } = renderAt("/history");

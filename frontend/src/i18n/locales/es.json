@@ -684,5 +684,185 @@
     "passwordRequired": "La contraseña es obligatoria.",
     "passwordTooShort": "La contraseña debe tener al menos {{min}} caracteres.",
     "passwordNumeric": "La contraseña no puede contener solo números."
+  },
+  "legal": {
+    "copyright": "© transcendence 2026",
+    "footerLabel": "Información legal",
+    "lastUpdated": "Última actualización: {{date}}",
+    "back": "Volver a la aplicación",
+    "privacy": {
+      "title": "Política de privacidad",
+      "intro": "Esta página explica qué guarda 42 Prague Evaluations sobre ti, por qué lo hace y quién puede verlo.",
+      "sections": [
+        {
+          "title": "Quién gestiona esta aplicación",
+          "text": [
+            "42 Prague Evaluations es un proyecto estudiantil, creado por estudiantes de 42 Prague para el proyecto ft_transcendence. Ayuda a los estudiantes a solicitar evaluaciones y a los Hitchhikers (tutores) a ofrecerles un horario."
+          ]
+        },
+        {
+          "title": "Qué guardamos",
+          "text": ["Guardamos solo lo que la aplicación necesita para funcionar:"],
+          "items": [
+            "Cuenta: tu correo electrónico, nombre visible, idioma, roles y estado de la cuenta. Tu contraseña se guarda solo como un hash seguro (Argon2), nunca como texto legible.",
+            "Inicio de sesión con 42: si inicias sesión con 42, también guardamos tu ID y tu nombre de usuario de 42. Recibimos estos datos y tu correo electrónico de 42. Nunca vemos tu contraseña de 42.",
+            "Evaluaciones: tus solicitudes, el proyecto, tu nota opcional, los horarios propuestos, quién tomó la solicitud, cualquier cancelación, y el resultado y los comentarios una vez registrados.",
+            "Elegibilidad de Hitchhiker: tus solicitudes, los proyectos que incluyen, quién las revisó y la nota de revisión.",
+            "Notificaciones: los mensajes que te envía la aplicación.",
+            "Mensajes al Consejo estudiantil: el texto que envías y tu cuenta como remitente. El remitente se guarda solo para investigar abusos.",
+            "Registro de auditoría: un registro de acciones sensibles, como cambios de rol y suspensiones de cuentas, con quién las hizo, cuándo y por qué.",
+            "Registros técnicos: nuestros servidores registran las peticiones, incluidas las direcciones IP, para mantener el servicio en marcha y limitar abusos."
+          ]
+        },
+        {
+          "title": "Para qué lo usamos",
+          "text": ["Usamos tus datos solo para estos fines:"],
+          "items": [
+            "Organizar evaluaciones entre estudiantes y Hitchhikers.",
+            "Permitir que los Head Tutors decidan quién puede evaluar cada proyecto.",
+            "Enviarte notificaciones sobre lo que ocurre con tus solicitudes.",
+            "Hacer llegar tus mensajes al Consejo estudiantil.",
+            "Mantener la aplicación segura e investigar abusos."
+          ]
+        },
+        {
+          "title": "Quién puede verlo",
+          "text": [],
+          "items": [
+            "Los usuarios con sesión iniciada pueden ver tu nombre visible y tus roles. Si eres Hitchhiker, también pueden ver los proyectos que puedes evaluar. Tu correo electrónico, tu nombre de usuario de 42 y tu idioma siguen siendo privados.",
+            "Mientras tu solicitud de evaluación está pendiente, los Hitchhikers la ven sin tu nombre. Quien la toma ve entonces quién eres.",
+            "Los Head Tutors y los administradores pueden ver las solicitudes de evaluación y de elegibilidad para gestionarlas.",
+            "Los miembros del Consejo estudiantil leen tus mensajes, pero nunca ven quién los envió. Solo un administrador puede revelar al remitente, solo para investigar abusos y solo indicando un motivo. Cada revelación queda escrita en el registro de auditoría.",
+            "Los administradores pueden ver y gestionar las cuentas."
+          ]
+        },
+        {
+          "title": "Compartir con terceros",
+          "text": [
+            "No vendemos tus datos, no mostramos publicidad y no usamos herramientas de analítica. No compartimos nada con otras empresas. Si eliges continuar con 42, inicias sesión en el sitio web de 42, donde se aplican las condiciones de 42."
+          ]
+        },
+        {
+          "title": "Cookies y almacenamiento del navegador",
+          "text": [
+            "Usamos solo lo que la aplicación necesita. No hay cookies de seguimiento ni de publicidad, así que no hay nada que aceptar."
+          ],
+          "items": [
+            "La cookie sessionid mantiene tu sesión iniciada. Los scripts de la página no pueden leerla.",
+            "La cookie csrftoken protege tus acciones frente a peticiones falsificadas.",
+            "El almacenamiento local recuerda tu idioma en este dispositivo.",
+            "El almacenamiento de sesión guarda tu espacio de trabajo activo, los formularios sin terminar y la página a la que volver tras iniciar sesión. Se borra al cerrar la pestaña."
+          ]
+        },
+        {
+          "title": "Cuánto tiempo lo guardamos",
+          "text": [],
+          "items": [
+            "Las notificaciones se eliminan automáticamente después de 90 días.",
+            "Las cuentas se mantienen hasta que se eliminan.",
+            "El historial de evaluaciones se conserva, porque también pertenece a la otra persona implicada.",
+            "Los mensajes al Consejo estudiantil se mantienen hasta que se retiran por moderación.",
+            "El registro de auditoría se conserva, y la aplicación nunca cambia ni elimina sus entradas."
+          ]
+        },
+        {
+          "title": "Tus opciones",
+          "text": [
+            "Puedes cambiar tu nombre visible y tu idioma en tu perfil. No puedes descargar tus datos ni eliminar tu cuenta por tu cuenta. Para saber qué guardamos sobre ti, corregirlo o eliminar tu cuenta, contacta con un administrador.",
+            "Cuando se elimina una cuenta, se quitan tu nombre, tu correo electrónico y tus datos de 42, y apareces como «Deleted user». Se eliminan tus roles y notificaciones, y también el vínculo con tus mensajes al Consejo estudiantil. Las evaluaciones pasadas se mantienen con ese nombre, porque forman parte del historial de la otra persona."
+          ]
+        },
+        {
+          "title": "Seguridad",
+          "text": [
+            "Las conexiones usan HTTPS, las contraseñas se guardan como hash y cada permiso se comprueba en el servidor. Ningún sistema es perfectamente seguro, así que usa una contraseña que no utilices en ningún otro sitio."
+          ]
+        },
+        {
+          "title": "Cambios y contacto",
+          "text": [
+            "Si esta política cambia, actualizamos la fecha en la parte superior de esta página. Si tienes alguna pregunta, habla con un Head Tutor o un administrador."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Términos de servicio",
+      "intro": "Al crear una cuenta o usar 42 Prague Evaluations, aceptas estos términos.",
+      "sections": [
+        {
+          "title": "El servicio",
+          "text": [
+            "42 Prague Evaluations es un proyecto estudiantil que ayuda a los estudiantes de 42 Prague a organizar sus evaluaciones. No sustituye a la intranet de 42, y nada de lo que se registra aquí cambia tu expediente oficial de 42."
+          ]
+        },
+        {
+          "title": "Tu cuenta",
+          "text": [],
+          "items": [
+            "Da información verdadera y usa solo tu propia cuenta.",
+            "Mantén tu contraseña en privado. Eres responsable de lo que ocurra con tu cuenta.",
+            "Avisa a un administrador si crees que otra persona ha usado tu cuenta."
+          ]
+        },
+        {
+          "title": "Roles",
+          "text": [
+            "Todas las cuentas empiezan como estudiante. Los roles de Hitchhiker, Head Tutor, Consejo estudiantil y administrador los asignan personas autorizadas, y se pueden retirar."
+          ]
+        },
+        {
+          "title": "Evaluaciones",
+          "text": [],
+          "items": [
+            "Un estudiante solicita una evaluación, un Hitchhiker propone un horario y el estudiante lo confirma.",
+            "Una vez confirmado el horario, llega a tiempo. Si no puedes asistir, cancela lo antes posible.",
+            "Evalúa y déjate evaluar con honestidad y respeto.",
+            "Una solicitud pendiente caduca a los 14 días. Un horario propuesto caduca si no se confirma antes de que empiece.",
+            "Los Head Tutors y los administradores pueden cancelar o liberar una evaluación cuando sea necesario."
+          ]
+        },
+        {
+          "title": "Elegibilidad de Hitchhiker",
+          "text": [
+            "Un Hitchhiker solo puede evaluar un proyecto después de que lo apruebe un Head Tutor o un administrador. La aprobación se puede revocar. Las evaluaciones ya acordadas se mantienen."
+          ]
+        },
+        {
+          "title": "Mensajes al Consejo estudiantil",
+          "text": [
+            "El Consejo estudiantil no puede ver quién escribió un mensaje ni responderlo. Usa este canal con respeto. Si un mensaje es abusivo, un administrador puede revelar al remitente para investigarlo."
+          ]
+        },
+        {
+          "title": "Uso aceptable",
+          "text": ["No debes:"],
+          "items": [
+            "Acosar, amenazar o insultar a otras personas.",
+            "Publicar datos personales de otras personas.",
+            "Intentar acceder a datos o acciones que no te corresponden, o saltarte los permisos.",
+            "Atacar o sobrecargar la aplicación, o saturarla con peticiones automatizadas."
+          ]
+        },
+        {
+          "title": "Suspensión y eliminación",
+          "text": [
+            "Un administrador puede suspender o eliminar una cuenta que incumpla estos términos, y debe registrar el motivo. Una cuenta suspendida no puede iniciar sesión."
+          ]
+        },
+        {
+          "title": "Sin garantías",
+          "text": [
+            "Este es un proyecto estudiantil, ofrecido tal como está. Intentamos que funcione, pero no podemos prometer que esté siempre disponible, sin errores, ni que no se pierdan datos. En la medida en que la ley lo permita, no somos responsables de las pérdidas causadas por su uso."
+          ]
+        },
+        {
+          "title": "Privacidad, cambios y contacto",
+          "text": [
+            "La Política de privacidad explica cómo tratamos tus datos. Si estos términos cambian, actualizamos la fecha en la parte superior de esta página, y al seguir usando la aplicación aceptas los nuevos términos. Si tienes alguna pregunta, habla con un Head Tutor o un administrador."
+          ]
+        }
+      ]
+    }
   }
 }
