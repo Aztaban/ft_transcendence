@@ -260,3 +260,11 @@ msgstr "Smazaný"
 #: apps/accounts/views/admin_users.py
 msgid "Deleted accounts cannot be edited."
 msgstr "Smazané účty nelze upravovat."
+
+#: apps/accounts/exceptions.py
+msgid "You cannot change your own account status."
+msgstr "Nemůžete změnit stav svého vlastního účtu."
+
+#: apps/accounts/exceptions.py
+msgid "This action is not allowed in the user's current status."
+msgstr "Tato akce není v aktuálním stavu uživatele povolena."

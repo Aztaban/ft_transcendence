@@ -260,3 +260,11 @@ msgstr "Eliminado"
 #: apps/accounts/views/admin_users.py
 msgid "Deleted accounts cannot be edited."
 msgstr "Las cuentas eliminadas no se pueden editar."
+
+#: apps/accounts/exceptions.py
+msgid "You cannot change your own account status."
+msgstr "No puedes cambiar el estado de tu propia cuenta."
+
+#: apps/accounts/exceptions.py
+msgid "This action is not allowed in the user's current status."
+msgstr "Esta acción no está permitida en el estado actual del usuario."
