@@ -4,10 +4,11 @@ import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 import logo42 from "../assets/figma/42.svg";
 import { ApiError } from "../api/client";
+import AuthSwitchLink from "../components/auth/AuthSwitchLink";
 import LanguageSwitcher from "../components/layout/LanguageSwitcher";
 import { Button, Input } from "../components/ui";
 import { useAuth } from "../store/AuthContext";
-import { rememberReturnPath, takeReturnPath } from "../utils/loginReturn";
+import { rememberReturnPath, takeReturnPath, type ReturnPage } from "../utils/loginReturn";
 import "../styles/registration.css";
 
 const OAUTH_42_REDIRECT_URL = "/api/v1/auth/42/redirect/";
@@ -42,7 +43,7 @@ function getOAuthErrorKey(code: string | null) {
 // `from`: the page the login gate sent the user away from (#328).
 interface LoginLocationState {
   registeredEmail?: string;
-  from?: { pathname: string; search?: string; hash?: string };
+  from?: ReturnPage;
 }
 
 function LoginPage() {
@@ -174,6 +175,14 @@ function LoginPage() {
           <img src={logo42} alt="" aria-hidden="true" />
           {t("auth.continueWith42")}
         </a>
+
+        <AuthSwitchLink
+          prompt={t("auth.noAccount")}
+          label={t("auth.createAccount")}
+          to="/register"
+          from={from}
+          disabled={isSubmitting}
+        />
       </div>
     </main>
   );

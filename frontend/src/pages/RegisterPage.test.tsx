@@ -92,3 +92,16 @@ describe("RegisterPage in another language", () => {
     expect(screen.getByText("Password is required.")).toBeTruthy();
   });
 });
+
+describe("RegisterPage link to Login", () => {
+  it("goes back to the Login page", () => {
+    renderPage();
+
+    expect(screen.getByText("Already have an account?")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("link", { name: "Log in" }));
+
+    expect(screen.getByText("Login page for")).toBeTruthy();
+    expect(registerUser).not.toHaveBeenCalled();
+  });
+});
