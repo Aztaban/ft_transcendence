@@ -44,7 +44,7 @@ User = get_user_model()
 @permission_classes([IsAuthenticated, CanAssignRoles])
 def assign_role(request, user_id):
     """Assign a role to the target user, following the rules of api-plan §5.8."""
-    target = get_object_or_404(User, pk=user_id)
+    target = get_object_or_404(User.objects.exclude(status=User.Status.DELETED), pk=user_id)
     serializer = RoleAssignSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     role_name = serializer.validated_data["role"]
