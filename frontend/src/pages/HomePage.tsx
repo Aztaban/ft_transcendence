@@ -153,7 +153,7 @@ const councilDashboard: DashboardDefinition = {
   ctaTitle: "home.ctaCouncilTitle",
   ctaText: "home.ctaCouncilText",
   ctaLabel: "home.ctaCouncilLabel",
-  ctaTo: "/council/messages",
+  ctaTo: "/council/inbox",
   actionSymbol: "→",
   actionAriaLabel: "home.ctaCouncilAria",
 };

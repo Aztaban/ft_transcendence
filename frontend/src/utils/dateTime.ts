@@ -23,6 +23,15 @@ const timeUnits: [Intl.RelativeTimeFormatUnit, number][] = [
   ["minute", 60 * 1000],
 ];
 
+// A calendar date in the chosen language, e.g. "4 July 2026" or "4. července 2026".
+export function formatDate(date: string) {
+  return new Date(date).toLocaleDateString(dateLocale(), {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 // Formats how long ago something happened, e.g. "2 hours ago" or "yesterday".
 export function formatTimeAgo(date: string, now = new Date()) {
   const elapsed = new Date(date).getTime() - now.getTime();
