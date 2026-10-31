@@ -691,5 +691,185 @@
     "passwordRequired": "Heslo je povinné.",
     "passwordTooShort": "Heslo musí mít alespoň {{min}} znaků.",
     "passwordNumeric": "Heslo nemůže obsahovat jen číslice."
+  },
+  "legal": {
+    "copyright": "© transcendence 2026",
+    "footerLabel": "Právní informace",
+    "lastUpdated": "Poslední aktualizace: {{date}}",
+    "back": "Zpět do aplikace",
+    "privacy": {
+      "title": "Zásady ochrany osobních údajů",
+      "intro": "Tato stránka vysvětluje, co o vás 42 Prague Evaluations ukládá, proč to dělá a kdo to může vidět.",
+      "sections": [
+        {
+          "title": "Kdo aplikaci provozuje",
+          "text": [
+            "42 Prague Evaluations je studentský projekt, který vytvořili studenti 42 Prague v rámci projektu ft_transcendence. Pomáhá studentům žádat o hodnocení a Hitchhikerům (tutorům) nabízet pro ně termín."
+          ]
+        },
+        {
+          "title": "Co ukládáme",
+          "text": ["Ukládáme jen to, co aplikace potřebuje ke své činnosti:"],
+          "items": [
+            "Účet: vaši e-mailovou adresu, zobrazované jméno, jazyk, role a stav účtu. Heslo se ukládá jen jako bezpečný hash (Argon2), nikdy jako čitelný text.",
+            "Přihlášení přes 42: pokud se přihlašujete přes 42, ukládáme také vaše ID a přihlašovací jméno v 42. Tyto údaje a vaši e-mailovou adresu dostáváme od 42. Vaše heslo do 42 nikdy nevidíme.",
+            "Hodnocení: vaše žádosti, projekt, volitelnou poznámku, navržené termíny, kdo si žádost vzal, případné zrušení a výsledek se zpětnou vazbou, jakmile jsou zapsány.",
+            "Způsobilost Hitchhikera: vaše žádosti, projekty v nich uvedené, kdo je posoudil a poznámku k posouzení.",
+            "Oznámení: zprávy, které vám aplikace posílá.",
+            "Zprávy Studentské radě: text, který pošlete, a váš účet jako odesílatele. Odesílatel se ukládá jen kvůli vyšetření zneužití.",
+            "Auditní záznam: záznam citlivých akcí, například změn rolí a pozastavení účtů, s tím, kdo je provedl, kdy a proč.",
+            "Technické záznamy: naše servery zaznamenávají požadavky včetně IP adres, aby služba fungovala a aby bylo možné omezit zneužití."
+          ]
+        },
+        {
+          "title": "K čemu údaje používáme",
+          "text": ["Vaše údaje používáme jen k těmto účelům:"],
+          "items": [
+            "K organizaci hodnocení mezi studenty a Hitchhikery.",
+            "Aby Head Tutoři mohli rozhodovat, kdo může hodnotit které projekty.",
+            "K zasílání oznámení o tom, co se děje s vašimi žádostmi.",
+            "K předání vašich zpráv Studentské radě.",
+            "K zabezpečení aplikace a k vyšetření zneužití."
+          ]
+        },
+        {
+          "title": "Kdo údaje vidí",
+          "text": [],
+          "items": [
+            "Přihlášení uživatelé vidí vaše zobrazované jméno a role. Pokud jste Hitchhiker, vidí také projekty, které můžete hodnotit. Vaše e-mailová adresa, přihlašovací jméno v 42 a jazyk zůstávají soukromé.",
+            "Dokud vaše žádost o hodnocení čeká, Hitchhikeři ji vidí bez vašeho jména. Kdo si ji vezme, pak uvidí, o koho jde.",
+            "Head Tutoři a administrátoři vidí žádosti o hodnocení a o způsobilost, aby je mohli spravovat.",
+            "Členové Studentské rady vaše zprávy čtou, ale nikdy nevidí, kdo je poslal. Odesílatele může odhalit jen administrátor, jen kvůli vyšetření zneužití a jen s uvedením důvodu. Každé odhalení se zapíše do auditního záznamu.",
+            "Administrátoři vidí účty a spravují je."
+          ]
+        },
+        {
+          "title": "Sdílení s ostatními",
+          "text": [
+            "Vaše údaje neprodáváme, nezobrazujeme reklamu a nepoužíváme analytické nástroje. S jinými společnostmi nic nesdílíme. Když zvolíte pokračování přes 42, přihlásíte se na webu 42, kde platí podmínky 42."
+          ]
+        },
+        {
+          "title": "Cookies a úložiště prohlížeče",
+          "text": [
+            "Používáme jen to, co aplikace potřebuje. Nemáme sledovací ani reklamní cookies, takže není co odsouhlasit."
+          ],
+          "items": [
+            "Cookie sessionid vás udržuje přihlášené. Skripty na stránce ji nemohou číst.",
+            "Cookie csrftoken chrání vaše akce před podvrženými požadavky.",
+            "Místní úložiště si na tomto zařízení pamatuje váš jazyk.",
+            "Úložiště relace uchovává aktivní pracovní prostor, nedokončené formuláře a stránku, na kterou se po přihlášení vrátíte. Vymaže se po zavření karty."
+          ]
+        },
+        {
+          "title": "Jak dlouho údaje uchováváme",
+          "text": [],
+          "items": [
+            "Oznámení se automaticky mažou po 90 dnech.",
+            "Účty zůstávají, dokud nejsou smazány.",
+            "Historie hodnocení se uchovává, protože patří i druhé zúčastněné osobě.",
+            "Zprávy Studentské radě zůstávají, dokud nejsou odstraněny v rámci moderování.",
+            "Auditní záznam se uchovává a aplikace jeho položky nikdy nemění ani nemaže."
+          ]
+        },
+        {
+          "title": "Vaše možnosti",
+          "text": [
+            "Zobrazované jméno a jazyk můžete změnit ve svém profilu. Své údaje si nemůžete stáhnout ani sami smazat účet. Pokud chcete zjistit, co o vás uchováváme, opravit to nebo smazat účet, obraťte se na administrátora.",
+            "Při smazání účtu se odstraní vaše jméno, e-mailová adresa a údaje z 42 a zobrazíte se jako „Deleted user“. Vaše role a oznámení se smažou a odstraní se i vazba na vaše zprávy Studentské radě. Minulá hodnocení pod tímto jménem zůstávají, protože jsou součástí historie druhé osoby."
+          ]
+        },
+        {
+          "title": "Zabezpečení",
+          "text": [
+            "Připojení používá HTTPS, hesla jsou hashovaná a každé oprávnění se kontroluje na serveru. Žádný systém není dokonale bezpečný, proto prosím používejte heslo, které nemáte nikde jinde."
+          ]
+        },
+        {
+          "title": "Změny a kontakt",
+          "text": [
+            "Pokud se tyto zásady změní, aktualizujeme datum v horní části stránky. S dotazy se obraťte na Head Tutora nebo administrátora."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Podmínky používání",
+      "intro": "Vytvořením účtu nebo používáním 42 Prague Evaluations s těmito podmínkami souhlasíte.",
+      "sections": [
+        {
+          "title": "Služba",
+          "text": [
+            "42 Prague Evaluations je studentský projekt, který studentům 42 Prague pomáhá organizovat hodnocení. Nenahrazuje intranet 42 a nic, co se zde zaznamená, nemění váš oficiální záznam v 42."
+          ]
+        },
+        {
+          "title": "Váš účet",
+          "text": [],
+          "items": [
+            "Uvádějte pravdivé údaje a používejte jen svůj vlastní účet.",
+            "Heslo si nechte pro sebe. Odpovídáte za to, co se pod vaším účtem děje.",
+            "Pokud máte podezření, že váš účet použil někdo jiný, řekněte to administrátorovi."
+          ]
+        },
+        {
+          "title": "Role",
+          "text": [
+            "Každý účet začíná jako student. Role Hitchhiker, Head Tutor, Studentská rada a administrátor přidělují oprávněné osoby a lze je zase odebrat."
+          ]
+        },
+        {
+          "title": "Hodnocení",
+          "text": [],
+          "items": [
+            "Student požádá o hodnocení, Hitchhiker navrhne termín a student ho potvrdí.",
+            "Jakmile je termín potvrzený, přijďte včas. Pokud to nestihnete, zrušte ho co nejdříve.",
+            "Hodnoťte a nechte se hodnotit poctivě a s respektem.",
+            "Čekající žádost vyprší po 14 dnech. Navržený termín vyprší, pokud není potvrzen před svým začátkem.",
+            "Head Tutoři a administrátoři mohou hodnocení v případě potřeby zrušit nebo uvolnit."
+          ]
+        },
+        {
+          "title": "Způsobilost Hitchhikera",
+          "text": [
+            "Hitchhiker může hodnotit projekt až poté, co to schválí Head Tutor nebo administrátor. Schválení lze odvolat. Hodnocení, která už jsou domluvená, zůstávají v platnosti."
+          ]
+        },
+        {
+          "title": "Zprávy Studentské radě",
+          "text": [
+            "Studentská rada nevidí, kdo zprávu napsal, a nemůže na ni odpovědět. Používejte tento kanál s respektem. Pokud je zpráva urážlivá nebo zneužívající, může administrátor kvůli vyšetření odhalit jejího odesílatele."
+          ]
+        },
+        {
+          "title": "Přijatelné používání",
+          "text": ["Je zakázáno:"],
+          "items": [
+            "Obtěžovat, ohrožovat nebo urážet ostatní.",
+            "Zveřejňovat osobní údaje jiných lidí.",
+            "Pokoušet se získat přístup k datům nebo akcím, které vám nepřísluší, nebo obcházet oprávnění.",
+            "Útočit na aplikaci, přetěžovat ji nebo ji zahlcovat automatizovanými požadavky."
+          ]
+        },
+        {
+          "title": "Pozastavení a smazání",
+          "text": [
+            "Administrátor může pozastavit nebo smazat účet, který porušuje tyto podmínky, a musí uvést důvod. Pozastavený účet se nemůže přihlásit."
+          ]
+        },
+        {
+          "title": "Žádné záruky",
+          "text": [
+            "Jde o studentský projekt poskytovaný tak, jak je. Snažíme se, aby fungoval, ale nemůžeme slíbit, že bude vždy dostupný, bez chyb nebo že nedojde ke ztrátě dat. V rozsahu povoleném zákonem neodpovídáme za škody způsobené jeho používáním."
+          ]
+        },
+        {
+          "title": "Soukromí, změny a kontakt",
+          "text": [
+            "Jak zacházíme s vašimi údaji, vysvětlují Zásady ochrany osobních údajů. Pokud se tyto podmínky změní, aktualizujeme datum v horní části stránky a dalším používáním aplikace s novými podmínkami souhlasíte. S dotazy se obraťte na Head Tutora nebo administrátora."
+          ]
+        }
+      ]
+    }
   }
 }
