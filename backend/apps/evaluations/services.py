@@ -5,8 +5,9 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from rest_framework.exceptions import APIException, PermissionDenied
+from rest_framework.exceptions import APIException, NotAuthenticated, PermissionDenied
 
+from apps.accounts.models import Role, User
 from apps.accounts.services.locking import lock_users
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
@@ -83,7 +84,9 @@ def history_filter(at):
 
 @transaction.atomic
 def create_request(student, project, note):
-    get_user_model().objects.select_for_update().get(pk=student.pk)
+    student = get_user_model().objects.select_for_update().get(pk=student.pk)
+    if not student.is_active:
+        raise NotAuthenticated()
     active = Q(
         status__in=(
             EvaluationRequest.Status.PENDING,
@@ -164,7 +167,7 @@ def decline_request(evaluation):
 
 
 @transaction.atomic
-def cancel_request(evaluation, user=None, *, reason=None):
+def cancel_request(evaluation, user=None, *, reason=None, exclude_user_ids=(), at=None):
     """Cancel as the student before the start, or as an audited override."""
     user = user or evaluation.student
     _lock_transition_users(evaluation, user)
@@ -179,7 +182,7 @@ def cancel_request(evaluation, user=None, *, reason=None):
     )
     if current.status not in cancellable:
         raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
-    at = timezone.now()
+    at = at if at is not None else timezone.now()
     if not override and current.starts_at is not None and current.starts_at <= at:
         raise EvaluationAlreadyStarted()
     if current.result is not None:
@@ -209,8 +212,10 @@ def cancel_request(evaluation, user=None, *, reason=None):
             target_id=evaluation.pk,
             reason=reason,
         )
-    publish_cancelled_event(evaluation, previous_status=current.status)
-    notify_evaluation_cancelled(evaluation)
+    publish_cancelled_event(
+        evaluation, previous_status=current.status, exclude_user_ids=exclude_user_ids
+    )
+    notify_evaluation_cancelled(evaluation, exclude_user_ids=exclude_user_ids)
     return evaluation
 
 
@@ -222,11 +227,37 @@ def release_slot(evaluation, user, *, reason=None):
     override = reason is not None
     if override and not can_override(user, current):
         raise PermissionDenied()
+    if (
+        not override
+        and current.status in EvaluationRequest.PICKED_STATUSES
+        and current.picked_by_id != user.pk
+    ):
+        raise PermissionDenied()
+    return _release_locked_slot(evaluation, current, user, reason=reason)
+
+
+@transaction.atomic
+def release_deleted_user_slot(evaluation, actor, *, deleted_user_id, reason, at):
+    """leanup, including a pick on the deleting Admin's own request.
+
+    This trusted internal path cannot be selected by the public release endpoint.
+    It requires an Admin and a picker whose account is already marked deleted.
+    """
+    _lock_transition_users(evaluation, actor)
+    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    if not actor.has_role(Role.Name.ADMIN):
+        raise PermissionDenied()
+    if current.picked_by_id != deleted_user_id or current.picked_by.status != User.Status.DELETED:
+        raise InvalidStateTransition(_("Only picked requests without a result can be released."))
+    return _release_locked_slot(
+        evaluation, current, actor, reason=reason, at=at, exclude_user_ids=(deleted_user_id,)
+    )
+
+
+def _release_locked_slot(evaluation, current, user, *, reason, at=None, exclude_user_ids=()):
     if current.status not in EvaluationRequest.PICKED_STATUSES:
         raise InvalidStateTransition(_("Only picked requests without a result can be released."))
-    if not override and current.picked_by_id != user.pk:
-        raise PermissionDenied()
-    at = timezone.now()
+    at = at if at is not None else timezone.now()
     if current.starts_at <= at:
         raise EvaluationAlreadyStarted()
     if current.result is not None:
@@ -247,7 +278,7 @@ def release_slot(evaluation, user, *, reason=None):
     if updated != 1:
         raise InvalidStateTransition(_("Only picked requests without a result can be released."))
     evaluation.refresh_from_db()
-    if override:
+    if reason is not None:
         record_audit(
             actor=user,
             action=AuditLog.Action.EVALUATION_RELEASED_BY_OVERRIDE,
@@ -255,11 +286,15 @@ def release_slot(evaluation, user, *, reason=None):
             target_id=evaluation.pk,
             reason=reason,
         )
-    publish_released_event(evaluation, previous_picker_id=current.picked_by_id)
-    if override:
-        notify_evaluation_released(evaluation, previous_picker=current.picked_by, actor_id=user.pk)
-    else:
-        notify_evaluation_released(evaluation, previous_picker=current.picked_by)
+    publish_released_event(
+        evaluation, previous_picker_id=current.picked_by_id, exclude_user_ids=exclude_user_ids
+    )
+    notify_evaluation_released(
+        evaluation,
+        previous_picker=current.picked_by,
+        actor_id=user.pk if reason is not None else None,
+        exclude_user_ids=exclude_user_ids,
+    )
     return evaluation
 
 
@@ -283,10 +318,10 @@ def person_is_busy(person_id, starts_at, ends_at, request_id):
 
 
 def pick_slot(evaluation, user, starts_at, ends_at):
-    """Claim a pending evaluation request (§7.1, §10.4).
+    """Claim a pending evaluation request.
 
     Re-check and lock eligibility inside the transaction to prevent
-    picking a slot after concurrent revocation (schema §4.2).
+    picking a slot after concurrent revocation.
     """
     with transaction.atomic():
         lock_participants(user.pk, evaluation.student_id)
