@@ -153,14 +153,17 @@ def test_competing_reviews_have_one_winner_and_consistent_grants(actors, monkeyp
     existing = TutorEligibility.objects.create(tutor=tutor, project_id=801)
     browsers = [browser_for(head), browser_for(admin)]
     barrier = Barrier(2)
-    original_update = QuerySet.update
+    from apps.evaluations.views import eligibility as eligibility_views
 
-    def update_after_both_reviewers_reach_claim(queryset, **kwargs):
-        if queryset.model is TutorEligibilityRequest:
-            barrier.wait(timeout=10)
-        return original_update(queryset, **kwargs)
+    original_lock = eligibility_views.lock_users
 
-    monkeypatch.setattr(QuerySet, "update", update_after_both_reviewers_reach_claim)
+    def lock_after_both_reviewers_arrive(*user_ids):
+        # Reviews now serialize with account deletion on the requester row.
+        # Rendezvous before locking; a barrier at UPDATE would deadlock.
+        barrier.wait(timeout=10)
+        return original_lock(*user_ids)
+
+    monkeypatch.setattr(eligibility_views, "lock_users", lock_after_both_reviewers_arrive)
     responses = compete(
         browsers,
         reverse("api:tutor-eligibility-requests-review", kwargs={"request_id": pending.id}),

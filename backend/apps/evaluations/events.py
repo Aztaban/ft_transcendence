@@ -62,16 +62,21 @@ def publish_updated_event(evaluation: EvaluationRequest) -> None:
     publish_evaluation_event(EvaluationEvent.UPDATED, evaluation, user_ids=recipients)
 
 
-def publish_released_event(evaluation: EvaluationRequest, *, previous_picker_id: int) -> None:
+def publish_released_event(
+    evaluation: EvaluationRequest, *, previous_picker_id: int, exclude_user_ids=()
+) -> None:
     """Keep the releasing Hitchhiker among recipients after clearing the pick."""
     publish_evaluation_event(
         EvaluationEvent.RELEASED,
         evaluation,
-        user_ids=[
-            evaluation.student_id,
-            previous_picker_id,
-            *_eligible_hitchhiker_ids(evaluation.project_id),
-        ],
+        user_ids=set(
+            [
+                evaluation.student_id,
+                previous_picker_id,
+                *_eligible_hitchhiker_ids(evaluation.project_id),
+            ]
+        )
+        - set(exclude_user_ids),
     )
 
 
@@ -101,14 +106,18 @@ def publish_declined_event(evaluation: EvaluationRequest, *, previous_picker_id:
     )
 
 
-def publish_cancelled_event(evaluation: EvaluationRequest, *, previous_status: str) -> None:
+def publish_cancelled_event(
+    evaluation: EvaluationRequest, *, previous_status: str, exclude_user_ids=()
+) -> None:
     """Refresh the open queue only when cancellation removed a pending request."""
     recipients = [evaluation.student_id]
     if evaluation.picked_by_id is not None:
         recipients.append(evaluation.picked_by_id)
     if previous_status == EvaluationRequest.Status.PENDING:
         recipients.extend(_eligible_hitchhiker_ids(evaluation.project_id))
-    publish_evaluation_event(EvaluationEvent.CANCELLED, evaluation, user_ids=recipients)
+    publish_evaluation_event(
+        EvaluationEvent.CANCELLED, evaluation, user_ids=set(recipients) - set(exclude_user_ids)
+    )
 
 
 def publish_expired_event(

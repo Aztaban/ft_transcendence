@@ -15,7 +15,7 @@ from apps.notifications.services import create_notification
 
 
 def notify_evaluation_created(evaluation: EvaluationRequest) -> None:
-    """Notify active eligible Hitchhikers without disclosing the student (§8.8)."""
+    """Notify active eligible Hitchhikers without disclosing the student."""
     payload = {
         "request_id": evaluation.pk,
         "project": ProjectRefSerializer(evaluation.project).data,
@@ -32,13 +32,14 @@ def notify_evaluation_created(evaluation: EvaluationRequest) -> None:
 
 
 def notify_evaluation_released(
-    evaluation: EvaluationRequest, *, previous_picker, actor_id=None
+    evaluation: EvaluationRequest, *, previous_picker, actor_id=None, exclude_user_ids=()
 ) -> None:
     """Use the locked picker's facts after release has cleared the pick."""
     recipients = {evaluation.student_id}
     if actor_id is not None and actor_id != previous_picker.pk:
         recipients.add(previous_picker.pk)
     recipients.discard(actor_id)
+    recipients.difference_update(exclude_user_ids)
     for recipient_id in sorted(recipients):
         create_notification(
             recipient_id=recipient_id,
@@ -156,7 +157,7 @@ def notify_evaluation_declined(evaluation: EvaluationRequest, *, previous_picker
     )
 
 
-def notify_evaluation_cancelled(evaluation: EvaluationRequest) -> None:
+def notify_evaluation_cancelled(evaluation: EvaluationRequest, *, exclude_user_ids=()) -> None:
     """Notify the affected participants inside the cancellation transaction (§8.8)."""
     recipients = set()
     if evaluation.picked_by_id is not None:
@@ -164,6 +165,7 @@ def notify_evaluation_cancelled(evaluation: EvaluationRequest) -> None:
     if evaluation.cancelled_by_id != evaluation.student_id:
         recipients.add(evaluation.student_id)
     recipients.discard(evaluation.cancelled_by_id)
+    recipients.difference_update(exclude_user_ids)
     if not recipients:
         return
     payload = {

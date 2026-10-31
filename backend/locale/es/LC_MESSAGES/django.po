@@ -268,3 +268,7 @@ msgstr "No puedes cambiar el estado de tu propia cuenta."
 #: apps/accounts/exceptions.py
 msgid "This action is not allowed in the user's current status."
 msgstr "Esta acción no está permitida en el estado actual del usuario."
+
+#: apps/accounts/services/deletion.py
+msgid "Deleted user"
+msgstr "Usuario eliminado"

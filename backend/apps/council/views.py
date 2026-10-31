@@ -1,4 +1,4 @@
-"""Student Council inbox endpoints (api-plan §10.6)."""
+"""Student Council inbox endpoints."""
 
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -8,16 +8,18 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
+from apps.accounts.models import Role, User
+from apps.accounts.services.locking import lock_users
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
-from apps.core.schema import CSRF_HEADER, error_responses
+from apps.core.schema import CSRF_HEADER, DeleteBodySchema, error_responses
 from apps.core.throttling import SCMessageSendRateThrottle
 
 from .models import SCMessage
@@ -40,8 +42,17 @@ def _create_sc_message(request):
     serializer = SCMessageCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     with transaction.atomic():
+        # Lock the sender and Council recipients in one order before inserting
+        # either the message or notifications that reference their user rows.
+        council_ids = User.objects.filter(roles__name=Role.Name.SC_MEMBER).values_list(
+            "pk", flat=True
+        )
+        lock_users(request.user.pk, *council_ids)
+        sender = User.objects.get(pk=request.user.pk)
+        if not sender.is_active:
+            raise NotAuthenticated()
         message = SCMessage.objects.create(
-            sender=request.user,
+            sender=sender,
             body=serializer.validated_data["body"],
         )
         notify_sc_message_created(message)
@@ -312,22 +323,8 @@ def sc_message_reveal_sender(request, pk):
 _ExtendedSchema = sc_message_detail.cls.kwargs["schema"]
 
 
-class _DeleteBodySchema(_ExtendedSchema):
+class _DeleteBodySchema(DeleteBodySchema, _ExtendedSchema):
     """drf-spectacular omits a body on DELETE. This endpoint requires ``reason`` (§10.6)."""
-
-    def _get_request_body(self, direction="request"):
-        if self.method != "DELETE":
-            return super()._get_request_body(direction)
-        # Keep DELETE while the annotation is resolved, then pass the body guard.
-        request_serializer = self.get_request_serializer()
-        resolve_request = self.get_request_serializer
-        self.get_request_serializer = lambda: request_serializer
-        self.method = "POST"
-        try:
-            return super()._get_request_body(direction)
-        finally:
-            self.method = "DELETE"
-            self.get_request_serializer = resolve_request
 
 
 sc_message_detail.cls.kwargs["schema"] = _DeleteBodySchema

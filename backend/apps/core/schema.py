@@ -1,7 +1,25 @@
-"""Shared OpenAPI descriptions for API errors and CSRF (api-plan §5.4–§5.6)."""
+"""Shared OpenAPI descriptions for API errors and CSRF."""
 
+from drf_spectacular.openapi import AutoSchema
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse
 from rest_framework import serializers
+
+
+class DeleteBodySchema(AutoSchema):
+    """Include explicitly annotated DELETE bodies, which spectacular otherwise omits."""
+
+    def _get_request_body(self, direction="request"):
+        if self.method != "DELETE":
+            return super()._get_request_body(direction)
+        request_serializer = self.get_request_serializer()
+        resolve_request = self.get_request_serializer
+        self.get_request_serializer = lambda: request_serializer
+        self.method = "POST"
+        try:
+            return super()._get_request_body(direction)
+        finally:
+            self.method = "DELETE"
+            self.get_request_serializer = resolve_request
 
 
 class ErrorSerializer(serializers.Serializer):

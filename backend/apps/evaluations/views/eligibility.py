@@ -10,12 +10,13 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotAuthenticated, PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import HITCHHIKER_ROLES
+from apps.accounts.services.locking import lock_users
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
@@ -138,7 +139,9 @@ def _create_eligibility_request(request):
 
     with transaction.atomic():
         # Schema §3.2: lock the requester row, then check pending in the same transaction.
-        User.objects.select_for_update().get(pk=request.user.pk)
+        current = User.objects.select_for_update().get(pk=request.user.pk)
+        if not current.is_active:
+            raise NotAuthenticated()
         if TutorEligibilityRequest.objects.filter(
             requester=request.user,
             status=TutorEligibilityRequest.Status.PENDING,
@@ -270,6 +273,9 @@ def tutor_eligibility_request_review(request, request_id):
     reviewed_at = timezone.now()
 
     with transaction.atomic():
+        # Deletion declines pending reviews and removes grants while holding
+        # these user rows. A late reviewer must not recreate eligibility.
+        lock_users(request.user.pk, eligibility_request.requester_id)
         updated = TutorEligibilityRequest.objects.filter(
             pk=request_id,
             status=TutorEligibilityRequest.Status.PENDING,

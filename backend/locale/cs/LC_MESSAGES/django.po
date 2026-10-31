@@ -268,3 +268,7 @@ msgstr "Nemůžete změnit stav svého vlastního účtu."
 #: apps/accounts/exceptions.py
 msgid "This action is not allowed in the user's current status."
 msgstr "Tato akce není v aktuálním stavu uživatele povolena."
+
+#: apps/accounts/services/deletion.py
+msgid "Deleted user"
+msgstr "Smazaný uživatel"
