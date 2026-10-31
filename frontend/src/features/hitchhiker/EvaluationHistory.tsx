@@ -59,7 +59,12 @@ function EvaluationHistory({ requests, viewer, isLoading = false }: EvaluationHi
           <p>{t("history.emptyText")}</p>
         </div>
       ) : (
-        <div className="dashboard-requests">
+        <div
+          className="dashboard-requests"
+          role="group"
+          tabIndex={0}
+          aria-labelledby="evaluation-history-title"
+        >
           {history.map((request) => {
             const otherPerson = viewer === "student" ? request.picked_by : request.student;
 

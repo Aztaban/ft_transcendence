@@ -17,6 +17,19 @@ export function formatSlot(startsAt: string, endsAt: string) {
   return `${day}, ${start.toLocaleTimeString(locale, timeFormat)}–${end.toLocaleTimeString(locale, timeFormat)}`;
 }
 
+// The start of a slot in the user's local time, e.g. "Tue, 3 Nov, 14:00".
+export function formatSlotStart(startsAt: string) {
+  const start = new Date(startsAt);
+  const locale = dateLocale();
+  const day = start.toLocaleDateString(locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+
+  return `${day}, ${start.toLocaleTimeString(locale, timeFormat)}`;
+}
+
 const timeUnits: [Intl.RelativeTimeFormatUnit, number][] = [
   ["day", 24 * 60 * 60 * 1000],
   ["hour", 60 * 60 * 1000],

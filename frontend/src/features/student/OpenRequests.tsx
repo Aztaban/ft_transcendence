@@ -43,7 +43,12 @@ function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
           <p>{t("dashboard.studentOpenEmpty")}</p>
         </div>
       ) : (
-        <div className="dashboard-requests">
+        <div
+          className="dashboard-requests"
+          role="group"
+          tabIndex={0}
+          aria-labelledby="open-requests-title"
+        >
           {openRequests.map((request) => (
             <article
               className={
