@@ -17,6 +17,7 @@ import { canCancel, cancelErrorMessage } from "../features/student/cancelRequest
 import useDialog from "../hooks/useDialog";
 import i18n, { dateLocale } from "../i18n";
 import { useCurrentUser } from "../store/CurrentUserContext";
+import { useRole } from "../store/RoleContext";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
 import { EVALUATION_EVENTS } from "../websocket/events";
 import { useLiveRefresh } from "../websocket/LiveProvider";
@@ -122,6 +123,7 @@ function EvaluationPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useCurrentUser();
+  const { availableRoles } = useRole();
   const [request, setRequest] = useState<EvaluationRequest | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isBusy, setIsBusy] = useState(false);
@@ -136,8 +138,8 @@ function EvaluationPage() {
   const [reloadKey, setReloadKey] = useState(0);
   // Set by a live refresh: a failure then keeps the request already shown.
   const isLiveRefresh = useRef(false);
-  // A 404 from a live refresh or from Accept / Decline: the request is no longer shown to this
-  // user (§5.5).
+  // A 404 from loading, a live refresh or Accept / Decline: the request is no longer shown to this
+  // user (§5.5), e.g. another Hitchhiker picked it before this one opened the notification (#691).
   const [isGone, setIsGone] = useState(false);
 
   // This request was picked, confirmed, released, cancelled, expired or changed, or the
@@ -167,7 +169,7 @@ function EvaluationPage() {
       })
       .catch((error) => {
         if (active) {
-          if (inBackground && error instanceof ApiError && error.status === 404) {
+          if (error instanceof ApiError && error.status === 404) {
             setIsGone(true);
           }
 
@@ -244,6 +246,14 @@ function EvaluationPage() {
   // The Hitchhiker who proposed the slot. Everyone else who is not the student (a Head Tutor,
   // an Admin) gets the same neutral wording.
   const isPicker = request?.picked_by != null && request.picked_by.id === user?.id;
+  // The `evaluation.created` notification opens this page (§8.8), but slots are picked on
+  // /requests/{id}, so a Hitchhiker gets a link there (#690). Checked against the workspaces the user
+  // has, not the active one, and only once /users/me/ has answered.
+  const canPickSlot =
+    user !== null &&
+    request?.status === "pending" &&
+    !isOwnRequest &&
+    availableRoles.includes("HITCHHIKER");
   const status =
     baseStatus && request?.status === "awaiting_confirmation" && !isOwnRequest
       ? { ...baseStatus, labelKey: "status.waitingForStudent" }
@@ -257,7 +267,7 @@ function EvaluationPage() {
 
       {loadState === "loading" && <div className="evaluation__skeleton" aria-busy="true" />}
 
-      {loadState === "error" && (
+      {loadState === "error" && !isGone && (
         <p className="evaluation__error" role="alert">
           {t("evaluation.loadError")}
         </p>
@@ -420,6 +430,17 @@ function EvaluationPage() {
                   </button>
                 </>
               )}
+            </div>
+          )}
+
+          {canPickSlot && (
+            <div className="evaluation__actions">
+              <Link
+                className="evaluation__button evaluation__button--primary"
+                to={`/requests/${request.id}`}
+              >
+                {t("evaluation.pickSlot")}
+              </Link>
             </div>
           )}
 

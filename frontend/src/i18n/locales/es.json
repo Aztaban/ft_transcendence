@@ -227,6 +227,7 @@
     "scheduledOwn": "Tu evaluación está programada",
     "scheduledOther": "La evaluación está programada",
     "waiting": "Esperando a un Hitchhiker",
+    "pickSlot": "Elegir un horario",
     "inactive": "Esta solicitud ya no está activa",
     "declinedNotice": "Has rechazado ese horario. Tu solicitud vuelve a la cola, así que otro Hitchhiker puede proponer uno nuevo.",
     "cancelledNotice": "Tu solicitud se ha cancelado. Puedes crear una nueva cuando quieras.",
