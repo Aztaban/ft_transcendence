@@ -18,10 +18,12 @@ vi.mock("../../api/notifications", () => ({
   markNotificationRead: vi.fn(),
 }));
 
-const count = vi.hoisted(() => ({ refresh: vi.fn() }));
+// The bell's count as the panel sees it: a test sets `unreadCount` before rendering, and a
+// `refresh` implementation can change it, as the provider does after the server answers.
+const count = vi.hoisted(() => ({ unreadCount: 0, refresh: vi.fn() }));
 
 vi.mock("../../store/NotificationCountContext", () => ({
-  useNotificationCount: () => ({ unreadCount: 0, refresh: count.refresh }),
+  useNotificationCount: () => ({ unreadCount: count.unreadCount, refresh: count.refresh }),
 }));
 
 const libft = { id: 4, slug: "libft", name: "Libft" };
@@ -67,6 +69,7 @@ function renderPanel(onClose = vi.fn()) {
 
 beforeEach(() => {
   FakeSocket.reset();
+  count.unreadCount = 0;
 });
 
 afterEach(() => {
@@ -246,6 +249,39 @@ describe("NotificationPanel", () => {
     await screen.findByText('Your resource "Libft tips" was deleted');
 
     expect(screen.queryByRole("button", { name: "Mark all as read" })).toBeNull();
+  });
+
+  // #674: the list holds only the newest page, so unread notifications can all be older ones.
+  it("offers Mark all as read when only notifications outside the list are unread", async () => {
+    count.unreadCount = 3;
+    vi.mocked(listNotifications).mockResolvedValue(
+      page([{ ...created, read_at: "2026-10-24T10:00:00Z" }, deleted]),
+    );
+
+    renderPanel();
+    await screen.findByText('Your resource "Libft tips" was deleted');
+
+    expect(screen.getByRole("button", { name: "Mark all as read" })).toBeTruthy();
+    expect(screen.queryByText("Unread")).toBeNull();
+  });
+
+  it("hides Mark all as read once the badge count is back to 0", async () => {
+    count.unreadCount = 3;
+    // Like the provider: the count loaded again after "Mark all as read" is 0.
+    count.refresh.mockImplementation(() => {
+      count.unreadCount = 0;
+    });
+    vi.mocked(listNotifications).mockResolvedValue(page([deleted]));
+    vi.mocked(markAllNotificationsRead).mockResolvedValue(undefined);
+    renderPanel();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Mark all as read" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Mark all as read" })).toBeNull(),
+    );
+    expect(markAllNotificationsRead).toHaveBeenCalledTimes(1);
+    expect(count.refresh).toHaveBeenCalledTimes(1);
   });
 
   it("marks all as read, then loads the list and the badge again", async () => {
