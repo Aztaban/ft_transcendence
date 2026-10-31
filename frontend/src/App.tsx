@@ -131,7 +131,13 @@ function AuthenticatedApp() {
         <Route
           path="/profile"
           element={
-            <RoleGuard allowedRoles={routePermissions.profile} fallback={<UnauthorizedPage />}>
+            // `eligibility.revoked`, `role.changed` and `account.updated` link here from any
+            // workspace (§8.8), the Student Council one too (#687).
+            <RoleGuard
+              allowedRoles={routePermissions.profile}
+              fallback={<UnauthorizedPage />}
+              switchWorkspace
+            >
               <ProfilePage />
             </RoleGuard>
           }

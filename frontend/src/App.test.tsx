@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { getSession, loginUser } from "./api/auth";
 import { listEvaluationRequests } from "./api/evaluationRequests";
 import { listProjects } from "./api/projects";
+import { getCurrentUser } from "./api/users";
 import App from "./App";
 import { AuthProvider } from "./store/AuthContext";
 import { RoleProvider } from "./store/RoleContext";
@@ -17,6 +18,19 @@ vi.mock("./api/auth", () => ({
 }));
 vi.mock("./api/evaluationRequests", () => ({ listEvaluationRequests: vi.fn() }));
 vi.mock("./api/projects", () => ({ listProjects: vi.fn() }));
+vi.mock("./api/users", () => ({
+  getCurrentUser: vi.fn(),
+  getPublicUser: vi.fn(),
+  updateCurrentUser: vi.fn(),
+}));
+
+// The user's real roles from /users/me/. By default nothing is loaded, as without a provider; a
+// test sets `roles` and `isLoaded` when a page depends on them.
+const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
+
+vi.mock("./store/CurrentUserContext", () => ({
+  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+}));
 
 const user = { id: 1, email: "student@example.com", display_name: "Student" };
 
@@ -34,6 +48,8 @@ afterEach(() => {
   cleanup();
   vi.resetAllMocks();
   sessionStorage.clear();
+  currentUser.roles = [];
+  currentUser.isLoaded = false;
 });
 
 const renderAt = (path: string) =>
@@ -68,6 +84,30 @@ describe("logged in", () => {
     await screen.findByRole("heading", { name: "Welcome Back" });
     expect(container.querySelector(".sidebar")).toBeTruthy();
     expect(container.querySelector(".topbar")).toBeTruthy();
+  });
+
+  // #687: notifications link to /profile from any workspace (§8.8).
+  test("opens /profile from the Student Council workspace instead of refusing it", async () => {
+    sessionStorage.setItem("active-role", "COUNCIL");
+    currentUser.roles = ["student", "tutor", "sc_member"];
+    currentUser.isLoaded = true;
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      ...user,
+      display_name: "Bob",
+      avatar_url: null,
+      language: "en",
+      roles: [
+        { id: 1, name: "student" },
+        { id: 2, name: "sc_member" },
+        { id: 3, name: "tutor" },
+      ],
+      intra_login: null,
+    });
+
+    renderAt("/profile");
+
+    expect(await screen.findByRole("heading", { name: "Bob" })).toBeDefined();
+    expect(screen.queryByText("This page is not available for your current role.")).toBeNull();
   });
 });
 
