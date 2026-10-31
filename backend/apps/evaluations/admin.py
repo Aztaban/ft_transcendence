@@ -5,15 +5,26 @@ evaluation results here after an evaluation (api-plan §7.1).
 """
 
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.http import HttpResponseRedirect
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+from apps.accounts.services.locking import lock_users
 
 from .events import publish_updated_event
 from .models import EvaluationRequest, Project, TutorEligibility, TutorEligibilityRequest
 from .notifications import notify_evaluation_result_recorded
+
+RESULT_ENTRY_ERROR = _(
+    "Results can only be entered for confirmed evaluations whose end time has passed."
+)
+
+
+class _ResultSaveConflict(ValidationError):
+    """The evaluation no longer meets the admin form's result-entry conditions."""
 
 
 @admin.register(Project)
@@ -59,10 +70,7 @@ class EvaluationRequestAdminForm(forms.ModelForm):
             or self.instance.ends_at is None
             or self.instance.ends_at >= timezone.now()
         ):
-            message = _(
-                "Results can only be entered for confirmed evaluations whose end time has passed."
-            )
-            raise ValidationError({field: message for field in populated_fields})
+            raise ValidationError({field: RESULT_ENTRY_ERROR for field in populated_fields})
         return cleaned_data
 
 
@@ -90,18 +98,48 @@ class EvaluationRequestAdmin(admin.ModelAdmin):
     )
     fields = readonly_fields[:-2] + ("result", "feedback", "completed_at") + readonly_fields[-2:]
 
+    def has_add_permission(self, request):
+        # Evaluation creation belongs to the API; this form only records results.
+        return False
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        try:
+            return super().changeform_view(request, object_id, form_url, extra_context)
+        except _ResultSaveConflict:
+            # ModelAdmin's outer transaction has rolled back. Avoid a success
+            # message or admin log entry for a result that was never persisted.
+            self.message_user(request, RESULT_ENTRY_ERROR, level=messages.ERROR)
+            return HttpResponseRedirect(request.path)
+
     @transaction.atomic
     def save_model(self, request, obj, form, change):
-        result_recorded = False
-        if change and "result" in form.changed_data and obj.result is not None:
-            previous_result = (
-                EvaluationRequest.objects.select_for_update()
-                .values_list("result", flat=True)
-                .get(pk=obj.pk)
-            )
-            result_recorded = previous_result is None
-        super().save_model(request, obj, form, change)
-        if change and form.changed_data:
-            publish_updated_event(obj)
-        if result_recorded:
+        if not change:
+            raise _ResultSaveConflict(RESULT_ENTRY_ERROR)
+        updates = {
+            field: getattr(obj, field)
+            for field in EvaluationRequestAdminForm.Meta.fields
+            if field in form.changed_data
+        }
+        if not updates:
+            obj.refresh_from_db()
+            return
+        # Match API transition lock order, including the actor referenced by the
+        # admin log entry and recipients referenced by notification inserts.
+        lock_users(obj.student_id, obj.picked_by_id, request.user.pk if request else None)
+        previous_result = (
+            EvaluationRequest.objects.select_for_update()
+            .filter(pk=obj.pk)
+            .values_list("result", flat=True)
+            .first()
+        )
+        updated = EvaluationRequest.objects.filter(
+            pk=obj.pk,
+            status=EvaluationRequest.Status.CONFIRMED,
+            ends_at__lt=timezone.now(),
+        ).update(**updates)
+        if updated != 1:
+            raise _ResultSaveConflict(RESULT_ENTRY_ERROR)
+        obj.refresh_from_db()
+        publish_updated_event(obj)
+        if "result" in updates and previous_result is None and obj.result is not None:
             notify_evaluation_result_recorded(obj)
