@@ -7,6 +7,10 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException, PermissionDenied
 
+from apps.accounts.services.locking import lock_users
+from apps.audit.models import AuditLog
+from apps.audit.services import record_audit
+
 from .events import (
     EvaluationEvent,
     publish_cancelled_event,
@@ -26,7 +30,13 @@ from .notifications import (
     notify_evaluation_released,
     notify_slot_picked,
 )
-from .permissions import NotEligible
+from .permissions import NotEligible, can_override
+
+
+def _lock_transition_users(evaluation, actor):
+    # Picks lock users before requests. Keep that order for transitions whose
+    # notification/audit inserts also reference these users.
+    lock_users(evaluation.student_id, evaluation.picked_by_id, actor.pk)
 
 
 class ActiveRequestExists(APIException):
@@ -103,6 +113,7 @@ def edit_note(evaluation, validated_data):
 @transaction.atomic
 def confirm_request(evaluation):
     """Accept the current pick before its start (api-plan §7.1, schema §4.2)."""
+    _lock_transition_users(evaluation, evaluation.student)
     current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
     if current.status != EvaluationRequest.Status.AWAITING_CONFIRMATION:
         raise InvalidStateTransition(_("Only requests awaiting confirmation can be confirmed."))
@@ -130,6 +141,7 @@ def confirm_request(evaluation):
 @transaction.atomic
 def decline_request(evaluation):
     """Return an unanswered pick to pending."""
+    _lock_transition_users(evaluation, evaluation.student)
     current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
     previous_picker_id = current.picked_by_id
     updated = EvaluationRequest.objects.filter(
@@ -152,9 +164,14 @@ def decline_request(evaluation):
 
 
 @transaction.atomic
-def cancel_request(evaluation):
-    """Cancel the owning student's request before its slot starts."""
+def cancel_request(evaluation, user=None, *, reason=None):
+    """Cancel as the student before the start, or as an audited override."""
+    user = user or evaluation.student
+    _lock_transition_users(evaluation, user)
     current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    override = user.pk != current.student_id
+    if override and (not can_override(user, current) or reason is None):
+        raise PermissionDenied()
     cancellable = (
         EvaluationRequest.Status.PENDING,
         EvaluationRequest.Status.AWAITING_CONFIRMATION,
@@ -163,40 +180,51 @@ def cancel_request(evaluation):
     if current.status not in cancellable:
         raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
     at = timezone.now()
-    if current.starts_at is not None and current.starts_at <= at:
+    if not override and current.starts_at is not None and current.starts_at <= at:
         raise EvaluationAlreadyStarted()
     if current.result is not None:
         raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
-    updated = (
-        EvaluationRequest.objects.filter(
-            pk=current.pk,
-            student_id=evaluation.student_id,
-            status=current.status,
-            result__isnull=True,
-        )
-        .filter(Q(starts_at__isnull=True) | Q(starts_at__gt=at))
-        .update(
-            status=EvaluationRequest.Status.CANCELLED,
-            cancelled_by_id=current.student_id,
-            cancelled_at=at,
-            updated_at=at,
-        )
+    candidates = EvaluationRequest.objects.filter(
+        pk=current.pk,
+        student_id=evaluation.student_id,
+        status=current.status,
+        result__isnull=True,
+    )
+    if not override:
+        candidates = candidates.filter(Q(starts_at__isnull=True) | Q(starts_at__gt=at))
+    updated = candidates.update(
+        status=EvaluationRequest.Status.CANCELLED,
+        cancelled_by_id=user.pk,
+        cancelled_at=at,
+        updated_at=at,
     )
     if updated != 1:
         raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
     evaluation.refresh_from_db()
+    if override:
+        record_audit(
+            actor=user,
+            action=AuditLog.Action.EVALUATION_CANCELLED_BY_OVERRIDE,
+            target_type=AuditLog.TargetType.EVALUATION_REQUEST,
+            target_id=evaluation.pk,
+            reason=reason,
+        )
     publish_cancelled_event(evaluation, previous_status=current.status)
     notify_evaluation_cancelled(evaluation)
     return evaluation
 
 
 @transaction.atomic
-def release_slot(evaluation, user):
+def release_slot(evaluation, user, *, reason=None):
     """Return the picking Hitchhiker's slot to the queue before its start (§10.4)."""
+    _lock_transition_users(evaluation, user)
     current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    override = reason is not None
+    if override and not can_override(user, current):
+        raise PermissionDenied()
     if current.status not in EvaluationRequest.PICKED_STATUSES:
         raise InvalidStateTransition(_("Only picked requests without a result can be released."))
-    if current.picked_by_id != user.pk:
+    if not override and current.picked_by_id != user.pk:
         raise PermissionDenied()
     at = timezone.now()
     if current.starts_at <= at:
@@ -206,7 +234,7 @@ def release_slot(evaluation, user):
     updated = EvaluationRequest.objects.filter(
         pk=current.pk,
         status=current.status,
-        picked_by_id=user.pk,
+        picked_by_id=current.picked_by_id,
         starts_at__gt=at,
         result__isnull=True,
     ).update(
@@ -219,19 +247,25 @@ def release_slot(evaluation, user):
     if updated != 1:
         raise InvalidStateTransition(_("Only picked requests without a result can be released."))
     evaluation.refresh_from_db()
+    if override:
+        record_audit(
+            actor=user,
+            action=AuditLog.Action.EVALUATION_RELEASED_BY_OVERRIDE,
+            target_type=AuditLog.TargetType.EVALUATION_REQUEST,
+            target_id=evaluation.pk,
+            reason=reason,
+        )
     publish_released_event(evaluation, previous_picker_id=current.picked_by_id)
-    notify_evaluation_released(evaluation, previous_picker=current.picked_by)
+    if override:
+        notify_evaluation_released(evaluation, previous_picker=current.picked_by, actor_id=user.pk)
+    else:
+        notify_evaluation_released(evaluation, previous_picker=current.picked_by)
     return evaluation
 
 
 def lock_participants(hitchhiker_id, student_id):
     """Lock both user rows in ascending id order (schema §4.2)."""
-    list(
-        get_user_model()
-        .objects.select_for_update()
-        .filter(pk__in=(hitchhiker_id, student_id))
-        .order_by("pk")
-    )
+    lock_users(hitchhiker_id, student_id)
 
 
 def person_is_busy(person_id, starts_at, ends_at, request_id):

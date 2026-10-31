@@ -5,6 +5,7 @@ from rest_framework import serializers
 from apps.accounts.exceptions import EmailAlreadyExists
 from apps.accounts.models import Role, User
 from apps.accounts.serializers.profiles import ProfileSerializer, ProfileUpdateSerializer
+from apps.core.serializers import ReasonSerializer
 
 ADMIN_USER_ORDERINGS = tuple(
     prefix + field
@@ -33,8 +34,9 @@ class AdminUserUpdateSerializer(ProfileUpdateSerializer):
         return value
 
 
-class AccountStatusChangeSerializer(serializers.Serializer):
-    reason = serializers.CharField(min_length=1, max_length=500)
+class AccountStatusChangeSerializer(ReasonSerializer):
+    # Retain the existing OpenAPI component name.
+    pass
 
 
 class AdminUserQuerySerializer(serializers.Serializer):
