@@ -58,6 +58,11 @@ urlpatterns = [
         name="tutor-eligibility-requests-list",
     ),
     path(
+        "tutor-eligibility-requests/<int:request_id>/",
+        eligibility.tutor_eligibility_request_detail,
+        name="tutor-eligibility-requests-detail",
+    ),
+    path(
         "tutor-eligibility-requests/<int:request_id>/review/",
         eligibility.tutor_eligibility_request_review,
         name="tutor-eligibility-requests-review",
