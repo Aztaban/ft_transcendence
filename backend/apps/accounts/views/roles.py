@@ -1,6 +1,7 @@
 """Account roles views."""
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiResponse, extend_schema
@@ -10,7 +11,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.models import Role
+from apps.accounts.models import Role, UserRole
+from apps.accounts.notifications import notify_role_changed
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
 from apps.accounts.serializers.profiles import RoleAssignmentResultSerializer
 from apps.accounts.serializers.roles import RoleAssignSerializer
@@ -48,7 +50,10 @@ def assign_role(request, user_id):
     if not can_assign(request.user, role_name):
         raise PermissionDenied(_("You may not assign this role."), code="role_not_assignable")
     role = Role.objects.get(name=role_name)
-    target.roles.add(role)
+    with transaction.atomic():
+        _membership, created = UserRole.objects.get_or_create(user=target, role=role)
+        if created:
+            notify_role_changed(target.pk, role.name, "assigned")
     return Response(
         RoleAssignmentResultSerializer(target).data,
         status=status.HTTP_200_OK,
@@ -89,5 +94,8 @@ def revoke_role(request, user_id, role_id):
         return error_response(
             "cannot_modify_self", _("You cannot change your own roles."), status.HTTP_409_CONFLICT
         )
-    target.roles.remove(role)
+    with transaction.atomic():
+        deleted, _per_model = UserRole.objects.filter(user=target, role=role).delete()
+        if deleted:
+            notify_role_changed(target.pk, role.name, "revoked")
     return Response(status=status.HTTP_204_NO_CONTENT)
