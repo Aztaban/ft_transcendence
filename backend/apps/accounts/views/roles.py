@@ -50,7 +50,6 @@ def assign_role(request, user_id):
     if not can_assign(request.user, role_name):
         raise PermissionDenied(_("You may not assign this role."), code="role_not_assignable")
     role = Role.objects.get(name=role_name)
-    # TODO(audit): role.assigned (#53). The audit log is not on this branch.
     with transaction.atomic():
         _membership, created = UserRole.objects.get_or_create(user=target, role=role)
         if created:
@@ -95,7 +94,6 @@ def revoke_role(request, user_id, role_id):
         return error_response(
             "cannot_modify_self", _("You cannot change your own roles."), status.HTTP_409_CONFLICT
         )
-    # TODO(audit): role.revoked (#53). The audit log is not on this branch.
     with transaction.atomic():
         deleted, _per_model = UserRole.objects.filter(user=target, role=role).delete()
         if deleted:
