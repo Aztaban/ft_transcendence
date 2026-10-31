@@ -17,10 +17,14 @@ msgstr ""
 "Plural-Forms: nplurals=4; plural=(n == 1 && n % 1 == 0) ? 0 : (n >= 2 && n "
 "<= 4 && n % 1 == 0) ? 1: (n % 1 != 0 ) ? 2 : 3;\n"
 
-#: apps/accounts/serializers/authentication.py:21
+#: apps/accounts/serializers/authentication.py:24
 #: apps/accounts/views/authentication.py:37
 msgid "An account with this email already exists."
 msgstr "Účet s tímto e-mailem už existuje."
+
+#: apps/accounts/serializers/authentication.py:21
+msgid "Use 42 login for a 42 Prague email."
+msgstr "Pro e-mail 42 Prague použijte přihlášení přes 42."
 
 #: apps/accounts/serializers/oauth.py:35 apps/accounts/serializers/oauth.py:60
 msgid "42 user ID must be a positive integer."

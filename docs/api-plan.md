@@ -616,7 +616,7 @@ Events are sent with `transaction.on_commit`, so a client never re-fetches befor
 { "email": "alice@example.com", "display_name": "Alice", "password": "correct horse battery" }
 ```
 
-- `email`: valid email, max 254. Stored lowercase.
+- `email`: valid email, max 254, not a 42 email (`42prague.com` or a subdomain); those accounts use 42 OAuth. Stored lowercase.
 - `display_name`: 1–64 chars.
 - `password`: Django's validators: at least 8 characters, not too similar to email or display name, not a common password, not entirely numeric.
 - The new account's `language` is the request's language (`Accept-Language`, §5.5), so the app does not switch language at the first login; `en` when it is not `en`, `cs` or `es`.
