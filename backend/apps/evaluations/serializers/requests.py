@@ -84,6 +84,10 @@ class EvaluationRequestNoteSerializer(serializers.Serializer):
     note = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
 
+class EvaluationOverrideSerializer(serializers.Serializer):
+    reason = serializers.CharField(min_length=1, max_length=500)
+
+
 class TimezoneRequiredDateTimeField(serializers.DateTimeField):
     """ISO 8601 datetime that must include Z or an offset (api-plan §5.2)."""
 

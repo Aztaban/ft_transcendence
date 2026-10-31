@@ -12,6 +12,11 @@ from .models import TutorEligibility
 OVERRIDE_ROLES = (Role.Name.HEAD_TUTOR, Role.Name.ADMIN)
 
 
+def can_override(user, evaluation):
+    """Overrides apply only to another student's evaluation request."""
+    return evaluation.student_id != user.pk and user.roles.filter(name__in=OVERRIDE_ROLES).exists()
+
+
 class NotEligible(APIException):
     status_code = 403
     default_code = "not_eligible"
@@ -40,13 +45,18 @@ class EvaluationRequestPermission(BasePermission):
 
 
 class CanReleaseSlot(BasePermission):
-    """Only the picking Hitchhiker may use the ordinary release action."""
+    """Allow the picking Hitchhiker or a Head Tutor/Admin override."""
 
     def has_object_permission(self, request, view, obj):
         return (
             obj.picked_by_id == request.user.pk
             and request.user.roles.filter(name__in=HITCHHIKER_ROLES).exists()
-        )
+        ) or can_override(request.user, obj)
+
+
+class CanCancelRequest(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.student_id == request.user.pk or can_override(request.user, obj)
 
 
 class CanPickSlot(BasePermission):

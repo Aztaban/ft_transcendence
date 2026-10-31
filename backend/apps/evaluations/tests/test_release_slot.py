@@ -203,11 +203,12 @@ def test_unrelated_users_cannot_release_with_real_session(evaluation, expected, 
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
     )
     if role in ("head_tutor", "admin"):
-        assert response.status_code == 403
+        assert response.status_code == 400
         assert response.json() == {
             "error": {
-                "code": "permission_denied",
-                "message": "You do not have permission to perform this action.",
+                "code": "validation_error",
+                "message": "Please correct the highlighted fields.",
+                "fields": {"reason": ["This field is required."]},
             }
         }
     else:

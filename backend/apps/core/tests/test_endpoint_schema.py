@@ -233,6 +233,8 @@ def test_root_and_shared_error_component_shapes(schema):
             "evaluation-requests/{id}/release/",
             "post",
             {
+                400: "validation_error",
+                415: "unsupported_media_type",
                 403: "permission_denied csrf_failed",
                 404: "not_found",
                 409: "invalid_state_transition evaluation_already_started",
@@ -242,6 +244,8 @@ def test_root_and_shared_error_component_shapes(schema):
             "evaluation-requests/{id}/cancel/",
             "post",
             {
+                400: "validation_error",
+                415: "unsupported_media_type",
                 403: "permission_denied csrf_failed",
                 404: "not_found",
                 409: "invalid_state_transition evaluation_already_started",
@@ -326,7 +330,12 @@ def test_remaining_implemented_operations_document_relevant_errors(schema, path,
 @pytest.mark.parametrize("action", ["confirm", "decline", "cancel", "release"])
 def test_transition_schema_takes_no_body_and_returns_evaluation_request(schema, action):
     operation = schema["paths"][f"/api/v1/evaluation-requests/{{id}}/{action}/"]["post"]
-    assert "requestBody" not in operation
+    if action in ("release", "cancel"):
+        assert not operation["requestBody"].get("required", False)
+        assert "400" in operation["responses"]
+        assert "415" in operation["responses"]
+    else:
+        assert "requestBody" not in operation
     assert operation["security"] == [{"cookieAuth": []}]
     assert operation["responses"]["200"]["content"]["application/json"]["schema"] == {
         "$ref": "#/components/schemas/EvaluationRequest"

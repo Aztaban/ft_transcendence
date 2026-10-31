@@ -1,12 +1,15 @@
 """Fixtures shared by every backend test."""
 
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
-from apps.evaluations.models import Project
+from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
 
 
 @pytest.fixture
@@ -49,3 +52,66 @@ def make_session_client():
         return client
 
     return _client
+
+
+@pytest.fixture
+def override_evaluation(make_user, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime(2026, 10, 31, 10, tzinfo=timezone.utc)
+    monkeypatch.setattr("django.utils.timezone.now", lambda: now)
+    for name in Role.Name.values:
+        Role.objects.get_or_create(name=name)
+    student = make_user("student@example.com", display_name="Alice", language="en")
+    picker = make_user("picker@example.com", display_name="Bob", roles=("student", "tutor"))
+    actor = make_user("actor@example.com", display_name="Ada", roles=("head_tutor",))
+    eligible = make_user("eligible@example.com", display_name="Cara", roles=("tutor",))
+    project = Project.objects.create(slug="override_project", name="Override project")
+    for tutor in (picker, eligible):
+        TutorEligibility.objects.create(tutor=tutor, project=project)
+    evaluation = EvaluationRequest.objects.create(
+        student=student,
+        project=project,
+        status="confirmed",
+        picked_by=picker,
+        starts_at=now + timedelta(days=1),
+        ends_at=now + timedelta(days=1, minutes=45),
+    )
+    return evaluation, student, picker, actor, eligible
+
+
+@pytest.fixture
+def override_response(override_evaluation):
+    evaluation, student, picker, _, _ = override_evaluation
+    return {
+        "id": evaluation.pk,
+        "student": {"id": student.pk, "display_name": "Alice", "avatar_url": None},
+        "project": {
+            "id": evaluation.project_id,
+            "slug": "override_project",
+            "name": "Override project",
+        },
+        "note": "",
+        "status": "confirmed",
+        "picked_by": {"id": picker.pk, "display_name": "Bob", "avatar_url": None},
+        "starts_at": "2026-11-01T10:00:00Z",
+        "ends_at": "2026-11-01T10:45:00Z",
+        "cancelled_by": None,
+        "cancelled_at": None,
+        "expired_at": None,
+        "result": None,
+        "feedback": "",
+        "completed_at": None,
+        "is_history": False,
+        "created_at": "2026-10-31T10:00:00Z",
+        "updated_at": "2026-10-31T10:00:00Z",
+    }
+
+
+@pytest.fixture
+def user_event_sender(monkeypatch):
+    sender = AsyncMock()
+    monkeypatch.setattr(
+        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
+    )
+    return sender
