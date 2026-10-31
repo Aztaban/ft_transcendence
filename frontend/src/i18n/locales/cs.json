@@ -231,6 +231,7 @@
     "scheduledOwn": "Vaše hodnocení je naplánované",
     "scheduledOther": "Hodnocení je naplánované",
     "waiting": "Čeká na Hitchhikera",
+    "pickSlot": "Vybrat termín",
     "inactive": "Tato žádost už není aktivní",
     "declinedNotice": "Termín jste odmítli. Vaše žádost je zpět ve frontě, takže jiný Hitchhiker může navrhnout nový termín.",
     "cancelledNotice": "Vaše žádost byla zrušena. Novou můžete vytvořit kdykoli.",

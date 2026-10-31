@@ -85,7 +85,12 @@ function AuthenticatedApp() {
         <Route
           path="/requests/:id"
           element={
-            <RoleGuard allowedRoles={["HITCHHIKER"]} fallback={<UnauthorizedPage />}>
+            // The evaluation page links here for a Hitchhiker in any workspace (#690).
+            <RoleGuard
+              allowedRoles={["HITCHHIKER"]}
+              fallback={<UnauthorizedPage />}
+              switchWorkspace
+            >
               <PickSlotPage />
             </RoleGuard>
           }

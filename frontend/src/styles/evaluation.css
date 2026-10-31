@@ -295,6 +295,16 @@
   background: var(--color-accent-dark);
 }
 
+/* A link styled as a button, e.g. "Pick a slot" (#690): links have no :enabled state. */
+a.evaluation__button {
+  text-decoration: none;
+}
+
+a.evaluation__button--primary:hover {
+  background: var(--color-accent-dark);
+  transform: translateY(-1px);
+}
+
 .evaluation__button--danger {
   border-color: #d92d20;
   color: #b42318;

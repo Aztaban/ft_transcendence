@@ -14,11 +14,20 @@ import { LiveContext } from "../websocket/LiveProvider";
 import { FakeSocket, openLiveSocket } from "../websocket/testSocket";
 import EvaluationPage from "./EvaluationPage";
 
-// The viewer: the student of `makeRequest` (id 1) unless a test changes it.
-const viewer = vi.hoisted(() => ({ id: 1 }));
+// The viewer: the student of `makeRequest` (id 1) unless a test changes it, and the workspaces
+// their real roles open (only the student one unless a test adds the Hitchhiker one).
+const viewer = vi.hoisted(() => ({ id: 1, workspaces: ["STUDENT"] }));
 
 vi.mock("../store/CurrentUserContext", () => ({
   useCurrentUser: () => ({ user: { id: viewer.id }, roles: [], isLoaded: true, refresh: () => {} }),
+}));
+
+vi.mock("../store/RoleContext", () => ({
+  useRole: () => ({
+    activeRole: "STUDENT",
+    setActiveRole: () => {},
+    availableRoles: viewer.workspaces,
+  }),
 }));
 
 vi.mock("../api/evaluationRequests", () => ({
@@ -32,6 +41,7 @@ const awaiting = makeRequest(7, "push_swap", "awaiting_confirmation");
 
 afterEach(() => {
   viewer.id = 1;
+  viewer.workspaces = ["STUDENT"];
   cleanup();
   vi.resetAllMocks();
 });
@@ -42,6 +52,7 @@ function renderPage() {
       <Routes>
         <Route path="/evaluations/:id" element={<EvaluationPage />} />
         <Route path="/" element={<div>Home page</div>} />
+        <Route path="/requests/:id" element={<div>Pick slot page</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -171,6 +182,78 @@ describe("EvaluationPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Waiting for a Hitchhiker" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+  });
+
+  // #691: e.g. another Hitchhiker picked it before this one opened the notification (§5.6).
+  it("says the evaluation is no longer available when the first load answers 404", async () => {
+    vi.mocked(getEvaluationRequest).mockRejectedValue(new ApiError(404, "Not found.", "not_found"));
+
+    renderPage();
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This evaluation is no longer available. It may have been cancelled or declined.",
+    );
+    expect(screen.queryByText("This evaluation could not be loaded.")).toBeNull();
+  });
+
+  it("still says it could not be loaded when the first load fails otherwise", async () => {
+    vi.mocked(getEvaluationRequest).mockRejectedValue(new Error("network"));
+
+    renderPage();
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This evaluation could not be loaded.",
+    );
+  });
+});
+
+// #690: the `evaluation.created` notification opens this page, but slots are picked on
+// /requests/{id}.
+describe("EvaluationPage link to the slot picking", () => {
+  it("offers a Hitchhiker who is not the student to pick a slot for a pending request", async () => {
+    viewer.id = 9;
+    viewer.workspaces = ["STUDENT", "HITCHHIKER"];
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "pending"));
+    renderPage();
+
+    const link = await screen.findByRole("link", { name: "Pick a slot" });
+
+    expect(link.getAttribute("href")).toBe("/requests/7");
+
+    fireEvent.click(link);
+
+    expect(screen.getByText("Pick slot page")).toBeTruthy();
+  });
+
+  it("does not offer it to the student of the request", async () => {
+    viewer.workspaces = ["STUDENT", "HITCHHIKER"];
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "pending"));
+    renderPage();
+
+    await screen.findByRole("heading", { name: "Waiting for a Hitchhiker" });
+
+    expect(screen.queryByRole("link", { name: "Pick a slot" })).toBeNull();
+  });
+
+  it("does not offer it without the Hitchhiker workspace", async () => {
+    viewer.id = 9;
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "pending"));
+    renderPage();
+
+    await screen.findByRole("heading", { name: "Waiting for a Hitchhiker" });
+
+    expect(screen.queryByRole("link", { name: "Pick a slot" })).toBeNull();
+  });
+
+  it("does not offer it once the request is no longer pending", async () => {
+    viewer.id = 9;
+    viewer.workspaces = ["STUDENT", "HITCHHIKER"];
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "confirmed"));
+    renderPage();
+
+    await screen.findByRole("heading", { name: "The evaluation is scheduled" });
+
+    expect(screen.queryByRole("link", { name: "Pick a slot" })).toBeNull();
   });
 });
 
