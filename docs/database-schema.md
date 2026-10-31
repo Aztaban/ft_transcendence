@@ -38,7 +38,7 @@ Once a model is merged to `main`, its migration is the source of truth for exact
 | intra_id | BIGINT UNSIGNED UNIQUE | yes | 42 user id. Set on first 42 OAuth login; used to recognize returning 42 users. |
 | intra_login | varchar(64) UNIQUE | yes | 42 login. Private: never returned by public endpoints. |
 | avatar_file_id | FK file.id | yes | `ON DELETE SET NULL`. NULL means the default avatar. |
-| language | varchar(2) | no | `en`, `cs`, `es`. Default `en`. |
+| language | varchar(2) | no | `en`, `cs`, `es`. Set at creation from the request's language (api-plan §10.1), else `en`. |
 | status | varchar(16) | no | `active`, `suspended`, `deleted`. Default `active`. Only `active` users can log in. |
 | is_staff | bool | no | Access to the Django admin site (`/admin/`). Team members only. Unrelated to the `admin` role. |
 | is_superuser | bool | no | Django built-in (`PermissionsMixin`). |

@@ -643,5 +643,42 @@
     "togetherError": "Could not load your evaluations.",
     "togetherEmpty": "No evaluations with {{name}} yet.",
     "noSlot": "No slot yet"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "displayName": "Display name",
+    "login": "LOGIN",
+    "loggingIn": "LOGGING IN...",
+    "or": "or",
+    "continueWith42": "CONTINUE WITH 42",
+    "registered": "Account created. You can log in now.",
+    "invalidCredentials": "Invalid email or password.",
+    "loginError": "Unable to log in. Please try again.",
+    "register": "REGISTER",
+    "registering": "REGISTERING...",
+    "registerError": "Unable to create the account. Please try again.",
+    "oauthNotConfigured": "42 login is not available right now.",
+    "oauthInvalidState": "Your 42 login session expired. Please try again.",
+    "oauthMissingCode": "42 login was cancelled or did not complete.",
+    "oauthTokenExchangeFailed": "Could not verify your 42 login. Please try again.",
+    "oauthProfileRetrievalFailed": "Could not load your 42 profile. Please try again.",
+    "oauthAccessDenied": "42 login was denied. Please authorize access to continue.",
+    "oauthProviderError": "42 is having trouble right now. Please try again later.",
+    "oauthAccountSuspended": "Your account is suspended or disabled.",
+    "oauthAccountExists": "An account with this email already exists. Log in with your email and password.",
+    "oauthIdentityConflict": "Your 42 account could not be linked. Please contact support.",
+    "oauthAccountConflict": "Could not create your account from 42. Please try again.",
+    "oauthFailed": "42 login failed. Please try again."
+  },
+  "validation": {
+    "displayNameRequired": "Display name is required.",
+    "displayNameTooLong": "Display name must be {{max}} characters or fewer.",
+    "emailRequired": "Email is required.",
+    "emailTooLong": "Email must be {{max}} characters or fewer.",
+    "emailInvalid": "Enter a valid email address.",
+    "passwordRequired": "Password is required.",
+    "passwordTooShort": "Password must contain at least {{min}} characters.",
+    "passwordNumeric": "Password cannot contain only numbers."
   }
 }

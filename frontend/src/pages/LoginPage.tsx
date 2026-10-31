@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 import logo42 from "../assets/figma/42.svg";
 import { ApiError } from "../api/client";
+import LanguageSwitcher from "../components/layout/LanguageSwitcher";
 import { Button, Input } from "../components/ui";
 import { useAuth } from "../store/AuthContext";
 import { rememberReturnPath, takeReturnPath } from "../utils/loginReturn";
@@ -10,27 +12,30 @@ import "../styles/registration.css";
 
 const OAUTH_42_REDIRECT_URL = "/api/v1/auth/42/redirect/";
 
-const OAUTH_ERROR_MESSAGES: Record<string, string> = {
-  oauth_not_configured: "42 login is not available right now.",
-  oauth_invalid_state: "Your 42 login session expired. Please try again.",
-  oauth_missing_code: "42 login was cancelled or did not complete.",
-  oauth_token_exchange_failed: "Could not verify your 42 login. Please try again.",
-  oauth_profile_retrieval_failed: "Could not load your 42 profile. Please try again.",
-  oauth_access_denied: "42 login was denied. Please authorize access to continue.",
-  oauth_provider_error: "42 is having trouble right now. Please try again later.",
-  oauth_account_suspended: "Your account is suspended or disabled.",
-  oauth_account_exists:
-    "An account with this email already exists. Log in with your email and password.",
-  oauth_identity_conflict: "Your 42 account could not be linked. Please contact support.",
-  oauth_account_conflict: "Could not create your account from 42. Please try again.",
+// `?oauth=` code from the 42 login (api-plan §10.1) → key of the "auth" texts.
+const OAUTH_ERROR_KEYS: Record<string, string> = {
+  oauth_not_configured: "auth.oauthNotConfigured",
+  oauth_invalid_state: "auth.oauthInvalidState",
+  oauth_missing_code: "auth.oauthMissingCode",
+  oauth_token_exchange_failed: "auth.oauthTokenExchangeFailed",
+  oauth_profile_retrieval_failed: "auth.oauthProfileRetrievalFailed",
+  oauth_access_denied: "auth.oauthAccessDenied",
+  oauth_provider_error: "auth.oauthProviderError",
+  oauth_account_suspended: "auth.oauthAccountSuspended",
+  oauth_account_exists: "auth.oauthAccountExists",
+  oauth_identity_conflict: "auth.oauthIdentityConflict",
+  oauth_account_conflict: "auth.oauthAccountConflict",
 };
 
-function getOAuthErrorMessage(code: string | null) {
+function getOAuthErrorKey(code: string | null) {
   if (!code) {
     return "";
   }
 
-  return OAUTH_ERROR_MESSAGES[code] ?? "42 login failed. Please try again.";
+  // Own keys only: `?oauth=toString` must not find the object's built-in properties.
+  return Object.prototype.hasOwnProperty.call(OAUTH_ERROR_KEYS, code)
+    ? OAUTH_ERROR_KEYS[code]
+    : "auth.oauthFailed";
 }
 
 // `registeredEmail`: set by RegisterPage after a successful registration (#522).
@@ -41,6 +46,7 @@ interface LoginLocationState {
 }
 
 function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const registeredEmail = (location.state as LoginLocationState | null)?.registeredEmail;
@@ -49,7 +55,11 @@ function LoginPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { login } = useAuth();
 
-  const [error, setError] = useState(() => getOAuthErrorMessage(searchParams.get("oauth")));
+  // Our own messages are kept as keys, so they follow a language switch; a message from the
+  // backend is already in the language it was asked in (api-plan §5.5).
+  const [errorKey, setErrorKey] = useState(() => getOAuthErrorKey(searchParams.get("oauth")));
+  const [serverError, setServerError] = useState("");
+  const error = errorKey ? t(errorKey) : serverError;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showRegistered, setShowRegistered] = useState(Boolean(registeredEmail));
 
@@ -69,7 +79,8 @@ function LoginPage() {
     const email = String(form.get("email") ?? "");
     const password = String(form.get("password") ?? "");
 
-    setError("");
+    setErrorKey("");
+    setServerError("");
     setShowRegistered(false);
     setIsSubmitting(true);
 
@@ -81,11 +92,11 @@ function LoginPage() {
       navigate(from ? afterLogin : (keptForOAuth ?? "/"), { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.code === "invalid_credentials") {
-        setError("Invalid email or password.");
+        setErrorKey("auth.invalidCredentials");
       } else if (error instanceof ApiError) {
-        setError(error.message);
+        setServerError(error.message);
       } else {
-        setError("Unable to log in. Please try again.");
+        setErrorKey("auth.loginError");
       }
     } finally {
       setIsSubmitting(false);
@@ -94,6 +105,10 @@ function LoginPage() {
 
   return (
     <main className="registration-page">
+      <div className="registration-page__language">
+        <LanguageSwitcher />
+      </div>
+
       <div className="registration-panel">
         <div className="registration-brand">
           <img src={logo42} alt="42" />
@@ -107,8 +122,8 @@ function LoginPage() {
             id="login-email"
             name="email"
             type="email"
-            placeholder="Email"
-            aria-label="Email"
+            placeholder={t("auth.email")}
+            aria-label={t("auth.email")}
             autoComplete="email"
             defaultValue={registeredEmail}
             required
@@ -118,8 +133,8 @@ function LoginPage() {
             id="login-password"
             name="password"
             type="password"
-            placeholder="Password"
-            aria-label="Password"
+            placeholder={t("auth.password")}
+            aria-label={t("auth.password")}
             autoComplete="current-password"
             required
           />
@@ -129,7 +144,7 @@ function LoginPage() {
               className="registration-form__message registration-form__message--success"
               role="status"
             >
-              Account created. You can log in now.
+              {t("auth.registered")}
             </p>
           )}
 
@@ -143,12 +158,12 @@ function LoginPage() {
           )}
 
           <Button className="registration-form__submit" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "LOGGING IN..." : "LOGIN"}
+            {isSubmitting ? t("auth.loggingIn") : t("auth.login")}
           </Button>
         </form>
 
         <div className="registration-divider">
-          <span>or</span>
+          <span>{t("auth.or")}</span>
         </div>
 
         <a
@@ -157,7 +172,7 @@ function LoginPage() {
           onClick={() => rememberReturnPath(afterLogin)}
         >
           <img src={logo42} alt="" aria-hidden="true" />
-          CONTINUE WITH 42
+          {t("auth.continueWith42")}
         </a>
       </div>
     </main>
