@@ -167,6 +167,51 @@ describe("CouncilInboxPage", () => {
     expect(titles()).toEqual(["Message #5", "Message #4", "Message #3"]);
   });
 
+  it("drops a page that arrives after a refresh replaced the list", async () => {
+    let resolvePage3: (value: ReturnType<typeof page>) => void = () => {};
+
+    vi.mocked(listSCMessages)
+      .mockResolvedValueOnce(page([scMessage(6, "Sixth.")], 3, "next"))
+      .mockResolvedValueOnce(page([scMessage(5, "Fifth.")], 3, "next"))
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolvePage3 = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(page([scMessage(6, "Sixth.")], 3, "next"))
+      .mockResolvedValueOnce(page([scMessage(5, "Fifth.")], 3, "next"));
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Show more/ }));
+    expect(await screen.findByRole("heading", { name: "Message #5" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Show more/ }));
+    await waitFor(() => {
+      expect(listSCMessages).toHaveBeenLastCalledWith({ unread: true, page: 3 });
+    });
+
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await waitFor(() => {
+      expect(titles()).toEqual(["Message #6"]);
+    });
+
+    await act(async () => {
+      resolvePage3(page([scMessage(4, "Fourth.")], 3));
+    });
+
+    expect(titles()).toEqual(["Message #6"]);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Show more/ }));
+
+    await waitFor(() => {
+      expect(titles()).toEqual(["Message #6", "Message #5"]);
+    });
+    expect(listSCMessages).toHaveBeenLastCalledWith({ unread: true, page: 2 });
+  });
+
   it("re-fetches in the background when a new message is notified", async () => {
     vi.mocked(listSCMessages)
       .mockResolvedValueOnce(page([scMessage(3, "The fridge is broken.")]))
