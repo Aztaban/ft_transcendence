@@ -41,12 +41,12 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function renderSidebar() {
+function renderSidebar(path = "/") {
   return render(
-    <MemoryRouter initialEntries={["/"]}>
+    <MemoryRouter initialEntries={[path]}>
       <RoleProvider>
         <Routes>
-          <Route path="/" element={<Sidebar />} />
+          <Route path="*" element={<Sidebar />} />
           <Route path="/login" element={<div>Login after logout</div>} />
         </Routes>
       </RoleProvider>
@@ -144,6 +144,32 @@ describe("Sidebar language", () => {
       "STUDENT",
       "RADA",
     ]);
+  });
+});
+
+describe("Sidebar active item", () => {
+  function activeItems() {
+    return screen
+      .getAllByRole("link")
+      .filter((link) => link.className.includes("sidebar__nav-link--active"))
+      .map((link) => link.textContent);
+  }
+
+  test("highlights only Messages on a council message", () => {
+    currentUser.roles = ["student", "sc_member"];
+    currentUser.isLoaded = true;
+
+    renderSidebar("/council/inbox/3");
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+    fireEvent.click(screen.getByRole("option", { name: "COUNCIL" }));
+
+    expect(activeItems()).toEqual(["Messages"]);
+  });
+
+  test("keeps Student Council highlighted on the message form", () => {
+    renderSidebar("/council/send");
+
+    expect(activeItems()).toEqual(["Student Council"]);
   });
 });
 

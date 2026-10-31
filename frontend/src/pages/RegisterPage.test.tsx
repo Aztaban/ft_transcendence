@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { registerUser } from "../api/auth";
 import { ApiError } from "../api/client";
+import i18n from "../i18n";
 import RegisterPage from "./RegisterPage";
 
 vi.mock("../api/auth", () => ({ registerUser: vi.fn() }));
@@ -69,5 +70,25 @@ describe("RegisterPage", () => {
 
     expect(await screen.findByText("An account with this email already exists.")).toBeTruthy();
     expect(screen.queryByText(/^Login page for/)).toBeNull();
+  });
+});
+
+describe("RegisterPage in another language", () => {
+  it("shows the form and its checks in Spanish, and switches back from the pill", async () => {
+    await i18n.changeLanguage("es");
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "REGISTRARSE" }));
+
+    expect(screen.getByText("El nombre visible es obligatorio.")).toBeTruthy();
+    expect(screen.getByText("El correo electrónico es obligatorio.")).toBeTruthy();
+    expect(screen.getByText("La contraseña es obligatoria.")).toBeTruthy();
+    expect(registerUser).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+
+    expect(screen.getByRole("button", { name: "REGISTER" })).toBeTruthy();
+    expect(await screen.findByText("Display name is required.")).toBeTruthy();
+    expect(screen.getByText("Password is required.")).toBeTruthy();
   });
 });

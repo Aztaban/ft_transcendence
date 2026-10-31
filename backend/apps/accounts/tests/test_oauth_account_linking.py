@@ -92,6 +92,21 @@ def test_first_oauth_login_creates_local_user_with_unusable_password(monkeypatch
 
 
 @override_settings(**OAUTH_SETTINGS)
+def test_first_oauth_login_takes_the_browser_language(monkeypatch):
+    mock_verified_42_identity(monkeypatch)
+
+    response = client_with_state().get(
+        reverse("api:oauth_42_callback"),
+        {"code": "secret-authorization-code", "state": "known-state"},
+        HTTP_HOST="localhost",
+        HTTP_ACCEPT_LANGUAGE="es",
+    )
+
+    assert_frontend_redirect(response, OAUTH_42_SUCCESS_PATH)
+    assert get_user_model().objects.get().language == "es"
+
+
+@override_settings(**OAUTH_SETTINGS)
 def test_repeat_oauth_login_reuses_user_by_intra_id(monkeypatch):
     user = get_user_model().objects.create_user(
         email="stored@example.com",

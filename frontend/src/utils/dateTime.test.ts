@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import i18n from "../i18n";
-import { formatDayHeading, formatDuration, formatStartsIn, formatTimeAgo } from "./dateTime";
+import {
+  formatDate,
+  formatDayHeading,
+  formatDuration,
+  formatStartsIn,
+  formatTimeAgo,
+} from "./dateTime";
 
 describe("formatTimeAgo", () => {
   const now = new Date("2026-10-09T12:00:00Z");
@@ -71,5 +77,11 @@ describe("in Czech", () => {
     expect(formatDayHeading(new Date(2026, 9, 14, 9, 0).toISOString(), now)).toBe(
       "Zítra · středa 14. října",
     );
+  });
+});
+
+describe("formatDate", () => {
+  it("writes the day, month and year", () => {
+    expect(formatDate("2026-07-04T10:00:00Z")).toBe("4 July 2026");
   });
 });

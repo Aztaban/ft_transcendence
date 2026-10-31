@@ -1,10 +1,18 @@
 .registration-page {
+  position: relative;
   min-height: 100vh;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 150px 24px 60px;
   background: #ffffff;
+}
+
+/* EN / CS / ES, so a visitor can switch before logging in. */
+.registration-page__language {
+  position: absolute;
+  top: 24px;
+  right: 24px;
 }
 
 .registration-panel {
