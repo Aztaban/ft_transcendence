@@ -17,3 +17,14 @@ ALLOWED_HOSTS = [
 # Require HTTPS for authentication and CSRF cookies in deployment.
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# `collectstatic` gathers the admin's CSS/JS here; nginx serves them (docker-compose.prod.yml).
+STATIC_ROOT = BASE_DIR / "staticfiles"  # noqa: F405
+
+# With DEBUG off, Django's default logging drops request errors; send everything to the console.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "INFO"},
+}

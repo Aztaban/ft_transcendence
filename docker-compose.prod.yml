@@ -1,0 +1,43 @@
+# Production profile, layered on docker-compose.yml: `make prod`.
+# The code is baked into the images (no bind mounts), Django runs under Daphne with
+# DEBUG off, and nginx serves the built frontend and Django's static files.
+# `!reset` and `!override` need Docker Compose 2.24 or newer.
+
+services:
+  backend:
+    # Migrations run on every start, before Celery starts (it waits for a healthy backend).
+    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && exec daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    volumes: !override
+      - static_files:/app/staticfiles
+
+  celery_worker:
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    volumes: !reset []
+
+  celery_beat:
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    volumes: !reset []
+
+  frontend:
+    # Builds the bundle into the shared volume and exits; nginx serves it.
+    command: sh -c "npm run build && rm -rf /dist/* && cp -r dist/. /dist/"
+    restart: "no"
+    volumes: !override
+      - frontend_dist:/dist
+    ports: !reset []
+
+  nginx:
+    volumes:
+      - frontend_dist:/srv/frontend:ro
+      - static_files:/srv/static:ro
+    depends_on:
+      frontend:
+        condition: service_completed_successfully
+
+volumes:
+  frontend_dist:
+  static_files:
