@@ -4,7 +4,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, call
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -14,18 +13,9 @@ from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 
 pytestmark = pytest.mark.django_db
-PASSWORD = "RoleRulesPassword123!"
 
 TUTOR = Role.Name.TUTOR
 ADMIN = Role.Name.ADMIN
-
-
-def make_user(email, *roles):
-    user = get_user_model().objects.create_user(
-        email=email, password=PASSWORD, display_name=email.split("@")[0]
-    )
-    user.roles.set(Role.objects.filter(name__in=roles))
-    return user
 
 
 def client_for(user):
@@ -39,7 +29,7 @@ def logged_in_browser(user):
     client.get(reverse("api:session"), HTTP_HOST="localhost")
     response = client.post(
         reverse("api:login"),
-        {"email": user.email, "password": PASSWORD},
+        {"email": user.email, "password": "secret"},
         format="json",
         HTTP_HOST="localhost",
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
@@ -96,8 +86,8 @@ def assert_role_notification(target, role, action):
     return notification
 
 
-def test_assign_notifies_the_user_after_commit(send, django_capture_on_commit_callbacks):
-    admin = make_user("admin@example.com", ADMIN)
+def test_assign_notifies_the_user_after_commit(make_user, send, django_capture_on_commit_callbacks):
+    admin = make_user("admin@example.com", roles=(ADMIN,))
     target = make_user("target@example.com")
     browser = logged_in_browser(admin)
 
@@ -134,9 +124,9 @@ def test_assign_notifies_the_user_after_commit(send, django_capture_on_commit_ca
     ]
 
 
-def test_revoke_notifies_the_user_after_commit(send, django_capture_on_commit_callbacks):
-    admin = make_user("admin@example.com", ADMIN)
-    target = make_user("target@example.com", TUTOR)
+def test_revoke_notifies_the_user_after_commit(make_user, send, django_capture_on_commit_callbacks):
+    admin = make_user("admin@example.com", roles=(ADMIN,))
+    target = make_user("target@example.com", roles=(TUTOR,))
 
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = revoke(client_for(admin), target, TUTOR)
@@ -162,9 +152,11 @@ def test_revoke_notifies_the_user_after_commit(send, django_capture_on_commit_ca
     ]
 
 
-def test_assigning_a_role_already_held_sends_nothing(send, django_capture_on_commit_callbacks):
-    admin = make_user("admin@example.com", ADMIN)
-    target = make_user("target@example.com", TUTOR)
+def test_assigning_a_role_already_held_sends_nothing(
+    make_user, send, django_capture_on_commit_callbacks
+):
+    admin = make_user("admin@example.com", roles=(ADMIN,))
+    target = make_user("target@example.com", roles=(TUTOR,))
 
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = assign(client_for(admin), target, TUTOR)
@@ -175,8 +167,10 @@ def test_assigning_a_role_already_held_sends_nothing(send, django_capture_on_com
     assert not Notification.objects.exists()
 
 
-def test_revoking_a_role_not_held_sends_nothing(send, django_capture_on_commit_callbacks):
-    admin = make_user("admin@example.com", ADMIN)
+def test_revoking_a_role_not_held_sends_nothing(
+    make_user, send, django_capture_on_commit_callbacks
+):
+    admin = make_user("admin@example.com", roles=(ADMIN,))
     target = make_user("target@example.com")
 
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
@@ -188,9 +182,9 @@ def test_revoking_a_role_not_held_sends_nothing(send, django_capture_on_commit_c
 
 
 def test_notification_failure_rolls_back_the_assignment(
-    send, monkeypatch, django_capture_on_commit_callbacks
+    make_user, send, monkeypatch, django_capture_on_commit_callbacks
 ):
-    admin = make_user("admin@example.com", ADMIN)
+    admin = make_user("admin@example.com", roles=(ADMIN,))
     target = make_user("target@example.com")
 
     def fail_after_notification(**kwargs):
