@@ -1,6 +1,7 @@
 """Full ASGI connection lifecycle using real MySQL sessions and Redis."""
 
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -10,7 +11,7 @@ from channels.layers import get_channel_layer
 from channels.testing import WebsocketCommunicator
 from channels_redis.core import RedisChannelLayer
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth import SESSION_KEY, get_user_model
 from django.contrib.sessions.models import Session
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -133,23 +134,55 @@ def test_independent_redis_publisher_targets_authenticated_tabs_and_devices(
     async_to_sync(connect)()
 
 
-def test_http_logout_reaches_redis_sockets_and_revoked_cookie_cannot_reconnect(
-    redis_config, sessions
+@pytest.mark.parametrize("action", ["logout", "suspend"])
+def test_http_session_ending_reaches_redis_sockets_and_revoked_cookie_cannot_reconnect(
+    redis_config, sessions, action
 ):
-    _, current_client, device_client, other_client = sessions
+    user, current_client, device_client, other_client = sessions
     key = session_key(current_client)
     device_key = session_key(device_client)
 
-    def logout():
-        response = current_client.post(
-            reverse("api:logout"),
-            HTTP_HOST="localhost",
-            HTTP_X_CSRFTOKEN=current_client.cookies["csrftoken"].value,
+    if action == "suspend":
+        admin_role, _ = Role.objects.get_or_create(name=Role.Name.ADMIN)
+        admin = get_user_model().objects.get(pk=other_client.session[SESSION_KEY])
+        admin.roles.add(admin_role)
+        now = datetime(2026, 10, 31, 10, tzinfo=timezone.utc)
+        get_user_model().objects.filter(pk=user.pk).update(
+            created_at=now, last_login=now, language="en"
         )
-        assert response.status_code == 204
-        assert response.content == b""
+
+    def end_session():
+        if action == "logout":
+            response = current_client.post(
+                reverse("api:logout"),
+                HTTP_HOST="localhost",
+                HTTP_X_CSRFTOKEN=current_client.cookies["csrftoken"].value,
+            )
+            assert response.status_code == 204
+            assert response.content == b""
+        else:
+            response = other_client.post(
+                reverse("api:admin-users-suspend", kwargs={"user_id": user.pk}),
+                {"reason": "Policy review"},
+                format="json",
+                HTTP_HOST="localhost",
+                HTTP_X_CSRFTOKEN=other_client.cookies["csrftoken"].value,
+            )
+            assert response.status_code == 200
+            assert response.json() == {
+                "id": user.pk,
+                "display_name": "Socket owner",
+                "email": "socket-owner@example.com",
+                "avatar_url": None,
+                "language": "en",
+                "intra_login": None,
+                "roles": [{"id": Role.objects.get(name="student").pk, "name": "student"}],
+                "status": "suspended",
+                "created_at": "2026-10-31T10:00:00Z",
+                "last_login": "2026-10-31T10:00:00Z",
+            }
         assert not Session.objects.filter(session_key=key).exists()
-        assert Session.objects.filter(session_key=device_key).exists()
+        assert Session.objects.filter(session_key=device_key).exists() == (action == "logout")
 
     async def connect():
         async with redis_publisher(redis_config):
@@ -159,10 +192,13 @@ def test_http_logout_reaches_redis_sockets_and_revoked_cookie_cannot_reconnect(
             try:
                 for communicator in (first, second, device, other):
                     assert await communicator.connect() == (True, None)
-                await database_sync_to_async(logout)()
+                await database_sync_to_async(end_session)()
                 await assert_session_ended(first)
                 await assert_session_ended(second)
-                assert await device.receive_nothing(timeout=0.1)
+                if action == "suspend":
+                    await assert_session_ended(device)
+                else:
+                    assert await device.receive_nothing(timeout=0.1)
                 assert await other.receive_nothing(timeout=0.1)
                 assert await replay.connect() == (True, None)
                 assert await replay.receive_output() == {"type": "websocket.close", "code": 4401}

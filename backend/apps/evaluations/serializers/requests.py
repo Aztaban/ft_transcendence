@@ -9,6 +9,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.references import UserRefSerializer
+from apps.core.serializers import ReasonSerializer
 from apps.evaluations.models import EvaluationRequest, Project
 from apps.evaluations.permissions import OVERRIDE_ROLES
 from apps.evaluations.references import ProjectRefSerializer
@@ -84,8 +85,9 @@ class EvaluationRequestNoteSerializer(serializers.Serializer):
     note = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
 
-class EvaluationOverrideSerializer(serializers.Serializer):
-    reason = serializers.CharField(min_length=1, max_length=500)
+class EvaluationOverrideSerializer(ReasonSerializer):
+    # Retain the existing OpenAPI component name.
+    pass
 
 
 class TimezoneRequiredDateTimeField(serializers.DateTimeField):

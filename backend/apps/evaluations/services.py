@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import APIException, PermissionDenied
 
+from apps.accounts.services.locking import lock_users
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
 
@@ -35,12 +36,7 @@ from .permissions import NotEligible, can_override
 def _lock_transition_users(evaluation, actor):
     # Picks lock users before requests. Keep that order for transitions whose
     # notification/audit inserts also reference these users.
-    list(
-        get_user_model()
-        .objects.select_for_update()
-        .filter(pk__in={evaluation.student_id, evaluation.picked_by_id, actor.pk})
-        .order_by("pk")
-    )
+    lock_users(evaluation.student_id, evaluation.picked_by_id, actor.pk)
 
 
 class ActiveRequestExists(APIException):
@@ -269,12 +265,7 @@ def release_slot(evaluation, user, *, reason=None):
 
 def lock_participants(hitchhiker_id, student_id):
     """Lock both user rows in ascending id order (schema §4.2)."""
-    list(
-        get_user_model()
-        .objects.select_for_update()
-        .filter(pk__in=(hitchhiker_id, student_id))
-        .order_by("pk")
-    )
+    lock_users(hitchhiker_id, student_id)
 
 
 def person_is_busy(person_id, starts_at, ends_at, request_id):
