@@ -252,3 +252,7 @@ msgstr "Checo"
 #: config/settings/base.py:122
 msgid "Spanish"
 msgstr "Español"
+
+#: apps/accounts/models.py:40
+msgid "Deleted"
+msgstr "Eliminado"
