@@ -90,6 +90,24 @@ def test_can_assign_roles_allows_admin_head_tutor_and_sc_member(make_user):
     assert _allowed(CanAssignRoles(), admin) is True
 
 
+@pytest.mark.parametrize("roles", [(Role.Name.STUDENT,), (Role.Name.ADMIN,)])
+@pytest.mark.parametrize("is_staff", [False, True])
+def test_django_admin_dashboard_access_depends_on_staff_flag(
+    make_user, make_session_client, roles, is_staff
+):
+    user = make_user("viewer@example.com", roles=roles, is_staff=is_staff)
+    client = make_session_client(user)
+    url = reverse("admin:index")
+
+    response = client.get(url)
+
+    if is_staff:
+        assert response.status_code == status.HTTP_200_OK
+    else:
+        assert response.status_code == status.HTTP_302_FOUND
+        assert response.url == f"{reverse('admin:login')}?next={url}"
+
+
 # --- Restricted endpoints: unauthorized callers are blocked ---
 
 

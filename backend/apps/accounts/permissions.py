@@ -47,7 +47,12 @@ class IsSCMemberRole(HasRole):
 
 
 class IsAdminRole(HasRole):
-    """Allow users with the admin role."""
+    """Gate administrative APIs by the stored admin role.
+
+    Django's is_staff/is_superuser flags grant no API roles.
+    Combine with IsAuthenticated on administrative views; HasRole reads current
+    membership on each request, independently of the frontend workspace.
+    """
 
     role_name = Role.Name.ADMIN
 

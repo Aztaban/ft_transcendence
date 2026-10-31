@@ -3,6 +3,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import Project
@@ -36,3 +37,15 @@ def make_user():
         return user
 
     return _make
+
+
+@pytest.fixture
+def make_session_client():
+    """A password-authenticated session for users created by ``make_user``."""
+
+    def _client(user):
+        client = APIClient(enforce_csrf_checks=True)
+        assert client.login(email=user.email, password="secret")
+        return client
+
+    return _client
