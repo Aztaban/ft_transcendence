@@ -36,7 +36,12 @@ function OpenRequestQueue({ requests, isLoading = false }: OpenRequestQueueProps
           <p>{t("dashboard.queueEmpty")}</p>
         </div>
       ) : (
-        <div className="dashboard-requests">
+        <div
+          className="dashboard-requests"
+          role="group"
+          tabIndex={0}
+          aria-labelledby="open-request-queue-title"
+        >
           {openRequests.map((request) => (
             <article className="dashboard-request" key={request.id}>
               <div>
