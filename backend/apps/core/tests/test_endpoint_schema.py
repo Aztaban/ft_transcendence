@@ -194,6 +194,11 @@ def test_root_and_shared_error_component_shapes(schema):
             },
         ),
         (
+            "tutor-eligibility-requests/{request_id}/",
+            "get",
+            {404: "not_found"},
+        ),
+        (
             "tutor-eligibility-requests/{request_id}/review/",
             "post",
             {

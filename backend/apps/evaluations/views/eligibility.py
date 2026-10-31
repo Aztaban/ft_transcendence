@@ -62,14 +62,19 @@ _ELIGIBILITY_REQUEST_STATUSES = frozenset(TutorEligibilityRequest.Status.values)
 _ELIGIBILITY_REQUEST_SEE_ALL = frozenset({Role.Name.HEAD_TUTOR, Role.Name.ADMIN})
 
 
-def _list_eligibility_requests(request):
+def _visible_eligibility_requests(user):
+    """Requests this user may see. Anyone else gets 404 on detail (api-plan §10.3)."""
     projects = Prefetch("projects", queryset=Project.objects.order_by("name"))
     qs = TutorEligibilityRequest.objects.select_related(
         "requester", "reviewed_by"
     ).prefetch_related(projects)
+    if not user.roles.filter(name__in=_ELIGIBILITY_REQUEST_SEE_ALL).exists():
+        qs = qs.filter(requester=user)
+    return qs
 
-    if not request.user.roles.filter(name__in=_ELIGIBILITY_REQUEST_SEE_ALL).exists():
-        qs = qs.filter(requester=request.user)
+
+def _list_eligibility_requests(request):
+    qs = _visible_eligibility_requests(request.user)
 
     status_param = request.query_params.get("status")
     if status_param is not None:
@@ -224,6 +229,23 @@ def tutor_eligibility_request_list(request):
     if request.method == "POST":
         return _create_eligibility_request(request)
     return _list_eligibility_requests(request)
+
+
+@extend_schema(
+    summary="Retrieve an eligibility request",
+    responses={
+        200: EligibilityRequestSerializer,
+        **error_responses({401: ("not_authenticated",), 404: ("not_found",)}),
+    },
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def tutor_eligibility_request_detail(request, request_id):
+    """One eligibility request (api-plan §10.3). Hidden from anyone who may not see it."""
+    eligibility_request = get_object_or_404(
+        _visible_eligibility_requests(request.user), pk=request_id
+    )
+    return Response(EligibilityRequestSerializer(eligibility_request).data)
 
 
 @extend_schema(
