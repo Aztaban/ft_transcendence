@@ -256,3 +256,7 @@ msgstr "Španělština"
 #: apps/accounts/models.py:40
 msgid "Deleted"
 msgstr "Smazaný"
+
+#: apps/accounts/views/admin_users.py
+msgid "Deleted accounts cannot be edited."
+msgstr "Smazané účty nelze upravovat."

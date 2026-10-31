@@ -1,0 +1,167 @@
+"""Admin-only user listing, detail and editing."""
+
+from django.db import IntegrityError, transaction
+from django.db.models import Prefetch, Q
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework.generics import GenericAPIView, ListAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from apps.accounts.exceptions import EmailAlreadyExists
+from apps.accounts.models import Role, User
+from apps.accounts.permissions import IsAdminRole
+from apps.accounts.serializers.admin_users import (
+    ADMIN_USER_ORDERINGS,
+    AdminUserQuerySerializer,
+    AdminUserSerializer,
+    AdminUserUpdateSerializer,
+)
+from apps.audit.models import AuditLog
+from apps.audit.services import record_audit
+from apps.core.exceptions import error_response
+from apps.core.pagination import APIPageNumberPagination
+from apps.core.schema import CSRF_HEADER, error_responses
+from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
+
+
+def _admin_users():
+    return User.objects.prefetch_related(Prefetch("roles", queryset=Role.objects.order_by("name")))
+
+
+@extend_schema(
+    summary="List users for administration",
+    parameters=[
+        OpenApiParameter("q", str, description="Match email, display name or 42 login."),
+        OpenApiParameter("role", str, many=True, enum=Role.Name.values, explode=False),
+        OpenApiParameter("status", str, many=True, enum=User.Status.values, explode=False),
+        OpenApiParameter("ordering", str, enum=ADMIN_USER_ORDERINGS),
+    ],
+    responses={
+        200: AdminUserSerializer(many=True),
+        **error_responses(
+            {
+                400: ("validation_error",),
+                401: ("not_authenticated",),
+                403: ("permission_denied",),
+                404: ("not_found",),
+            }
+        ),
+    },
+)
+class AdminUserListView(ListAPIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+    serializer_class = AdminUserSerializer
+    pagination_class = APIPageNumberPagination
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return User.objects.none()
+        query = AdminUserQuerySerializer(data=dict(self.request.query_params.items()))
+        query.is_valid(raise_exception=True)
+        filters = query.validated_data
+        users = _admin_users()
+        if filters.get("q"):
+            users = users.filter(
+                Q(email__icontains=filters["q"])
+                | Q(display_name__icontains=filters["q"])
+                | Q(intra_login__icontains=filters["q"])
+            )
+        if "role" in filters:
+            users = users.filter(roles__name__in=filters["role"])
+        if "status" in filters:
+            users = users.filter(status__in=filters["status"])
+        return users.distinct().order_by(filters["ordering"], "pk")
+
+
+class AdminUserDetailView(GenericAPIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+    serializer_class = AdminUserSerializer
+    lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        return _admin_users()
+
+    @extend_schema(
+        summary="Inspect a user for administration",
+        responses={
+            200: AdminUserSerializer,
+            **error_responses(
+                {401: ("not_authenticated",), 403: ("permission_denied",), 404: ("not_found",)}
+            ),
+        },
+    )
+    def get(self, request, user_id):
+        return Response(self.get_serializer(self.get_object()).data)
+
+    @extend_schema(
+        summary="Edit a user's profile as an Admin",
+        parameters=[CSRF_HEADER],
+        request=AdminUserUpdateSerializer,
+        responses={
+            200: AdminUserSerializer,
+            **error_responses(
+                {
+                    400: ("validation_error",),
+                    401: ("not_authenticated",),
+                    403: ("permission_denied", "csrf_failed"),
+                    404: ("not_found",),
+                    409: ("email_already_exists", "invalid_user_status"),
+                    415: ("unsupported_media_type",),
+                }
+            ),
+        },
+    )
+    def patch(self, request, user_id):
+        with transaction.atomic():
+            # Audit rows reference the actor and notifications reference the target.
+            # Lock both in ID order so Admins editing each other cannot deadlock.
+            list(
+                User.objects.select_for_update()
+                .filter(pk__in={request.user.pk, user_id})
+                .order_by("pk")
+            )
+            target = get_object_or_404(self.get_queryset(), pk=user_id)
+            if target.status == User.Status.DELETED:
+                return error_response(
+                    "invalid_user_status", _("Deleted accounts cannot be edited."), 409
+                )
+            serializer = AdminUserUpdateSerializer(target, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            changes = {
+                field: value
+                for field, value in serializer.validated_data.items()
+                if getattr(target, field) != value
+            }
+            if changes:
+                old = {field: getattr(target, field) for field in changes}
+                try:
+                    with transaction.atomic():
+                        User.objects.filter(pk=target.pk).update(
+                            **changes, updated_at=timezone.now()
+                        )
+                except IntegrityError:
+                    # Email is the only writable unique field. The database also
+                    # arbitrates simultaneous edits that pass the serializer check.
+                    if "email" in changes:
+                        raise EmailAlreadyExists() from None
+                    raise
+                record_audit(
+                    actor=request.user,
+                    action=AuditLog.Action.USER_UPDATED,
+                    target_type=AuditLog.TargetType.USER,
+                    target_id=target.pk,
+                    metadata={"old": old, "new": changes},
+                )
+                if target.pk != request.user.pk:
+                    create_notification(
+                        recipient_id=target.pk,
+                        notification_type=Notification.Type.ACCOUNT_UPDATED,
+                        payload={"fields": sorted(changes)},
+                        target_url="/profile",
+                    )
+                target.refresh_from_db()
+            return Response(self.get_serializer(target).data)

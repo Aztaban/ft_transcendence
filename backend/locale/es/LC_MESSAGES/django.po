@@ -256,3 +256,7 @@ msgstr "Español"
 #: apps/accounts/models.py:40
 msgid "Deleted"
 msgstr "Eliminado"
+
+#: apps/accounts/views/admin_users.py
+msgid "Deleted accounts cannot be edited."
+msgstr "Las cuentas eliminadas no se pueden editar."
