@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import type { ListEvaluationRequestsParams } from "../api/evaluationRequests";
 import historyIcon from "../assets/figma/history.svg";
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import pendingIcon from "../assets/figma/pending.svg";
@@ -12,12 +13,14 @@ import OpenRequestQueue from "../features/hitchhiker/OpenRequestQueue";
 import ScheduledEvaluations from "../features/hitchhiker/ScheduledEvaluations";
 import { useHitchhikerRequests } from "../features/hitchhiker/useHitchhikerRequests";
 import PixelBanner from "../features/home/PixelBanner";
+import ScrollableList from "../features/home/ScrollableList";
 import { useCouncilOverview } from "../features/home/useCouncilOverview";
+import { useRequestOverview } from "../features/home/useRequestOverview";
 import OpenRequests from "../features/student/OpenRequests";
 import { useStudentRequests } from "../features/student/useStudentRequests";
-import { useRole } from "../store/RoleContext";
-import type { EvaluationRequest } from "../types/evaluation";
+import { useRole, type AppRole } from "../store/RoleContext";
 import { formatSlotStart } from "../utils/dateTime";
+import { EVALUATION_EVENTS, OPEN_QUEUE_EVENTS } from "../websocket/events";
 import "../styles/dashboard.css";
 
 // A box of the overview row. `label` is a key of the "home" texts in src/i18n/locales.
@@ -61,45 +64,58 @@ const councilAction: CallToAction = {
   symbol: "→",
 };
 
+// Filtered lists whose `count` gives the real totals (api-plan §10.4), and the student's soonest
+// evaluations. Kept here so that they stay the same object between renders.
+const studentQueries = {
+  open: { scope: "mine", status: ["pending", "awaiting_confirmation"], history: false },
+  completed: { scope: "mine", status: ["confirmed"], history: true },
+  upcoming: { scope: "mine", status: ["confirmed"], history: false, ordering: "starts_at" },
+} satisfies Record<string, ListEvaluationRequestsParams>;
+
+const hitchhikerQueries = {
+  open: { scope: "open" },
+  awaiting: { scope: "picked", status: ["awaiting_confirmation"] },
+  done: { scope: "picked", status: ["confirmed"], history: true },
+} satisfies Record<string, ListEvaluationRequestsParams>;
+
+const subtitles: Record<AppRole, string> = {
+  STUDENT: "home.bannerStudent",
+  HITCHHIKER: "home.bannerHitchhiker",
+  COUNCIL: "home.bannerCouncil",
+};
+
 // "—" until the number is known, and when it could not be loaded.
-function countText(count: number, isKnown: boolean) {
-  return isKnown ? String(count) : "—";
+function countText(count: number | null | undefined) {
+  return count === null || count === undefined ? "—" : String(count);
 }
 
-function isCompleted(request: EvaluationRequest) {
-  return request.is_history && request.result !== null;
-}
+const MINUTE = 60 * 1000;
 
-// The soonest confirmed evaluation that has not ended yet.
-function nextEvaluation(requests: EvaluationRequest[]) {
-  return requests
-    .filter((request) => request.status === "confirmed" && !request.is_history && request.starts_at)
-    .map((request) => request.starts_at as string)
-    .sort()[0];
+// The time, once a minute: no event fires when an evaluation ends.
+function useCurrentMinute() {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), MINUTE);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return now;
 }
 
 interface DashboardProps {
-  subtitle: string;
   overview: OverviewItem[];
   action: CallToAction;
   children: ReactNode;
 }
 
-// The page of every workspace: banner, overview, the workspace's boxes and the call to action.
-function Dashboard({ subtitle, overview, action, children }: DashboardProps) {
+// What every workspace shows under the banner: the overview, its boxes and the call to action.
+function Dashboard({ overview, action, children }: DashboardProps) {
   const { t } = useTranslation();
 
   return (
-    <section className="dashboard">
-      <header className="dashboard-banner">
-        <div className="dashboard-banner__text">
-          <h1>{t("home.greeting")}</h1>
-          <p>{t(subtitle)}</p>
-        </div>
-
-        <PixelBanner />
-      </header>
-
+    <>
       <div className="dashboard__content">
         <section className="dashboard-overview" aria-label={t("home.overview")}>
           {overview.map((item) => (
@@ -131,7 +147,7 @@ function Dashboard({ subtitle, overview, action, children }: DashboardProps) {
           {t(action.label)}
         </Link>
       </section>
-    </section>
+    </>
   );
 }
 
@@ -140,27 +156,32 @@ function Dashboard({ subtitle, overview, action, children }: DashboardProps) {
 function StudentDashboard() {
   const { t } = useTranslation();
   const { requests, isLoading, hasError } = useStudentRequests();
-  const isKnown = !isLoading && !hasError;
-  const open = requests.filter(
-    (request) => request.status === "pending" || request.status === "awaiting_confirmation",
+  const counts = useRequestOverview(studentQueries, EVALUATION_EVENTS);
+  const now = useCurrentMinute();
+  const next = counts.upcoming?.results.find(
+    (request) => request.ends_at !== null && Date.parse(request.ends_at) > now,
   );
-  const next = nextEvaluation(requests);
+  const nextText = next?.starts_at
+    ? formatSlotStart(next.starts_at)
+    : counts.upcoming
+      ? t("home.notScheduled")
+      : "—";
 
   const overview: OverviewItem[] = [
     {
-      value: countText(open.length, isKnown),
-      label: "home.pending",
+      value: countText(counts.open?.count),
+      label: "home.openRequests",
       icon: pendingIcon,
       tone: "teal",
     },
     {
-      value: countText(requests.filter(isCompleted).length, isKnown),
+      value: countText(counts.completed?.count),
       label: "home.completed",
       icon: historyIcon,
       tone: "violet",
     },
     {
-      value: next ? formatSlotStart(next) : isKnown ? t("home.notScheduled") : "—",
+      value: nextText,
       label: "home.nextEvaluation",
       icon: requestIcon,
       tone: "blue",
@@ -174,7 +195,7 @@ function StudentDashboard() {
   ];
 
   return (
-    <Dashboard subtitle="home.bannerStudent" overview={overview} action={studentAction}>
+    <Dashboard overview={overview} action={studentAction}>
       {hasError ? (
         <p className="dashboard__load-error" role="alert">
           {t("myRequests.error")}
@@ -195,24 +216,23 @@ function StudentDashboard() {
 function HitchhikerDashboard() {
   const { t } = useTranslation();
   const { openRequests, pickedRequests, isLoading, hasError } = useHitchhikerRequests();
-  const isKnown = !isLoading && !hasError;
-  const awaiting = pickedRequests.filter((request) => request.status === "awaiting_confirmation");
+  const counts = useRequestOverview(hitchhikerQueries, OPEN_QUEUE_EVENTS);
 
   const overview: OverviewItem[] = [
     {
-      value: countText(openRequests.length, isKnown),
+      value: countText(counts.open?.count),
       label: "home.openRequests",
       icon: requestIcon,
       tone: "teal",
     },
     {
-      value: countText(awaiting.length, isKnown),
+      value: countText(counts.awaiting?.count),
       label: "home.awaitingConfirmation",
       icon: pendingIcon,
       tone: "amber",
     },
     {
-      value: countText(pickedRequests.filter(isCompleted).length, isKnown),
+      value: countText(counts.done?.count),
       label: "home.evaluationsDone",
       icon: historyIcon,
       tone: "violet",
@@ -226,7 +246,7 @@ function HitchhikerDashboard() {
   ];
 
   return (
-    <Dashboard subtitle="home.bannerHitchhiker" overview={overview} action={hitchhikerAction}>
+    <Dashboard overview={overview} action={hitchhikerAction}>
       {hasError ? (
         <p className="dashboard__load-error" role="alert">
           {t("myRequests.error")}
@@ -256,19 +276,19 @@ function CouncilDashboard() {
 
   const overview: OverviewItem[] = [
     {
-      value: countText(unreadCount, isKnown),
+      value: countText(isKnown ? unreadCount : null),
       label: "home.newMessages",
       icon: requestIcon,
       tone: "teal",
     },
     {
-      value: countText(totalCount - unreadCount, isKnown),
+      value: countText(isKnown ? totalCount : null),
       label: "home.history",
       icon: historyIcon,
       tone: "violet",
     },
     {
-      value: countText(hitchhikerCount, isKnown),
+      value: countText(hitchhikerCount),
       label: "home.hitchhikers",
       icon: hitchhikersIcon,
       tone: "blue",
@@ -282,7 +302,7 @@ function CouncilDashboard() {
   ];
 
   return (
-    <Dashboard subtitle="home.bannerCouncil" overview={overview} action={councilAction}>
+    <Dashboard overview={overview} action={councilAction}>
       {hasError ? (
         <p className="dashboard__load-error" role="alert">
           {t("council.loadMessagesError")}
@@ -305,16 +325,11 @@ function CouncilDashboard() {
               <div className="dashboard-empty__history-mark" aria-hidden="true">
                 —
               </div>
-              <h3>{t("home.noMessages")}</h3>
-              <p>{t("home.messagesText")}</p>
+              <h3>{t(totalCount > 0 ? "council.caughtUp" : "home.noMessages")}</h3>
+              <p>{t(totalCount > 0 ? "council.caughtUpText" : "home.messagesText")}</p>
             </div>
           ) : (
-            <div
-              className="dashboard-requests"
-              role="group"
-              tabIndex={0}
-              aria-labelledby="council-messages-title"
-            >
+            <ScrollableList labelledBy="council-messages-title">
               {unread.map((message) => (
                 <article className="dashboard-request" key={message.id}>
                   <div className="dashboard-request__summary">
@@ -331,7 +346,7 @@ function CouncilDashboard() {
                   </Link>
                 </article>
               ))}
-            </div>
+            </ScrollableList>
           )}
         </section>
       )}
@@ -339,14 +354,32 @@ function CouncilDashboard() {
   );
 }
 
-function HomePage() {
-  const { activeRole } = useRole();
-
-  if (activeRole === "HITCHHIKER") {
+function WorkspaceDashboard({ role }: { role: AppRole }) {
+  if (role === "HITCHHIKER") {
     return <HitchhikerDashboard />;
   }
 
-  return activeRole === "COUNCIL" ? <CouncilDashboard /> : <StudentDashboard />;
+  return role === "COUNCIL" ? <CouncilDashboard /> : <StudentDashboard />;
+}
+
+function HomePage() {
+  const { t } = useTranslation();
+  const { activeRole } = useRole();
+
+  return (
+    <section className="dashboard">
+      <header className="dashboard-banner">
+        <div className="dashboard-banner__text">
+          <h1>{t("home.greeting")}</h1>
+          <p>{t(subtitles[activeRole])}</p>
+        </div>
+
+        <PixelBanner />
+      </header>
+
+      <WorkspaceDashboard role={activeRole} />
+    </section>
+  );
 }
 
 export default HomePage;

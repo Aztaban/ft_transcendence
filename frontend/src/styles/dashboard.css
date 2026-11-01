@@ -31,17 +31,19 @@
    gradient keeps the text readable while the scene passes behind it. */
 
 .dashboard-banner {
-  position: relative;
+  display: grid;
   overflow: hidden;
   background: #141a22;
 }
 
+/* In the same cell, and in normal flow: larger text makes the banner taller, not cut off. */
+.dashboard-banner > * {
+  grid-area: 1 / 1;
+}
+
 .dashboard-banner__text {
-  position: absolute;
+  position: relative;
   z-index: 1;
-  top: 0;
-  bottom: 0;
-  left: 0;
   display: flex;
   width: min(50%, 480px);
   box-sizing: border-box;
@@ -107,7 +109,6 @@
 
 .dashboard-overview__card strong {
   display: block;
-  overflow-wrap: anywhere;
   font-size: 1.5rem;
   font-weight: 600;
   line-height: 1.2;
@@ -178,6 +179,9 @@
   display: flex;
   max-height: 236px;
   flex-direction: column;
+  /* Room for the focus ring of a row's link, which the scrolling box would cut off. */
+  margin: 0 -4px;
+  padding: 0 4px 4px;
   overflow-y: auto;
 }
 
@@ -435,7 +439,8 @@
   }
 }
 
-@media (max-width: 1000px) {
+/* The sidebar takes 300px: four boxes need more room than the window width suggests. */
+@media (max-width: 1240px) {
   .dashboard-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -443,8 +448,11 @@
 
 @media (max-width: 760px) {
   /* Too narrow for text over the scene: the text sits above it, on the banner's dark. */
+  .dashboard-banner {
+    display: block;
+  }
+
   .dashboard-banner__text {
-    position: static;
     width: auto;
     padding: 20px 24px 8px;
     background: none;

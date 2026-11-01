@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { useEffect } from "react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -7,31 +7,29 @@ import { makeRequest } from "../features/student/testUtils";
 import i18n from "../i18n";
 import { RoleProvider, useRole, type AppRole } from "../store/RoleContext";
 import type { EvaluationRequest } from "../types/evaluation";
+import type { Paginated } from "../types/pagination";
 import type { SCMessage } from "../types/scMessage";
 import HomePage from "./HomePage";
 
 // What the mocked hooks report; each test may change it before rendering.
 const load = vi.hoisted(() => ({ isLoading: false, hasError: false }));
 const data = vi.hoisted(() => ({
-  requests: [] as EvaluationRequest[],
-  openRequests: [] as EvaluationRequest[],
-  pickedRequests: [] as EvaluationRequest[],
+  overview: {} as Record<string, Paginated<EvaluationRequest>>,
   unread: [] as SCMessage[],
   unreadCount: 0,
   totalCount: 0,
-  hitchhikerCount: 0,
+  hitchhikerCount: 0 as number | null,
 }));
 
 // The student boxes load data from the API; that is tested in OpenRequests and the hook itself.
 vi.mock("../features/hitchhiker/useHitchhikerRequests", () => ({
-  useHitchhikerRequests: () => ({
-    openRequests: data.openRequests,
-    pickedRequests: data.pickedRequests,
-    ...load,
-  }),
+  useHitchhikerRequests: () => ({ openRequests: [], pickedRequests: [], ...load }),
 }));
 vi.mock("../features/student/useStudentRequests", () => ({
-  useStudentRequests: () => ({ requests: data.requests, ...load, reload: vi.fn() }),
+  useStudentRequests: () => ({ requests: [], ...load, reload: vi.fn() }),
+}));
+vi.mock("../features/home/useRequestOverview", () => ({
+  useRequestOverview: () => data.overview,
 }));
 vi.mock("../features/home/useCouncilOverview", () => ({
   useCouncilOverview: () => ({
@@ -49,9 +47,7 @@ afterEach(() => {
   sessionStorage.clear();
   load.isLoading = false;
   load.hasError = false;
-  data.requests = [];
-  data.openRequests = [];
-  data.pickedRequests = [];
+  data.overview = {};
   data.unread = [];
   data.unreadCount = 0;
   data.totalCount = 0;
@@ -154,66 +150,81 @@ function overviewBox(label: string) {
   return overview.getByText(label).closest("article") as HTMLElement;
 }
 
-describe("HomePage overview", () => {
-  it("counts the student's real requests and shows the soonest evaluation", () => {
-    const later = {
-      ...makeRequest(1, "minishell", "confirmed"),
-      starts_at: "2026-11-20T10:00:00Z",
-      ends_at: "2026-11-20T10:45:00Z",
-    };
-    const sooner = {
-      ...makeRequest(2, "push_swap", "confirmed"),
-      starts_at: "2026-11-10T10:00:00Z",
-      ends_at: "2026-11-10T10:45:00Z",
-    };
-    const passed = {
-      ...makeRequest(3, "cpp09", "confirmed"),
-      is_history: true,
-      result: "passed" as const,
-    };
+function list(count: number, results: EvaluationRequest[] = []) {
+  return { count, next: null, previous: null, results };
+}
 
-    data.requests = [
-      later,
-      sooner,
-      passed,
-      makeRequest(4, "born2beroot", "pending"),
-      makeRequest(5, "Fly-In", "awaiting_confirmation"),
-      makeRequest(6, "Codexion", "cancelled"),
-    ];
+function evaluation(id: number, startsAt: string, endsAt: string) {
+  return { ...makeRequest(id, "push_swap", "confirmed"), starts_at: startsAt, ends_at: endsAt };
+}
+
+describe("HomePage overview", () => {
+  it("shows the student's real totals, not what fits on one page", () => {
+    data.overview = { open: list(35), completed: list(8), upcoming: list(0) };
     renderHomeAs("STUDENT");
 
-    expect(within(overviewBox("Pending")).getByText("2")).toBeTruthy();
-    expect(within(overviewBox("Completed")).getByText("1")).toBeTruthy();
+    expect(within(overviewBox("Open requests")).getByText("35")).toBeTruthy();
+    expect(within(overviewBox("Completed")).getByText("8")).toBeTruthy();
+    expect(within(overviewBox("Next evaluation")).getByText("Not scheduled")).toBeTruthy();
+  });
+
+  it("shows the soonest evaluation that has not ended", () => {
+    data.overview = {
+      upcoming: list(2, [
+        evaluation(1, "2020-11-03T10:00:00Z", "2020-11-03T10:45:00Z"),
+        evaluation(2, "2099-11-10T10:00:00Z", "2099-11-10T10:45:00Z"),
+      ]),
+    };
+    renderHomeAs("STUDENT");
+
     expect(within(overviewBox("Next evaluation")).getByText(/10 Nov/)).toBeTruthy();
   });
 
-  it("says when no evaluation is scheduled", () => {
+  it("leaves a box without a number when its list has not answered", () => {
+    data.overview = { open: list(2) };
     renderHomeAs("STUDENT");
 
-    expect(within(overviewBox("Next evaluation")).getByText("Not scheduled")).toBeTruthy();
-    expect(within(overviewBox("Pending")).getByText("0")).toBeTruthy();
-  });
-
-  it("shows no number while the requests load or after an error", () => {
-    load.isLoading = true;
-    renderHomeAs("STUDENT");
-
-    expect(within(overviewBox("Pending")).getByText("—")).toBeTruthy();
+    expect(within(overviewBox("Open requests")).getByText("2")).toBeTruthy();
+    expect(within(overviewBox("Completed")).getByText("—")).toBeTruthy();
     expect(within(overviewBox("Next evaluation")).getByText("—")).toBeTruthy();
   });
 
-  it("counts the Hitchhiker's real requests", () => {
-    data.openRequests = [makeRequest(1, "minishell", "pending")];
-    data.pickedRequests = [
-      makeRequest(2, "push_swap", "awaiting_confirmation"),
-      makeRequest(3, "cpp09", "awaiting_confirmation"),
-      { ...makeRequest(4, "Fly-In", "confirmed"), is_history: true, result: "failed" as const },
-    ];
+  it("shows the Hitchhiker's real totals", () => {
+    data.overview = { open: list(35), awaiting: list(2), done: list(12) };
     renderHomeAs("HITCHHIKER");
 
-    expect(within(overviewBox("Open requests")).getByText("1")).toBeTruthy();
+    expect(within(overviewBox("Open requests")).getByText("35")).toBeTruthy();
     expect(within(overviewBox("Awaiting confirmation")).getByText("2")).toBeTruthy();
-    expect(within(overviewBox("Evaluations done")).getByText("1")).toBeTruthy();
+    expect(within(overviewBox("Evaluations done")).getByText("12")).toBeTruthy();
+  });
+});
+
+describe("HomePage banner", () => {
+  it("stays paused when the workspace changes", () => {
+    function Switch() {
+      const { setActiveRole } = useRole();
+
+      return (
+        <button type="button" onClick={() => setActiveRole("HITCHHIKER")}>
+          Switch
+        </button>
+      );
+    }
+
+    render(
+      <MemoryRouter>
+        <RoleProvider>
+          <Switch />
+          <HomePage />
+        </RoleProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Pause animation" }));
+    fireEvent.click(screen.getByRole("button", { name: "Switch" }));
+
+    expect(screen.getByText("Ready to evaluate?")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Play animation" })).toBeTruthy();
   });
 });
 
@@ -235,7 +246,7 @@ describe("HomePage for the Student Council", () => {
     renderHomeAs("COUNCIL");
 
     expect(within(overviewBox("New messages")).getByText("1")).toBeTruthy();
-    expect(within(overviewBox("History")).getByText("3")).toBeTruthy();
+    expect(within(overviewBox("History")).getByText("4")).toBeTruthy();
     expect(within(overviewBox("Hitchhikers")).getByText("9")).toBeTruthy();
     expect(screen.getByText("The fridge is broken.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Read message #7" }).getAttribute("href")).toBe(
@@ -246,10 +257,27 @@ describe("HomePage for the Student Council", () => {
     );
   });
 
-  it("says when there is nothing to read", () => {
+  it("says when the council has no messages at all", () => {
     renderHomeAs("COUNCIL");
 
     expect(screen.getByText("No messages yet")).toBeTruthy();
+  });
+
+  it("says everything is read when only read messages exist", () => {
+    data.totalCount = 4;
+    renderHomeAs("COUNCIL");
+
+    expect(screen.getByText("All caught up!")).toBeTruthy();
+    expect(screen.queryByText("No messages yet")).toBeNull();
+  });
+
+  it("leaves only the Hitchhiker box empty when its count is missing", () => {
+    data.totalCount = 4;
+    data.hitchhikerCount = null;
+    renderHomeAs("COUNCIL");
+
+    expect(within(overviewBox("History")).getByText("4")).toBeTruthy();
+    expect(within(overviewBox("Hitchhikers")).getByText("—")).toBeTruthy();
   });
 
   it("shows only the error when the messages cannot be loaded", () => {

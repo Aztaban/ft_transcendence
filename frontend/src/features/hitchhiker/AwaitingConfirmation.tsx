@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
+import ScrollableList from "../home/ScrollableList";
 
 interface AwaitingConfirmationProps {
   requests: EvaluationRequest[];
@@ -36,12 +37,7 @@ function AwaitingConfirmation({ requests, isLoading = false }: AwaitingConfirmat
           <p>{t("dashboard.awaitingEmpty")}</p>
         </div>
       ) : (
-        <div
-          className="dashboard-requests"
-          role="group"
-          tabIndex={0}
-          aria-labelledby="awaiting-confirmation-title"
-        >
+        <ScrollableList labelledBy="awaiting-confirmation-title">
           {awaitingRequests.map((request) => (
             <article className="dashboard-request" key={request.id}>
               <div>
@@ -63,7 +59,7 @@ function AwaitingConfirmation({ requests, isLoading = false }: AwaitingConfirmat
               <span className="dashboard-request__status">{t("dashboard.waitingForStudent")}</span>
             </article>
           ))}
-        </div>
+        </ScrollableList>
       )}
     </section>
   );

@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { confettiPieces, planetPixels, spritePixels, textPixels } from "./pixelArt";
 import PixelBanner from "./PixelBanner";
@@ -12,6 +13,7 @@ const desk =
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 function finishScene() {
@@ -45,6 +47,28 @@ describe("PixelBanner", () => {
 
     finishScene();
     expect(screen.getByTestId("pixel-banner-clock").style.animationDuration).toBe("14s");
+  });
+
+  it("goes to the still rocket when reduced motion is turned on while it plays", () => {
+    const query = {
+      matches: false,
+      listeners: new Set<() => void>(),
+      addEventListener: (_: string, listener: () => void) => query.listeners.add(listener),
+      removeEventListener: (_: string, listener: () => void) => query.listeners.delete(listener),
+    };
+
+    vi.stubGlobal("matchMedia", () => query);
+    render(<PixelBanner />);
+    finishScene();
+    expect(screen.getByRole("img", { name: road })).toBeTruthy();
+
+    act(() => {
+      query.matches = true;
+      query.listeners.forEach((listener) => listener());
+    });
+
+    expect(screen.getByRole("img", { name: rocket })).toBeTruthy();
+    expect(screen.queryByTestId("pixel-banner-clock")).toBeNull();
   });
 
   it("pauses and plays the animation", () => {

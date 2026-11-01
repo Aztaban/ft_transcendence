@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
+import ScrollableList from "../home/ScrollableList";
 
 interface ScheduledEvaluationsProps {
   requests: EvaluationRequest[];
@@ -50,7 +51,7 @@ function ScheduledEvaluations({ requests, viewer, isLoading = false }: Scheduled
           <p>{t(texts[viewer].empty)}</p>
         </div>
       ) : (
-        <div className="dashboard-requests" role="group" tabIndex={0} aria-labelledby={titleId}>
+        <ScrollableList labelledBy={titleId}>
           {scheduled.map((request) => {
             const otherPerson = viewer === "student" ? request.picked_by : request.student;
 
@@ -69,7 +70,7 @@ function ScheduledEvaluations({ requests, viewer, isLoading = false }: Scheduled
               </article>
             );
           })}
-        </div>
+        </ScrollableList>
       )}
     </section>
   );

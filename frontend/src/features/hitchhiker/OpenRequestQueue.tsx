@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatTimeAgo } from "../../utils/dateTime";
+import ScrollableList from "../home/ScrollableList";
 
 interface OpenRequestQueueProps {
   requests: EvaluationRequest[];
@@ -36,12 +37,7 @@ function OpenRequestQueue({ requests, isLoading = false }: OpenRequestQueueProps
           <p>{t("dashboard.queueEmpty")}</p>
         </div>
       ) : (
-        <div
-          className="dashboard-requests"
-          role="group"
-          tabIndex={0}
-          aria-labelledby="open-request-queue-title"
-        >
+        <ScrollableList labelledBy="open-request-queue-title">
           {openRequests.map((request) => (
             <article className="dashboard-request" key={request.id}>
               <div>
@@ -58,7 +54,7 @@ function OpenRequestQueue({ requests, isLoading = false }: OpenRequestQueueProps
               <span className="dashboard-request__status">{t("dashboard.open")}</span>
             </article>
           ))}
-        </div>
+        </ScrollableList>
       )}
     </section>
   );

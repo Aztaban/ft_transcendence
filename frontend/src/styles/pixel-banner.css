@@ -2,17 +2,21 @@
 
 .pixel-banner {
   position: relative;
-  overflow: hidden;
   width: 100%;
   max-height: 400px;
+  overflow: hidden;
+  align-self: stretch;
   aspect-ratio: 19 / 5;
   background: #141a22;
 }
 
+/* Fades its left edge, where a banner wider than the scene would otherwise show a hard line. */
 .pixel-banner__scene {
   display: block;
   width: 100%;
   height: 100%;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000000 12%);
+  mask-image: linear-gradient(90deg, transparent, #000000 12%);
 }
 
 .pixel-banner--paused * {
