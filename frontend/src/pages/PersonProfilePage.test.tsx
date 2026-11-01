@@ -6,25 +6,38 @@ import { ApiError } from "../api/client";
 import { getTutorEligibility } from "../api/eligibility";
 import { listEvaluationRequests } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
-import { getPublicUser } from "../api/users";
+import { assignRole, getPublicUser, revokeRole } from "../api/users";
 import i18n from "../i18n";
 import { makeRequest } from "../features/student/testUtils";
 import type { EvaluationRequest } from "../types/evaluation";
 import type { PublicUser } from "../types/people";
+import type { UserRole } from "../types/user";
 import PersonProfilePage from "./PersonProfilePage";
 
 const session = vi.hoisted(() => ({ isAuthenticated: true, isLoading: false }));
 const workspace = vi.hoisted(() => ({ activeRole: "STUDENT" }));
-const me = vi.hoisted(() => ({ id: 1 }));
+const me = vi.hoisted(() => ({
+  id: 1,
+  roles: [{ id: 1, name: "student" }] as UserRole[],
+}));
 
-vi.mock("../api/users", () => ({ getPublicUser: vi.fn() }));
+vi.mock("../api/users", () => ({
+  getPublicUser: vi.fn(),
+  assignRole: vi.fn(),
+  revokeRole: vi.fn(),
+}));
 vi.mock("../api/eligibility", () => ({ getTutorEligibility: vi.fn() }));
 vi.mock("../api/projects", () => ({ listProjects: vi.fn() }));
 vi.mock("../api/evaluationRequests", () => ({ listEvaluationRequests: vi.fn() }));
 vi.mock("../store/AuthContext", () => ({ useAuth: () => session }));
 vi.mock("../store/RoleContext", () => ({ useRole: () => workspace }));
 vi.mock("../store/CurrentUserContext", () => ({
-  useCurrentUser: () => ({ user: { id: me.id }, roles: [], isLoaded: true, refresh: () => {} }),
+  useCurrentUser: () => ({
+    user: { id: me.id, roles: me.roles },
+    roles: [],
+    isLoaded: true,
+    refresh: () => {},
+  }),
 }));
 
 const lenka: PublicUser = {
@@ -64,6 +77,7 @@ afterEach(() => {
   session.isLoading = false;
   workspace.activeRole = "STUDENT";
   me.id = 1;
+  me.roles = [{ id: 1, name: "student" }];
   cleanup();
   vi.resetAllMocks();
 });
@@ -288,6 +302,66 @@ describe("PersonProfilePage", () => {
     expect(screen.getByText("This is how other students see your profile.")).toBeTruthy();
     expect(screen.queryByRole("link", { name: /Create a request/ })).toBeNull();
     expect(screen.queryByRole("region", { name: /Your evaluations/ })).toBeNull();
+  });
+
+  // #679: Head Tutors, SC Members and Admins change roles from the profile.
+  it("lets an Admin remove a role and shows the new role pills", async () => {
+    me.roles = [
+      { id: 1, name: "student" },
+      { id: 5, name: "admin" },
+    ];
+    vi.mocked(revokeRole).mockResolvedValue(undefined);
+    renderPage();
+    await findProfile();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove the role Student Council" }));
+
+    expect(await screen.findByText("Role Student Council removed.")).toBeTruthy();
+    expect(revokeRole).toHaveBeenCalledWith(7, 4);
+    expect(texts(screen.getByRole("list", { name: "Roles" }), "listitem")).toEqual(["Head Tutor"]);
+  });
+
+  it("lets a Head Tutor make a student a Hitchhiker", async () => {
+    const student: PublicUser = { ...lenka, roles: [{ id: 1, name: "student" }] };
+
+    me.roles = [
+      { id: 1, name: "student" },
+      { id: 3, name: "head_tutor" },
+    ];
+    vi.mocked(getPublicUser).mockResolvedValue(student);
+    vi.mocked(assignRole).mockResolvedValue({
+      ...student,
+      roles: [
+        { id: 1, name: "student" },
+        { id: 2, name: "tutor" },
+      ],
+    });
+    renderPage();
+    await findProfile();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add role" }));
+
+    expect(await screen.findByText("Role Hitchhiker added.")).toBeTruthy();
+    expect(assignRole).toHaveBeenCalledWith(7, "tutor");
+    expect(texts(screen.getByRole("list", { name: "Roles" }), "listitem")).toEqual(["Hitchhiker"]);
+  });
+
+  it("does not offer role changes to students or on the own profile", async () => {
+    renderPage();
+    await findProfile();
+
+    expect(screen.queryByRole("heading", { name: "Manage roles" })).toBeNull();
+
+    cleanup();
+    me.id = 7;
+    me.roles = [
+      { id: 1, name: "student" },
+      { id: 5, name: "admin" },
+    ];
+    renderPage();
+    await findProfile();
+
+    expect(screen.queryByRole("heading", { name: "Manage roles" })).toBeNull();
   });
 
   it("copies the profile link", async () => {
