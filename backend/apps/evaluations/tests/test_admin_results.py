@@ -1,12 +1,17 @@
 """Manual result entry is limited to ended, confirmed evaluations (api-plan §7.1)."""
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import call
 
 import pytest
+from django.contrib import admin, messages
+from django.contrib.admin.models import LogEntry
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import Client
 from django.urls import reverse
 
+from apps.evaluations.admin import EvaluationRequestAdminForm, _ResultSaveConflict
 from apps.evaluations.models import EvaluationRequest, Project
 from apps.notifications.models import Notification
 
@@ -61,6 +66,15 @@ def submit(browser, evaluation, **overrides):
     }
     payload.update(overrides)
     return browser.post(url, payload, HTTP_X_CSRFTOKEN=browser.cookies["csrftoken"].value)
+
+
+def loaded_result_form(evaluation, **overrides):
+    """Validate a form before simulating a concurrent database change."""
+    payload = {"result": "passed", "feedback": "", "completed_at": None}
+    payload.update(overrides)
+    form = EvaluationRequestAdminForm(data=payload, instance=evaluation)
+    assert form.is_valid(), form.errors
+    return form
 
 
 @pytest.mark.parametrize("field", ["result", "feedback", "completed_at"])
@@ -247,15 +261,9 @@ def test_admin_can_correct_or_clear_existing_results(browser, evaluation):
 
 
 def test_admin_result_update_publishes_after_commit(
-    browser, evaluation, monkeypatch, django_capture_on_commit_callbacks
+    browser, evaluation, user_event_sender, django_capture_on_commit_callbacks
 ):
-    from types import SimpleNamespace
-    from unittest.mock import AsyncMock, call
-
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
+    sender = user_event_sender
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = submit(browser, evaluation, result="passed")
         assert response.status_code == 302
@@ -289,18 +297,13 @@ def test_admin_result_update_publishes_after_commit(
 
 
 def test_stale_admin_saves_do_not_duplicate_result_notifications(evaluation):
-    from types import SimpleNamespace
-
-    from django.contrib import admin
-
     first = EvaluationRequest.objects.get(pk=evaluation.pk)
     stale = EvaluationRequest.objects.get(pk=evaluation.pk)
-    first.result = "passed"
-    stale.result = "passed"
+    first_form = loaded_result_form(first)
+    stale_form = loaded_result_form(stale)
     model_admin = admin.site._registry[EvaluationRequest]
-    form = SimpleNamespace(changed_data=["result"])
-    model_admin.save_model(None, first, form, change=True)
-    model_admin.save_model(None, stale, form, change=True)
+    model_admin.save_model(None, first, first_form, change=True)
+    model_admin.save_model(None, stale, stale_form, change=True)
     assert Notification.objects.count() == 2
     assert set(Notification.objects.values_list("recipient_id", flat=True)) == {
         evaluation.student_id,
@@ -325,6 +328,128 @@ def test_result_notification_failure_rolls_back_save_and_partial_notifications(
     assert evaluation.result is None
     assert not Notification.objects.exists()
     assert callbacks == []
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["cancelled", "pending", "awaiting_confirmation", "expired", "end_boundary", "end_future"],
+)
+def test_concurrent_state_change_survives_a_stale_admin_save(
+    evaluation, user_event_sender, django_capture_on_commit_callbacks, change
+):
+    form = loaded_result_form(evaluation, feedback="Proposed feedback", completed_at=NOW)
+    updates = {}
+    if change.startswith("end_"):
+        updates["ends_at"] = NOW if change == "end_boundary" else NOW + timedelta(minutes=1)
+    else:
+        updates["status"] = change
+        if change in ("pending", "expired"):
+            updates.update(picked_by=None, starts_at=None, ends_at=None)
+        if change == "cancelled":
+            updates.update(cancelled_by_id=evaluation.student_id, cancelled_at=NOW)
+        if change == "expired":
+            updates["expired_at"] = NOW
+    EvaluationRequest.objects.filter(pk=evaluation.pk).update(**updates)
+    before = EvaluationRequest.objects.values().get(pk=evaluation.pk)
+    model_admin = admin.site._registry[EvaluationRequest]
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(ValidationError, match=ERROR):
+            model_admin.save_model(None, form.instance, form, change=True)
+
+    assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == before
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    user_event_sender.assert_not_awaited()
+
+
+def test_admin_save_preserves_other_columns_and_notifies_current_participants(
+    evaluation, make_user, user_event_sender, django_capture_on_commit_callbacks
+):
+    form = loaded_result_form(evaluation, feedback="Fresh feedback", completed_at=NOW)
+    replacement = make_user("replacement@example.com", display_name="Replacement")
+    EvaluationRequest.objects.filter(pk=evaluation.pk).update(
+        picked_by=replacement, note="Concurrent note", updated_at=NOW + timedelta(minutes=1)
+    )
+    before = EvaluationRequest.objects.values().get(pk=evaluation.pk)
+    model_admin = admin.site._registry[EvaluationRequest]
+
+    with django_capture_on_commit_callbacks(execute=True):
+        model_admin.save_model(None, form.instance, form, change=True)
+        user_event_sender.assert_not_awaited()
+
+    assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == {
+        **before,
+        "result": "passed",
+        "feedback": "Fresh feedback",
+        "completed_at": NOW,
+    }
+    assert evaluation.picked_by_id == replacement.pk
+    assert list(
+        Notification.objects.order_by("recipient_id").values_list("recipient_id", flat=True)
+    ) == [
+        evaluation.student_id,
+        replacement.pk,
+    ]
+    assert [
+        args.args
+        for args in user_event_sender.await_args_list
+        if args.args[1].get("event") == "evaluation.updated"
+    ] == [
+        (
+            f"user_{user_id}",
+            {
+                "type": "user.event",
+                "event": "evaluation.updated",
+                "data": {"id": evaluation.pk, "status": "confirmed"},
+            },
+        )
+        for user_id in (evaluation.student_id, replacement.pk)
+    ]
+
+
+def test_feedback_only_save_preserves_a_concurrently_recorded_result(
+    evaluation, user_event_sender, django_capture_on_commit_callbacks
+):
+    form = loaded_result_form(evaluation, result="", feedback="Fresh feedback")
+    EvaluationRequest.objects.filter(pk=evaluation.pk).update(result="passed", completed_at=NOW)
+    before = EvaluationRequest.objects.values().get(pk=evaluation.pk)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        admin.site._registry[EvaluationRequest].save_model(None, form.instance, form, change=True)
+
+    assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == {
+        **before,
+        "feedback": "Fresh feedback",
+    }
+    assert evaluation.result == "passed"
+    assert not Notification.objects.exists()
+    assert user_event_sender.await_count == 2
+
+
+def test_admin_race_reports_an_error_without_a_success_log(browser, evaluation, monkeypatch):
+    def fail_save(*args, **kwargs):
+        raise _ResultSaveConflict(ERROR)
+
+    monkeypatch.setattr(admin.site._registry[EvaluationRequest], "save_model", fail_save)
+    response = submit(browser, evaluation, result="passed")
+
+    url = reverse("admin:evaluations_evaluationrequest_change", args=[evaluation.pk])
+    assert response.status_code == 302
+    assert response.url == url
+    page = browser.get(url)
+    assert page.status_code == 200
+    assert [(message.level, str(message)) for message in page.context["messages"]] == [
+        (messages.ERROR, ERROR),
+    ]
+    assert not LogEntry.objects.filter(object_id=str(evaluation.pk)).exists()
+    evaluation.refresh_from_db()
+    assert evaluation.result is None
+
+
+def test_admin_cannot_create_evaluations_from_the_result_form(browser, evaluation):
+    response = browser.get(reverse("admin:evaluations_evaluationrequest_add"))
+    assert response.status_code == 403
 
 
 def test_result_save_rolls_back_with_outer_transaction(
