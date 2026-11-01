@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 
 import { registerUser } from "../api/auth";
 import { ApiError } from "../api/client";
 import logo42 from "../assets/figma/42.svg";
+import AuthSwitchLink from "../components/auth/AuthSwitchLink";
 import LanguageSwitcher from "../components/layout/LanguageSwitcher";
 import { Button, Input } from "../components/ui";
 import {
@@ -15,11 +16,15 @@ import {
   type RegistrationFieldErrors,
   type RegistrationValues,
 } from "../utils/validation";
+import type { ReturnPage } from "../utils/loginReturn";
 import "../styles/registration.css";
 
 function RegisterPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  // The page the login gate sent the user away from (#328), passed on to the Login page.
+  const from = (location.state as { from?: ReturnPage } | null)?.from;
   const [errors, setErrors] = useState<RegistrationFieldErrors>({});
   // The values that failed the checks in the browser, so the messages can be shown again in a
   // newly chosen language. Errors from the backend are not checked again.
@@ -63,7 +68,7 @@ function RegisterPage() {
       await registerUser(values);
 
       // Registration does not start a session (api-plan §10.1), so the user logs in next (#522).
-      navigate("/login", { state: { registeredEmail: values.email } });
+      navigate("/login", { replace: true, state: { registeredEmail: values.email, from } });
     } catch (error) {
       if (error instanceof ApiError) {
         const backendErrors: RegistrationFieldErrors = {
@@ -152,6 +157,14 @@ function RegisterPage() {
             {isSubmitting ? t("auth.registering") : t("auth.register")}
           </Button>
         </form>
+
+        <AuthSwitchLink
+          prompt={t("auth.haveAccount")}
+          label={t("auth.goToLogin")}
+          to="/login"
+          from={from}
+          disabled={isSubmitting}
+        />
       </div>
     </main>
   );
