@@ -14,9 +14,44 @@ def schema():
     return result
 
 
+def test_admin_user_schema(schema):
+    component = schema["components"]["schemas"]["AdminUser"]
+    assert set(component["properties"]) == {
+        "id",
+        "email",
+        "display_name",
+        "avatar_url",
+        "language",
+        "roles",
+        "intra_login",
+        "status",
+        "created_at",
+        "last_login",
+    }
+    assert set(component["required"]) == set(component["properties"])
+    assert component["properties"]["last_login"]["nullable"] is True
+    assert component["properties"]["avatar_url"]["nullable"] is True
+    operation = schema["paths"]["/api/v1/admin/users/{user_id}/"]["patch"]
+    body = operation["requestBody"]["content"]["application/json"]["schema"]
+    writable = schema["components"]["schemas"][body["$ref"].split("/")[-1]]
+    assert set(writable["properties"]) == {"display_name", "email", "language"}
+    assert not writable.get("required")
+
+
 @pytest.mark.parametrize(
     "path,method,statuses",
     [
+        ("/api/v1/admin/users/", "get", {"200", "400", "401", "403", "404", "406", "429", "500"}),
+        (
+            "/api/v1/admin/users/{user_id}/",
+            "get",
+            {"200", "401", "403", "404", "406", "429", "500"},
+        ),
+        (
+            "/api/v1/admin/users/{user_id}/",
+            "patch",
+            {"200", "400", "401", "403", "404", "406", "409", "415", "429", "500"},
+        ),
         ("/api/v1/", "get", {"200", "406", "429", "500"}),
         (
             "/api/v1/auth/register/",
@@ -47,7 +82,7 @@ def test_documented_statuses_and_error_envelopes(schema, path, method, statuses)
             assert response["content"]["application/json"]["schema"] == {
                 "$ref": "#/components/schemas/ErrorResponse"
             }
-    if method in {"post", "delete"}:
+    if method in {"post", "delete", "patch"}:
         header = next(p for p in operation["parameters"] if p["name"] == "X-CSRFToken")
         assert header["in"] == "header"
         assert header["required"] is True
@@ -55,7 +90,7 @@ def test_documented_statuses_and_error_envelopes(schema, path, method, statuses)
     if "204" in operation["responses"]:
         assert "requestBody" not in operation
         assert "content" not in operation["responses"]["204"]
-    if method == "delete":
+    if method == "delete" or path.startswith("/api/v1/admin/"):
         assert operation["security"] == [{"cookieAuth": []}]
     else:
         assert operation.get("security", []) == []
