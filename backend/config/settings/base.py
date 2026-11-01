@@ -175,6 +175,9 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "ft_transcendence API",
     "VERSION": "1.0.0",
+    "ENUM_NAME_OVERRIDES": {
+        "EvaluationRequestStatusEnum": "apps.evaluations.models.EvaluationRequest.Status",
+    },
 }
 
 # Eligibility request submit: max projects in one request.
@@ -182,6 +185,9 @@ ELIGIBILITY_REQUEST_MAX_PROJECTS = 50
 
 # Unpicked evaluation requests expire after this many days.
 EVALUATION_REQUEST_TTL_DAYS = 14
+
+# Administration flags confirmed evaluations still missing a result after this interval.
+EVALUATION_RESULT_MISSING_DAYS = 7
 
 # Student Council message body and discussion note (api-plan §10.6): max characters.
 SC_MESSAGE_MAX_LENGTH = 5000

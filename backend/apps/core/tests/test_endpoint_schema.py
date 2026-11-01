@@ -38,6 +38,36 @@ def test_admin_user_schema(schema):
     assert not writable.get("required")
 
 
+def test_evaluation_exceptions_schema(schema):
+    operation = schema["paths"]["/api/v1/admin/evaluation-requests/exceptions/"]["get"]
+    assert operation["security"] == [{"cookieAuth": []}]
+    assert set(operation["responses"]) == {"200", "401", "403", "404", "406", "429", "500"}
+    assert {parameter["name"] for parameter in operation["parameters"]} == {"page", "page_size"}
+    page = _component(
+        schema, operation["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
+    )
+    assert set(page["required"]) == {"count", "next", "previous", "results"}
+    entry = _component(schema, page["properties"]["results"]["items"]["$ref"])
+    base = schema["components"]["schemas"]["EvaluationRequest"]
+    assert set(entry["properties"]) == {*base["properties"], "problem"}
+    assert set(entry["required"]) == {*base["required"], "problem"}
+    assert (
+        entry["properties"]["status"]
+        == base["properties"]["status"]
+        == {
+            "allOf": [{"$ref": "#/components/schemas/EvaluationRequestStatusEnum"}],
+            "readOnly": True,
+        }
+    )
+    assert schema["components"]["schemas"]["EvaluationRequestStatusEnum"]["enum"] == [
+        "pending",
+        "awaiting_confirmation",
+        "confirmed",
+        "cancelled",
+        "expired",
+    ]
+
+
 @pytest.mark.parametrize(
     "path,method,statuses",
     [
