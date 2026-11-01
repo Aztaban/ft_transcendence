@@ -20,6 +20,22 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+describe("listSCMessages", () => {
+  test("passes the signal on, so the request can be cancelled", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const controller = new AbortController();
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ count: 0, next: null, previous: null, results: [] }),
+    );
+
+    await listSCMessages({ unread: true, page: 2, signal: controller.signal });
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/sc-messages/?unread=true&page=2");
+    expect(fetchMock.mock.calls[0][1]?.signal).toBe(controller.signal);
+  });
+});
+
 describe("sendSCMessage", () => {
   test("posts the message with the CSRF token", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");

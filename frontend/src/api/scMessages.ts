@@ -28,10 +28,12 @@ export interface ListSCMessagesParams {
   unread?: boolean;
   // 1-based page number (§5.7).
   page?: number;
+  // Cancels the request, e.g. when a newer one replaces it.
+  signal?: AbortSignal;
 }
 
 // GET /api/v1/sc-messages/ (api-plan §10.6): SC Members and Admins. Newest first, paginated.
-export function listSCMessages({ unread, page }: ListSCMessagesParams = {}): Promise<
+export function listSCMessages({ unread, page, signal }: ListSCMessagesParams = {}): Promise<
   Paginated<SCMessage>
 > {
   const query = new URLSearchParams();
@@ -46,7 +48,9 @@ export function listSCMessages({ unread, page }: ListSCMessagesParams = {}): Pro
 
   const search = query.toString();
 
-  return apiRequest<Paginated<SCMessage>>(`/api/v1/sc-messages/${search ? `?${search}` : ""}`);
+  return apiRequest<Paginated<SCMessage>>(`/api/v1/sc-messages/${search ? `?${search}` : ""}`, {
+    signal,
+  });
 }
 
 // GET /api/v1/sc-messages/{id}/ (api-plan §10.6): does not change the read state. 404 when the
