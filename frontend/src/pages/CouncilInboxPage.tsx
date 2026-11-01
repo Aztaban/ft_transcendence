@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router";
 import { listSCMessages } from "../api/scMessages";
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
+import CouncilTabs from "../features/council/CouncilTabs";
 import type { SCMessage } from "../types/scMessage";
 import { formatTimeAgo } from "../utils/dateTime";
 import { useLiveRefresh } from "../websocket/LiveProvider";
@@ -141,6 +142,8 @@ function CouncilInboxPage() {
         </div>
       </header>
 
+      <CouncilTabs active="new" />
+
       <div className="council-layout">
         <div className="council-message__body">
           {loadState === "loading" && (
@@ -165,6 +168,9 @@ function CouncilInboxPage() {
               </span>
               <h2>{t("council.caughtUp")}</h2>
               <p>{t("council.caughtUpText")}</p>
+              <Link className="council-button council-button--small" to="/council/history">
+                {t("council.openHistory")} <span aria-hidden="true">→</span>
+              </Link>
             </div>
           )}
 

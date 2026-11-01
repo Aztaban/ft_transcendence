@@ -72,10 +72,28 @@ describe("CouncilInboxPage", () => {
     renderPage();
 
     expect(await screen.findByRole("heading", { name: "All caught up!" })).toBeTruthy();
-    expect(screen.getByText("There are no new messages.")).toBeTruthy();
+    expect(
+      screen.getByText("There are no new messages. The ones you have read are in the History."),
+    ).toBeTruthy();
     expect(screen.getByRole("heading", { name: "How the inbox works" })).toBeTruthy();
-    // The History page comes with #279; until then nothing links to it.
-    expect(screen.queryByRole("link", { name: /History/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "Open History" }).getAttribute("href")).toBe(
+      "/council/history",
+    );
+  });
+
+  // #279: the tabs switch between the new messages and the History.
+  it("shows the New tab as open and links the History tab", async () => {
+    vi.mocked(listSCMessages).mockResolvedValue(page([scMessage(4, "Quiet study areas, please.")]));
+
+    renderPage();
+    await screen.findByRole("heading", { name: "Message #4" });
+
+    const tabs = screen.getByRole("navigation", { name: "Council messages" });
+
+    expect(within(tabs).getByText("New").getAttribute("aria-current")).toBe("page");
+    expect(within(tabs).getByRole("link", { name: "History" }).getAttribute("href")).toBe(
+      "/council/history",
+    );
   });
 
   it("loads the messages again when the tab becomes visible", async () => {
