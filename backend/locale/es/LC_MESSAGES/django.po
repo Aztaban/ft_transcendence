@@ -253,6 +253,14 @@ msgstr "Checo"
 msgid "Spanish"
 msgstr "Español"
 
+#: apps/accounts/models.py:38
+msgid "Active"
+msgstr "Activo"
+
+#: apps/accounts/models.py:39
+msgid "Suspended"
+msgstr "Suspendido"
+
 #: apps/accounts/models.py:40
 msgid "Deleted"
 msgstr "Eliminado"
@@ -268,3 +276,7 @@ msgstr "No puedes cambiar el estado de tu propia cuenta."
 #: apps/accounts/exceptions.py
 msgid "This action is not allowed in the user's current status."
 msgstr "Esta acción no está permitida en el estado actual del usuario."
+
+#: apps/accounts/services/deletion.py
+msgid "Deleted user"
+msgstr "Usuario eliminado"

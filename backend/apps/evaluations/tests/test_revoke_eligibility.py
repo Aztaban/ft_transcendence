@@ -440,11 +440,17 @@ def test_competing_revokes_have_one_winner(make_user, monkeypatch):
     browsers = [browser_for(head), browser_for(admin)]
     barrier = Barrier(2)
     original_fetch = QuerySet._fetch_all
+    lock_seen = threading.local()
 
     def fetch_after_both_reach_the_lock(queryset):
         # Rendezvous before the tutor row lock. Waiting after acquisition deadlocks,
         # and the grant lock is taken only once that user lock is held.
-        if queryset.model is get_user_model() and queryset.query.select_for_update:
+        if (
+            queryset.model is get_user_model()
+            and queryset.query.select_for_update
+            and not getattr(lock_seen, "reached", False)
+        ):
+            lock_seen.reached = True
             barrier.wait(timeout=10)
         return original_fetch(queryset)
 

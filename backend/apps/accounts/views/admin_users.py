@@ -20,13 +20,15 @@ from apps.accounts.serializers.admin_users import (
     AdminUserSerializer,
     AdminUserUpdateSerializer,
 )
+from apps.accounts.services.deletion import delete_account
 from apps.accounts.services.locking import lock_users
 from apps.accounts.services.sessions import end_user_sessions
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
-from apps.core.schema import CSRF_HEADER, error_responses
+from apps.core.schema import CSRF_HEADER, DeleteBodySchema, error_responses
+from apps.core.serializers import ReasonSerializer
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 
@@ -88,12 +90,39 @@ class AdminUserListView(ListAPIView):
 
 
 class AdminUserDetailView(GenericAPIView):
+    schema = DeleteBodySchema()
     permission_classes = [IsAuthenticated, IsAdminRole]
     serializer_class = AdminUserSerializer
     lookup_url_kwarg = "user_id"
 
     def get_queryset(self):
         return _admin_users()
+
+    @extend_schema(
+        summary="Anonymize an account and clean up its active workflows",
+        parameters=[CSRF_HEADER],
+        request=ReasonSerializer,
+        responses={
+            204: None,
+            **error_responses(
+                {
+                    400: ("validation_error",),
+                    401: ("not_authenticated",),
+                    403: ("permission_denied", "csrf_failed"),
+                    404: ("not_found",),
+                    409: ("cannot_modify_self", "invalid_user_status"),
+                    415: ("unsupported_media_type",),
+                }
+            ),
+        },
+    )
+    def delete(self, request, user_id):
+        serializer = ReasonSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        delete_account(
+            actor=request.user, user_id=user_id, reason=serializer.validated_data["reason"]
+        )
+        return Response(status=204)
 
     @extend_schema(
         summary="Inspect a user for administration",

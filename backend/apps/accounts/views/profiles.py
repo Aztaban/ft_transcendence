@@ -1,6 +1,7 @@
 """Account profiles views."""
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema
@@ -18,6 +19,7 @@ from apps.accounts.serializers.profiles import (
     ProfileUpdateSerializer,
     PublicProfileSerializer,
 )
+from apps.accounts.services.locking import lock_users
 from apps.core.exceptions import validation_error_response
 from apps.core.schema import CSRF_HEADER, error_responses
 
@@ -57,12 +59,17 @@ class MeView(APIView):
             ),
         },
     )
+    @transaction.atomic
     def patch(self, request: Request):
         """Update the current user's display name or language"""
         if not request.user.is_authenticated:
             raise NotAuthenticated()
 
-        serializer = ProfileUpdateSerializer(instance=request.user, data=request.data, partial=True)
+        lock_users(request.user.pk)
+        current = User.objects.filter(pk=request.user.pk).first()
+        if current is None or not current.is_active:
+            raise NotAuthenticated()
+        serializer = ProfileUpdateSerializer(instance=current, data=request.data, partial=True)
         if not serializer.is_valid():
             return validation_error_response(
                 serializer.errors, _("Please correct the profile fields.")

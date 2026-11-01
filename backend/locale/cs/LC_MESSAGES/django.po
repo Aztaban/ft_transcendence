@@ -253,6 +253,14 @@ msgstr "Čeština"
 msgid "Spanish"
 msgstr "Španělština"
 
+#: apps/accounts/models.py:38
+msgid "Active"
+msgstr "Aktivní"
+
+#: apps/accounts/models.py:39
+msgid "Suspended"
+msgstr "Pozastavený"
+
 #: apps/accounts/models.py:40
 msgid "Deleted"
 msgstr "Smazaný"
@@ -268,3 +276,7 @@ msgstr "Nemůžete změnit stav svého vlastního účtu."
 #: apps/accounts/exceptions.py
 msgid "This action is not allowed in the user's current status."
 msgstr "Tato akce není v aktuálním stavu uživatele povolena."
+
+#: apps/accounts/services/deletion.py
+msgid "Deleted user"
+msgstr "Smazaný uživatel"

@@ -134,7 +134,7 @@ def test_independent_redis_publisher_targets_authenticated_tabs_and_devices(
     async_to_sync(connect)()
 
 
-@pytest.mark.parametrize("action", ["logout", "suspend"])
+@pytest.mark.parametrize("action", ["logout", "suspend", "delete"])
 def test_http_session_ending_reaches_redis_sockets_and_revoked_cookie_cannot_reconnect(
     redis_config, sessions, action
 ):
@@ -142,7 +142,7 @@ def test_http_session_ending_reaches_redis_sockets_and_revoked_cookie_cannot_rec
     key = session_key(current_client)
     device_key = session_key(device_client)
 
-    if action == "suspend":
+    if action != "logout":
         admin_role, _ = Role.objects.get_or_create(name=Role.Name.ADMIN)
         admin = get_user_model().objects.get(pk=other_client.session[SESSION_KEY])
         admin.roles.add(admin_role)
@@ -160,6 +160,17 @@ def test_http_session_ending_reaches_redis_sockets_and_revoked_cookie_cannot_rec
             )
             assert response.status_code == 204
             assert response.content == b""
+        elif action == "delete":
+            response = other_client.delete(
+                reverse("api:admin-users-detail", kwargs={"user_id": user.pk}),
+                {"reason": "Policy review"},
+                format="json",
+                HTTP_HOST="localhost",
+                HTTP_X_CSRFTOKEN=other_client.cookies["csrftoken"].value,
+            )
+            assert response.status_code == 204
+            assert response.content == b""
+            assert get_user_model().objects.get(pk=user.pk).status == "deleted"
         else:
             response = other_client.post(
                 reverse("api:admin-users-suspend", kwargs={"user_id": user.pk}),
@@ -195,7 +206,7 @@ def test_http_session_ending_reaches_redis_sockets_and_revoked_cookie_cannot_rec
                 await database_sync_to_async(end_session)()
                 await assert_session_ended(first)
                 await assert_session_ended(second)
-                if action == "suspend":
+                if action != "logout":
                     await assert_session_ended(device)
                 else:
                     assert await device.receive_nothing(timeout=0.1)

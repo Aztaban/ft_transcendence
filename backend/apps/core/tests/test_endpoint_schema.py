@@ -60,6 +60,11 @@ def test_admin_user_schema(schema):
             "patch",
             {"200", "400", "401", "403", "404", "406", "409", "415", "429", "500"},
         ),
+        (
+            "/api/v1/admin/users/{user_id}/",
+            "delete",
+            {"204", "400", "401", "403", "404", "406", "409", "415", "429", "500"},
+        ),
         ("/api/v1/", "get", {"200", "406", "429", "500"}),
         (
             "/api/v1/auth/register/",
@@ -96,7 +101,10 @@ def test_documented_statuses_and_error_envelopes(schema, path, method, statuses)
         assert header["required"] is True
         assert "csrf_failed" in operation["responses"]["403"]["description"]
     if "204" in operation["responses"]:
-        assert "requestBody" not in operation
+        if path == "/api/v1/admin/users/{user_id}/" and method == "delete":
+            assert operation["requestBody"]["required"] is True
+        else:
+            assert "requestBody" not in operation
         assert "content" not in operation["responses"]["204"]
     if method == "delete" or path.startswith("/api/v1/admin/"):
         assert operation["security"] == [{"cookieAuth": []}]
