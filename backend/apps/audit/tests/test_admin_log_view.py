@@ -6,12 +6,11 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from apps.accounts.models import Role
+from apps.accounts.models import Role, User
 from apps.audit.models import AuditLog
 
 pytestmark = pytest.mark.django_db
 
-PASSWORD = "secret"
 OLDER = datetime(2026, 10, 9, 8, 0, tzinfo=timezone.utc)
 NEWER = datetime(2026, 10, 9, 9, 0, tzinfo=timezone.utc)
 DENIED = {
@@ -26,8 +25,8 @@ def audit_log_url():
     return reverse("api:admin-audit-log")
 
 
-def admin_client(make_user):
-    admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
+def admin_client(make_user, *, roles=(Role.Name.ADMIN,)):
+    admin = make_user("admin@example.com", "Admin", roles)
     client = APIClient()
     client.force_authenticate(admin)
     return client, admin
@@ -69,11 +68,22 @@ def test_missing_session_returns_contract_error():
 
 
 @pytest.mark.parametrize(
-    "role",
-    [Role.Name.STUDENT, Role.Name.TUTOR, Role.Name.HEAD_TUTOR, Role.Name.SC_MEMBER],
+    "roles",
+    [
+        (Role.Name.STUDENT,),
+        (Role.Name.TUTOR,),
+        (Role.Name.HEAD_TUTOR,),
+        (Role.Name.SC_MEMBER,),
+        (Role.Name.STUDENT, Role.Name.TUTOR, Role.Name.HEAD_TUTOR, Role.Name.SC_MEMBER),
+    ],
 )
-def test_non_admin_roles_are_denied(make_user, role):
-    user = make_user(f"{role}@example.com", role, (role,))
+@pytest.mark.parametrize(
+    "flags",
+    [{}, {"is_staff": True}, {"is_staff": True, "is_superuser": True}],
+    ids=["ordinary", "django-staff", "django-superuser"],
+)
+def test_non_admin_roles_are_denied(make_user, roles, flags):
+    user = make_user("viewer@example.com", roles=roles, **flags)
     client = APIClient()
     client.force_authenticate(user)
     response = client.get(audit_log_url())
@@ -81,8 +91,18 @@ def test_non_admin_roles_are_denied(make_user, role):
     assert response.json() == DENIED
 
 
-def test_admin_sees_an_empty_log(make_user):
-    client, _ = admin_client(make_user)
+@pytest.mark.parametrize(
+    "roles",
+    [
+        (Role.Name.ADMIN,),
+        (Role.Name.STUDENT, Role.Name.ADMIN),
+        tuple(Role.Name.values),
+    ],
+)
+def test_admin_sees_an_empty_log_without_django_staff_access(make_user, roles):
+    client, admin = admin_client(make_user, roles=roles)
+    assert admin.is_staff is False
+    assert admin.is_superuser is False
     response = client.get(audit_log_url())
     assert response.status_code == 200
     assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
@@ -285,10 +305,38 @@ def test_filter_validation(make_user, params, field, message):
     }
 
 
-def test_session_authentication_allows_an_admin(make_user):
-    admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
-    client = APIClient(enforce_csrf_checks=True)
-    assert client.login(email=admin.email, password=PASSWORD)
+def test_session_permissions_follow_role_changes_without_logging_in_again(
+    make_user, make_session_client
+):
+    user = make_user("viewer@example.com")
+    client = make_session_client(user)
+    session_id = client.cookies["sessionid"].value
+
+    response = client.get(audit_log_url())
+    assert response.status_code == 403
+    assert response.json() == DENIED
+
+    admin_role = Role.objects.get(name=Role.Name.ADMIN)
+    user.roles.add(admin_role)
     response = client.get(audit_log_url())
     assert response.status_code == 200
     assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
+
+    user.roles.remove(admin_role)
+    response = client.get(audit_log_url())
+    assert response.status_code == 403
+    assert response.json() == DENIED
+    assert client.cookies["sessionid"].value == session_id
+
+
+def test_suspended_admin_session_is_not_authenticated(make_user, make_session_client):
+    admin = make_user("admin@example.com", roles=(Role.Name.ADMIN,))
+    client = make_session_client(admin)
+    User.objects.filter(pk=admin.pk, status=User.Status.ACTIVE).update(status=User.Status.SUSPENDED)
+
+    response = client.get(audit_log_url())
+
+    assert response.status_code == 401
+    assert response.json() == {
+        "error": {"code": "not_authenticated", "message": "Authentication required."}
+    }

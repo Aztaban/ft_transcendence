@@ -105,3 +105,22 @@ The role switcher shows one workspace per group of roles. It is UI state only: i
 | Student Council | `sc_member` |
 
 Head Tutor and Admin features appear inside these workspaces when the user holds the role (for example the eligibility review table). The Admin endpoints of §10.2 and §10.9 have no pages yet.
+
+## Administrative permission implementation (#330)
+
+Administrative API views use `IsAuthenticated` and the shared `IsAdminRole` from
+`apps.accounts.permissions`. The exceptions endpoint allows Head Tutors too, as
+specified in §10.9. Each endpoint declares its permissions; there is no separate
+dashboard API or role selected by the frontend that grants access.
+
+The application `admin` role is independent of Django's `is_staff` and
+`is_superuser` flags (schema §2.1). An application Admin can use administrative
+APIs without access to `/admin/`; an active staff user can open Django's dashboard
+without holding the application `admin` role. Django model permissions still
+control which models that staff user can manage.
+
+Permission checks use current database membership. Assigning or revoking a role
+changes access on the next request without a new login (§5.8); an inactive
+account is not authenticated (§5.3). The audit-log endpoint exercises these
+administrative API rules; admin user management and evaluation exceptions are
+implemented in their respective #51 sub-issues.
