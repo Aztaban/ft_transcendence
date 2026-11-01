@@ -1,27 +1,196 @@
 """Account anonymization, cleanup, rollback and in-flight writes."""
 
 from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
+from datetime import timedelta
+from threading import Barrier, Event, local
 
 import pytest
 from django.contrib.auth import authenticate
 from django.contrib.sessions.models import Session
-from django.db import close_old_connections
+from django.db import close_old_connections, connection
+from django.db.models.query import QuerySet
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role, User, UserRole
 from apps.audit.models import AuditLog
 from apps.council.models import SCMessage
-from apps.evaluations.models import EvaluationRequest, TutorEligibility, TutorEligibilityRequest
+from apps.evaluations.models import (
+    EvaluationRequest,
+    Project,
+    TutorEligibility,
+    TutorEligibilityRequest,
+)
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 
 pytestmark = pytest.mark.django_db
 
 
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("workflow", ["evaluation", "eligibility", "council"])
+def test_creation_and_account_deletion_lock_notification_recipients_together(
+    make_user, make_session_client, seeded_roles, user_event_sender, monkeypatch, workflow
+):
+    from apps.accounts.services import deletion
+
+    assert connection.vendor == "mysql"
+    tutor = make_user("first-tutor@example.com", roles=("tutor", "head_tutor", "sc_member"))
+    student = make_user("later-student@example.com", roles=("student", "tutor"))
+    actor = make_user("deleting-admin@example.com", roles=("admin",))
+    assert tutor.pk < student.pk
+    original_project = Project.objects.create(slug="existing-slot", name="Existing slot")
+    new_project = Project.objects.create(slug="new-request", name="New request")
+    TutorEligibility.objects.create(tutor=tutor, project=original_project)
+    TutorEligibility.objects.create(tutor=tutor, project=new_project)
+    existing = EvaluationRequest.objects.create(
+        student=student,
+        project=original_project,
+        status="awaiting_confirmation",
+        picked_by=tutor,
+        starts_at=timezone.now() + timedelta(days=1),
+        ends_at=timezone.now() + timedelta(days=1, minutes=45),
+    )
+    deleting_client = make_session_client(actor)
+    creating_client = make_session_client(student)
+    for client in (deleting_client, creating_client):
+        client.get(reverse("api:session"))
+    tutor_locked = Event()
+    creator_reached_lock = Event()
+    worker = local()
+    original_lock = deletion.lock_users
+    original_fetch = QuerySet._fetch_all
+
+    def pause_deletion_after_first_user(*user_ids):
+        # Split the ordered acquisition only to make the reported interleaving deterministic.
+        for user_id in sorted(set(user_ids)):
+            original_lock(user_id)
+            if user_id == tutor.pk:
+                tutor_locked.set()
+                assert creator_reached_lock.wait(timeout=10)
+
+    def coordinate_creator(queryset):
+        if (
+            getattr(worker, "creating", False)
+            and queryset.model is User
+            and queryset.query.select_for_update
+            and not creator_reached_lock.is_set()
+        ):
+            _, params = queryset.query.sql_with_params()
+            if tutor.pk in params:
+                # Correct ordering: creator waits for the tutor before it can hold the student.
+                assert student.pk in params
+                creator_reached_lock.set()
+                return original_fetch(queryset)
+            # Regression: student-only locking allows deletion and creation to form a cycle.
+            result = original_fetch(queryset)
+            creator_reached_lock.set()
+            return result
+        return original_fetch(queryset)
+
+    monkeypatch.setattr(deletion, "lock_users", pause_deletion_after_first_user)
+    monkeypatch.setattr(QuerySet, "_fetch_all", coordinate_creator)
+
+    def submit(creating):
+        close_old_connections()
+        worker.creating = creating
+        try:
+            if creating:
+                route, body = {
+                    "evaluation": ("evaluation-request-list", {"project_id": new_project.pk}),
+                    "eligibility": (
+                        "tutor-eligibility-requests-list",
+                        {"project_ids": [new_project.pk]},
+                    ),
+                    "council": ("sc-message-list", {"body": "Concurrent message"}),
+                }[workflow]
+                return creating_client.post(
+                    reverse(f"api:{route}"),
+                    body,
+                    format="json",
+                    HTTP_X_CSRFTOKEN=creating_client.cookies["csrftoken"].value,
+                )
+            return delete_user(deleting_client, tutor.pk)
+        finally:
+            close_old_connections()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        deleting = pool.submit(submit, False)
+        assert tutor_locked.wait(timeout=10)
+        creating = pool.submit(submit, True)
+        assert deleting.result(timeout=30).status_code == 204
+        assert creating.result(timeout=30).status_code == 201
+    tutor.refresh_from_db()
+    existing.refresh_from_db()
+    assert tutor.status == "deleted"
+    assert not tutor.roles.exists()
+    assert existing.status == "pending"
+    assert existing.picked_by_id is None
+    if workflow == "evaluation":
+        assert (
+            EvaluationRequest.objects.filter(
+                student=student, project=new_project, status="pending"
+            ).count()
+            == 1
+        )
+    elif workflow == "eligibility":
+        assert (
+            TutorEligibilityRequest.objects.filter(requester=student, status="pending").count() == 1
+        )
+    else:
+        assert SCMessage.objects.filter(sender=student, body="Concurrent message").count() == 1
+    assert not Notification.objects.filter(recipient=tutor).exists()
+    assert AuditLog.objects.filter(action="user.deleted", target_id=tutor.pk).count() == 1
+
+
 def deletion_url(user_id):
     return reverse("api:admin-users-detail", kwargs={"user_id": user_id})
+
+
+@pytest.mark.parametrize("workflow", ["evaluation", "eligibility", "council"])
+def test_creation_does_not_discover_new_recipients_after_user_locking(
+    make_user, seeded_roles, user_event_sender, monkeypatch, workflow
+):
+    from apps.council import views as council_views
+    from apps.evaluations import services as evaluation_services
+    from apps.evaluations.views import eligibility as eligibility_views
+
+    recipient = make_user("new-recipient@example.com")
+    creator = make_user("creator@example.com", roles=("tutor",))
+    project = Project.objects.create(slug="recipient-snapshot", name="Recipient snapshot")
+    module, route, body, recipient_role = {
+        "evaluation": (
+            evaluation_services,
+            "evaluation-request-list",
+            {"project_id": project.pk},
+            "tutor",
+        ),
+        "eligibility": (
+            eligibility_views,
+            "tutor-eligibility-requests-list",
+            {"project_ids": [project.pk]},
+            "head_tutor",
+        ),
+        "council": (council_views, "sc-message-list", {"body": "Snapshot message"}, "sc_member"),
+    }[workflow]
+    original_lock = module.lock_users
+
+    def grant_membership_after_discovery(*user_ids):
+        assert set(user_ids) == {creator.pk}
+        original_lock(*user_ids)
+        # A concurrent membership change must not add a new, lower-ID user to
+        # this workflow's notification locks after the creator is already locked.
+        recipient.roles.add(Role.objects.get(name=recipient_role))
+        if workflow == "evaluation":
+            TutorEligibility.objects.create(tutor=recipient, project=project)
+
+    monkeypatch.setattr(module, "lock_users", grant_membership_after_discovery)
+    client = APIClient()
+    client.force_authenticate(creator)
+    response = client.post(reverse(f"api:{route}"), body, format="json")
+    assert response.status_code == 201
+    assert not Notification.objects.filter(recipient=recipient).exists()
 
 
 def delete_user(client, user_id, data=None, *, csrf=True):

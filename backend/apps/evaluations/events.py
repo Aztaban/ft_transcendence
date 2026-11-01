@@ -43,12 +43,12 @@ def _eligible_hitchhiker_ids(project_id: int):
     )
 
 
-def publish_created_event(evaluation: EvaluationRequest) -> None:
+def publish_created_event(evaluation: EvaluationRequest, *, user_ids: Iterable[int]) -> None:
     """Refresh eligible Hitchhikers' queues when a request appears."""
     publish_evaluation_event(
         EvaluationEvent.CREATED,
         evaluation,
-        user_ids=_eligible_hitchhiker_ids(evaluation.project_id),
+        user_ids=user_ids,
     )
 
 

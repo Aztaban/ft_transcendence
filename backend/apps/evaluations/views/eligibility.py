@@ -138,10 +138,14 @@ def _create_eligibility_request(request):
         )
 
     with transaction.atomic():
-        # Schema §3.2: lock the requester row, then check pending in the same transaction.
-        current = User.objects.select_for_update().get(pk=request.user.pk)
+        heads = User.objects.filter(roles__name=Role.Name.HEAD_TUTOR)
+        head_ids = list(heads.values_list("pk", flat=True).distinct())
+        # Notification recipients belong in the same ordered lock set as the requester.
+        lock_users(request.user.pk, *head_ids)
+        current = User.objects.get(pk=request.user.pk)
         if not current.is_active:
             raise NotAuthenticated()
+        head_ids = list(heads.filter(pk__in=head_ids).values_list("pk", flat=True).distinct())
         if TutorEligibilityRequest.objects.filter(
             requester=request.user,
             status=TutorEligibilityRequest.Status.PENDING,
@@ -153,7 +157,7 @@ def _create_eligibility_request(request):
             )
         eligibility_request = TutorEligibilityRequest.objects.create(requester=request.user)
         eligibility_request.projects.set(projects)
-        notify_eligibility_requested(eligibility_request)
+        notify_eligibility_requested(eligibility_request, head_ids=head_ids)
 
     return Response(
         EligibilityRequestSerializer(eligibility_request).data,

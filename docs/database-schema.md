@@ -220,6 +220,12 @@ MySQL locks the row for the statement, so of two simultaneous picks exactly one 
 
 The overlap checks (api-plan §7.1) read other rows, so the pick runs inside `transaction.atomic()` and first locks the `user` rows of both the Hitchhiker and the student with `select_for_update()`, in ascending id order so two picks can never deadlock. That serializes picks involving the same people without blocking anyone else.
 
+Workflows that notify multiple users discover recipients before acquiring user locks,
+and include those recipients in the same ascending-id lock set as the actor and
+participants. Notification creation uses that captured set, revalidated after locking;
+it must not discover and lock additional users afterward. This keeps request creation,
+eligibility submission and Council messages consistent with account deletion's lock order.
+
 The check constraints in §4.1 are the database-level safety net: a buggy code path that tries to write an inconsistent row fails instead of corrupting data.
 
 ### 4.3 Expiry

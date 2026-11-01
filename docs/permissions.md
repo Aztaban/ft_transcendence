@@ -120,7 +120,7 @@ without holding the application `admin` role. Django model permissions still
 control which models that staff user can manage.
 
 Permission checks use current database membership. Assigning or revoking a role
-changes access on the next request without a new login (§5.8); an inactive
-account is not authenticated (§5.3). The audit-log endpoint exercises these
+changes access on the next request without a new login (§5.8). Only users with
+`status = "active"` are authenticated (§5.3). The audit-log endpoint exercises these
 administrative API rules; admin user management and evaluation exceptions are
 implemented in their respective #51 sub-issues.
