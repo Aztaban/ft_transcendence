@@ -729,11 +729,11 @@
           "title": "Who can see it",
           "text": [],
           "items": [
-            "Logged-in users can see your display name and roles. If you are a Hitchhiker, they can also see the projects you can evaluate. Your email address, 42 login and language stay private.",
-            "While your evaluation request is pending, Hitchhikers see it without your name. The Hitchhiker who picks it then sees who you are.",
+            "Logged-in users can see your display name and roles. If you are a Hitchhiker, they can also see the projects you can evaluate. Your email address and language stay private. If you log in with 42, your display name starts as your 42 login until you change it, and people search can find you by your 42 login.",
+            "While your evaluation request is pending, Hitchhikers see it without your name. Head Tutors are the exception: they always see who asked. The Hitchhiker who picks it also sees who you are.",
             "Head Tutors and Administrators can see evaluation and eligibility requests in order to manage them.",
-            "Student Council members read your messages but never see who sent them. Only an Administrator can reveal a sender, only to investigate abuse, and only by giving a reason. Every reveal is written to the audit log.",
-            "Administrators can see and manage accounts."
+            "Student Council members and Administrators can read your messages, but neither sees who sent them. Only an Administrator can reveal a sender, only to investigate abuse, and only by giving a reason. Every reveal is written to the audit log.",
+            "Administrators and staff with access to the Django admin can see and manage accounts, including your email address and 42 login."
           ]
         },
         {
@@ -762,14 +762,15 @@
             "Accounts stay until they are deleted.",
             "Evaluation history is kept, because it also belongs to the other person involved.",
             "Student Council messages stay until they are removed by moderation.",
-            "The audit log is kept, and the application never changes or deletes its entries."
+            "The audit log is kept, and the application never changes or deletes its entries.",
+            "Technical logs stay on the server until they are cleared."
           ]
         },
         {
           "title": "Your choices",
           "text": [
             "You can change your display name and language on your profile. You cannot download your data or delete your account yourself. To find out what we hold about you, correct it, or delete your account, contact an Administrator.",
-            "When an account is deleted, your name, email address and 42 details are removed, and you appear as “Deleted user”. Your roles and notifications are deleted, and your link to any Student Council messages is removed. Past evaluations stay under that name, because they are part of the other person’s history."
+            "When an account is deleted, your name, email address and 42 details are removed, and you appear as “Deleted user”. Your roles and notifications are deleted, and your link to any Student Council messages is removed. Past evaluations stay under that name, because they are part of the other person’s history. The audit log keeps its records, which can include the earlier values of an edited account."
           ]
         },
         {
@@ -818,7 +819,7 @@
             "A student requests an evaluation, a Hitchhiker proposes a time, and the student confirms it.",
             "Once a time is confirmed, be there on time. If you cannot make it, cancel as early as you can.",
             "Evaluate and be evaluated honestly and respectfully.",
-            "A pending request expires after 14 days. A proposed time expires if it is not confirmed before it starts.",
+            "A pending request expires after 14 days. If you do not confirm a proposed time before it starts, the request expires.",
             "Head Tutors and Administrators can cancel or release an evaluation when that is needed."
           ]
         },
@@ -863,6 +864,7 @@
           ]
         }
       ]
-    }
+    },
+    "opensInNewTab": "opens in a new tab"
   }
 }

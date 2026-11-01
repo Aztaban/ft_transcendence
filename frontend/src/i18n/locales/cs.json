@@ -740,11 +740,11 @@
           "title": "Kdo údaje vidí",
           "text": [],
           "items": [
-            "Přihlášení uživatelé vidí vaše zobrazované jméno a role. Pokud jste Hitchhiker, vidí také projekty, které můžete hodnotit. Vaše e-mailová adresa, přihlašovací jméno v 42 a jazyk zůstávají soukromé.",
-            "Dokud vaše žádost o hodnocení čeká, Hitchhikeři ji vidí bez vašeho jména. Kdo si ji vezme, pak uvidí, o koho jde.",
+            "Přihlášení uživatelé vidí vaše zobrazované jméno a role. Pokud jste Hitchhiker, vidí také projekty, které můžete hodnotit. Vaše e-mailová adresa a jazyk zůstávají soukromé. Pokud se přihlašujete přes 42, je vaše zobrazované jméno zpočátku vaše přihlašovací jméno v 42, dokud ho nezměníte, a vyhledávání lidí vás podle něj najde.",
+            "Dokud vaše žádost o hodnocení čeká, Hitchhikeři ji vidí bez vašeho jména. Výjimkou jsou Head Tutoři, kteří vždy vidí, kdo žádá. Kdo si žádost vezme, také uvidí, o koho jde.",
             "Head Tutoři a administrátoři vidí žádosti o hodnocení a o způsobilost, aby je mohli spravovat.",
-            "Členové Studentské rady vaše zprávy čtou, ale nikdy nevidí, kdo je poslal. Odesílatele může odhalit jen administrátor, jen kvůli vyšetření zneužití a jen s uvedením důvodu. Každé odhalení se zapíše do auditního záznamu.",
-            "Administrátoři vidí účty a spravují je."
+            "Členové Studentské rady a administrátoři mohou číst vaše zprávy, ale nevidí, kdo je poslal. Odesílatele může odhalit jen administrátor, jen kvůli vyšetření zneužití a jen s uvedením důvodu. Každé odhalení se zapíše do auditního záznamu.",
+            "Administrátoři a pracovníci s přístupem do administrace Django vidí a spravují účty včetně e-mailové adresy a přihlašovacího jména v 42."
           ]
         },
         {
@@ -773,14 +773,15 @@
             "Účty zůstávají, dokud nejsou smazány.",
             "Historie hodnocení se uchovává, protože patří i druhé zúčastněné osobě.",
             "Zprávy Studentské radě zůstávají, dokud nejsou odstraněny v rámci moderování.",
-            "Auditní záznam se uchovává a aplikace jeho položky nikdy nemění ani nemaže."
+            "Auditní záznam se uchovává a aplikace jeho položky nikdy nemění ani nemaže.",
+            "Technické záznamy zůstávají na serveru, dokud nejsou vymazány."
           ]
         },
         {
           "title": "Vaše možnosti",
           "text": [
             "Zobrazované jméno a jazyk můžete změnit ve svém profilu. Své údaje si nemůžete stáhnout ani sami smazat účet. Pokud chcete zjistit, co o vás uchováváme, opravit to nebo smazat účet, obraťte se na administrátora.",
-            "Při smazání účtu se odstraní vaše jméno, e-mailová adresa a údaje z 42 a zobrazíte se jako „Deleted user“. Vaše role a oznámení se smažou a odstraní se i vazba na vaše zprávy Studentské radě. Minulá hodnocení pod tímto jménem zůstávají, protože jsou součástí historie druhé osoby."
+            "Při smazání účtu se odstraní vaše jméno, e-mailová adresa a údaje z 42 a zobrazíte se jako „Deleted user“. Vaše role a oznámení se smažou a odstraní se i vazba na vaše zprávy Studentské radě. Minulá hodnocení pod tímto jménem zůstávají, protože jsou součástí historie druhé osoby. Auditní záznam své položky uchovává a mohou v nich být i dřívější hodnoty upraveného účtu."
           ]
         },
         {
@@ -829,7 +830,7 @@
             "Student požádá o hodnocení, Hitchhiker navrhne termín a student ho potvrdí.",
             "Jakmile je termín potvrzený, přijďte včas. Pokud to nestihnete, zrušte ho co nejdříve.",
             "Hodnoťte a nechte se hodnotit poctivě a s respektem.",
-            "Čekající žádost vyprší po 14 dnech. Navržený termín vyprší, pokud není potvrzen před svým začátkem.",
+            "Čekající žádost vyprší po 14 dnech. Pokud navržený termín nepotvrdíte před jeho začátkem, žádost vyprší.",
             "Head Tutoři a administrátoři mohou hodnocení v případě potřeby zrušit nebo uvolnit."
           ]
         },
@@ -842,7 +843,7 @@
         {
           "title": "Zprávy Studentské radě",
           "text": [
-            "Studentská rada nevidí, kdo zprávu napsal, a nemůže na ni odpovědět. Používejte tento kanál s respektem. Pokud je zpráva urážlivá nebo zneužívající, může administrátor kvůli vyšetření odhalit jejího odesílatele."
+            "Studentská rada nevidí, kdo zprávu napsal, a nemůže na ni odpovědět. Používejte tento kanál s respektem. Pokud je zpráva zneužívající, může administrátor kvůli vyšetření odhalit jejího odesílatele."
           ]
         },
         {
@@ -874,6 +875,7 @@
           ]
         }
       ]
-    }
+    },
+    "opensInNewTab": "otevře se v nové kartě"
   }
 }

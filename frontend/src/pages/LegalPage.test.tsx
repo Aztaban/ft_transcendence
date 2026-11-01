@@ -10,10 +10,10 @@ afterEach(async () => {
   await i18n.changeLanguage("en");
 });
 
-function renderPage(kind: "privacy" | "terms") {
+function renderPage(kind: "privacy" | "terms", standalone = true) {
   return render(
     <MemoryRouter>
-      <LegalPage kind={kind} />
+      <LegalPage kind={kind} standalone={standalone} />
     </MemoryRouter>,
   );
 }
@@ -27,7 +27,7 @@ describe("LegalPage", () => {
     renderPage("privacy");
 
     expect(screen.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeTruthy();
-    expect(screen.getByText("Last updated: 31 October 2026")).toBeTruthy();
+    expect(screen.getByText("Last updated: 1 November 2026")).toBeTruthy();
     expect(headings()).toEqual([
       "Who runs this application",
       "What we store",
@@ -61,13 +61,50 @@ describe("LegalPage", () => {
     ]);
   });
 
-  it("leads back to the application", () => {
+  it("leads back to the application and names its logo link", () => {
     renderPage("terms");
 
-    const main = screen.getByRole("main");
-    const links = within(main).getAllByRole("link", { name: /Back to the application/ });
+    const main = within(screen.getByRole("main"));
 
-    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/"]);
+    expect(main.getByRole("link", { name: "42 EVALS" }).getAttribute("href")).toBe("/");
+    expect(main.getByRole("link", { name: "Back to the application" }).getAttribute("href")).toBe(
+      "/",
+    );
+  });
+
+  it("leaves the logo, language and way back to the application shell", () => {
+    renderPage("privacy", false);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeTruthy();
+    expect(screen.queryByRole("main")).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Language" })).toBeNull();
+  });
+
+  it("opens at its title, also when moving between the two documents", () => {
+    document.documentElement.scrollTop = 900;
+
+    const { rerender } = renderPage("privacy");
+
+    expect(document.documentElement.scrollTop).toBe(0);
+
+    document.documentElement.scrollTop = 900;
+    rerender(
+      <MemoryRouter>
+        <LegalPage kind="terms" standalone />
+      </MemoryRouter>,
+    );
+
+    expect(document.documentElement.scrollTop).toBe(0);
+  });
+
+  it("says who can really see what", () => {
+    renderPage("privacy");
+
+    expect(screen.getByText(/your 42 login until you change it/)).toBeTruthy();
+    expect(screen.getByText(/Head Tutors are the exception/)).toBeTruthy();
+    expect(screen.getByText(/Student Council members and Administrators can read/)).toBeTruthy();
+    expect(screen.queryByText(/42 login and language stay private/)).toBeNull();
   });
 
   it("follows the chosen language, date included", async () => {
@@ -77,13 +114,13 @@ describe("LegalPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Zásady ochrany osobních údajů" }),
     ).toBeTruthy();
-    expect(screen.getByText("Poslední aktualizace: 31. října 2026")).toBeTruthy();
+    expect(screen.getByText("Poslední aktualizace: 1. listopadu 2026")).toBeTruthy();
     cleanup();
 
     await i18n.changeLanguage("es");
     renderPage("terms");
 
     expect(screen.getByRole("heading", { level: 1, name: "Términos de servicio" })).toBeTruthy();
-    expect(screen.getByText("Última actualización: 31 de octubre de 2026")).toBeTruthy();
+    expect(screen.getByText("Última actualización: 1 de noviembre de 2026")).toBeTruthy();
   });
 });

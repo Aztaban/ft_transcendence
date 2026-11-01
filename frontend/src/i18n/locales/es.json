@@ -733,11 +733,11 @@
           "title": "Quién puede verlo",
           "text": [],
           "items": [
-            "Los usuarios con sesión iniciada pueden ver tu nombre visible y tus roles. Si eres Hitchhiker, también pueden ver los proyectos que puedes evaluar. Tu correo electrónico, tu nombre de usuario de 42 y tu idioma siguen siendo privados.",
-            "Mientras tu solicitud de evaluación está pendiente, los Hitchhikers la ven sin tu nombre. Quien la toma ve entonces quién eres.",
+            "Los usuarios con sesión iniciada pueden ver tu nombre visible y tus roles. Si eres Hitchhiker, también pueden ver los proyectos que puedes evaluar. Tu correo electrónico y tu idioma siguen siendo privados. Si inicias sesión con 42, tu nombre visible es al principio tu nombre de usuario de 42, hasta que lo cambies, y la búsqueda de personas puede encontrarte por él.",
+            "Mientras tu solicitud de evaluación está pendiente, los Hitchhikers la ven sin tu nombre. La excepción son los Head Tutors, que siempre ven quién la hizo. Quien la toma también ve quién eres.",
             "Los Head Tutors y los administradores pueden ver las solicitudes de evaluación y de elegibilidad para gestionarlas.",
-            "Los miembros del Consejo estudiantil leen tus mensajes, pero nunca ven quién los envió. Solo un administrador puede revelar al remitente, solo para investigar abusos y solo indicando un motivo. Cada revelación queda escrita en el registro de auditoría.",
-            "Los administradores pueden ver y gestionar las cuentas."
+            "Los miembros del Consejo estudiantil y los administradores pueden leer tus mensajes, pero no ven quién los envió. Solo un administrador puede revelar al remitente, solo para investigar abusos y solo indicando un motivo. Cada revelación queda escrita en el registro de auditoría.",
+            "Los administradores y el personal con acceso al panel de administración de Django pueden ver y gestionar las cuentas, incluidos tu correo electrónico y tu nombre de usuario de 42."
           ]
         },
         {
@@ -766,14 +766,15 @@
             "Las cuentas se mantienen hasta que se eliminan.",
             "El historial de evaluaciones se conserva, porque también pertenece a la otra persona implicada.",
             "Los mensajes al Consejo estudiantil se mantienen hasta que se retiran por moderación.",
-            "El registro de auditoría se conserva, y la aplicación nunca cambia ni elimina sus entradas."
+            "El registro de auditoría se conserva, y la aplicación nunca cambia ni elimina sus entradas.",
+            "Los registros técnicos permanecen en el servidor hasta que se borran."
           ]
         },
         {
           "title": "Tus opciones",
           "text": [
             "Puedes cambiar tu nombre visible y tu idioma en tu perfil. No puedes descargar tus datos ni eliminar tu cuenta por tu cuenta. Para saber qué guardamos sobre ti, corregirlo o eliminar tu cuenta, contacta con un administrador.",
-            "Cuando se elimina una cuenta, se quitan tu nombre, tu correo electrónico y tus datos de 42, y apareces como «Deleted user». Se eliminan tus roles y notificaciones, y también el vínculo con tus mensajes al Consejo estudiantil. Las evaluaciones pasadas se mantienen con ese nombre, porque forman parte del historial de la otra persona."
+            "Cuando se elimina una cuenta, se quitan tu nombre, tu correo electrónico y tus datos de 42, y apareces como «Deleted user». Se eliminan tus roles y notificaciones, y también el vínculo con tus mensajes al Consejo estudiantil. Las evaluaciones pasadas se mantienen con ese nombre, porque forman parte del historial de la otra persona. El registro de auditoría conserva sus entradas, que pueden incluir los valores anteriores de una cuenta editada."
           ]
         },
         {
@@ -822,7 +823,7 @@
             "Un estudiante solicita una evaluación, un Hitchhiker propone un horario y el estudiante lo confirma.",
             "Una vez confirmado el horario, llega a tiempo. Si no puedes asistir, cancela lo antes posible.",
             "Evalúa y déjate evaluar con honestidad y respeto.",
-            "Una solicitud pendiente caduca a los 14 días. Un horario propuesto caduca si no se confirma antes de que empiece.",
+            "Una solicitud pendiente caduca a los 14 días. Si no confirmas un horario propuesto antes de que empiece, la solicitud caduca.",
             "Los Head Tutors y los administradores pueden cancelar o liberar una evaluación cuando sea necesario."
           ]
         },
@@ -867,6 +868,7 @@
           ]
         }
       ]
-    }
+    },
+    "opensInNewTab": "se abre en una pestaña nueva"
   }
 }

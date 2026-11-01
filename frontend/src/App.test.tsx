@@ -63,6 +63,17 @@ describe("logged in", () => {
     expect(screen.getByText("Page not found.")).toBeDefined();
   });
 
+  test.each([
+    ["/privacy", "Privacy Policy"],
+    ["/terms", "Terms of Service"],
+  ])("keeps the application shell around %s", async (path, title) => {
+    const { container } = renderAt(path);
+
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeDefined();
+    expect(container.querySelector(".sidebar")).toBeTruthy();
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+  });
+
   test("links to both legal pages inside the application", async () => {
     renderAt("/");
 
@@ -102,21 +113,35 @@ describe("logged out", () => {
     expect(container.querySelector(".sidebar")).toBeNull();
   });
 
-  test.each(["/login", "/register", "/privacy", "/terms"])(
-    "links to both legal pages from %s",
-    async (path) => {
-      renderAt(path);
+  test.each(["/privacy", "/terms"])("links to both legal pages from %s", async (path) => {
+    renderAt(path);
 
-      const footer = within(await screen.findByRole("contentinfo"));
+    const footer = within(await screen.findByRole("contentinfo"));
 
-      expect(footer.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toBe(
-        "/privacy",
-      );
-      expect(footer.getByRole("link", { name: "Terms of Service" }).getAttribute("href")).toBe(
-        "/terms",
-      );
-    },
-  );
+    expect(footer.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toBe(
+      "/privacy",
+    );
+    expect(footer.getByRole("link", { name: "Terms of Service" }).getAttribute("href")).toBe(
+      "/terms",
+    );
+  });
+
+  // Leaving in the same tab would lose the form and the page to return to after login.
+  test.each(["/login", "/register"])("opens the legal pages in a new tab from %s", async (path) => {
+    renderAt(path);
+
+    const footer = within(await screen.findByRole("contentinfo"));
+
+    for (const [name, href] of [
+      ["Privacy Policy (opens in a new tab)", "/privacy"],
+      ["Terms of Service (opens in a new tab)", "/terms"],
+    ]) {
+      const link = footer.getByRole("link", { name });
+
+      expect(link.getAttribute("href")).toBe(href);
+      expect(link.getAttribute("target")).toBe("_blank");
+    }
+  });
 
   test("sends every page to the login page without calling its APIs", async () => {
     const { container } = renderAt("/history");

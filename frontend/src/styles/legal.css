@@ -4,12 +4,6 @@
   background: #ffffff;
 }
 
-.legal-page__language {
-  position: absolute;
-  top: 24px;
-  right: 24px;
-}
-
 .legal-page__article {
   width: min(100%, 720px);
   margin: 0 auto;
