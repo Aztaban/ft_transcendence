@@ -8,6 +8,16 @@ from .views.people_search import PeopleSearchView
 urlpatterns = [
     path("admin/users/", admin_users.AdminUserListView.as_view(), name="admin-users-list"),
     path(
+        "admin/users/<int:user_id>/suspend/",
+        admin_users.AdminUserSuspendView.as_view(),
+        name="admin-users-suspend",
+    ),
+    path(
+        "admin/users/<int:user_id>/reactivate/",
+        admin_users.AdminUserReactivateView.as_view(),
+        name="admin-users-reactivate",
+    ),
+    path(
         "admin/users/<int:user_id>/",
         admin_users.AdminUserDetailView.as_view(),
         name="admin-users-detail",

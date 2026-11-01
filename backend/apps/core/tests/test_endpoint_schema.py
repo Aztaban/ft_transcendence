@@ -41,6 +41,14 @@ def test_admin_user_schema(schema):
 @pytest.mark.parametrize(
     "path,method,statuses",
     [
+        *[
+            (
+                f"/api/v1/admin/users/{{user_id}}/{action}/",
+                "post",
+                {"200", "400", "401", "403", "404", "406", "409", "415", "429", "500"},
+            )
+            for action in ("suspend", "reactivate")
+        ],
         ("/api/v1/admin/users/", "get", {"200", "400", "401", "403", "404", "406", "429", "500"}),
         (
             "/api/v1/admin/users/{user_id}/",
@@ -94,6 +102,25 @@ def test_documented_statuses_and_error_envelopes(schema, path, method, statuses)
         assert operation["security"] == [{"cookieAuth": []}]
     else:
         assert operation.get("security", []) == []
+
+
+@pytest.mark.parametrize("action", ["suspend", "reactivate"])
+def test_account_status_action_schema(schema, action):
+    operation = schema["paths"][f"/api/v1/admin/users/{{user_id}}/{action}/"]["post"]
+    assert operation["requestBody"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/AccountStatusChange"
+    }
+    reason = schema["components"]["schemas"]["AccountStatusChange"]
+    assert reason == {
+        "type": "object",
+        "properties": {"reason": {"type": "string", "minLength": 1, "maxLength": 500}},
+        "required": ["reason"],
+    }
+    assert operation["responses"]["200"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/AdminUser"
+    }
+    assert "cannot_modify_self" in operation["responses"]["409"]["description"]
+    assert "invalid_user_status" in operation["responses"]["409"]["description"]
 
 
 def test_authentication_inputs_and_outputs_have_distinct_shapes(schema):
