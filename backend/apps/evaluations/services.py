@@ -14,6 +14,7 @@ from apps.audit.services import record_audit
 
 from .events import (
     EvaluationEvent,
+    _eligible_hitchhiker_ids,
     publish_cancelled_event,
     publish_created_event,
     publish_declined_event,
@@ -84,9 +85,14 @@ def history_filter(at):
 
 @transaction.atomic
 def create_request(student, project, note):
-    student = get_user_model().objects.select_for_update().get(pk=student.pk)
+    recipient_ids = list(_eligible_hitchhiker_ids(project.pk))
+    lock_users(student.pk, *recipient_ids)
+    student = get_user_model().objects.get(pk=student.pk)
     if not student.is_active:
         raise NotAuthenticated()
+    # Membership may have changed while waiting. Only retain recipients whose
+    # rows were locked up front; never acquire a newly discovered user out of order.
+    recipient_ids = list(_eligible_hitchhiker_ids(project.pk).filter(tutor_id__in=recipient_ids))
     active = Q(
         status__in=(
             EvaluationRequest.Status.PENDING,
@@ -96,8 +102,8 @@ def create_request(student, project, note):
     if EvaluationRequest.objects.filter(active, student=student, project=project).exists():
         raise ActiveRequestExists()
     evaluation = EvaluationRequest.objects.create(student=student, project=project, note=note)
-    publish_created_event(evaluation)
-    notify_evaluation_created(evaluation)
+    publish_created_event(evaluation, user_ids=recipient_ids)
+    notify_evaluation_created(evaluation, recipient_ids=recipient_ids)
     return evaluation
 
 

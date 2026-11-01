@@ -18,6 +18,8 @@ def create_notification(
     Workflow callers select recipients and construct the type-specific payload and
     target from api-plan §8.8. Call within the action's transaction so both changes
     roll back together. The shared event publisher waits for the outermost commit.
+    Callers that hold user locks must include all recipients in their initial
+    ordered lock_users() call, rather than discover recipients after locking.
     """
     if not isinstance(payload, dict):
         raise ValidationError({"payload": _("Notification payload must be an object.")})

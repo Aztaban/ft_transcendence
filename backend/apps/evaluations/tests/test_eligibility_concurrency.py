@@ -94,15 +94,16 @@ def test_competing_submissions_create_only_one_pending_request(actors, monkeypat
     tutor, _, _ = actors
     browsers = [browser_for(tutor), browser_for(tutor)]
     barrier = Barrier(2)
-    original_get = QuerySet.get
+    from apps.evaluations.views import eligibility as eligibility_views
 
-    def get_after_both_reach_requester_lock(queryset, *args, **kwargs):
-        if queryset.model is get_user_model() and queryset.query.select_for_update:
-            # Rendezvous before acquiring the lock: waiting after acquisition deadlocks.
-            barrier.wait(timeout=10)
-        return original_get(queryset, *args, **kwargs)
+    original_lock = eligibility_views.lock_users
 
-    monkeypatch.setattr(QuerySet, "get", get_after_both_reach_requester_lock)
+    def lock_after_both_reach_requester(*user_ids):
+        # Rendezvous before locking the requester together with notification recipients.
+        barrier.wait(timeout=10)
+        return original_lock(*user_ids)
+
+    monkeypatch.setattr(eligibility_views, "lock_users", lock_after_both_reach_requester)
     responses = compete(
         browsers,
         reverse("api:tutor-eligibility-requests-list"),

@@ -44,9 +44,8 @@ def _create_sc_message(request):
     with transaction.atomic():
         # Lock the sender and Council recipients in one order before inserting
         # either the message or notifications that reference their user rows.
-        council_ids = User.objects.filter(roles__name=Role.Name.SC_MEMBER).values_list(
-            "pk", flat=True
-        )
+        members = User.objects.filter(roles__name=Role.Name.SC_MEMBER)
+        council_ids = list(members.values_list("pk", flat=True).distinct())
         lock_users(request.user.pk, *council_ids)
         sender = User.objects.get(pk=request.user.pk)
         if not sender.is_active:
@@ -55,7 +54,10 @@ def _create_sc_message(request):
             sender=sender,
             body=serializer.validated_data["body"],
         )
-        notify_sc_message_created(message)
+        council_ids = list(
+            members.filter(pk__in=council_ids).values_list("pk", flat=True).distinct()
+        )
+        notify_sc_message_created(message, recipient_ids=council_ids)
     return Response(SCMessageCreatedSerializer(message).data, status=status.HTTP_201_CREATED)
 
 
