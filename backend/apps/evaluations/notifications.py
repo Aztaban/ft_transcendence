@@ -31,18 +31,25 @@ def notify_evaluation_created(evaluation: EvaluationRequest) -> None:
         )
 
 
-def notify_evaluation_released(evaluation: EvaluationRequest, *, previous_picker) -> None:
+def notify_evaluation_released(
+    evaluation: EvaluationRequest, *, previous_picker, actor_id=None
+) -> None:
     """Use the locked picker's facts after release has cleared the pick."""
-    create_notification(
-        recipient_id=evaluation.student_id,
-        notification_type=Notification.Type.EVALUATION_RELEASED,
-        payload={
-            "request_id": evaluation.pk,
-            "project": ProjectRefSerializer(evaluation.project).data,
-            "tutor": {"id": previous_picker.pk, "display_name": previous_picker.display_name},
-        },
-        target_url=f"/evaluations/{evaluation.pk}",
-    )
+    recipients = {evaluation.student_id}
+    if actor_id is not None and actor_id != previous_picker.pk:
+        recipients.add(previous_picker.pk)
+    recipients.discard(actor_id)
+    for recipient_id in sorted(recipients):
+        create_notification(
+            recipient_id=recipient_id,
+            notification_type=Notification.Type.EVALUATION_RELEASED,
+            payload={
+                "request_id": evaluation.pk,
+                "project": ProjectRefSerializer(evaluation.project).data,
+                "tutor": {"id": previous_picker.pk, "display_name": previous_picker.display_name},
+            },
+            target_url=f"/evaluations/{evaluation.pk}",
+        )
 
 
 def notify_evaluation_expired(

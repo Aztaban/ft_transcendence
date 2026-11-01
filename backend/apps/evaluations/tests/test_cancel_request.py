@@ -382,18 +382,28 @@ def test_csrf_required(student, evaluation):
 
 
 @pytest.mark.parametrize("role", ["tutor", "head_tutor", "admin"])
-def test_non_owner_cannot_use_student_cancellation(tutor, evaluation, role):
+def test_non_owner_cancellation_needs_override_permission_and_reason(tutor, evaluation, role):
     tutor.roles.add(Role.objects.get(name=role))
     client = APIClient()
     client.force_authenticate(tutor)
     response = client.post(cancel_url())
-    assert response.status_code == 403
-    assert response.json() == {
-        "error": {
-            "code": "permission_denied",
-            "message": "You do not have permission to perform this action.",
+    if role == "tutor":
+        assert response.status_code == 403
+        assert response.json() == {
+            "error": {
+                "code": "permission_denied",
+                "message": "You do not have permission to perform this action.",
+            }
         }
-    }
+    else:
+        assert response.status_code == 400
+        assert response.json() == {
+            "error": {
+                "code": "validation_error",
+                "message": "Please correct the highlighted fields.",
+                "fields": {"reason": ["This field is required."]},
+            }
+        }
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
     assert evaluation.cancelled_at is None
@@ -420,11 +430,20 @@ def test_other_users_cannot_cancel_across_active_states_with_real_session(
         HTTP_HOST="localhost",
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
     )
-    # Normal cancellation never grants an override. Visible objects give 403;
-    # hidden ones give 404, including picked requests for an unrelated tutor.
+    # Privileged overrides need a reason. Other callers get 403 for visible
+    # requests and 404 for hidden requests.
     visible = role in ("head_tutor", "admin") or (role == "tutor" and state == "pending")
-    assert response.status_code == (403 if visible else 404)
-    if visible:
+    if role in ("head_tutor", "admin"):
+        assert response.status_code == 400
+        assert response.json() == {
+            "error": {
+                "code": "validation_error",
+                "message": "Please correct the highlighted fields.",
+                "fields": {"reason": ["This field is required."]},
+            }
+        }
+    elif visible:
+        assert response.status_code == 403
         assert response.json() == {
             "error": {
                 "code": "permission_denied",
@@ -432,6 +451,7 @@ def test_other_users_cannot_cancel_across_active_states_with_real_session(
             }
         }
     else:
+        assert response.status_code == 404
         assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
 
     # Verify the full representation through the owner's session after the denial.

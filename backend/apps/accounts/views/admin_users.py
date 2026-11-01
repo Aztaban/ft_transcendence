@@ -20,6 +20,7 @@ from apps.accounts.serializers.admin_users import (
     AdminUserSerializer,
     AdminUserUpdateSerializer,
 )
+from apps.accounts.services.locking import lock_users
 from apps.accounts.services.sessions import end_user_sessions
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
@@ -37,7 +38,7 @@ def _admin_users():
 def _locked_admin_target(actor, user_id):
     # Audit rows reference the actor. Lock both users in ID order so Admins
     # changing each other's accounts cannot deadlock on foreign-key checks.
-    list(User.objects.select_for_update().filter(pk__in={actor.pk, user_id}).order_by("pk"))
+    lock_users(actor.pk, user_id)
     return get_object_or_404(_admin_users(), pk=user_id)
 
 
