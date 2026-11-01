@@ -5,6 +5,13 @@
 // so every access is guarded: the user then simply lands on Home.
 const KEY = "login-return-to";
 
+// The page the login gate sent a logged-out user away from: `location` from the router.
+export interface ReturnPage {
+  pathname: string;
+  search?: string;
+  hash?: string;
+}
+
 // Only paths inside the app, e.g. "/history?status=cancelled", never "//other.site" or a full URL.
 export function isAppPath(path: unknown): path is string {
   return (
