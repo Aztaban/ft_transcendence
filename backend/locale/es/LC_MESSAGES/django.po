@@ -253,6 +253,14 @@ msgstr "Checo"
 msgid "Spanish"
 msgstr "Español"
 
+#: apps/accounts/models.py:38
+msgid "Active"
+msgstr "Activo"
+
+#: apps/accounts/models.py:39
+msgid "Suspended"
+msgstr "Suspendido"
+
 #: apps/accounts/models.py:40
 msgid "Deleted"
 msgstr "Eliminado"

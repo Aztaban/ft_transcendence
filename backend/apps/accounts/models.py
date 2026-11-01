@@ -35,8 +35,8 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         SPANISH = "es", "Spanish"
 
     class Status(models.TextChoices):
-        ACTIVE = "active", "Active"
-        SUSPENDED = "suspended", "Suspended"
+        ACTIVE = "active", _("Active")
+        SUSPENDED = "suspended", _("Suspended")
         DELETED = "deleted", _("Deleted")
 
     id = models.BigAutoField(primary_key=True)

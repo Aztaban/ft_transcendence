@@ -253,6 +253,14 @@ msgstr "Čeština"
 msgid "Spanish"
 msgstr "Španělština"
 
+#: apps/accounts/models.py:38
+msgid "Active"
+msgstr "Aktivní"
+
+#: apps/accounts/models.py:39
+msgid "Suspended"
+msgstr "Pozastavený"
+
 #: apps/accounts/models.py:40
 msgid "Deleted"
 msgstr "Smazaný"
