@@ -7,7 +7,9 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
+from apps.audit.models import AuditLog
 from apps.evaluations.models import Project, TutorEligibility
+from apps.notifications.models import Notification
 
 pytestmark = pytest.mark.django_db
 
@@ -72,13 +74,17 @@ def test_user_detail_requires_authentication(api_client, make_user):
     }
 
 
-def test_user_detail_returns_public_profile_without_private_fields(api_client, make_user):
+@pytest.mark.parametrize("target_status", ["active", "suspended"])
+def test_user_detail_returns_public_profile_without_private_fields(
+    api_client, make_user, target_status
+):
     viewer = make_user("viewer@example.com", roles=(Role.Name.STUDENT,))
     target = make_user(
         "target@example.com",
         display_name="Target",
         roles=(Role.Name.STUDENT, Role.Name.TUTOR),
         intra_login="target42",
+        status=target_status,
     )
 
     api_client.force_authenticate(user=viewer)
@@ -102,6 +108,44 @@ def test_user_detail_unknown_user_returns_404(api_client, make_user):
     response = api_client.get(reverse("api:users-detail", kwargs={"user_id": 999999}))
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.parametrize(
+    "route,method",
+    [
+        ("api:users-detail", "get"),
+        ("api:users-assign-role", "post"),
+        ("api:tutors-eligibility", "get"),
+    ],
+)
+def test_deleted_users_are_hidden_even_from_admins(make_user, make_session_client, route, method):
+    admin = make_user("admin@example.com", roles=(Role.Name.ADMIN,))
+    target = make_user("deleted@example.com", roles=(Role.Name.TUTOR,), status="deleted")
+    project = Project.objects.create(slug="deleted_tutor_project", name="Deleted tutor project")
+    grant = TutorEligibility.objects.create(tutor=target, project=project)
+    client = make_session_client(admin)
+    url = reverse(route, kwargs={"user_id": target.pk})
+
+    if method == "post":
+        client.get(reverse("api:session"), HTTP_HOST="localhost")
+        response = client.post(
+            url,
+            {"role": "head_tutor"},
+            format="json",
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+        )
+    else:
+        response = client.get(url)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
+    target.refresh_from_db()
+    assert target.status == "deleted"
+    assert list(target.roles.values_list("name", flat=True)) == ["tutor"]
+    assert TutorEligibility.objects.filter(pk=grant.pk).exists()
+    assert not AuditLog.objects.exists()
+    assert not Notification.objects.exists()
 
 
 def test_student_cannot_assign_roles(api_client, make_user):
@@ -142,9 +186,10 @@ def test_head_tutor_can_only_assign_tutor(api_client, make_user):
     assert target.has_role(Role.Name.ADMIN) is False
 
 
-def test_admin_can_assign_any_role(api_client, make_user):
+@pytest.mark.parametrize("target_status", ["active", "suspended"])
+def test_admin_can_assign_any_role(api_client, make_user, target_status):
     admin = make_user("admin@example.com", roles=(Role.Name.ADMIN,))
-    target = make_user("target@example.com", roles=(Role.Name.STUDENT,))
+    target = make_user("target@example.com", roles=(Role.Name.STUDENT,), status=target_status)
 
     api_client.force_authenticate(user=admin)
     response = api_client.post(
@@ -242,9 +287,12 @@ def test_tutor_eligibility_returns_empty_list_when_no_data(api_client, make_user
     assert response.json() == []
 
 
-def test_tutor_eligibility_returns_active_projects_sorted_by_name(api_client, make_user):
+@pytest.mark.parametrize("target_status", ["active", "suspended"])
+def test_tutor_eligibility_returns_active_projects_sorted_by_name(
+    api_client, make_user, target_status
+):
     viewer = make_user("viewer@example.com", roles=(Role.Name.STUDENT,))
-    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+    tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,), status=target_status)
     # Slugs must not collide with projects seeded by migration 0003_seed_projects.
     zebra = Project.objects.create(slug="zebra_eval", name="Zebra")
     libft = Project.objects.create(slug="libft", name="Libft")

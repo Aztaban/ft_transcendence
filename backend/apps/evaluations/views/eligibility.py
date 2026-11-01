@@ -52,7 +52,7 @@ User = get_user_model()
 def tutor_eligibility(request, user_id):
     """Return projects this hitchhiker is approved to evaluate (public listing)."""
     _ = request
-    tutor = get_object_or_404(User, pk=user_id)
+    tutor = get_object_or_404(User.objects.exclude(status=User.Status.DELETED), pk=user_id)
     projects = list_approved_projects_for_tutor(tutor)
     return Response(ProjectRefSerializer(projects, many=True).data)
 

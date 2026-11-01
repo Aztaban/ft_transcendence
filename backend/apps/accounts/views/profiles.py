@@ -84,5 +84,5 @@ class MeView(APIView):
 def user_detail(request, user_id):
     """Return a user's public profile (authenticated community visibility)."""
     _ = request
-    target = get_object_or_404(User, pk=user_id)
+    target = get_object_or_404(User.objects.exclude(status=User.Status.DELETED), pk=user_id)
     return Response(PublicProfileSerializer(target).data)
