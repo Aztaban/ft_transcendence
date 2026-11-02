@@ -143,7 +143,7 @@ def test_created_notification_filters_recipients_and_preserves_anonymity(partici
                 "request_id": evaluation.pk,
                 "project": {"id": 4, "slug": "libft", "name": "Libft"},
             },
-            "target_url": f"/evaluations/{evaluation.pk}",
+            "target_url": f"/requests/{evaluation.pk}",
             "read_at": None,
         }
     ]
