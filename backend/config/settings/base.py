@@ -150,7 +150,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "apps.core.schema.AutoSchema",
     "EXCEPTION_HANDLER": "apps.core.exceptions.envelope_exception_handler",
     # JSON only: no browsable API pages, so `Accept: text/html` is a 406 (api-plan §5.6).
     "DEFAULT_RENDERER_CLASSES": [

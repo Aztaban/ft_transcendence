@@ -307,31 +307,3 @@ def sc_message_detail(request, pk):
 def sc_message_reveal_sender(request, pk):
     """Look up the sender of one message. Every lookup is audited (api-plan §10.6)."""
     return _reveal_sender(request, pk)
-
-
-_ExtendedSchema = sc_message_detail.cls.kwargs["schema"]
-
-
-class _DeleteBodySchema(_ExtendedSchema):
-    """drf-spectacular omits a body on DELETE. This endpoint requires ``reason`` (§10.6)."""
-
-    def _get_request_body(self, direction="request"):
-        if self.method != "DELETE":
-            return super()._get_request_body(direction)
-        # Keep DELETE while the annotation is resolved, then pass the body guard.
-        request_serializer = self.get_request_serializer()
-        resolve_request = self.get_request_serializer
-        self.get_request_serializer = lambda: request_serializer
-        self.method = "POST"
-        try:
-            return super()._get_request_body(direction)
-        finally:
-            self.method = "DELETE"
-            self.get_request_serializer = resolve_request
-
-
-sc_message_detail.cls.kwargs["schema"] = _DeleteBodySchema
-for _method_name in sc_message_detail.cls.http_method_names:
-    _handler = getattr(sc_message_detail.cls, _method_name)
-    if getattr(_handler, "kwargs", {}).get("schema") is _ExtendedSchema:
-        _handler.kwargs["schema"] = _DeleteBodySchema

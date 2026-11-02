@@ -24,16 +24,6 @@ class CanReadCouncilInbox(BasePermission):
             return True
         return is_council(request.user)
 
-
-class IsCouncilOrNotFound(BasePermission):
-    """Allow only the council; answer 404 to anyone else so messages stay hidden (§5.5)."""
-
-    def has_permission(self, request, view):
-        if not is_council(request.user):
-            raise NotFound()
-        return True
-
-
 def _moderate_or_hide(user):
     """Admin may moderate a message. An SC Member already sees it, so the refusal is 403.
 
