@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import transaction
+from django.utils.translation import get_language
 
 
 class UserManager(BaseUserManager):
@@ -18,6 +20,9 @@ class UserManager(BaseUserManager):
 
         email = self.normalize_email(email)
         email = self.model._meta.get_field("email").clean(email, None)
+        # A new account starts in the language of the request that created it (api-plan §10.1).
+        if get_language() in dict(settings.LANGUAGES):
+            extra_fields.setdefault("language", get_language())
 
         user = self.model(
             email=email,

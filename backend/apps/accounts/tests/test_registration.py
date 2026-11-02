@@ -308,3 +308,18 @@ def test_register_handles_database_uniqueness_race(monkeypatch):
         }
     }
     assert user_model.objects.count() == 1
+
+
+@pytest.mark.parametrize(
+    ("accept_language", "language"),
+    [("cs", "cs"), ("es-ES,es;q=0.9", "es"), ("de", "en"), (None, "en")],
+)
+def test_new_account_starts_in_the_request_language(accept_language, language):
+    headers = {"HTTP_ACCEPT_LANGUAGE": accept_language} if accept_language else {}
+
+    response = APIClient().post(
+        reverse("api:register"), registration_payload(), format="json", **headers
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert get_user_model().objects.get().language == language
