@@ -43,7 +43,7 @@ function NotificationPanel({ onClose }: NotificationPanelProps) {
   // True while "Mark all as read" waits for the server, so it cannot be sent twice.
   const [isMarkingAll, setIsMarkingAll] = useState(false);
 
-  const { refresh: refreshCount } = useNotificationCount();
+  const { unreadCount, refresh: refreshCount } = useNotificationCount();
 
   const refresh = useCallback(() => setReloadKey((key) => key + 1), []);
 
@@ -112,7 +112,9 @@ function NotificationPanel({ onClose }: NotificationPanelProps) {
       .finally(() => setIsMarkingAll(false));
   }
 
-  const hasUnread = notifications.some((item) => item.read_at === null);
+  // The badge counts every unread notification, but the list holds only the newest page (#674), so
+  // older unread ones still need the button. The list covers the moment before the count arrives.
+  const hasUnread = unreadCount > 0 || notifications.some((item) => item.read_at === null);
 
   return (
     <section
