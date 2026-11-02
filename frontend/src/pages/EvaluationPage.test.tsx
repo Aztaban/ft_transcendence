@@ -1,8 +1,9 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { Link, MemoryRouter, Route, Routes } from "react-router";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
+import { getTutorEligibility } from "../api/eligibility";
 import {
   cancelEvaluationRequest,
   confirmEvaluationRequest,
@@ -36,6 +37,8 @@ vi.mock("../api/evaluationRequests", () => ({
   confirmEvaluationRequest: vi.fn(),
   declineEvaluationRequest: vi.fn(),
 }));
+
+vi.mock("../api/eligibility", () => ({ getTutorEligibility: vi.fn() }));
 
 const awaiting = makeRequest(7, "push_swap", "awaiting_confirmation");
 
@@ -196,6 +199,31 @@ describe("EvaluationPage", () => {
     expect(screen.queryByText("This evaluation could not be loaded.")).toBeNull();
   });
 
+  // From a request that is gone, another notification opens a request that fails to load: the
+  // page is reused with a new id, and must not keep the old "no longer available".
+  it("says it could not be loaded when the next request fails after one that was gone", async () => {
+    vi.mocked(getEvaluationRequest)
+      .mockRejectedValueOnce(new ApiError(404, "Not found.", "not_found"))
+      .mockRejectedValueOnce(new Error("network"));
+    render(
+      <MemoryRouter initialEntries={["/evaluations/7"]}>
+        <Link to="/evaluations/8">Next notification</Link>
+        <Routes>
+          <Route path="/evaluations/:id" element={<EvaluationPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByText(
+      "This evaluation is no longer available. It may have been cancelled or declined.",
+    );
+
+    fireEvent.click(screen.getByRole("link", { name: "Next notification" }));
+
+    expect(await screen.findByText("This evaluation could not be loaded.")).toBeTruthy();
+    expect(getEvaluationRequest).toHaveBeenLastCalledWith(8);
+    expect(screen.queryByText(/no longer available/)).toBeNull();
+  });
+
   it("still says it could not be loaded when the first load fails otherwise", async () => {
     vi.mocked(getEvaluationRequest).mockRejectedValue(new Error("network"));
 
@@ -210,6 +238,14 @@ describe("EvaluationPage", () => {
 // #690: the `evaluation.created` notification opens this page, but slots are picked on
 // /requests/{id}.
 describe("EvaluationPage link to the slot picking", () => {
+  // `makeRequest(7, "push_swap", …)` is for the project with id 7.
+  const pushSwap = { id: 7, slug: "push_swap", name: "push_swap" };
+  const minishell = { id: 3, slug: "minishell", name: "minishell" };
+
+  beforeEach(() => {
+    vi.mocked(getTutorEligibility).mockResolvedValue([minishell, pushSwap]);
+  });
+
   it("offers a Hitchhiker who is not the student to pick a slot for a pending request", async () => {
     viewer.id = 9;
     viewer.workspaces = ["STUDENT", "HITCHHIKER"];
@@ -218,11 +254,42 @@ describe("EvaluationPage link to the slot picking", () => {
 
     const link = await screen.findByRole("link", { name: "Pick a slot" });
 
+    expect(getTutorEligibility).toHaveBeenCalledWith(9);
     expect(link.getAttribute("href")).toBe("/requests/7");
 
     fireEvent.click(link);
 
     expect(screen.getByText("Pick slot page")).toBeTruthy();
+  });
+
+  // A Head Tutor or Admin sees every request, also for projects they may not evaluate (§5.6).
+  it("does not offer it to a Head Tutor who may not evaluate the project", async () => {
+    viewer.id = 9;
+    viewer.workspaces = ["STUDENT", "HITCHHIKER"];
+    vi.mocked(getTutorEligibility).mockResolvedValue([minishell]);
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "pending"));
+    renderPage();
+
+    await screen.findByRole("heading", { name: "Waiting for a Hitchhiker" });
+    await waitFor(() => expect(getTutorEligibility).toHaveBeenCalledWith(9));
+    await act(async () => {});
+
+    expect(screen.queryByRole("link", { name: "Pick a slot" })).toBeNull();
+  });
+
+  it("does not offer it when the eligibility cannot be loaded", async () => {
+    viewer.id = 9;
+    viewer.workspaces = ["STUDENT", "HITCHHIKER"];
+    vi.mocked(getTutorEligibility).mockRejectedValue(new Error("network"));
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "pending"));
+    renderPage();
+
+    await screen.findByRole("heading", { name: "Waiting for a Hitchhiker" });
+    await waitFor(() => expect(getTutorEligibility).toHaveBeenCalled());
+    await act(async () => {});
+
+    expect(screen.queryByRole("link", { name: "Pick a slot" })).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("does not offer it to the student of the request", async () => {
@@ -233,6 +300,7 @@ describe("EvaluationPage link to the slot picking", () => {
     await screen.findByRole("heading", { name: "Waiting for a Hitchhiker" });
 
     expect(screen.queryByRole("link", { name: "Pick a slot" })).toBeNull();
+    expect(getTutorEligibility).not.toHaveBeenCalled();
   });
 
   it("does not offer it without the Hitchhiker workspace", async () => {
@@ -348,6 +416,55 @@ describe("EvaluationPage live", () => {
     );
     expect(screen.queryByText("Needs your answer")).toBeNull();
     expect(screen.queryByRole("button", { name: /Accept/ })).toBeNull();
+  });
+});
+
+describe("EvaluationPage live, after the request is gone", () => {
+  afterEach(() => {
+    FakeSocket.reset();
+    vi.useRealTimers();
+  });
+
+  // Reconnecting re-fetches (§9.4); a re-fetch that fails on the network keeps what is shown.
+  it("keeps saying it is no longer available when a later re-fetch fails otherwise", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(getEvaluationRequest)
+      .mockResolvedValueOnce(awaiting)
+      .mockRejectedValueOnce(new ApiError(404, "Not found.", "not_found"))
+      .mockRejectedValueOnce(new Error("network"));
+
+    render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MemoryRouter initialEntries={["/evaluations/7"]}>
+          <Routes>
+            <Route path="/evaluations/:id" element={<EvaluationPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LiveContext.Provider>,
+    );
+    await screen.findByText("Needs your answer");
+
+    function reconnect() {
+      act(() => {
+        FakeSocket.latest().serverClose(1006);
+        vi.advanceTimersByTime(1000);
+        FakeSocket.latest().serverOpen();
+      });
+    }
+
+    reconnect();
+    await screen.findByText(
+      "This evaluation is no longer available. It may have been cancelled or declined.",
+    );
+
+    reconnect();
+    await vi.waitFor(() => expect(getEvaluationRequest).toHaveBeenCalledTimes(3));
+    await act(async () => {});
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "This evaluation is no longer available. It may have been cancelled or declined.",
+    );
+    expect(screen.queryByText("Needs your answer")).toBeNull();
   });
 });
 
