@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ft_transcendence\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 09:16+0000\n"
-"PO-Revision-Date: 2026-10-22 11:20+0200\n"
+"POT-Creation-Date: 2026-11-02 21:07+0100\n"
+"PO-Revision-Date: 2026-11-02 21:10+0100\n"
 "Last-Translator: ft_transcendence\n"
 "Language-Team: Czech\n"
 "Language: cs\n"
@@ -25,6 +25,15 @@ msgstr "Účet s tímto e-mailem už existuje."
 #: apps/accounts/serializers/oauth.py:35 apps/accounts/serializers/oauth.py:60
 msgid "42 user ID must be a positive integer."
 msgstr "ID uživatele na 42 musí být kladné celé číslo."
+
+#: apps/accounts/serializers/people_search.py:37
+#: apps/evaluations/serializers/requests.py:207
+msgid "Unknown project slug."
+msgstr "Neznámý slug projektu."
+
+#: apps/accounts/serializers/people_search.py:48
+msgid "Choose tutor, head_tutor or sc_member."
+msgstr "Zvolte tutor, head_tutor nebo sc_member."
 
 #: apps/accounts/serializers/roles.py:21
 msgid "Unknown role."
@@ -54,17 +63,110 @@ msgstr "Přihlášení proběhlo úspěšně."
 msgid "Please correct the profile fields."
 msgstr "Opravte prosím pole profilu."
 
-#: apps/accounts/views/roles.py:49
+#: apps/accounts/views/roles.py:53
 msgid "You may not assign this role."
 msgstr "Tuto roli nemůžete přiřadit."
 
-#: apps/accounts/views/roles.py:86
+#: apps/accounts/views/roles.py:100
 msgid "This role cannot be revoked."
 msgstr "Tuto roli nelze odebrat."
 
-#: apps/accounts/views/roles.py:90
+#: apps/accounts/views/roles.py:104
 msgid "You cannot change your own roles."
 msgstr "Své vlastní role nemůžete měnit."
+
+#: apps/audit/models.py:17 apps/audit/models.py:22 apps/audit/models.py:36
+#: apps/audit/models.py:110 apps/audit/models.py:112
+msgid "Audit log rows cannot be updated."
+msgstr "Řádky auditního záznamu nelze upravovat."
+
+#: apps/audit/models.py:47 apps/audit/models.py:117
+msgid "Audit log rows cannot be deleted."
+msgstr "Řádky auditního záznamu nelze mazat."
+
+#: apps/audit/models.py:54
+msgid "Role assigned"
+msgstr "Role přiřazena"
+
+#: apps/audit/models.py:55
+msgid "Role revoked"
+msgstr "Role odebrána"
+
+#: apps/audit/models.py:56
+msgid "User updated"
+msgstr "Uživatel upraven"
+
+#: apps/audit/models.py:57
+msgid "User suspended"
+msgstr "Uživatel pozastaven"
+
+#: apps/audit/models.py:58
+msgid "User reactivated"
+msgstr "Uživatel znovu aktivován"
+
+#: apps/audit/models.py:59
+msgid "User deleted"
+msgstr "Uživatel smazán"
+
+#: apps/audit/models.py:60
+msgid "Eligibility reviewed"
+msgstr "Způsobilost posouzena"
+
+#: apps/audit/models.py:61 apps/notifications/models.py:22
+msgid "Eligibility revoked"
+msgstr "Způsobilost odebrána"
+
+#: apps/audit/models.py:64
+msgid "Evaluation released by override"
+msgstr "Hodnocení uvolněno zásahem"
+
+#: apps/audit/models.py:68
+msgid "Evaluation cancelled by override"
+msgstr "Hodnocení zrušeno zásahem"
+
+#: apps/audit/models.py:70
+msgid "Council sender revealed"
+msgstr "Odesílatel zprávy radě odhalen"
+
+#: apps/audit/models.py:71
+msgid "Council message deleted"
+msgstr "Zpráva radě smazána"
+
+#: apps/audit/models.py:72
+msgid "File updated by moderator"
+msgstr "Soubor upraven moderátorem"
+
+#: apps/audit/models.py:73
+msgid "File deleted by moderator"
+msgstr "Soubor smazán moderátorem"
+
+#: apps/audit/models.py:76
+msgid "User"
+msgstr "Uživatel"
+
+#: apps/audit/models.py:77
+msgid "Evaluation request"
+msgstr "Žádost o hodnocení"
+
+#: apps/audit/models.py:78
+msgid "Tutor eligibility request"
+msgstr "Žádost o způsobilost tutora"
+
+#: apps/audit/models.py:79
+msgid "Tutor eligibility"
+msgstr "Způsobilost tutora"
+
+#: apps/audit/models.py:80
+msgid "Council message"
+msgstr "Zpráva radě"
+
+#: apps/audit/models.py:81
+msgid "File"
+msgstr "Soubor"
+
+#: apps/audit/services.py:20
+msgid "Audit metadata must be an object."
+msgstr "Metadata auditu musí být objekt."
 
 #: apps/core/exceptions.py:23
 msgid "Please correct the highlighted fields."
@@ -78,12 +180,15 @@ msgstr "Je vyžadováno přihlášení."
 msgid "CSRF verification failed. Reload the page and try again."
 msgstr "Ověření CSRF selhalo. Načtěte stránku znovu a zkuste to ještě jednou."
 
-#: apps/core/exceptions.py:26 apps/evaluations/views/eligibility.py:100
-#: apps/evaluations/views/eligibility.py:248
+#: apps/core/exceptions.py:26 apps/evaluations/views/eligibility.py:112
+#: apps/evaluations/views/eligibility.py:277
+#: apps/evaluations/views/eligibility.py:361
 msgid "You do not have permission to perform this action."
 msgstr "K této akci nemáte oprávnění."
 
-#: apps/core/exceptions.py:27
+#: apps/core/exceptions.py:27 apps/council/views.py:100
+#: apps/evaluations/views/eligibility.py:372
+#: apps/evaluations/views/eligibility.py:380
 msgid "Not found."
 msgstr "Nenalezeno."
 
@@ -107,13 +212,31 @@ msgstr "Příliš mnoho požadavků. Zkuste to znovu později."
 msgid "Something went wrong. Please try again."
 msgstr "Něco se pokazilo. Zkuste to prosím znovu."
 
-#: apps/evaluations/admin.py:61
+#: apps/council/serializers.py:38
+msgid "This field is required."
+msgstr "Toto pole je povinné."
+
+#: apps/council/serializers.py:41
+msgid "Send is_read or discussion_note."
+msgstr "Pošlete is_read nebo discussion_note."
+
+#: apps/council/views.py:58
+msgid "Must be true."
+msgstr "Musí být pravda."
+
+#: apps/council/views.py:85
+msgid ""
+"Someone else saved the note since you loaded it. Reload it and try again."
+msgstr ""
+"Poznámku od vašeho načtení uložil někdo jiný. Načtěte ji znovu a zkuste to "
+"ještě jednou."
+
+#: apps/evaluations/admin.py:63
 msgid ""
 "Results can only be entered for confirmed evaluations whose end time has "
 "passed."
 msgstr ""
-"Výsledky lze zadat jen u potvrzených hodnocení, jejichž čas konce už "
-"uplynul."
+"Výsledky lze zadat jen u potvrzených hodnocení, jejichž čas konce už uplynul."
 
 #: apps/evaluations/permissions.py:18
 msgid "You are not eligible to evaluate this project."
@@ -160,95 +283,159 @@ msgstr "Začátek smí být nejvýše %(days)s dní od teď."
 msgid "End time must be after start time."
 msgstr "Čas konce musí být po čase začátku."
 
-#: apps/evaluations/serializers/requests.py:207
-msgid "Unknown project slug."
-msgstr "Neznámý slug projektu."
-
-#: apps/evaluations/services.py:26
+#: apps/evaluations/services.py:35
 msgid "You already have an active request for this project."
 msgstr "Pro tento projekt už máte aktivní žádost."
 
-#: apps/evaluations/services.py:32
+#: apps/evaluations/services.py:41
 msgid "Only pending requests can be edited."
 msgstr "Upravit lze jen čekající žádosti."
 
-#: apps/evaluations/services.py:38
+#: apps/evaluations/services.py:47
 msgid "This request is no longer pending."
 msgstr "Tato žádost už není ve stavu čekání."
 
-#: apps/evaluations/services.py:44
+#: apps/evaluations/services.py:53
 msgid "You already have an evaluation at that time."
 msgstr "V tom čase už hodnocení máte."
 
-#: apps/evaluations/services.py:50
+#: apps/evaluations/services.py:59
 msgid "The student already has an evaluation at that time."
 msgstr "Student už v tom čase hodnocení má."
 
-#: apps/evaluations/services.py:56
+#: apps/evaluations/services.py:65
 msgid "This evaluation has already started."
 msgstr "Toto hodnocení už začalo."
 
-#: apps/evaluations/services.py:99 apps/evaluations/services.py:110
+#: apps/evaluations/services.py:108 apps/evaluations/services.py:119
 msgid "Only requests awaiting confirmation can be confirmed."
 msgstr "Potvrdit lze jen žádosti čekající na potvrzení."
 
-#: apps/evaluations/services.py:138
+#: apps/evaluations/services.py:147
 msgid "Only requests awaiting confirmation can be declined."
 msgstr "Odmítnout lze jen žádosti čekající na potvrzení."
 
-#: apps/evaluations/services.py:155 apps/evaluations/services.py:160
-#: apps/evaluations/services.py:177
+#: apps/evaluations/services.py:164 apps/evaluations/services.py:169
+#: apps/evaluations/services.py:186
 msgid "Only active requests without a result can be cancelled."
 msgstr "Zrušit lze jen aktivní žádosti bez výsledku."
 
-#: apps/evaluations/services.py:189 apps/evaluations/services.py:196
-#: apps/evaluations/services.py:211
+#: apps/evaluations/services.py:198 apps/evaluations/services.py:205
+#: apps/evaluations/services.py:220
 msgid "Only picked requests without a result can be released."
 msgstr "Uvolnit lze jen vybrané žádosti bez výsledku."
 
-#: apps/evaluations/views/eligibility.py:73
+#: apps/evaluations/views/eligibility.py:85
 msgid "This field may not be blank."
 msgstr "Toto pole nesmí být prázdné."
 
-#: apps/evaluations/views/eligibility.py:79
+#: apps/evaluations/views/eligibility.py:91
 #, python-format
 msgid "Unknown status: %(value)s."
 msgstr "Neznámý stav: %(value)s."
 
-#: apps/evaluations/views/eligibility.py:86
+#: apps/evaluations/views/eligibility.py:98
 msgid "Ordering must be one of: created_at, -created_at."
 msgstr "Řazení musí být jedna z hodnot: created_at, -created_at."
 
-#: apps/evaluations/views/eligibility.py:115
+#: apps/evaluations/views/eligibility.py:127
 #, python-format
 msgid "Unknown or inactive project id(s): %(ids)s."
 msgstr "Neznámé nebo neaktivní ID projektu: %(ids)s."
 
-#: apps/evaluations/views/eligibility.py:129
+#: apps/evaluations/views/eligibility.py:141
 #, python-format
 msgid "Already eligible for: %(names)s."
 msgstr "Způsobilost už máte pro: %(names)s."
 
-#: apps/evaluations/views/eligibility.py:141
+#: apps/evaluations/views/eligibility.py:153
 msgid "You already have a pending eligibility request."
 msgstr "Už máte nevyřízenou žádost o způsobilost."
 
-#: apps/evaluations/views/eligibility.py:255
+#: apps/evaluations/views/eligibility.py:284
 msgid "You cannot review your own eligibility request."
 msgstr "Nemůžete posuzovat vlastní žádost o způsobilost."
 
-#: apps/evaluations/views/eligibility.py:278
+#: apps/evaluations/views/eligibility.py:307
 msgid "This eligibility request has already been reviewed."
 msgstr "Tato žádost o způsobilost už byla posouzena."
 
-#: config/settings/base.py:120
+#: apps/notifications/models.py:12
+msgid "Evaluation created"
+msgstr "Hodnocení vytvořeno"
+
+#: apps/notifications/models.py:13
+msgid "Evaluation slot picked"
+msgstr "Termín hodnocení vybrán"
+
+#: apps/notifications/models.py:14
+msgid "Evaluation confirmed"
+msgstr "Hodnocení potvrzeno"
+
+#: apps/notifications/models.py:15
+msgid "Evaluation declined"
+msgstr "Hodnocení odmítnuto"
+
+#: apps/notifications/models.py:16
+msgid "Evaluation released"
+msgstr "Hodnocení uvolněno"
+
+#: apps/notifications/models.py:17
+msgid "Evaluation cancelled"
+msgstr "Hodnocení zrušeno"
+
+#: apps/notifications/models.py:18
+msgid "Evaluation expired"
+msgstr "Hodnocení vypršelo"
+
+#: apps/notifications/models.py:19
+msgid "Evaluation result recorded"
+msgstr "Výsledek hodnocení zaznamenán"
+
+#: apps/notifications/models.py:20
+msgid "Eligibility requested"
+msgstr "Způsobilost vyžádána"
+
+#: apps/notifications/models.py:21
+msgid "Eligibility decided"
+msgstr "O způsobilosti rozhodnuto"
+
+#: apps/notifications/models.py:23
+msgid "Role changed"
+msgstr "Role změněna"
+
+#: apps/notifications/models.py:24
+msgid "Account updated"
+msgstr "Účet upraven"
+
+#: apps/notifications/models.py:25
+msgid "Student Council message created"
+msgstr "Zpráva Studentské radě vytvořena"
+
+#: apps/notifications/models.py:26
+msgid "Resource created"
+msgstr "Zdroj vytvořen"
+
+#: apps/notifications/models.py:27
+msgid "Resource updated"
+msgstr "Zdroj upraven"
+
+#: apps/notifications/models.py:28
+msgid "Resource deleted"
+msgstr "Zdroj smazán"
+
+#: apps/notifications/services.py:22
+msgid "Notification payload must be an object."
+msgstr "Data oznámení musí být objekt."
+
+#: config/settings/base.py:123
 msgid "English"
 msgstr "Angličtina"
 
-#: config/settings/base.py:121
+#: config/settings/base.py:124
 msgid "Czech"
 msgstr "Čeština"
 
-#: config/settings/base.py:122
+#: config/settings/base.py:125
 msgid "Spanish"
 msgstr "Španělština"
