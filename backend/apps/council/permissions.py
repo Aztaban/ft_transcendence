@@ -24,6 +24,7 @@ class CanReadCouncilInbox(BasePermission):
             return True
         return is_council(request.user)
 
+
 def _moderate_or_hide(user):
     """Admin may moderate a message. An SC Member already sees it, so the refusal is 403.
 
