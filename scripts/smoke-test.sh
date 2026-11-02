@@ -19,13 +19,25 @@ curl -fsk -o /dev/null "$BASE/api/v1/"
 wait_for "$BASE/"
 
 if [ "${1:-}" = "prod" ]; then
-  # The built frontend comes from nginx, and app routes fall back to index.html.
-  grep -q 'id="root"' <<< "$(curl -fsk "$BASE/")"
-  grep -q 'id="root"' <<< "$(curl -fsk "$BASE/requests")"
-  # So do Django's static files (collectstatic).
+  html=$(curl -fsk "$BASE/")
+  if grep -q '/@vite/client' <<< "$html"; then echo "The Vite dev server answers /"; exit 1; fi
+  assets=$(grep -o '/assets/[^"]*\.\(js\|css\)' <<< "$html" || true)
+  if [ -z "$assets" ]; then echo "index.html links no built assets"; exit 1; fi
+  
+  for asset in $assets; do
+    # A missing file falls back to index.html with 200, so check the type too.
+    type=$(curl -fsk -o /dev/null -w '%{content_type}' "$BASE$asset")
+    case $type in text/html*) echo "$asset is missing"; exit 1 ;; esac
+  done
+
+  # App routes fall back to the same index.html.
+  [ "$(curl -fsk "$BASE/requests")" = "$html" ]
+
+  # Django's static files (collectstatic).
   curl -fsk -o /dev/null "$BASE/static/admin/css/base.css"
-  # DEBUG is off: an unknown admin page is a plain 404, not Django's technical page.
-  page=$(curl -sk "$BASE/admin/no-such-page/")
-  if grep -q "URLconf" <<< "$page"; then echo "DEBUG is on"; exit 1; fi
+
+  # DEBUG is off: a missing static file reaches Django, whose debug 404 page names the setting.
+  page=$(curl -sk "$BASE/static/no-such-file.css")
+  if grep -q "DEBUG = True" <<< "$page"; then echo "DEBUG is on"; exit 1; fi
 fi
 echo "smoke test passed${1:+ ($1)}"
