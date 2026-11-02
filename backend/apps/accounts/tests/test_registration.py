@@ -211,6 +211,38 @@ def test_register_refuses_42_prague_emails(email):
     assert get_user_model().objects.count() == 0
 
 
+# MySQL's utf8mb4_0900_ai_ci equates the 42 look-alikes with victim@student.42prague.com and the
+# control character with "victim"@example.com; normalizing would silently turn "ß" into "ss".
+@pytest.mark.parametrize(
+    "email",
+    [
+        pytest.param("victim@student.42pr\u00e1gue.com", id="accent"),
+        pytest.param("victim@student.42pra\u00adgue.com", id="soft-hyphen"),
+        pytest.param("victim@student\uff0e42prague.com", id="fullwidth-dot"),
+        pytest.param("victim@student.\u06642prague.com", id="arabic-indic-digit"),
+        pytest.param("anna@stra\u00dfe.de", id="sharp-s"),
+        pytest.param('"vic\x01tim"@example.com', id="control-character"),
+    ],
+)
+def test_register_refuses_non_ascii_emails(email):
+    response = APIClient().post(
+        reverse("api:register"),
+        registration_payload(email=email),
+        format="json",
+        HTTP_HOST="localhost",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the registration fields.",
+            "fields": {"email": ["Use an email address without accents or special characters."]},
+        }
+    }
+    assert get_user_model().objects.count() == 0
+
+
 @pytest.mark.parametrize("display_name", ["", " " * 8, "x" * 65])
 def test_register_rejects_invalid_display_name(display_name):
     client = APIClient()
