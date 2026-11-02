@@ -482,7 +482,7 @@ Every create, update or delete action that affects another user notifies that us
 
 | type | Recipients | payload | target_url |
 |---|---|---|---|
-| `evaluation.created` | Eligible Hitchhikers of the project (except the student) | `{request_id, project}` (no `student`: R15) | `/evaluations/{id}` |
+| `evaluation.created` | Eligible Hitchhikers of the project (except the student) | `{request_id, project}` (no `student`: R15) | `/requests/{id}` |
 | `evaluation.slot_picked` | Student | `{request_id, project, tutor, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.confirmed` | Picking Hitchhiker | `{request_id, project, student, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.declined` | Picking Hitchhiker | `{request_id, project, student}` | `/evaluations/{id}` |
