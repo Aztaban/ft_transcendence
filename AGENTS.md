@@ -48,7 +48,8 @@ frontend/src/
   types/             TypeScript types of API data, mirroring api-plan §8
   pages/  components/  features/<role>/  store/ (React contexts)  styles/  websocket/
 docs/                contract and architecture documents
-nginx/  docker-compose.yml  Makefile  .env.example
+nginx/  docker-compose.yml  docker-compose.prod.yml  Makefile  .env.example
+scripts/smoke-test.sh  end-to-end check of a running stack (CI and by hand)
 ```
 
 ## Commands

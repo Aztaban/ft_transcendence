@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 
+import Footer from "./Footer";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 
@@ -54,6 +55,7 @@ function BaseLayout({ children }: BaseLayoutProps) {
           onMenuClick={() => setIsMenuOpen((open) => !open)}
         />
         <main className="app-shell__content">{children}</main>
+        <Footer />
       </div>
     </div>
   );
