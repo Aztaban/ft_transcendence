@@ -228,7 +228,7 @@ def test_unknown_account_is_a_404(admin_user_directory, action):
     assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
 
 
-def test_suspension_removes_all_target_sessions_and_reactivation_does_not_restore_them(
+def test_suspension_removes_live_target_sessions_and_reactivation_does_not_restore_them(
     admin_user_directory,
     admin_user_bodies,
     make_user,
@@ -255,7 +255,8 @@ def test_suspension_removes_all_target_sessions_and_reactivation_does_not_restor
         expected = admin_user_bodies["target"]
         expected.update(status="suspended", last_login="2026-10-31T10:00:00Z")
         assert response.json() == expected
-        assert not Session.objects.filter(session_key__in=keys).exists()
+        assert not Session.objects.filter(session_key__in=keys[:-1]).exists()
+        assert Session.objects.filter(session_key=keys[-1]).exists()
         user_event_sender.assert_not_awaited()
     user_event_sender.assert_awaited_once_with(
         f"user_{target.pk}", {"type": "session.ended", "data": {}}
@@ -264,6 +265,7 @@ def test_suspension_removes_all_target_sessions_and_reactivation_does_not_restor
         admin_key,
         other_key,
         anonymous.session_key,
+        keys[-1],
     }
     assert not APIClient().login(email=target.email, password="secret")
     response = post_status(client, target.pk, "reactivate")

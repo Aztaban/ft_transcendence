@@ -222,6 +222,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "purge_old_notifications",
         "schedule": 86400.0,
     },
+    "clear-expired-sessions-daily": {
+        "task": "clear_expired_sessions",
+        "schedule": 86400.0,
+    },
     "expire-evaluation-requests-every-5m": {
         "task": "expire_evaluation_requests",
         "schedule": 300.0,

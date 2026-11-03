@@ -369,6 +369,7 @@ Append-only record of sensitive actions. Rows are never updated or deleted by th
 | --- | --- | --- |
 | `expire_evaluation_requests` | every 5 min | §4.3 |
 | `purge_old_notifications` | daily | §5.1 |
+| `clear_expired_sessions` | daily | Django `clearsessions`; remove expired session rows. Suspension and deletion scan only unexpired sessions. |
 
 Each task is idempotent: running it twice, or late, gives the same result.
 
