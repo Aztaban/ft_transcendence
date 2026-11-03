@@ -17,7 +17,7 @@ Once a model is merged to `main`, its migration is the source of truth for exact
 - Every table has `id BIGINT AUTO_INCREMENT` (`models.BigAutoField`) unless stated otherwise.
 - Every table has `created_at` and `updated_at` (`apps.core.models.TimeStampedModel`), except the link table in §3.3. They are omitted from the tables below.
 - All tables are InnoDB. Datetime columns are `DATETIME(6)` holding UTC (`USE_TZ = True`).
-- The default collation is case-insensitive, so unique indexes on email and slugs reject case-variant duplicates. Emails are additionally normalized to lowercase by `UserManager.normalize_email`.
+- The default collation, `utf8mb4_0900_ai_ci`, ignores case, accents, invisible characters and look-alike variants (`42prágue.com` equals `42prague.com`), so unique indexes on email and slugs reject such duplicates. Emails are additionally normalized to lowercase by `UserManager.normalize_email`, and registration accepts printable ASCII emails only (api-plan §10.1).
 - Enums are stored as `varchar` with Django `TextChoices`. Stored values are lowercase `snake_case` and are exactly the values the API sends.
 - Foreign keys are `ON DELETE PROTECT` unless the table says otherwise. Users are never hard-deleted through the application (see §2.4), so most FKs to `user` never fire.
 - Table names are set explicitly with `Meta.db_table` and match the headings below.
