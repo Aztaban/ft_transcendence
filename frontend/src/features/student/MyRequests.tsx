@@ -5,6 +5,7 @@ import { cancelEvaluationRequest, listEvaluationRequests } from "../../api/evalu
 import i18n from "../../i18n";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../../utils/dateTime";
+import { projectInitials } from "../projects/ProjectOverview";
 import CancelRequestDialog from "./CancelRequestDialog";
 import { canCancel, cancelErrorMessage } from "./cancelRequest";
 import { EVALUATION_EVENTS } from "../../websocket/events";
@@ -14,14 +15,6 @@ import "../../styles/my-requests.css";
 type LoadState = "loading" | "ready" | "error";
 
 type Tone = "blue" | "amber" | "teal" | "green" | "red" | "violet" | "grey";
-
-// "minishell" → "MI", "RAG against the machine" → "RA"
-function projectInitials(name: string) {
-  return name
-    .replace(/[^a-z0-9]/gi, "")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 // Status labels (api-plan §7.1). Results are entered later in the Django admin, so a past
 // confirmed request without `result` is "Result pending".

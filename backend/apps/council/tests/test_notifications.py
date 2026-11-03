@@ -4,7 +4,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, call
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.urls import reverse
 from rest_framework import status
@@ -17,26 +16,12 @@ from apps.notifications.models import Notification
 
 pytestmark = pytest.mark.django_db
 
-User = get_user_model()
 SEND = "api:sc-message-list"
 
 
 @pytest.fixture
 def api_client():
     return APIClient()
-
-
-@pytest.fixture
-def make_user():
-    def _make(email, roles=()):
-        user = User.objects.create_user(
-            email=email, password="secret", display_name=email.split("@")[0]
-        )
-        if roles:
-            user.roles.add(*Role.objects.filter(name__in=roles))
-        return user
-
-    return _make
 
 
 @pytest.fixture
@@ -60,10 +45,10 @@ def test_send_notifies_every_sc_member_once_and_nobody_else(
     api_client, make_user, group_send, django_capture_on_commit_callbacks
 ):
     anna = make_user("anna@example.com")
-    first = make_user("ada@example.com", (Role.Name.SC_MEMBER, Role.Name.ADMIN))
-    second = make_user("bea@example.com", (Role.Name.SC_MEMBER,))
-    make_user("tutor@example.com", (Role.Name.TUTOR,))
-    make_user("admin@example.com", (Role.Name.ADMIN,))
+    first = make_user("ada@example.com", roles=(Role.Name.SC_MEMBER, Role.Name.ADMIN))
+    second = make_user("bea@example.com", roles=(Role.Name.SC_MEMBER,))
+    make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
+    make_user("admin@example.com", roles=(Role.Name.ADMIN,))
     api_client.force_authenticate(user=anna)
 
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
@@ -121,7 +106,7 @@ def test_send_notifies_every_sc_member_once_and_nobody_else(
 def test_an_sc_member_who_sends_is_notified_without_being_named(
     api_client, make_user, group_send, django_capture_on_commit_callbacks
 ):
-    member = make_user("ada@example.com", (Role.Name.SC_MEMBER,))
+    member = make_user("ada@example.com", roles=(Role.Name.SC_MEMBER,))
     api_client.force_authenticate(user=member)
 
     with django_capture_on_commit_callbacks(execute=True):
@@ -159,7 +144,7 @@ def test_send_with_no_council_stores_the_message_and_no_notification(
 
 
 def test_invalid_send_creates_no_message_and_no_notification(api_client, make_user, group_send):
-    make_user("ada@example.com", (Role.Name.SC_MEMBER,))
+    make_user("ada@example.com", roles=(Role.Name.SC_MEMBER,))
     api_client.force_authenticate(user=make_user("anna@example.com"))
 
     response = api_client.post(reverse(SEND), {"body": ""}, format="json")
@@ -173,7 +158,7 @@ def test_invalid_send_creates_no_message_and_no_notification(api_client, make_us
 def test_outer_rollback_discards_the_message_and_its_notifications(
     api_client, make_user, group_send, django_capture_on_commit_callbacks
 ):
-    make_user("ada@example.com", (Role.Name.SC_MEMBER,))
+    make_user("ada@example.com", roles=(Role.Name.SC_MEMBER,))
     api_client.force_authenticate(user=make_user("anna@example.com"))
 
     with django_capture_on_commit_callbacks(execute=True) as callbacks:

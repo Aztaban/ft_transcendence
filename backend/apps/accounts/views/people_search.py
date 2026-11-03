@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
 from apps.accounts.models import Role
+from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.accounts.serializers.people_search import (
     PeopleSearchQuerySerializer,
     PeopleSearchSerializer,
@@ -69,7 +70,7 @@ class PeopleSearchView(ListAPIView):
             queryset = queryset.filter(roles__name__in=filters["role"])
         if "project" in filters:
             queryset = queryset.filter(
-                roles__name__in=(Role.Name.TUTOR, Role.Name.HEAD_TUTOR),
+                roles__name__in=HITCHHIKER_ROLES,
                 eligibilities__project=filters["project"],
             )
         return (

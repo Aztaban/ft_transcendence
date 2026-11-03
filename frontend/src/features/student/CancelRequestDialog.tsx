@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import useDialog from "../../hooks/useDialog";
 import i18n from "../../i18n";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
@@ -39,23 +40,17 @@ function CancelRequestDialog({
   onClose,
 }: CancelRequestDialogProps) {
   const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement>(null);
+  // Escape does nothing while the request is being sent.
+  const cardRef = useDialog<HTMLDivElement>(() => {
+    if (!isSubmitting) {
+      onClose();
+    }
+  });
 
+  // Sending disables the focused button, which drops the focus to the page: put it back.
   useEffect(() => {
     cardRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !isSubmitting) {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isSubmitting, onClose]);
+  }, [cardRef, isSubmitting]);
 
   return createPortal(
     <div

@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../api/client";
 import { createEligibilityRequest } from "../../api/eligibility";
 import { listProjects } from "../../api/projects";
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
+import useDialog from "../../hooks/useDialog";
 import i18n from "../../i18n";
 import type { ProjectRef } from "../../types/project";
+import { projectInitials } from "../projects/ProjectOverview";
 import "../../styles/welcome-hitchhiker.css";
 
 interface WelcomeHitchhikerDialogProps {
@@ -17,14 +19,6 @@ type View = "form" | "sent";
 
 // Badge colors, in turn: teal, amber, blue, violet (the dashboard section tones).
 const TONES = ["teal", "amber", "blue", "violet"] as const;
-
-// "minishell" → "MI", "RAG against the machine" → "RA"
-function projectInitials(name: string) {
-  return name
-    .replace(/[^a-z0-9]/gi, "")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 function submitErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
@@ -47,7 +41,7 @@ function submitErrorMessage(error: unknown) {
 // Projects can be added later from /eligibility-requests/new.
 function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
   const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useDialog<HTMLDivElement>(onClose);
   const [view, setView] = useState<View>("form");
   const [projects, setProjects] = useState<ProjectRef[]>([]);
   const [loadError, setLoadError] = useState(false);
@@ -75,23 +69,10 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
     };
   }, []);
 
+  // useDialog focuses the card when it opens; the "Form sent!" view gets the focus again.
   useEffect(() => {
     cardRef.current?.focus();
   }, [view]);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
 
   function toggle(projectId: number) {
     setSelectedIds((current) =>

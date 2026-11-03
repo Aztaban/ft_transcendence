@@ -482,7 +482,7 @@ Every create, update or delete action that affects another user notifies that us
 
 | type | Recipients | payload | target_url |
 |---|---|---|---|
-| `evaluation.created` | Eligible Hitchhikers of the project (except the student) | `{request_id, project}` (no `student`: R15) | `/evaluations/{id}` |
+| `evaluation.created` | Eligible Hitchhikers of the project (except the student) | `{request_id, project}` (no `student`: R15) | `/requests/{id}` |
 | `evaluation.slot_picked` | Student | `{request_id, project, tutor, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.confirmed` | Picking Hitchhiker | `{request_id, project, student, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.declined` | Picking Hitchhiker | `{request_id, project, student}` | `/evaluations/{id}` |
@@ -619,6 +619,7 @@ Events are sent with `transaction.on_commit`, so a client never re-fetches befor
 - `email`: valid email, max 254, printable ASCII only (MySQL treats accented, invisible and look-alike characters as plain ones, so `42prágue.com` would match `42prague.com`), not a 42 email (`42prague.com` or a subdomain); those accounts use 42 OAuth. Stored lowercase.
 - `display_name`: 1–64 chars.
 - `password`: Django's validators: at least 8 characters, not too similar to email or display name, not a common password, not entirely numeric.
+- The new account's `language` is the request's language (`Accept-Language`, §5.5), so the app does not switch language at the first login; `en` when it is not `en`, `cs` or `es`.
 
 201:
 
@@ -659,7 +660,7 @@ This endpoint never answers 401, so the startup check never shows up as a failed
 - The Login page links (full navigation) to `/api/v1/auth/42/redirect/`. The backend stores a random `state` in the session and redirects to 42.
 - On the callback the backend checks `state`, exchanges the code, reads the 42 profile, then:
   - a user with this `intra_id` exists → refreshes `intra_login`, logs in
-  - otherwise, no user with this email → creates an account (email from 42, `display_name` = 42 login, unusable password, role `student`), logs in
+  - otherwise, no user with this email → creates an account (email from 42, `display_name` = 42 login, unusable password, role `student`, `language` from the browser's `Accept-Language` as for register), logs in
   - otherwise (an email/password account already uses this email) → error `oauth_account_exists`. Accounts are never linked automatically by email.
 - Success redirects to `/`. Failure redirects to `/login?oauth=<code>`, where the Login page shows a message for the code.
 - The 42 access token, the code and the client secret never reach the browser.

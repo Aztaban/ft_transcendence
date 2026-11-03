@@ -32,22 +32,6 @@ def api_client():
     return APIClient()
 
 
-@pytest.fixture
-def make_user(user_model):
-    def _make(email, roles=(), **extra):
-        user = user_model.objects.create_user(
-            email=email,
-            password="secret",
-            display_name=email.split("@")[0],
-            **extra,
-        )
-        if roles:
-            user.roles.set(Role.objects.filter(name__in=roles))
-        return user
-
-    return _make
-
-
 def _allowed(permission, user) -> bool:
     request = factory.get("/")
     request.user = user

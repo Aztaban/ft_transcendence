@@ -1,7 +1,8 @@
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import type { EligibilityDecision } from "../../api/eligibility";
+import useDialog from "../../hooks/useDialog";
 import type { EligibilityRequest } from "../../types/eligibility";
 
 interface ReviewDialogProps {
@@ -25,25 +26,9 @@ function ReviewDialog({
   onConfirm,
   onClose,
 }: ReviewDialogProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useDialog<HTMLDivElement>(onClose);
   const [note, setNote] = useState("");
   const isApproval = decision === "approved";
-
-  useEffect(() => {
-    cardRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
 
   return createPortal(
     <div className="review-dialog" data-testid="review-dialog-backdrop" onClick={onClose}>

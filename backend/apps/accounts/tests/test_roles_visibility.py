@@ -22,22 +22,6 @@ def api_client():
     return APIClient()
 
 
-@pytest.fixture
-def make_user(user_model):
-    def _make(email, display_name=None, roles=(), **extra):
-        user = user_model.objects.create_user(
-            email=email,
-            password="secret",
-            display_name=display_name or email.split("@")[0],
-            **extra,
-        )
-        if roles:
-            user.roles.set(Role.objects.filter(name__in=roles))
-        return user
-
-    return _make
-
-
 def expected_roles(*names):
     return [
         {"id": role.id, "name": role.name}

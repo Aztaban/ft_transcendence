@@ -6,7 +6,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 
-from apps.accounts.models import Role
+from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.core.schema import error_responses
 from apps.evaluations.models import Project
 from apps.evaluations.references import ProjectRefSerializer
@@ -54,7 +54,7 @@ class ProjectDetailView(RetrieveAPIView):
         project.eligible_tutors = (
             User.objects.filter(
                 status=User.Status.ACTIVE,
-                roles__name__in=(Role.Name.TUTOR, Role.Name.HEAD_TUTOR),
+                roles__name__in=HITCHHIKER_ROLES,
                 eligibilities__project=project,
             )
             .order_by("display_name")

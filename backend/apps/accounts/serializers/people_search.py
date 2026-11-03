@@ -5,6 +5,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.models import Role
+from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.accounts.serializers.profiles import PublicProfileSerializer
 from apps.evaluations.models import Project
 from apps.evaluations.references import ProjectRefSerializer
@@ -19,9 +20,7 @@ class PeopleSearchSerializer(PublicProfileSerializer):
 
     @extend_schema_field(ProjectRefSerializer(many=True))
     def get_eligible_projects(self, obj):
-        if not any(
-            role.name in (Role.Name.TUTOR, Role.Name.HEAD_TUTOR) for role in obj.roles.all()
-        ):
+        if not any(role.name in HITCHHIKER_ROLES for role in obj.roles.all()):
             return []
         return ProjectRefSerializer(
             [eligibility.project for eligibility in obj.search_eligibilities], many=True

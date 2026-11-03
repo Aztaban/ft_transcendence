@@ -14,6 +14,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
+from apps.audit.models import AuditLog
 from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
 from apps.notifications.models import Notification
 
@@ -268,6 +269,7 @@ def test_failed_grant_creation_rolls_back_review_and_partial_grants(actors, monk
     )
     assert TutorEligibility.objects.count() == 0
     assert not Notification.objects.exists()
+    assert not AuditLog.objects.exists()
     assert list(pending.projects.order_by("id").values_list("id", flat=True)) == [801, 802]
 
     # The rolled-back request remains reviewable and grants both projects on retry.
@@ -287,3 +289,17 @@ def test_failed_grant_creation_rolls_back_review_and_partial_grants(actors, monk
             "tutor_id", "project_id", "granted_by_request_id"
         )
     ) == [(701, 801, pending.id), (701, 802, pending.id)]
+    assert list(
+        AuditLog.objects.values(
+            "actor_id", "action", "target_type", "target_id", "reason", "metadata"
+        )
+    ) == [
+        {
+            "actor_id": 702,
+            "action": "eligibility.reviewed",
+            "target_type": "tutor_eligibility_request",
+            "target_id": pending.id,
+            "reason": "",
+            "metadata": {"decision": "approved"},
+        }
+    ]

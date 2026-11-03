@@ -16,6 +16,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
+from apps.audit.models import AuditLog
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
 from apps.evaluations.services import pick_slot as write_pick
 from apps.notifications.models import Notification
@@ -147,6 +148,7 @@ def test_missing_eligibility_is_not_found(make_user, project, other_project, mis
     assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
     assert TutorEligibility.objects.filter(pk=kept.pk).exists()
     assert not Notification.objects.exists()
+    assert not AuditLog.objects.exists()
 
 
 @pytest.mark.parametrize("reviewer_role", REVIEWERS)
@@ -155,7 +157,7 @@ def test_reviewer_revokes_one_project_and_keeps_the_other(
 ):
     tutor = make_user("tutor@example.com", display_name="Tutor", roles=(Role.Name.TUTOR,))
     reviewer = make_user(f"{reviewer_role}@example.com", roles=(reviewer_role,))
-    grant(tutor, project)
+    removed = grant(tutor, project)
     kept = grant(tutor, other_project)
     client = browser_for(reviewer)
     with django_capture_on_commit_callbacks(execute=True):
@@ -197,6 +199,20 @@ def test_reviewer_revokes_one_project_and_keeps_the_other(
             },
         ),
     ]
+    assert list(
+        AuditLog.objects.values(
+            "actor_id", "action", "target_type", "target_id", "reason", "metadata"
+        )
+    ) == [
+        {
+            "actor_id": reviewer.pk,
+            "action": "eligibility.revoked",
+            "target_type": "tutor_eligibility",
+            "target_id": removed.pk,
+            "reason": "No longer teaching it.",
+            "metadata": {},
+        }
+    ]
 
 
 def test_inactive_project_eligibility_can_be_revoked(make_user, send):
@@ -214,15 +230,37 @@ def test_inactive_project_eligibility_can_be_revoked(make_user, send):
 def test_blank_or_missing_reason_is_accepted(make_user, project):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     head = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
-    grant(tutor, project)
+    first = grant(tutor, project)
     client = APIClient()
     client.force_authenticate(head)
     missing = client.delete(revoke_url(tutor_id=tutor.pk))
     assert missing.status_code == 204
-    grant(tutor, project)
+    second = grant(tutor, project)
     blank = client.delete(revoke_url(tutor_id=tutor.pk), {"reason": ""}, format="json")
     assert blank.status_code == 204
     assert not TutorEligibility.objects.filter(tutor=tutor, project=project).exists()
+    assert list(
+        AuditLog.objects.order_by("pk").values(
+            "actor_id", "action", "target_type", "target_id", "reason", "metadata"
+        )
+    ) == [
+        {
+            "actor_id": head.pk,
+            "action": "eligibility.revoked",
+            "target_type": "tutor_eligibility",
+            "target_id": first.pk,
+            "reason": "",
+            "metadata": {},
+        },
+        {
+            "actor_id": head.pk,
+            "action": "eligibility.revoked",
+            "target_type": "tutor_eligibility",
+            "target_id": second.pk,
+            "reason": "",
+            "metadata": {},
+        },
+    ]
 
 
 def test_reason_over_500_characters_is_rejected(make_user, project):
@@ -242,6 +280,7 @@ def test_reason_over_500_characters_is_rejected(make_user, project):
     }
     assert TutorEligibility.objects.filter(tutor=tutor, project=project).exists()
     assert not Notification.objects.exists()
+    assert not AuditLog.objects.exists()
 
 
 def test_session_revoke_requires_csrf(make_user, project, send, django_capture_on_commit_callbacks):
@@ -282,6 +321,7 @@ def test_repeated_revoke_does_not_repeat_side_effects(
     assert repeated.status_code == 404
     assert repeated.json() == {"error": {"code": "not_found", "message": "Not found."}}
     assert Notification.objects.count() == 1
+    assert AuditLog.objects.count() == 1
     assert callbacks == []
     assert send.await_count == 2
 
