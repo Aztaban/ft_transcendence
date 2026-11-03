@@ -16,6 +16,8 @@ from apps.accounts.notifications import notify_role_changed
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
 from apps.accounts.serializers.profiles import RoleAssignmentResultSerializer
 from apps.accounts.serializers.roles import RoleAssignSerializer
+from apps.audit.models import AuditLog
+from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
 from apps.core.schema import CSRF_HEADER, error_responses
 
@@ -53,6 +55,13 @@ def assign_role(request, user_id):
     with transaction.atomic():
         _membership, created = UserRole.objects.get_or_create(user=target, role=role)
         if created:
+            record_audit(
+                actor=request.user,
+                action=AuditLog.Action.ROLE_ASSIGNED,
+                target_type=AuditLog.TargetType.USER,
+                target_id=target.pk,
+                metadata={"role": role.name},
+            )
             notify_role_changed(target.pk, role.name, "assigned")
     return Response(
         RoleAssignmentResultSerializer(target).data,
@@ -97,5 +106,12 @@ def revoke_role(request, user_id, role_id):
     with transaction.atomic():
         deleted, _per_model = UserRole.objects.filter(user=target, role=role).delete()
         if deleted:
+            record_audit(
+                actor=request.user,
+                action=AuditLog.Action.ROLE_REVOKED,
+                target_type=AuditLog.TargetType.USER,
+                target_id=target.pk,
+                metadata={"role": role.name},
+            )
             notify_role_changed(target.pk, role.name, "revoked")
     return Response(status=status.HTTP_204_NO_CONTENT)
