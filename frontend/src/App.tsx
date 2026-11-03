@@ -1,8 +1,9 @@
 import { useEffect } from "react";
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router";
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router";
 
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
+import PublicLayout from "./components/layout/PublicLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
 import CouncilInboxMessagePage from "./pages/CouncilInboxMessagePage";
 import CouncilInboxPage from "./pages/CouncilInboxPage";
@@ -16,6 +17,7 @@ import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
 import HitchhikersPage from "./pages/HitchhikersPage";
 import HomePage from "./pages/HomePage";
+import LegalPage, { type LegalDocument } from "./pages/LegalPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import PendingPage from "./pages/PendingPage";
@@ -53,19 +55,29 @@ function ReturnAfterLogin() {
   return null;
 }
 
-// Every page except login and registration needs a session (#328). Nothing is rendered, and so
-// no API is called, until the session check has answered; logged out, the user goes to the login
-// page, which brings them back here afterwards.
+// The pages that need no session: logged in they stay inside the application shell.
+const legalPages: Record<string, LegalDocument> = { "/privacy": "privacy", "/terms": "terms" };
+
+// Every page except login, registration and the legal pages needs a session (#328). Nothing is
+// rendered, and so no API is called, until the session check has answered; logged out, the user
+// goes to the login page, which brings them back here afterwards.
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+  const legalPage = legalPages[location.pathname.replace(/\/$/, "")];
 
   if (isLoading) {
     return null;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return legalPage ? (
+      <PublicLayout>
+        <LegalPage kind={legalPage} standalone />
+      </PublicLayout>
+    ) : (
+      <Navigate to="/login" replace state={{ from: location }} />
+    );
   }
 
   return (
@@ -185,6 +197,8 @@ function AuthenticatedApp() {
           }
         />
         <Route path="/projects/:slug" element={<ProjectDetailsPage />} />
+        <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+        <Route path="/terms" element={<LegalPage kind="terms" />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <HitchhikerOnboarding />
@@ -195,8 +209,16 @@ function AuthenticatedApp() {
 function App() {
   return (
     <Routes>
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        element={
+          <PublicLayout legalLinksInNewTab>
+            <Outlet />
+          </PublicLayout>
+        }
+      >
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
+      </Route>
       <Route path="*" element={<AuthenticatedApp />} />
     </Routes>
   );
