@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
+import ScrollableList from "../home/ScrollableList";
 
 interface EvaluationHistoryProps {
   requests: EvaluationRequest[];
@@ -59,7 +60,7 @@ function EvaluationHistory({ requests, viewer, isLoading = false }: EvaluationHi
           <p>{t("history.emptyText")}</p>
         </div>
       ) : (
-        <div className="dashboard-requests">
+        <ScrollableList labelledBy="evaluation-history-title">
           {history.map((request) => {
             const otherPerson = viewer === "student" ? request.picked_by : request.student;
 
@@ -81,7 +82,7 @@ function EvaluationHistory({ requests, viewer, isLoading = false }: EvaluationHi
               </article>
             );
           })}
-        </div>
+        </ScrollableList>
       )}
     </section>
   );
