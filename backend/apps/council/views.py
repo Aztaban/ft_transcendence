@@ -19,7 +19,7 @@ from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
-from apps.core.schema import CSRF_HEADER, DeleteBodySchema, error_responses
+from apps.core.schema import CSRF_HEADER, error_responses
 from apps.core.throttling import SCMessageSendRateThrottle
 
 from .models import SCMessage
@@ -320,17 +320,3 @@ def sc_message_detail(request, pk):
 def sc_message_reveal_sender(request, pk):
     """Look up the sender of one message. Every lookup is audited (api-plan §10.6)."""
     return _reveal_sender(request, pk)
-
-
-_ExtendedSchema = sc_message_detail.cls.kwargs["schema"]
-
-
-class _DeleteBodySchema(DeleteBodySchema, _ExtendedSchema):
-    """drf-spectacular omits a body on DELETE. This endpoint requires ``reason`` (§10.6)."""
-
-
-sc_message_detail.cls.kwargs["schema"] = _DeleteBodySchema
-for _method_name in sc_message_detail.cls.http_method_names:
-    _handler = getattr(sc_message_detail.cls, _method_name)
-    if getattr(_handler, "kwargs", {}).get("schema") is _ExtendedSchema:
-        _handler.kwargs["schema"] = _DeleteBodySchema

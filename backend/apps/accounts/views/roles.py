@@ -12,6 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.accounts.models import Role, UserRole
+from apps.accounts.notifications import notify_role_changed
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
 from apps.accounts.serializers.profiles import RoleAssignmentResultSerializer
 from apps.accounts.serializers.roles import RoleAssignSerializer
@@ -64,6 +65,7 @@ def assign_role(request, user_id):
                 target_id=target.pk,
                 metadata={"role": role.name},
             )
+            notify_role_changed(target.pk, role.name, "assigned")
     return Response(
         RoleAssignmentResultSerializer(target).data,
         status=status.HTTP_200_OK,
@@ -114,4 +116,5 @@ def revoke_role(request, user_id, role_id):
                 target_id=target.pk,
                 metadata={"role": role.name},
             )
+            notify_role_changed(target.pk, role.name, "revoked")
     return Response(status=status.HTTP_204_NO_CONTENT)

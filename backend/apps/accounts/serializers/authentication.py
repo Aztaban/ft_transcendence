@@ -15,7 +15,16 @@ class RegistrationSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, trim_whitespace=False)
 
     def validate_email(self, value):
+        # MySQL UTF treats accented, invisible and look-alike characters as plain
+        # ones, so 42prágue.com equals 42prague.com there. Printable ASCII only differs by case.
+        if not (value.isascii() and value.isprintable()):
+            raise serializers.ValidationError(
+                _("Use an email address without accents or special characters.")
+            )
         email = User.objects.normalize_email(value)
+        # Emails are not verified, so a password account could take a student's 42 email first.
+        if email.endswith(("@42prague.com", ".42prague.com")):
+            raise serializers.ValidationError(_("Use 42 login for a 42 Prague email."))
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError(
                 _("An account with this email already exists."),

@@ -1,25 +1,8 @@
 """Shared OpenAPI descriptions for API errors and CSRF."""
 
-from drf_spectacular.openapi import AutoSchema
+from drf_spectacular.openapi import AutoSchema as SpectacularAutoSchema
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse
 from rest_framework import serializers
-
-
-class DeleteBodySchema(AutoSchema):
-    """Include explicitly annotated DELETE bodies, which spectacular otherwise omits."""
-
-    def _get_request_body(self, direction="request"):
-        if self.method != "DELETE":
-            return super()._get_request_body(direction)
-        request_serializer = self.get_request_serializer()
-        resolve_request = self.get_request_serializer
-        self.get_request_serializer = lambda: request_serializer
-        self.method = "POST"
-        try:
-            return super()._get_request_body(direction)
-        finally:
-            self.method = "DELETE"
-            self.get_request_serializer = resolve_request
 
 
 class ErrorSerializer(serializers.Serializer):
@@ -58,3 +41,29 @@ def error_responses(codes=None):
         )
         for status, values in errors.items()
     }
+
+
+class AutoSchema(SpectacularAutoSchema):
+    """drf-spectacular omits a body on DELETE. Document one when the view declares it.
+
+    ``@extend_schema`` subclasses this class, so every DELETE with a ``request``
+    serializer is documented. That includes ``DELETE /sc-messages/{id}/`` and
+    ``DELETE /projects/{slug}/eligibility/{tutor_id}/`` (api-plan §10.3, §10.6).
+    """
+
+    def _get_request_body(self, direction="request"):
+        if self.method != "DELETE":
+            return super()._get_request_body(direction)
+        # Resolve the annotation while the method is still DELETE. A method-scoped
+        # ``request=`` would not match after the parent guard is satisfied.
+        request_serializer = self.get_request_serializer()
+        if request_serializer is None:
+            return None
+        resolve_request = self.get_request_serializer
+        self.get_request_serializer = lambda: request_serializer
+        self.method = "POST"
+        try:
+            return super()._get_request_body(direction)
+        finally:
+            self.method = "DELETE"
+            self.get_request_serializer = resolve_request

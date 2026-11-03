@@ -27,7 +27,7 @@ from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
-from apps.core.schema import CSRF_HEADER, DeleteBodySchema, error_responses
+from apps.core.schema import CSRF_HEADER, AutoSchema, error_responses
 from apps.core.serializers import ReasonSerializer
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
@@ -90,7 +90,7 @@ class AdminUserListView(ListAPIView):
 
 
 class AdminUserDetailView(GenericAPIView):
-    schema = DeleteBodySchema()
+    schema = AutoSchema()
     permission_classes = [IsAuthenticated, IsAdminRole]
     serializer_class = AdminUserSerializer
     lookup_url_kwarg = "user_id"

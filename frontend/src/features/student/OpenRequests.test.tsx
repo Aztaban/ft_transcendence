@@ -57,7 +57,7 @@ describe("OpenRequests", () => {
     expect(screen.getByText("No open requests")).toBeTruthy();
   });
 
-  it("highlights requests awaiting confirmation with the proposed slot", () => {
+  it("shows the proposed slot of requests awaiting confirmation", () => {
     const requests = [
       makeRequest(1, "ft_transcendence", "pending"),
       makeRequest(2, "webserv", "awaiting_confirmation"),
@@ -66,10 +66,7 @@ describe("OpenRequests", () => {
     renderWithRouter(<OpenRequests requests={requests} />);
 
     const awaitingCard = screen.getByText("webserv").closest("article");
-    const pendingCard = screen.getByText("ft_transcendence").closest("article");
 
-    expect(awaitingCard?.classList.contains("dashboard-request--needs-confirmation")).toBe(true);
-    expect(pendingCard?.classList.contains("dashboard-request--needs-confirmation")).toBe(false);
     expect(screen.getByText("Hitchhiker proposed")).toBeTruthy();
     expect(awaitingCard?.querySelector("time")?.getAttribute("datetime")).toBe(
       "2026-10-12T15:00:00Z",

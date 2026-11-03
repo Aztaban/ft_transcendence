@@ -294,6 +294,11 @@ def test_root_and_shared_error_component_shapes(schema):
             },
         ),
         (
+            "tutor-eligibility-requests/{request_id}/",
+            "get",
+            {404: "not_found"},
+        ),
+        (
             "tutor-eligibility-requests/{request_id}/review/",
             "post",
             {
@@ -610,6 +615,17 @@ def test_audit_log_schema_matches_the_admin_entry(schema):
 
 def _component(schema, ref):
     return schema["components"]["schemas"][ref.rsplit("/", 1)[1]]
+
+
+def test_eligibility_revoke_schema_documents_the_optional_reason(schema):
+    delete = schema["paths"]["/api/v1/projects/{slug}/eligibility/{tutor_id}/"]["delete"]
+    assert "required" not in delete["requestBody"]
+    assert "content" not in delete["responses"]["204"]
+    reason = _component(
+        schema, delete["requestBody"]["content"]["application/json"]["schema"]["$ref"]
+    )
+    assert "required" not in reason
+    assert reason["properties"]["reason"] == {"type": "string", "default": "", "maxLength": 500}
 
 
 def test_council_moderation_schema_matches_the_contract(schema):
