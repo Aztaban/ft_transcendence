@@ -224,6 +224,7 @@
     "scheduledOwn": "Your evaluation is scheduled",
     "scheduledOther": "The evaluation is scheduled",
     "waiting": "Waiting for a Hitchhiker",
+    "pickSlot": "Pick a slot",
     "inactive": "This request is no longer active",
     "declinedNotice": "You declined that time. Your request is back in the queue, so another Hitchhiker can propose a new slot.",
     "cancelledNotice": "Your request has been cancelled. You can create a new one anytime.",

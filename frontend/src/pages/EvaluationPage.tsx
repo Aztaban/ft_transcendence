@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from "react-router";
 
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import { ApiError } from "../api/client";
+import { getTutorEligibility } from "../api/eligibility";
 import {
   cancelEvaluationRequest,
   confirmEvaluationRequest,
@@ -17,6 +18,7 @@ import { canCancel, cancelErrorMessage } from "../features/student/cancelRequest
 import useDialog from "../hooks/useDialog";
 import i18n, { dateLocale } from "../i18n";
 import { useCurrentUser } from "../store/CurrentUserContext";
+import { useRole } from "../store/RoleContext";
 import type { EvaluationRequest, EvaluationRequestStatus } from "../types/evaluation";
 import { EVALUATION_EVENTS } from "../websocket/events";
 import { useLiveRefresh } from "../websocket/LiveProvider";
@@ -122,6 +124,7 @@ function EvaluationPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useCurrentUser();
+  const { availableRoles } = useRole();
   const [request, setRequest] = useState<EvaluationRequest | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isBusy, setIsBusy] = useState(false);
@@ -136,9 +139,12 @@ function EvaluationPage() {
   const [reloadKey, setReloadKey] = useState(0);
   // Set by a live refresh: a failure then keeps the request already shown.
   const isLiveRefresh = useRef(false);
-  // A 404 from a live refresh or from Accept / Decline: the request is no longer shown to this
-  // user (§5.5).
+  // A 404 from loading, a live refresh or Accept / Decline: the request is no longer shown to this
+  // user (§5.5), e.g. another Hitchhiker picked it before this one opened the notification (#691).
   const [isGone, setIsGone] = useState(false);
+  // The ids of the projects the user may evaluate (GET /tutors/{id}/eligibility/, §10.3), `null`
+  // until loaded. Loaded only when the "Pick a slot" link could apply.
+  const [eligibleProjectIds, setEligibleProjectIds] = useState<number[] | null>(null);
 
   // This request was picked, confirmed, released, cancelled, expired or changed, or the
   // connection is back (§9, #257). Events about other requests are ignored.
@@ -167,10 +173,12 @@ function EvaluationPage() {
       })
       .catch((error) => {
         if (active) {
-          if (inBackground && error instanceof ApiError && error.status === 404) {
-            setIsGone(true);
-          }
+          const notFound = error instanceof ApiError && error.status === 404;
 
+          // A 404 always means gone. Any other failure clears an old "gone" from a previous
+          // request (#691), except in a background refresh, which keeps what is shown, like
+          // `loadState` below.
+          setIsGone((current) => notFound || (inBackground && current));
           setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
         }
       });
@@ -179,6 +187,44 @@ function EvaluationPage() {
       active = false;
     };
   }, [id, reloadKey]);
+
+  // Only the student who created the request may accept, decline or cancel it (§10.4 "Own
+  // student"). The picking Hitchhiker sees the same page without these buttons.
+  const isOwnRequest = request?.student != null && request.student.id === user?.id;
+  // The `evaluation.created` notification opens this page (§8.8), but slots are picked on
+  // /requests/{id}, so a Hitchhiker gets a link there (#690). Checked against the workspaces the user
+  // has, not the active one, and only once /users/me/ has answered.
+  const mayPickSlot =
+    user !== null &&
+    request?.status === "pending" &&
+    !isOwnRequest &&
+    availableRoles.includes("HITCHHIKER");
+  const userId = user?.id;
+
+  // A Head Tutor or Admin sees every request (§5.6 `not_eligible`), also for projects they may not
+  // evaluate, so the link also needs their eligibility for this project. Without it, the pick page
+  // would not find the request and call it no longer available.
+  useEffect(() => {
+    if (!mayPickSlot || userId === undefined) {
+      return;
+    }
+
+    let active = true;
+
+    getTutorEligibility(userId)
+      .then((projects) => {
+        if (active) {
+          setEligibleProjectIds(projects.map((project) => project.id));
+        }
+      })
+      .catch(() => {
+        // Without the list there is no link; the rest of the page is unaffected.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [mayPickSlot, userId]);
 
   async function answer(accept: boolean) {
     if (!request) {
@@ -238,12 +284,14 @@ function EvaluationPage() {
   }, []);
 
   const baseStatus = request ? statusInfo[request.status] : null;
-  // Only the student who created the request may accept, decline or cancel it (§10.4 "Own
-  // student"). The picking Hitchhiker sees the same page without these buttons.
-  const isOwnRequest = request?.student != null && request.student.id === user?.id;
   // The Hitchhiker who proposed the slot. Everyone else who is not the student (a Head Tutor,
   // an Admin) gets the same neutral wording.
   const isPicker = request?.picked_by != null && request.picked_by.id === user?.id;
+  const canPickSlot =
+    mayPickSlot &&
+    request !== null &&
+    eligibleProjectIds !== null &&
+    eligibleProjectIds.includes(request.project.id);
   const status =
     baseStatus && request?.status === "awaiting_confirmation" && !isOwnRequest
       ? { ...baseStatus, labelKey: "status.waitingForStudent" }
@@ -257,7 +305,7 @@ function EvaluationPage() {
 
       {loadState === "loading" && <div className="evaluation__skeleton" aria-busy="true" />}
 
-      {loadState === "error" && (
+      {loadState === "error" && !isGone && (
         <p className="evaluation__error" role="alert">
           {t("evaluation.loadError")}
         </p>
@@ -420,6 +468,17 @@ function EvaluationPage() {
                   </button>
                 </>
               )}
+            </div>
+          )}
+
+          {canPickSlot && (
+            <div className="evaluation__actions">
+              <Link
+                className="evaluation__button evaluation__button--primary"
+                to={`/requests/${request.id}`}
+              >
+                {t("evaluation.pickSlot")}
+              </Link>
             </div>
           )}
 
