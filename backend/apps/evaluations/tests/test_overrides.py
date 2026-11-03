@@ -187,21 +187,27 @@ def test_override_release_cannot_release_started_slot(
     assert not AuditLog.objects.exists()
 
 
-@pytest.mark.parametrize("result", [None, "passed", "failed"])
+@pytest.mark.parametrize("role", ["head_tutor", "admin"])
+@pytest.mark.parametrize(
+    "result,completed_at",
+    [(None, None), (None, NOW), ("passed", NOW), ("failed", NOW)],
+)
 def test_override_cancel_after_start_requires_unrecorded_result(
-    override_evaluation, override_response, make_session_client, result
+    override_evaluation, override_response, make_session_client, role, result, completed_at
 ):
     evaluation, _, _, actor, _ = override_evaluation
+    actor.roles.set(Role.objects.filter(name=role))
     EvaluationRequest.objects.filter(pk=evaluation.pk).update(
         starts_at=NOW - timedelta(hours=2),
         ends_at=NOW - timedelta(hours=1),
         result=result,
-        completed_at=NOW if result else None,
+        completed_at=completed_at,
     )
+    before = EvaluationRequest.objects.values().get(pk=evaluation.pk)
     client = make_session_client(actor)
     client.get(reverse("api:session"), HTTP_HOST="localhost")
     response = post_action(client, evaluation, "cancel", {"reason": "Review"})
-    if result:
+    if result is not None or completed_at is not None:
         assert response.status_code == 409
         assert response.json() == {
             "error": {
@@ -209,7 +215,9 @@ def test_override_cancel_after_start_requires_unrecorded_result(
                 "message": "Only active requests without a result can be cancelled.",
             }
         }
+        assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == before
         assert not AuditLog.objects.exists()
+        assert not Notification.objects.exists()
     else:
         assert response.status_code == 200
         override_response.update(
@@ -468,3 +476,74 @@ def test_override_and_participant_transition_do_not_deadlock(
     assert 200 in statuses
     assert set(statuses) <= {200, 409}
     assert AuditLog.objects.count() == (1 if statuses[0] == 200 else 0)
+
+
+@pytest.mark.parametrize(
+    "action,state",
+    [
+        ("confirm", "awaiting_confirmation"),
+        ("decline", "awaiting_confirmation"),
+        ("release", "awaiting_confirmation"),
+        ("release", "confirmed"),
+        ("cancel", "awaiting_confirmation"),
+        ("cancel", "confirmed"),
+    ],
+)
+def test_repick_before_user_locking_refuses_transition_without_new_recipient_locks(
+    override_evaluation,
+    make_user,
+    make_session_client,
+    monkeypatch,
+    user_event_sender,
+    django_capture_on_commit_callbacks,
+    action,
+    state,
+):
+    from apps.evaluations import services
+    from apps.evaluations.views.requests import EvaluationRequestObjectView
+
+    evaluation, student, _, actor, _ = override_evaluation
+    replacement = make_user("replacement@example.com", roles=("tutor",))
+    EvaluationRequest.objects.filter(pk=evaluation.pk).update(status=state)
+    client = make_session_client(student if action in ("confirm", "decline") else actor)
+    client.get(reverse("api:session"), HTTP_HOST="localhost")
+    get_object = EvaluationRequestObjectView.get_object
+    before = {}
+
+    def get_then_repick(view):
+        # Commit a replacement pick after the view reads, before the service transaction.
+        stale = get_object(view)
+        EvaluationRequest.objects.filter(pk=stale.pk).update(picked_by=replacement)
+        before.update(EvaluationRequest.objects.values().get(pk=stale.pk))
+        return stale
+
+    monkeypatch.setattr(EvaluationRequestObjectView, "get_object", get_then_repick)
+    locked_users = []
+    lock_users = services.lock_users
+
+    def track_locks(*user_ids):
+        locked_users.extend(user_ids)
+        lock_users(*user_ids)
+
+    monkeypatch.setattr(services, "lock_users", track_locks)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = post_action(client, evaluation, action, {"reason": "Review"})
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "error": {
+            "code": "invalid_state_transition",
+            "message": {
+                "confirm": "Only requests awaiting confirmation can be confirmed.",
+                "decline": "Only requests awaiting confirmation can be declined.",
+                "release": "Only picked requests without a result can be released.",
+                "cancel": "Only active requests without a result can be cancelled.",
+            }[action],
+        }
+    }
+    assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == before
+    assert replacement.pk not in locked_users
+    assert not AuditLog.objects.exists()
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    user_event_sender.assert_not_awaited()

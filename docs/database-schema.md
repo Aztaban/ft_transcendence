@@ -226,6 +226,15 @@ participants. Notification creation uses that captured set, revalidated after lo
 it must not discover and lock additional users afterward. This keeps request creation,
 eligibility submission and Council messages consistent with account deletion's lock order.
 
+Evaluation transitions re-check the picker after locking the request. If it differs
+from the picker whose user row was locked, they refuse with 409 `invalid_state_transition`.
+Council moderation locks the sender and audit actor in ascending user-id order before
+locking the message; its joined sender lookup does not acquire another user lock.
+
+Admin result forms carry the `updated_at` value loaded with the form. A result edit
+conditionally matches that value and advances it on success; a stale form is rejected
+with a reload message rather than overwriting another admin's result or feedback.
+
 The check constraints in §4.1 are the database-level safety net: a buggy code path that tries to write an inconsistent row fails instead of corrupting data.
 
 ### 4.3 Expiry

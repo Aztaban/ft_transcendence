@@ -113,14 +113,23 @@ def _not_found():
     return error_response("not_found", _("Not found."), status.HTTP_404_NOT_FOUND)
 
 
-def _lock_message(pk):
-    return SCMessage.objects.select_for_update().select_related("sender").filter(pk=pk).first()
+def _lock_message(pk, actor_id):
+    # Account deletion locks users before anonymizing their messages. Include the
+    # audit actor in the same ordered set before taking the message lock.
+    sender_id = SCMessage.objects.filter(pk=pk).values_list("sender_id", flat=True).first()
+    lock_users(sender_id, actor_id)
+    return (
+        SCMessage.objects.select_for_update(of=("self",))
+        .select_related("sender")
+        .filter(pk=pk)
+        .first()
+    )
 
 
 def _delete_sc_message(request, pk):
     """Remove one message. The audit row survives because target_id is not a foreign key."""
     with transaction.atomic():
-        message = _lock_message(pk)
+        message = _lock_message(pk, request.user.pk)
         if message is None:
             return _not_found()
         serializer = SCMessageDeleteSerializer(data=request.data)
@@ -139,7 +148,7 @@ def _delete_sc_message(request, pk):
 def _reveal_sender(request, pk):
     """Return the sender once, and always leave an audit row for that lookup (§10.6)."""
     with transaction.atomic():
-        message = _lock_message(pk)
+        message = _lock_message(pk, request.user.pk)
         if message is None:
             return _not_found()
         serializer = SCMessageRevealSerializer(data=request.data)

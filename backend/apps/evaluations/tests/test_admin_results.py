@@ -18,6 +18,7 @@ from apps.notifications.models import Notification
 pytestmark = pytest.mark.django_db
 NOW = datetime(2026, 10, 17, 12, tzinfo=timezone.utc)
 ERROR = "Results can only be entered for confirmed evaluations whose end time has passed."
+CONFLICT = "This evaluation changed since you loaded it. Reload the page and try again."
 
 
 @pytest.fixture
@@ -63,6 +64,7 @@ def submit(browser, evaluation, **overrides):
         "completed_at_0": "",
         "completed_at_1": "",
         "_save": "Save",
+        "loaded_updated_at": response.context["adminform"].form["loaded_updated_at"].value(),
     }
     payload.update(overrides)
     return browser.post(url, payload, HTTP_X_CSRFTOKEN=browser.cookies["csrftoken"].value)
@@ -70,7 +72,12 @@ def submit(browser, evaluation, **overrides):
 
 def loaded_result_form(evaluation, **overrides):
     """Validate a form before simulating a concurrent database change."""
-    payload = {"result": "passed", "feedback": "", "completed_at": None}
+    payload = {
+        "result": "passed",
+        "feedback": "",
+        "completed_at": None,
+        "loaded_updated_at": evaluation.updated_at.isoformat(),
+    }
     payload.update(overrides)
     form = EvaluationRequestAdminForm(data=payload, instance=evaluation)
     assert form.is_valid(), form.errors
@@ -303,7 +310,8 @@ def test_stale_admin_saves_do_not_duplicate_result_notifications(evaluation):
     stale_form = loaded_result_form(stale)
     model_admin = admin.site._registry[EvaluationRequest]
     model_admin.save_model(None, first, first_form, change=True)
-    model_admin.save_model(None, stale, stale_form, change=True)
+    with pytest.raises(_ResultSaveConflict, match=CONFLICT):
+        model_admin.save_model(None, stale, stale_form, change=True)
     assert Notification.objects.count() == 2
     assert set(Notification.objects.values_list("recipient_id", flat=True)) == {
         evaluation.student_id,
@@ -354,7 +362,8 @@ def test_concurrent_state_change_survives_a_stale_admin_save(
     model_admin = admin.site._registry[EvaluationRequest]
 
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
-        with pytest.raises(ValidationError, match=ERROR):
+        error = CONFLICT if change in ("pending", "expired") else ERROR
+        with pytest.raises(ValidationError, match=error):
             model_admin.save_model(None, form.instance, form, change=True)
 
     assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == before
@@ -363,7 +372,7 @@ def test_concurrent_state_change_survives_a_stale_admin_save(
     user_event_sender.assert_not_awaited()
 
 
-def test_admin_save_preserves_other_columns_and_notifies_current_participants(
+def test_admin_rejects_changed_participants_without_notifying_them(
     evaluation, make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     form = loaded_result_form(evaluation, feedback="Fresh feedback", completed_at=NOW)
@@ -372,40 +381,17 @@ def test_admin_save_preserves_other_columns_and_notifies_current_participants(
         picked_by=replacement, note="Concurrent note", updated_at=NOW + timedelta(minutes=1)
     )
     before = EvaluationRequest.objects.values().get(pk=evaluation.pk)
-    model_admin = admin.site._registry[EvaluationRequest]
 
-    with django_capture_on_commit_callbacks(execute=True):
-        model_admin.save_model(None, form.instance, form, change=True)
-        user_event_sender.assert_not_awaited()
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(_ResultSaveConflict, match=CONFLICT):
+            admin.site._registry[EvaluationRequest].save_model(
+                None, form.instance, form, change=True
+            )
 
-    assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == {
-        **before,
-        "result": "passed",
-        "feedback": "Fresh feedback",
-        "completed_at": NOW,
-    }
-    assert evaluation.picked_by_id == replacement.pk
-    assert list(
-        Notification.objects.order_by("recipient_id").values_list("recipient_id", flat=True)
-    ) == [
-        evaluation.student_id,
-        replacement.pk,
-    ]
-    assert [
-        args.args
-        for args in user_event_sender.await_args_list
-        if args.args[1].get("event") == "evaluation.updated"
-    ] == [
-        (
-            f"user_{user_id}",
-            {
-                "type": "user.event",
-                "event": "evaluation.updated",
-                "data": {"id": evaluation.pk, "status": "confirmed"},
-            },
-        )
-        for user_id in (evaluation.student_id, replacement.pk)
-    ]
+    assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == before
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    user_event_sender.assert_not_awaited()
 
 
 def test_feedback_only_save_preserves_a_concurrently_recorded_result(
@@ -421,6 +407,7 @@ def test_feedback_only_save_preserves_a_concurrently_recorded_result(
     assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == {
         **before,
         "feedback": "Fresh feedback",
+        "updated_at": NOW + timedelta(microseconds=1),
     }
     assert evaluation.result == "passed"
     assert not Notification.objects.exists()
@@ -467,3 +454,49 @@ def test_result_save_rolls_back_with_outer_transaction(
     assert evaluation.result is None
     assert not Notification.objects.exists()
     assert callbacks == []
+
+
+@pytest.mark.parametrize(
+    "saved_fields",
+    [
+        {"result": "passed"},
+        {"result": "failed"},
+        {"feedback": "Other admin's feedback"},
+        {"completed_at_0": "2026-10-17", "completed_at_1": "12:00:00"},
+    ],
+)
+def test_old_admin_page_cannot_overwrite_a_newer_save(
+    browser, evaluation, saved_fields, user_event_sender, django_capture_on_commit_callbacks
+):
+    url = reverse("admin:evaluations_evaluationrequest_change", args=[evaluation.pk])
+    old_page = browser.get(url)
+    token = old_page.context["adminform"].form["loaded_updated_at"].value()
+    saved = submit(browser, evaluation, **saved_fields)
+    assert saved.status_code == 302
+    before = EvaluationRequest.objects.values().get(pk=evaluation.pk)
+    assert before["updated_at"] == NOW + timedelta(microseconds=1)
+    log_count = LogEntry.objects.count()
+    notification_count = Notification.objects.count()
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = browser.post(
+            url,
+            {
+                "result": "",
+                "feedback": "Feedback from the old page",
+                "completed_at_0": "",
+                "completed_at_1": "",
+                "loaded_updated_at": token,
+                "_save": "Save",
+            },
+            HTTP_X_CSRFTOKEN=browser.cookies["csrftoken"].value,
+        )
+
+    assert response.status_code == 302
+    page = browser.get(url)
+    assert [(m.level, str(m)) for m in page.context["messages"]][-1] == (messages.ERROR, CONFLICT)
+    assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == before
+    assert LogEntry.objects.count() == log_count
+    assert Notification.objects.count() == notification_count
+    assert callbacks == []
+    user_event_sender.assert_not_awaited()

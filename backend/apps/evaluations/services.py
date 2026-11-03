@@ -41,6 +41,15 @@ def _lock_transition_users(evaluation, actor):
     lock_users(evaluation.student_id, evaluation.picked_by_id, actor.pk)
 
 
+def _lock_transition_request(evaluation, conflict_message):
+    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    # A release and a new pick may have committed since recipient discovery.
+    # Refuse rather than acquire the new picker's lock out of global ID order.
+    if current.picked_by_id != evaluation.picked_by_id:
+        raise InvalidStateTransition(conflict_message)
+    return current
+
+
 class ActiveRequestExists(APIException):
     status_code = 409
     default_code = "active_request_exists"
@@ -123,7 +132,9 @@ def edit_note(evaluation, validated_data):
 def confirm_request(evaluation):
     """Accept the current pick before its start (api-plan §7.1, schema §4.2)."""
     _lock_transition_users(evaluation, evaluation.student)
-    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    current = _lock_transition_request(
+        evaluation, _("Only requests awaiting confirmation can be confirmed.")
+    )
     if current.status != EvaluationRequest.Status.AWAITING_CONFIRMATION:
         raise InvalidStateTransition(_("Only requests awaiting confirmation can be confirmed."))
     at = timezone.now()
@@ -151,7 +162,9 @@ def confirm_request(evaluation):
 def decline_request(evaluation):
     """Return an unanswered pick to pending."""
     _lock_transition_users(evaluation, evaluation.student)
-    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    current = _lock_transition_request(
+        evaluation, _("Only requests awaiting confirmation can be declined.")
+    )
     previous_picker_id = current.picked_by_id
     updated = EvaluationRequest.objects.filter(
         pk=evaluation.pk,
@@ -177,7 +190,9 @@ def cancel_request(evaluation, user=None, *, reason=None, exclude_user_ids=(), a
     """Cancel as the student before the start, or as an audited override."""
     user = user or evaluation.student
     _lock_transition_users(evaluation, user)
-    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    current = _lock_transition_request(
+        evaluation, _("Only active requests without a result can be cancelled.")
+    )
     override = user.pk != current.student_id
     if override and (not can_override(user, current) or reason is None):
         raise PermissionDenied()
@@ -191,13 +206,14 @@ def cancel_request(evaluation, user=None, *, reason=None, exclude_user_ids=(), a
     at = at if at is not None else timezone.now()
     if not override and current.starts_at is not None and current.starts_at <= at:
         raise EvaluationAlreadyStarted()
-    if current.result is not None:
+    if current.result is not None or current.completed_at is not None:
         raise InvalidStateTransition(_("Only active requests without a result can be cancelled."))
     candidates = EvaluationRequest.objects.filter(
         pk=current.pk,
         student_id=evaluation.student_id,
         status=current.status,
         result__isnull=True,
+        completed_at__isnull=True,
     )
     if not override:
         candidates = candidates.filter(Q(starts_at__isnull=True) | Q(starts_at__gt=at))
@@ -229,7 +245,9 @@ def cancel_request(evaluation, user=None, *, reason=None, exclude_user_ids=(), a
 def release_slot(evaluation, user, *, reason=None):
     """Return the picking Hitchhiker's slot to the queue before its start (§10.4)."""
     _lock_transition_users(evaluation, user)
-    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    current = _lock_transition_request(
+        evaluation, _("Only picked requests without a result can be released.")
+    )
     override = reason is not None
     if override and not can_override(user, current):
         raise PermissionDenied()
@@ -250,7 +268,9 @@ def release_deleted_user_slot(evaluation, actor, *, deleted_user_id, reason, at)
     It requires an Admin and a picker whose account is already marked deleted.
     """
     _lock_transition_users(evaluation, actor)
-    current = EvaluationRequest.objects.select_for_update().get(pk=evaluation.pk)
+    current = _lock_transition_request(
+        evaluation, _("Only picked requests without a result can be released.")
+    )
     if not actor.has_role(Role.Name.ADMIN):
         raise PermissionDenied()
     if current.picked_by_id != deleted_user_id or current.picked_by.status != User.Status.DELETED:

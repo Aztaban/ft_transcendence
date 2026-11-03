@@ -8,7 +8,6 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.db import close_old_connections
 from django.urls import reverse
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
@@ -368,7 +367,7 @@ def test_stale_snapshot_cannot_release_unpicked_request(tutor, evaluation, state
 def test_stale_snapshot_cannot_release_another_tutors_new_pick(tutor, evaluation):
     replacement = get_user_model().objects.create_user(id=43, email="cara@example.com")
     EvaluationRequest.objects.filter(pk=17).update(picked_by=replacement)
-    with pytest.raises(PermissionDenied):
+    with pytest.raises(InvalidStateTransition):
         release_slot(evaluation, tutor)
     evaluation.refresh_from_db()
     assert evaluation.picked_by_id == 43

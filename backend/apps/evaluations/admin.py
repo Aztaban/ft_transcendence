@@ -4,6 +4,8 @@ Projects are maintained here (there is no API for them), and the team enters
 evaluation results here after an evaluation (api-plan §7.1).
 """
 
+from datetime import timedelta
+
 from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
@@ -21,10 +23,13 @@ from .notifications import notify_evaluation_result_recorded
 RESULT_ENTRY_ERROR = _(
     "Results can only be entered for confirmed evaluations whose end time has passed."
 )
+RESULT_SAVE_CONFLICT_ERROR = _(
+    "This evaluation changed since you loaded it. Reload the page and try again."
+)
 
 
 class _ResultSaveConflict(ValidationError):
-    """The evaluation no longer meets the admin form's result-entry conditions."""
+    """The evaluation changed or no longer meets the result-entry conditions."""
 
 
 @admin.register(Project)
@@ -56,14 +61,24 @@ class TutorEligibilityAdmin(admin.ModelAdmin):
 
 
 class EvaluationRequestAdminForm(forms.ModelForm):
+    loaded_updated_at = forms.DateTimeField(widget=forms.HiddenInput, label="")
+
     class Meta:
         model = EvaluationRequest
         fields = ("result", "feedback", "completed_at")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            # Keep microseconds in the hidden value: it is an optimistic lock token.
+            self.fields["loaded_updated_at"].initial = self.instance.updated_at.isoformat()
+
     def clean(self):
         cleaned_data = super().clean()
         populated_fields = [
-            field for field in self.Meta.fields if cleaned_data.get(field) not in (None, "")
+            field
+            for field in EvaluationRequestAdminForm.Meta.fields
+            if cleaned_data.get(field) not in (None, "")
         ]
         if populated_fields and (
             self.instance.status != EvaluationRequest.Status.CONFIRMED
@@ -96,7 +111,11 @@ class EvaluationRequestAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    fields = readonly_fields[:-2] + ("result", "feedback", "completed_at") + readonly_fields[-2:]
+    fields = (
+        readonly_fields[:-2]
+        + ("result", "feedback", "completed_at", "loaded_updated_at")
+        + readonly_fields[-2:]
+    )
 
     def has_add_permission(self, request):
         # Evaluation creation belongs to the API; this form only records results.
@@ -105,10 +124,10 @@ class EvaluationRequestAdmin(admin.ModelAdmin):
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         try:
             return super().changeform_view(request, object_id, form_url, extra_context)
-        except _ResultSaveConflict:
+        except _ResultSaveConflict as exc:
             # ModelAdmin's outer transaction has rolled back. Avoid a success
             # message or admin log entry for a result that was never persisted.
-            self.message_user(request, RESULT_ENTRY_ERROR, level=messages.ERROR)
+            self.message_user(request, exc.messages[0], level=messages.ERROR)
             return HttpResponseRedirect(request.path)
 
     @transaction.atomic
@@ -120,20 +139,25 @@ class EvaluationRequestAdmin(admin.ModelAdmin):
             for field in EvaluationRequestAdminForm.Meta.fields
             if field in form.changed_data
         }
-        if not updates:
-            obj.refresh_from_db()
-            return
         # Match API transition lock order, including the actor referenced by the
         # admin log entry and recipients referenced by notification inserts.
         lock_users(obj.student_id, obj.picked_by_id, request.user.pk if request else None)
-        previous_result = (
-            EvaluationRequest.objects.select_for_update()
-            .filter(pk=obj.pk)
-            .values_list("result", flat=True)
-            .first()
-        )
+        current = EvaluationRequest.objects.select_for_update().filter(pk=obj.pk).first()
+        loaded_at = form.cleaned_data["loaded_updated_at"]
+        if (
+            current is None
+            or current.updated_at != loaded_at
+            or current.picked_by_id != obj.picked_by_id
+        ):
+            raise _ResultSaveConflict(RESULT_SAVE_CONFLICT_ERROR)
+        if not updates:
+            obj.refresh_from_db()
+            return
+        # Advance even when two saves share the same clock tick.
+        updates["updated_at"] = max(timezone.now(), loaded_at + timedelta(microseconds=1))
         updated = EvaluationRequest.objects.filter(
             pk=obj.pk,
+            updated_at=loaded_at,
             status=EvaluationRequest.Status.CONFIRMED,
             ends_at__lt=timezone.now(),
         ).update(**updates)
@@ -141,5 +165,5 @@ class EvaluationRequestAdmin(admin.ModelAdmin):
             raise _ResultSaveConflict(RESULT_ENTRY_ERROR)
         obj.refresh_from_db()
         publish_updated_event(obj)
-        if "result" in updates and previous_result is None and obj.result is not None:
+        if "result" in updates and current.result is None and obj.result is not None:
             notify_evaluation_result_recorded(obj)

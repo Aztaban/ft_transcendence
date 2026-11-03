@@ -591,30 +591,20 @@ def test_recorded_result_cannot_be_cancelled(student, evaluation, monkeypatch, r
     assert evaluation.starts_at == START
 
 
-def test_cancellation_refreshes_released_pick(
-    student, evaluation, expected, event_sender, django_capture_on_commit_callbacks
+def test_stale_cancellation_refuses_a_released_pick(
+    evaluation, event_sender, django_capture_on_commit_callbacks
 ):
-    # A decline/release may have cleared the slot after the view fetched the row.
     EvaluationRequest.objects.filter(pk=17).update(
         status="pending", picked_by=None, starts_at=None, ends_at=None
     )
-    other = get_user_model().objects.create_user(id=43, email="eligible@example.com")
-    other.roles.add(Role.objects.get(name="tutor"))
-    TutorEligibility.objects.create(tutor=other, project=evaluation.project)
-    with django_capture_on_commit_callbacks(execute=True):
-        cancel_request(evaluation)
-    message = {
-        "type": "user.event",
-        "event": "evaluation.cancelled",
-        "data": {"id": 17, "status": "cancelled"},
-    }
-    assert event_sender.await_args_list == [call("user_7", message), call("user_43", message)]
-    expected.update(picked_by=None, starts_at=None, ends_at=None)
-    client = APIClient()
-    client.force_authenticate(student)
-    response = client.get(reverse("api:evaluation-request-detail", kwargs={"pk": 17}))
-    assert response.status_code == 200
-    assert response.json() == expected
+    before = EvaluationRequest.objects.values().get(pk=17)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(InvalidStateTransition):
+            cancel_request(evaluation)
+    assert EvaluationRequest.objects.values().get(pk=17) == before
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    event_sender.assert_not_awaited()
 
 
 @pytest.mark.django_db(transaction=True)
@@ -664,6 +654,7 @@ def test_pending_cancellation_event_filters_and_deduplicates_queue_recipients(
     EvaluationRequest.objects.filter(pk=17).update(
         status="pending", picked_by=None, starts_at=None, ends_at=None
     )
+    evaluation.refresh_from_db()
     other_project = Project.objects.create(slug="other", name="Other")
     for pk, roles, status, project in (
         (43, ("head_tutor",), "active", evaluation.project),
@@ -697,36 +688,21 @@ def test_pending_cancellation_event_filters_and_deduplicates_queue_recipients(
     ]
 
 
-def test_cancellation_of_new_pick_uses_locked_state_for_recipients(
+def test_stale_cancellation_refuses_a_new_pick(
     evaluation, event_sender, django_capture_on_commit_callbacks
 ):
     EvaluationRequest.objects.filter(pk=17).update(status="confirmed")
     # The caller fetched the request before it was picked and confirmed.
     evaluation.status = "pending"
     evaluation.picked_by = None
-    other = get_user_model().objects.create_user(id=43, email="eligible@example.com")
-    other.roles.add(Role.objects.get(name="tutor"))
-    TutorEligibility.objects.create(tutor=other, project=evaluation.project)
-    with django_capture_on_commit_callbacks(execute=True):
-        cancel_request(evaluation)
-    message = {
-        "type": "user.event",
-        "event": "evaluation.cancelled",
-        "data": {"id": 17, "status": "cancelled"},
-    }
-    assert event_sender.await_args_list == [
-        call("user_7", message),
-        call("user_42", message),
-        call(
-            "user_42",
-            {
-                "type": "user.event",
-                "event": "notification.created",
-                "data": {"id": Notification.objects.get().pk},
-            },
-        ),
-    ]
-    assert evaluation.picked_by_id == 42
+    before = EvaluationRequest.objects.values().get(pk=17)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(InvalidStateTransition):
+            cancel_request(evaluation)
+    assert EvaluationRequest.objects.values().get(pk=17) == before
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    event_sender.assert_not_awaited()
 
 
 def test_rolled_back_cancellation_sends_no_event(
