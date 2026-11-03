@@ -57,6 +57,7 @@ Django ── MySQL (all state)
 | R14 | Backend messages (`message` and `fields`) are returned in the user's language, because the i18n module requires all user-facing text to be translatable (§5.5). | Architect, Oct 2026 |
 | R15 | A `pending` request is anonymous to Hitchhikers: they see the student only once they pick it (§8.7). | Team, Oct 2026 |
 | R16 | Students do not offer time slots. The Hitchhiker proposes one, and the student can say when they are free in the request's `note` (§7.1). | Team, Oct 2026 |
+| R17 | Notifications link only to what the recipient can open: an `evaluation.*` link comes back empty once the request is hidden from them (§8.7), because a 404 logs a console error, which the subject forbids. The Hitchhiker whose proposed slot expires gets no notification, and the expired request leaves their history (expiry clears the pick, §7.1). | Team, Nov 2026 |
 
 ### 3.2 Open (not to be built until decided)
 
@@ -470,13 +471,13 @@ Returned by the admin user endpoints only. `Me` plus:
 | id | integer | |
 | type | string | One of the types below. |
 | payload | object | Shape depends on `type`. |
-| target_url | string | Frontend route to open; empty when the notification has no target. |
+| target_url | string | Frontend route to open; empty when the notification has no target. For `evaluation.*` types it is returned only while the recipient can still open the request (§8.7), and is empty after that (R17). |
 | read_at | datetime or null | `null` = unread. |
 | created_at | datetime | |
 
 The frontend builds the displayed sentence from `type` and `payload` in the current language. The backend never sends sentences. `target_url` values are routes the frontend must provide.
 
-Every create, update or delete action that affects another user notifies that user, as listed below. Actions that affect only the person performing them notify no one. Deliberate exceptions, which notify no one: editing a request's note, read state and the discussion note of the shared council inbox, and suspending, reactivating or deleting an account (the user cannot log in to read it); open views catch up through §9.3 events or §9.4.
+Every create, update or delete action that affects another user notifies that user, as listed below. Actions that affect only the person performing them notify no one. Deliberate exceptions, which notify no one: editing a request's note, read state and the discussion note of the shared council inbox, and suspending, reactivating or deleting an account (the user cannot log in to read it). Expiry notifies the student only, not the Hitchhiker whose proposed slot expired (R17). Open views catch up through §9.3 events or §9.4.
 
 **Types**, with recipients and payload. `user` objects in payloads are `{id, display_name}`; `project` objects are `ProjectRef`.
 
@@ -488,7 +489,7 @@ Every create, update or delete action that affects another user notifies that us
 | `evaluation.declined` | Picking Hitchhiker | `{request_id, project, student}` | `/evaluations/{id}` |
 | `evaluation.released` | Student; also the picking Hitchhiker when released by override | `{request_id, project, tutor}` | `/evaluations/{id}` |
 | `evaluation.cancelled` | Picking Hitchhiker if any; the student if cancelled by override | `{request_id, project, cancelled_by}` | `/evaluations/{id}` |
-| `evaluation.expired` | Student; also the Hitchhiker if it was `awaiting_confirmation` | `{request_id, project, previous_status}` | `/evaluations/{id}` |
+| `evaluation.expired` | Student | `{request_id, project, previous_status}` | `/evaluations/{id}` |
 | `evaluation.result_recorded` | Student and Hitchhiker | `{request_id, project, result}` | `/evaluations/{id}` |
 | `eligibility.requested` | All Head Tutors except the requester | `{request_id, requester, projects}` | `/eligibility-requests/{id}` |
 | `eligibility.decided` | Requester | `{request_id, decision, review_note}` | `/eligibility-requests/{id}` |
