@@ -81,7 +81,9 @@ describe("CouncilInboxPage", () => {
 
     expect(await screen.findByRole("heading", { name: "All caught up!" })).toBeTruthy();
     expect(
-      screen.getByText("There are no new messages. The ones you have read are in the History."),
+      screen.getByText(
+        "There are no new messages. Messages that have been read are in the History.",
+      ),
     ).toBeTruthy();
     expect(screen.getByRole("heading", { name: "How the inbox works" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open History" }).getAttribute("href")).toBe(
