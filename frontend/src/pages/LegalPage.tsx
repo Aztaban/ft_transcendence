@@ -4,6 +4,7 @@ import { Link } from "react-router";
 
 import logo42 from "../assets/figma/42.svg";
 import LanguageSwitcher from "../components/layout/LanguageSwitcher";
+import usePageTitle from "../components/layout/usePageTitle";
 import { dateLocale } from "../i18n";
 import "../styles/registration.css";
 import "../styles/legal.css";
@@ -33,6 +34,7 @@ interface LegalPageProps {
 // them before creating an account. The sections live in the locale files.
 function LegalPage({ kind, standalone = false }: LegalPageProps) {
   const { t } = useTranslation();
+  usePageTitle(t(`legal.${kind}.title`));
   const sections = t(`legal.${kind}.sections`, { returnObjects: true }) as LegalSection[];
   const lastUpdated = new Intl.DateTimeFormat(dateLocale(), {
     dateStyle: "long",
