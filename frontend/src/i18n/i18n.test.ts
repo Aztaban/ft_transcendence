@@ -21,10 +21,53 @@ function keys(texts: object, prefix = ""): string[] {
   return [...new Set(paths)];
 }
 
+// The plural forms of each text with a count, e.g. "time.days" → ["few", "one", "other"].
+function pluralTexts(texts: object, prefix = ""): Map<string, string[]> {
+  const found = new Map<string, string[]>();
+
+  for (const [key, value] of Object.entries(texts)) {
+    if (typeof value === "object") {
+      for (const [path, forms] of pluralTexts(value, `${prefix}${key}.`)) {
+        found.set(path, forms);
+      }
+    } else {
+      const match = /^(.*)_(one|few|many|other)$/.exec(key);
+
+      if (match) {
+        const path = `${prefix}${match[1]}`;
+        found.set(path, [...(found.get(path) ?? []), match[2]]);
+      }
+    }
+  }
+
+  return found;
+}
+
+// The forms a language uses for whole numbers: Czech one/few/other, English and Spanish
+// one/other. ("many" is for decimals in Czech and for millions in Spanish.)
+function wholeNumberForms(language: string) {
+  const rules = new Intl.PluralRules(language);
+
+  return [...new Set(Array.from({ length: 200 }, (_, count) => rules.select(count)))].sort();
+}
+
 describe("locale files", () => {
   test("Czech and Spanish have exactly the English keys", () => {
     expect(keys(cs)).toEqual(keys(en));
     expect(keys(es)).toEqual(keys(en));
+  });
+
+  test.each([
+    ["en", en],
+    ["cs", cs],
+    ["es", es],
+  ])("every text with a count has the %s plural forms", (language, texts) => {
+    const forms = wholeNumberForms(language);
+    const missing = [...pluralTexts(texts)]
+      .filter(([, found]) => forms.some((form) => !found.includes(form)))
+      .map(([path]) => path);
+
+    expect(missing).toEqual([]);
   });
 });
 

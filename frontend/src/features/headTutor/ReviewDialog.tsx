@@ -59,7 +59,7 @@ function ReviewDialog({
 
         <label className="review-dialog__note">
           <span>
-            {t("review.noteFor", { name })} <em>{t("createRequest.optional")}</em>
+            {t("review.noteFor", { name })} <em>{t("review.optional")}</em>
           </span>
           <textarea
             value={note}

@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { ApiError } from "../api/client";
 import { createEligibilityRequest } from "../api/eligibility";
 import EligibilitySentDialog from "../features/hitchhiker/EligibilitySentDialog";
+import { eligibilityRequestErrorMessage } from "../features/hitchhiker/eligibilityRequestError";
 import ProjectMultiSelect from "../features/hitchhiker/ProjectMultiSelect";
-import i18n from "../i18n";
 import type { ProjectRef } from "../types/project";
 import "../styles/eligibility-request.css";
 
+// The confirm step shares its name with the evaluation request wizard, like the rest of the header.
 const steps = [
   { id: "projects", titleKey: "eligibility.stepProjects" },
-  { id: "confirm", titleKey: "eligibility.stepConfirm" },
+  { id: "confirm", titleKey: "createRequest.stepConfirm" },
 ] as const;
 
 type StepId = (typeof steps)[number]["id"];
@@ -60,22 +60,6 @@ function writeDraft(projects: ProjectRef[] | null) {
   }
 }
 
-function submitErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    if (error.code === "eligibility_request_pending") {
-      return i18n.t("welcome.errorPending");
-    }
-
-    if (error.code === "permission_denied") {
-      return i18n.t("welcome.errorPermission");
-    }
-
-    return error.fields?.project_ids?.[0] ?? error.message;
-  }
-
-  return i18n.t("createRequest.errorGeneric");
-}
-
 // Hitchhiker eligibility request (#170, #171, #172): one request for every chosen project,
 // reviewed as a whole by a Head Tutor (api-plan §7.2, §10.3).
 function EligibilityRequestPage() {
@@ -84,7 +68,8 @@ function EligibilityRequestPage() {
   const [stepId, setStepId] = useState<StepId>("projects");
   const [projects, setProjects] = useState<ProjectRef[]>(readDraft);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  // The failed submit, translated at render so it follows the language switcher.
+  const [submitError, setSubmitError] = useState<unknown>(null);
   const [isSent, setIsSent] = useState(false);
 
   const stepIndex = steps.findIndex((step) => step.id === stepId);
@@ -99,12 +84,12 @@ function EligibilityRequestPage() {
   // Going back to change the request clears the last submit error, so it never shows up
   // under other projects.
   function goToStep(nextStepId: StepId) {
-    setSubmitError("");
+    setSubmitError(null);
     setStepId(nextStepId);
   }
 
   async function handleSubmit() {
-    setSubmitError("");
+    setSubmitError(null);
     setIsSubmitting(true);
 
     try {
@@ -112,7 +97,7 @@ function EligibilityRequestPage() {
       writeDraft(null);
       setIsSent(true);
     } catch (error) {
-      setSubmitError(submitErrorMessage(error));
+      setSubmitError(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -197,9 +182,9 @@ function EligibilityRequestPage() {
                 </button>
               </article>
 
-              {submitError && (
+              {submitError !== null && (
                 <p className="eligibility-request__error" role="alert">
-                  {submitError}
+                  {eligibilityRequestErrorMessage(submitError)}
                 </p>
               )}
 

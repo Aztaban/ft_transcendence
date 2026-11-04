@@ -20,17 +20,17 @@ type LoadState = "loading" | "ready" | "error";
 
 const tabs: EligibilityRequestStatus[] = ["pending", "approved", "declined"];
 
-// Keys of the "review" texts for each status: its name, and the empty list of that tab.
-const statusLabels: Record<EligibilityRequestStatus, string> = {
-  pending: "review.pending",
-  approved: "review.approved",
-  declined: "review.declined",
+// Keys of the "review" texts for each status: the tab (a plural heading) and its empty list.
+const statusTexts: Record<EligibilityRequestStatus, { tabKey: string; emptyKey: string }> = {
+  pending: { tabKey: "review.pending", emptyKey: "review.noPending" },
+  approved: { tabKey: "review.approved", emptyKey: "review.noApproved" },
+  declined: { tabKey: "review.declined", emptyKey: "review.noDeclined" },
 };
 
-const emptyLabels: Record<EligibilityRequestStatus, string> = {
-  pending: "review.noPending",
-  approved: "review.noApproved",
-  declined: "review.noDeclined",
+// The badge of one reviewed request, singular: the tab says "Aprobadas", a row "Aprobada".
+const badgeKeys: Record<Exclude<EligibilityRequestStatus, "pending">, string> = {
+  approved: "review.badgeApproved",
+  declined: "review.badgeDeclined",
 };
 
 interface OpenReview {
@@ -38,8 +38,16 @@ interface OpenReview {
   decision: EligibilityDecision;
 }
 
+// The last decision, kept as data and translated at render, so it follows the language switcher.
+interface Decision {
+  decision: EligibilityDecision;
+  name: string;
+}
+
+// Called at render with the kept error. An answer without a code (e.g. nginx's HTML 502) gets the
+// generic text, never the English developer message.
 function reviewErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
+  if (error instanceof ApiError && error.code) {
     if (error.code === "cannot_review_own_request") {
       return i18n.t("review.errorOwn");
     }
@@ -82,9 +90,10 @@ function EligibilityReviewPage() {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [openReview, setOpenReview] = useState<OpenReview | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reviewError, setReviewError] = useState("");
-  const [message, setMessage] = useState("");
-  const [pageError, setPageError] = useState("");
+  // Errors are kept as they came and translated at render (see `reviewErrorMessage`).
+  const [reviewError, setReviewError] = useState<unknown>(null);
+  const [message, setMessage] = useState<Decision | null>(null);
+  const [pageError, setPageError] = useState<unknown>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -152,7 +161,7 @@ function EligibilityReviewPage() {
 
   const closeReview = useCallback(() => {
     setOpenReview(null);
-    setReviewError("");
+    setReviewError(null);
   }, []);
 
   async function handleConfirm(reviewNote: string) {
@@ -162,7 +171,7 @@ function EligibilityReviewPage() {
 
     const { request, decision } = openReview;
 
-    setReviewError("");
+    setReviewError(null);
     setIsSubmitting(true);
 
     try {
@@ -171,23 +180,19 @@ function EligibilityReviewPage() {
         reviewNote ? { decision, review_note: reviewNote } : { decision },
       );
       setOpenReview(null);
-      setPageError("");
-      setMessage(
-        t(decision === "approved" ? "review.approvedMessage" : "review.declinedMessage", {
-          name: request.requester.display_name,
-        }),
-      );
+      setPageError(null);
+      setMessage({ decision, name: request.requester.display_name });
       reload();
     } catch (error) {
       if (error instanceof ApiError && error.code === "eligibility_request_already_reviewed") {
         // The request is gone from this tab: close the dialog, explain on the page and reload.
         setOpenReview(null);
-        setReviewError("");
-        setMessage("");
-        setPageError(reviewErrorMessage(error));
+        setReviewError(null);
+        setMessage(null);
+        setPageError(error);
         reload();
       } else {
-        setReviewError(reviewErrorMessage(error));
+        setReviewError(error);
       }
     } finally {
       setIsSubmitting(false);
@@ -231,11 +236,11 @@ function EligibilityReviewPage() {
               setStatus(tab);
               setPage(1);
               setMoreFailed(false);
-              setMessage("");
-              setPageError("");
+              setMessage(null);
+              setPageError(null);
             }}
           >
-            {t(statusLabels[tab])}
+            {t(statusTexts[tab].tabKey)}
             {tab === status && loadState === "ready" && (
               <span className="eligibility-review__tab-count">{total}</span>
             )}
@@ -245,13 +250,16 @@ function EligibilityReviewPage() {
 
       {message && (
         <p className="eligibility-review__message" role="status">
-          {message}
+          {t(
+            message.decision === "approved" ? "review.approvedMessage" : "review.declinedMessage",
+            { name: message.name },
+          )}
         </p>
       )}
 
-      {pageError && (
+      {pageError !== null && (
         <p className="eligibility-review__notice" role="alert">
-          {pageError}
+          {reviewErrorMessage(pageError)}
         </p>
       )}
 
@@ -260,19 +268,19 @@ function EligibilityReviewPage() {
           {[1, 2, 3].map((placeholder) => (
             <div className="eligibility-review__skeleton" key={placeholder} />
           ))}
-          <span className="eligibility-review__sr-only">{t("hitchhikerRequests.loading")}</span>
+          <span className="eligibility-review__sr-only">{t("review.loadingRequests")}</span>
         </div>
       )}
 
       {loadState === "error" && (
         <p className="eligibility-review__error" role="alert">
-          {t("hitchhikerRequests.error")}
+          {t("review.loadError")}
         </p>
       )}
 
       {loadState === "ready" && requests.length === 0 && (
         <div className="eligibility-review__empty">
-          <h2>{t(emptyLabels[status])}</h2>
+          <h2>{t(statusTexts[status].emptyKey)}</h2>
           {status === "pending" && <p>{t("review.newRequests")}</p>}
         </div>
       )}
@@ -353,7 +361,7 @@ function EligibilityReviewPage() {
                         <span
                           className={`eligibility-review__status eligibility-review__status--${request.status}`}
                         >
-                          {t(statusLabels[request.status])}
+                          {t(badgeKeys[request.status])}
                         </span>
                         {request.reviewed_by && (
                           <span>{t("review.by", { name: request.reviewed_by.display_name })}</span>
@@ -395,7 +403,7 @@ function EligibilityReviewPage() {
           request={openReview.request}
           decision={openReview.decision}
           isSubmitting={isSubmitting}
-          error={reviewError}
+          error={reviewError === null ? "" : reviewErrorMessage(reviewError)}
           onConfirm={handleConfirm}
           onClose={closeReview}
         />
