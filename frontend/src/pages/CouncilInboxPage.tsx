@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
+import CouncilTabs from "../features/council/CouncilTabs";
 import { useCouncilMessages } from "../features/council/useCouncilMessages";
 import { formatTimeAgo } from "../utils/dateTime";
 import "../styles/council.css";
@@ -46,6 +47,8 @@ function CouncilInboxPage() {
         </div>
       </header>
 
+      <CouncilTabs active="new" />
+
       <div className="council-layout">
         <div className="council-message__body">
           {loadState === "loading" && (
@@ -70,6 +73,9 @@ function CouncilInboxPage() {
               </span>
               <h2>{t("council.caughtUp")}</h2>
               <p>{t("council.caughtUpText")}</p>
+              <Link className="council-button council-button--small" to="/council/history">
+                {t("council.openHistory")} <span aria-hidden="true">→</span>
+              </Link>
             </div>
           )}
 

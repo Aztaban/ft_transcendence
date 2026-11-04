@@ -30,12 +30,16 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
-function renderPage() {
+// `from` is the router state the History's "Open" link sets.
+function renderPage(from?: string) {
   return render(
-    <MemoryRouter initialEntries={["/council/inbox/3"]}>
+    <MemoryRouter
+      initialEntries={[{ pathname: "/council/inbox/3", state: from ? { from } : null }]}
+    >
       <Routes>
         <Route path="/council/inbox/:id" element={<CouncilInboxMessagePage />} />
         <Route path="/council/inbox" element={<div>Messages page</div>} />
+        <Route path="/council/history" element={<div>History page</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -101,6 +105,29 @@ describe("CouncilInboxMessagePage", () => {
   it("goes back to the messages, also from a read message", async () => {
     vi.mocked(getSCMessage).mockResolvedValue(read);
     renderPage();
+    await screen.findByText(read.body);
+
+    fireEvent.click(button("Back to the messages"));
+
+    expect(screen.getByText("Messages page")).toBeTruthy();
+  });
+
+  // #279: a member reading old messages keeps their place in the History.
+  it("goes back to the History, also from the popup, when the message was opened there", async () => {
+    vi.mocked(getSCMessage).mockResolvedValue(unread);
+    vi.mocked(setSCMessageRead).mockResolvedValue(read);
+    renderPage("/council/history");
+    await screen.findByText(unread.body);
+
+    fireEvent.click(button("Mark as read"));
+    fireEvent.click(await screen.findByTestId("marked-read-backdrop"));
+
+    expect(screen.getByText("History page")).toBeTruthy();
+  });
+
+  it("goes back to the messages when it was opened from anywhere else", async () => {
+    vi.mocked(getSCMessage).mockResolvedValue(read);
+    renderPage("https://example.com/");
     await screen.findByText(read.body);
 
     fireEvent.click(button("Back to the messages"));
