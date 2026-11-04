@@ -211,14 +211,19 @@ def test_a_message_moves_from_send_through_moderation(
     student_delete = student.delete(
         reverse(DETAIL, args=[message.id]), {"reason": "Abusive content."}, format="json"
     )
-    removed = admin_client.delete(
-        reverse(DETAIL, args=[message.id]), {"reason": "Abusive content."}, format="json"
-    )
     assert council_delete.status_code == status.HTTP_403_FORBIDDEN
     assert council_delete.json() == FORBIDDEN
     assert student_delete.status_code == status.HTTP_404_NOT_FOUND
     assert student_delete.json() == NOT_FOUND
-    assert removed.status_code == status.HTTP_204_NO_CONTENT
+    assert group_send.await_count == 1
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        removed = admin_client.delete(
+            reverse(DETAIL, args=[message.id]), {"reason": "Abusive content."}, format="json"
+        )
+        assert removed.status_code == status.HTTP_204_NO_CONTENT
+        assert group_send.await_count == 1
+
     assert removed.content == b""
     assert not SCMessage.objects.filter(pk=message.id).exists()
     assert council.get(reverse(LIST)).json() == {
@@ -227,20 +232,13 @@ def test_a_message_moves_from_send_through_moderation(
         "previous": None,
         "results": [],
     }
-    assert list(
-        Notification.objects.order_by("recipient_id").values(
-            "recipient_id", "type", "payload", "target_url", "read_at"
-        )
-    ) == [
-        {
-            "recipient_id": ada.id,
-            "type": "sc_message.created",
-            "payload": {"message_id": message.id},
-            "target_url": f"/council/inbox/{message.id}",
-            "read_at": None,
-        }
-    ]
-    assert group_send.await_count == 1
+    assert not Notification.objects.exists()
+    assert len(callbacks) == 1
+    assert group_send.await_count == 2
+    group_send.assert_any_await(
+        f"user_{ada.id}",
+        {"type": "user.event", "event": "notification.updated", "data": {}},
+    )
     assert list(
         AuditLog.objects.order_by("id").values(
             "actor_id", "action", "target_type", "target_id", "reason", "metadata"

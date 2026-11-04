@@ -584,7 +584,7 @@ Events carry ids, never full objects. On receipt the frontend re-fetches what it
 | `eligibility.revoked` | `{project_id}` | The Hitchhiker |
 | `role.changed` | `{}` | The user. The frontend re-fetches `/users/me/` and rebuilds navigation. |
 | `notification.created` | `{id}` | Recipient. The frontend refreshes the unread count. |
-| `notification.updated` | `{}` | The user, after marking one or all notifications read or deleting one. The frontend refreshes the unread count and any notification list it shows, so other tabs and devices stay in sync. |
+| `notification.updated` | `{}` | The user, after marking one or all notifications read, deleting one, or losing an `sc_message.created` notification because an Admin deleted that message (§10.6). The frontend refreshes the unread count and any notification list it shows, so other tabs and devices stay in sync. |
 | `session.ended` | `{}` | On logout: the connections of that session. On suspension or deletion: all of the user's connections. The server closes them with 4401 right after. |
 
 Events are sent with `transaction.on_commit`, so a client never re-fetches before the change is visible.
@@ -891,6 +891,8 @@ Notifications are created only by the backend. Other users' notifications return
 ```
 
 The note is saved only if the version still matches, and the version goes up by one. If another member saved in between: 409 `edit_conflict` and nothing changes; re-fetch, merge, retry. `is_read` alone needs no version.
+
+**Delete.** `DELETE /sc-messages/{id}/` also deletes the `sc_message.created` notifications whose `payload.message_id` is that message, read or unread, in the same transaction. After commit, each SC Member who lost one receives `notification.updated` with `{}` (§9.3). A 400, 404 or rolled-back delete leaves the notifications in place.
 
 **Reveal sender.** `POST /sc-messages/{id}/reveal-sender/` with `{"reason": "..."}` (required, 10–500 chars).
 
