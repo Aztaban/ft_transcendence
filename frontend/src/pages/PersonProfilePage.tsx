@@ -11,6 +11,7 @@ import { listEvaluationRequests } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
 import { getPublicUser } from "../api/users";
 import PersonAvatar from "../features/people/PersonAvatar";
+import RoleManager from "../features/people/RoleManager";
 import { isHitchhiker, roleBadges } from "../features/people/roleBadges";
 import i18n, { dateLocale } from "../i18n";
 import { useAuth } from "../store/AuthContext";
@@ -470,6 +471,11 @@ function PersonProfilePage() {
                   ))}
                 </ul>
               </section>
+            )}
+
+            {/* Head Tutors, SC Members and Admins give or remove roles here (#679). */}
+            {user && !isMe && (
+              <RoleManager person={person} myRoles={user.roles} onChange={setPerson} />
             )}
 
             {showsTogether && (

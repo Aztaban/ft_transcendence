@@ -555,11 +555,96 @@
   color: var(--color-text-secondary);
 }
 
+/* Manage roles (#679) */
+
+.person-profile__manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.person-profile__manage-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #e3e7e7;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.person-profile__manage-remove {
+  flex: none;
+  padding: 6px 14px;
+  border: 1px solid #f3b8b2;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #b42318;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.person-profile__manage-remove:hover:not(:disabled) {
+  background: #fef6f5;
+}
+
+.person-profile__manage-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.person-profile__manage-form label {
+  flex-basis: 100%;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.person-profile__manage-form select {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid #cfd6d6;
+  border-radius: 10px;
+  background: #ffffff;
+  font: inherit;
+}
+
+.person-profile__manage-remove:disabled,
+.person-profile__manage-form button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.person-profile__manage-error {
+  margin: 12px 0 0;
+  color: #b42318;
+}
+
+.person-profile__manage-status {
+  margin: 12px 0 0;
+  color: var(--color-text-secondary);
+}
+
+.person-profile__manage-status:empty {
+  margin: 0;
+}
+
 .person-profile__back:focus-visible,
 .person-profile__action:focus-visible,
 .person-profile__segment:focus-visible,
 .person-profile__panel-link:focus-visible,
 .person-profile__row:focus-visible,
+.person-profile__manage-remove:focus-visible,
+.person-profile__manage-form select:focus-visible,
 .person-profile__message a:focus-visible,
 .person-profile__message button:focus-visible {
   outline: 3px solid rgba(0, 186, 188, 0.55);
