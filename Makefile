@@ -1,10 +1,19 @@
-.PHONY: up down build logs test env
+.PHONY: up down build logs test env prod prod-down
 
 up: env
 	docker compose up --build
 
 down:
 	docker compose down
+
+# Production profile: built frontend, Daphne, DEBUG off (docker-compose.prod.yml).
+PROD = docker compose -f docker-compose.yml -f docker-compose.prod.yml
+
+prod: env
+	$(PROD) up --build
+
+prod-down:
+	$(PROD) down
 
 build:
 	docker compose build

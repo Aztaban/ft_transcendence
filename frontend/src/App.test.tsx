@@ -1,10 +1,11 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { getSession, loginUser } from "./api/auth";
 import { listEvaluationRequests } from "./api/evaluationRequests";
 import { listProjects } from "./api/projects";
+import { getCurrentUser } from "./api/users";
 import App from "./App";
 import { AuthProvider } from "./store/AuthContext";
 import { RoleProvider } from "./store/RoleContext";
@@ -17,6 +18,19 @@ vi.mock("./api/auth", () => ({
 }));
 vi.mock("./api/evaluationRequests", () => ({ listEvaluationRequests: vi.fn() }));
 vi.mock("./api/projects", () => ({ listProjects: vi.fn() }));
+vi.mock("./api/users", () => ({
+  getCurrentUser: vi.fn(),
+  getPublicUser: vi.fn(),
+  updateCurrentUser: vi.fn(),
+}));
+
+// The user's real roles from /users/me/. By default nothing is loaded, as without a provider; a
+// test sets `roles` and `isLoaded` when a page depends on them.
+const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
+
+vi.mock("./store/CurrentUserContext", () => ({
+  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+}));
 
 const user = { id: 1, email: "student@example.com", display_name: "Student" };
 
@@ -34,6 +48,8 @@ afterEach(() => {
   cleanup();
   vi.resetAllMocks();
   sessionStorage.clear();
+  currentUser.roles = [];
+  currentUser.isLoaded = false;
 });
 
 const renderAt = (path: string) =>
@@ -63,11 +79,61 @@ describe("logged in", () => {
     expect(screen.getByText("Page not found.")).toBeDefined();
   });
 
+  test.each([
+    ["/privacy", "Privacy Policy"],
+    ["/terms", "Terms of Service"],
+  ])("keeps the application shell around %s", async (path, title) => {
+    const { container } = renderAt(path);
+
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeDefined();
+    expect(container.querySelector(".sidebar")).toBeTruthy();
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+  });
+
+  test("links to both legal pages inside the application", async () => {
+    renderAt("/");
+
+    const footer = within(await screen.findByRole("contentinfo"));
+
+    expect(footer.getByText("© transcendence 2026")).toBeDefined();
+
+    expect(footer.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toBe(
+      "/privacy",
+    );
+    expect(footer.getByRole("link", { name: "Terms of Service" }).getAttribute("href")).toBe(
+      "/terms",
+    );
+  });
+
   test("renders the application shell around every route", async () => {
     const { container } = renderAt("/");
     await screen.findByRole("heading", { name: "Welcome Back" });
     expect(container.querySelector(".sidebar")).toBeTruthy();
     expect(container.querySelector(".topbar")).toBeTruthy();
+  });
+
+  // #687: notifications link to /profile from any workspace (§8.8).
+  test("opens /profile from the Student Council workspace instead of refusing it", async () => {
+    sessionStorage.setItem("active-role", "COUNCIL");
+    currentUser.roles = ["student", "tutor", "sc_member"];
+    currentUser.isLoaded = true;
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      ...user,
+      display_name: "Bob",
+      avatar_url: null,
+      language: "en",
+      roles: [
+        { id: 1, name: "student" },
+        { id: 2, name: "sc_member" },
+        { id: 3, name: "tutor" },
+      ],
+      intra_login: null,
+    });
+
+    renderAt("/profile");
+
+    expect(await screen.findByRole("heading", { name: "Bob" })).toBeDefined();
+    expect(screen.queryByText("This page is not available for your current role.")).toBeNull();
   });
 });
 
@@ -75,6 +141,46 @@ describe("logged in", () => {
 describe("logged out", () => {
   beforeEach(() => {
     vi.mocked(getSession).mockResolvedValue({ authenticated: false, user: null });
+  });
+
+  test.each([
+    ["/privacy", "Privacy Policy"],
+    ["/terms", "Terms of Service"],
+  ])("opens %s without a session", async (path, title) => {
+    const { container } = renderAt(path);
+
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeDefined();
+    expect(container.querySelector(".sidebar")).toBeNull();
+  });
+
+  test.each(["/privacy", "/terms"])("links to both legal pages from %s", async (path) => {
+    renderAt(path);
+
+    const footer = within(await screen.findByRole("contentinfo"));
+
+    expect(footer.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toBe(
+      "/privacy",
+    );
+    expect(footer.getByRole("link", { name: "Terms of Service" }).getAttribute("href")).toBe(
+      "/terms",
+    );
+  });
+
+  // Leaving in the same tab would lose the form and the page to return to after login.
+  test.each(["/login", "/register"])("opens the legal pages in a new tab from %s", async (path) => {
+    renderAt(path);
+
+    const footer = within(await screen.findByRole("contentinfo"));
+
+    for (const [name, href] of [
+      ["Privacy Policy (opens in a new tab)", "/privacy"],
+      ["Terms of Service (opens in a new tab)", "/terms"],
+    ]) {
+      const link = footer.getByRole("link", { name });
+
+      expect(link.getAttribute("href")).toBe(href);
+      expect(link.getAttribute("target")).toBe("_blank");
+    }
   });
 
   test("sends every page to the login page without calling its APIs", async () => {

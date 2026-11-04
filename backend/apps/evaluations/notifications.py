@@ -27,7 +27,8 @@ def notify_evaluation_created(evaluation: EvaluationRequest) -> None:
             recipient_id=recipient_id,
             notification_type=Notification.Type.EVALUATION_CREATED,
             payload=payload,
-            target_url=f"/evaluations/{evaluation.pk}",
+            # The pick page: it does not 404 once another Hitchhiker has picked (#710).
+            target_url=f"/requests/{evaluation.pk}",
         )
 
 

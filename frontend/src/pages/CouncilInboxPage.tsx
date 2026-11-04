@@ -1,17 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
-import { listSCMessages } from "../api/scMessages";
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
 import CouncilTabs from "../features/council/CouncilTabs";
-import type { SCMessage } from "../types/scMessage";
+import { useCouncilMessages } from "../features/council/useCouncilMessages";
 import { formatTimeAgo } from "../utils/dateTime";
-import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/council.css";
-
-type LoadState = "loading" | "ready" | "error";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -21,102 +16,12 @@ const howItWorks = ["Open", "Mark", "Note"];
 
 // Council "Messages" (#277, Figma "new messages"): messages no council member has read yet,
 // newest first, from GET /sc-messages/?unread=true (api-plan §10.6). Messages have no title,
-// so a card shows its number and the first lines of the text. A new message notifies every
-// council member (`notification.created`, §9.3), so the list re-fetches in the background then
-// and after a reconnect.
+// so a card shows its number and the first lines of the text.
 function CouncilInboxPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<SCMessage[]>([]);
-  const [total, setTotal] = useState(0);
-  // The last page that is actually shown; "Show more" loads the one after it (§5.7).
-  const [loadedPage, setLoadedPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [moreFailed, setMoreFailed] = useState(false);
-  const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [reloadKey, setReloadKey] = useState(0);
-  // Set by a live refresh: a failure then keeps the messages already shown.
-  const isLiveRefresh = useRef(false);
-
-  // Reloads the first page in the background, keeping what is shown if that fails.
-  const refreshInBackground = useCallback(() => {
-    isLiveRefresh.current = true;
-    setReloadKey((key) => key + 1);
-  }, []);
-
-  useLiveRefresh(["notification.created"], refreshInBackground);
-
-  // Read state changes by colleagues send no event: catch up when the tab is shown again (§9.3).
-  useEffect(() => {
-    function handleVisibilityChange() {
-      if (document.visibilityState === "visible") {
-        refreshInBackground();
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [refreshInBackground]);
-
-  useEffect(() => {
-    let active = true;
-    const inBackground = isLiveRefresh.current;
-
-    isLiveRefresh.current = false;
-
-    // Always the first page: a refresh replaces the list, and only a successful answer does, so
-    // a failed background refresh keeps the shown list and its page count together.
-    listSCMessages({ unread: true, page: 1 })
-      .then((result) => {
-        if (active) {
-          setMessages(result.results);
-          setLoadedPage(1);
-          setTotal(result.count);
-          setHasMore(result.next !== null);
-          setMoreFailed(false);
-          setLoadState("ready");
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [reloadKey]);
-
-  // The page after the last one shown. The page count moves on only when it arrived; a failure
-  // shows an error and the next click asks for the same page again.
-  async function showMore() {
-    const next = loadedPage + 1;
-
-    setIsLoadingMore(true);
-    setMoreFailed(false);
-
-    try {
-      const result = await listSCMessages({ unread: true, page: next });
-
-      // A message that moved between pages (new ones arrive on top) is not shown twice.
-      setMessages((current) => [
-        ...current,
-        ...result.results.filter((message) => current.every((shown) => shown.id !== message.id)),
-      ]);
-      setLoadedPage(next);
-      setTotal(result.count);
-      setHasMore(result.next !== null);
-    } catch {
-      setMoreFailed(true);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }
+  const { messages, total, hasMore, isLoadingMore, moreFailed, loadState, showMore } =
+    useCouncilMessages(true);
 
   const now = new Date();
 

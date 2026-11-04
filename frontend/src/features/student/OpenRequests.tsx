@@ -3,6 +3,7 @@ import { Link } from "react-router";
 
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
+import ScrollableList from "../home/ScrollableList";
 
 interface OpenRequestsProps {
   requests: EvaluationRequest[];
@@ -43,16 +44,9 @@ function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
           <p>{t("dashboard.studentOpenEmpty")}</p>
         </div>
       ) : (
-        <div className="dashboard-requests">
+        <ScrollableList labelledBy="open-requests-title">
           {openRequests.map((request) => (
-            <article
-              className={
-                needsConfirmation(request)
-                  ? "dashboard-request dashboard-request--needs-confirmation"
-                  : "dashboard-request"
-              }
-              key={request.id}
-            >
+            <article className="dashboard-request" key={request.id}>
               <div>
                 <h3>{request.project.name}</h3>
 
@@ -94,7 +88,7 @@ function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
               )}
             </article>
           ))}
-        </div>
+        </ScrollableList>
       )}
     </section>
   );
