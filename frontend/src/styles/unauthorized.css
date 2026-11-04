@@ -14,7 +14,7 @@
 }
 
 .unauthorized-page__code {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-size: clamp(5rem, 11vw, 9rem);
   font-weight: 700;
   line-height: 0.9;
@@ -23,7 +23,7 @@
 
 .unauthorized-page__eyebrow {
   margin: 0 0 12px;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.12em;

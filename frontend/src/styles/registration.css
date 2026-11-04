@@ -140,7 +140,7 @@
   align-items: center;
   gap: 12px;
   margin: 24px 0;
-  color: #7a7a7a;
+  color: var(--color-text-secondary);
   font-size: 0.9rem;
   text-transform: uppercase;
 }
@@ -171,8 +171,8 @@
 }
 
 .registration-oauth.ui-button:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  border-color: var(--color-accent-text);
+  color: var(--color-accent-text);
 }
 
 .registration-oauth img {

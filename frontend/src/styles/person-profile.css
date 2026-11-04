@@ -200,7 +200,7 @@
 
 .person-profile__action--primary {
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .person-profile__action--primary:hover {
@@ -255,7 +255,7 @@
 }
 
 .person-profile__legend span {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-weight: 700;
 }
 
@@ -284,7 +284,7 @@
   border: 1px solid #e3e7e7;
   border-radius: 8px;
   background: #f5f7f7;
-  color: #7b8080;
+  color: var(--color-text-secondary);
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
@@ -298,7 +298,7 @@
 .person-profile__segment--on {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .person-profile__segment span[aria-hidden="true"] {
@@ -325,7 +325,7 @@
 
 .person-profile__segment--on:hover {
   background: var(--color-accent-dark);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .person-profile__strip-note {
@@ -386,7 +386,7 @@
 
 .person-profile__panel-link:hover {
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .person-profile__cards,
@@ -510,7 +510,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--tone);
+  /* The darker shade of the tone: white text stays above 4.5:1 on every row. */
+  background: var(--tone-ink);
   color: #ffffff;
   font-size: 0.75rem;
   text-transform: uppercase;
