@@ -166,6 +166,22 @@ describe("Sidebar active item", () => {
     expect(activeItems()).toEqual(["Messages"]);
   });
 
+  test("offers no message form in the Council workspace", () => {
+    currentUser.roles = ["student", "sc_member"];
+    currentUser.isLoaded = true;
+
+    renderSidebar("/council/inbox");
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+    fireEvent.click(screen.getByRole("option", { name: "COUNCIL" }));
+
+    expect(
+      screen
+        .getAllByRole("link")
+        .filter((link) => link.className.includes("sidebar__nav-link"))
+        .map((link) => link.textContent),
+    ).toEqual(["Home", "Messages", "History", "Hitchhikers"]);
+  });
+
   test("keeps Student Council highlighted on the message form", () => {
     renderSidebar("/council/send");
 
