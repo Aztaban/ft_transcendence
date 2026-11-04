@@ -9,16 +9,10 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
 from apps.evaluations.models import EvaluationRequest, TutorEligibility
-from apps.evaluations.permissions import (
-    OVERRIDE_ROLES,
-    CanPickSlot,
-    CanReleaseSlot,
-    EvaluationRequestPermission,
-)
+from apps.evaluations.permissions import CanPickSlot, CanReleaseSlot, EvaluationRequestPermission
 from apps.evaluations.serializers.requests import (
     EvaluationRequestCreateSerializer,
     EvaluationRequestNoteSerializer,
@@ -36,6 +30,7 @@ from apps.evaluations.services import (
     pick_slot,
     release_slot,
 )
+from apps.evaluations.visibility import visible_evaluation_requests
 
 
 class EvaluationRequestBaseView(GenericAPIView):
@@ -146,22 +141,6 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
             note=serializer.validated_data["note"],
         )
         return Response(self.get_serializer(evaluation).data, status=status.HTTP_201_CREATED)
-
-
-def visible_evaluation_requests(user):
-    """Requests this user may see. Anyone else gets 404."""
-    queryset = EvaluationRequest.objects.select_related(
-        "student", "project", "picked_by", "cancelled_by"
-    )
-    if user.roles.filter(name__in=OVERRIDE_ROLES).exists():
-        return queryset
-    visible = Q(student=user) | Q(picked_by=user)
-    if user.roles.filter(name__in=HITCHHIKER_ROLES).exists():
-        visible |= Q(
-            status=EvaluationRequest.Status.PENDING,
-            project_id__in=TutorEligibility.objects.filter(tutor=user).values("project_id"),
-        )
-    return queryset.filter(visible)
 
 
 # One request; anyone who may not see it gets 404 (api-plan §8.7). A comment, not a docstring:
