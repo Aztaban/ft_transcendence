@@ -1,4 +1,6 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render as renderInDom, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "../../i18n";
@@ -6,10 +8,14 @@ import type { UserProfile } from "../../types/user";
 import TopBar from "./TopBar";
 
 const current = vi.hoisted(() => ({ user: null as UserProfile | null, unreadCount: 0 }));
+const logoutMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./ConnectionStatus", () => ({ default: () => null }));
 vi.mock("../../store/CurrentUserContext", () => ({
   useCurrentUser: () => ({ user: current.user, roles: [], isLoaded: true, refresh: () => {} }),
+}));
+vi.mock("../../store/AuthContext", () => ({
+  useAuth: () => ({ logout: logoutMock }),
 }));
 vi.mock("../../store/NotificationCountContext", () => ({
   useNotificationCount: () => ({ unreadCount: current.unreadCount }),
@@ -35,7 +41,20 @@ const lenka: UserProfile = {
   intra_login: null,
 };
 
+// The user menu navigates to the login page after logging out.
+function render(ui: ReactElement) {
+  return renderInDom(
+    <MemoryRouter initialEntries={["/"]}>
+      <Routes>
+        <Route path="/" element={ui} />
+        <Route path="/login" element={<p>Login page</p>} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
 afterEach(async () => {
+  logoutMock.mockReset();
   current.user = null;
   current.unreadCount = 0;
   cleanup();
@@ -165,5 +184,84 @@ describe("TopBar notification center", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open a notification" }));
 
     expect(screen.queryByRole("region", { name: "Notifications" })).toBeNull();
+  });
+});
+
+describe("TopBar user menu", () => {
+  it("opens a menu with Logout from the arrow, and closes it again", () => {
+    current.user = lenka;
+    render(<TopBar />);
+    const arrow = screen.getByRole("button", { name: "Open user menu" });
+
+    expect(arrow.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("button", { name: "Logout" })).toBeNull();
+
+    fireEvent.click(arrow);
+
+    expect(arrow.getAttribute("aria-expanded")).toBe("true");
+    expect(arrow.getAttribute("aria-label")).toBe("Close user menu");
+    expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
+
+    fireEvent.click(arrow);
+
+    expect(screen.queryByRole("button", { name: "Logout" })).toBeNull();
+  });
+
+  it("closes on Escape and puts the focus back on the arrow", () => {
+    render(<TopBar />);
+    fireEvent.click(screen.getByRole("button", { name: "Open user menu" }));
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByRole("button", { name: "Logout" })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open user menu" }));
+  });
+
+  it("closes on a click outside, not on a click inside", () => {
+    render(<TopBar />);
+    fireEvent.click(screen.getByRole("button", { name: "Open user menu" }));
+
+    fireEvent.mouseDown(document.getElementById("user-menu") as HTMLElement);
+
+    expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByRole("button", { name: "Logout" })).toBeNull();
+  });
+
+  it("logs out and goes to the login page", async () => {
+    logoutMock.mockResolvedValue(undefined);
+    render(<TopBar />);
+    fireEvent.click(screen.getByRole("button", { name: "Open user menu" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+
+    expect(await screen.findByText("Login page")).toBeTruthy();
+    expect(logoutMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the menu open with an error when logging out fails", async () => {
+    logoutMock.mockRejectedValue(new Error("network"));
+    render(<TopBar />);
+    fireEvent.click(screen.getByRole("button", { name: "Open user menu" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe("Logout failed. Please try again.");
+    await waitFor(() =>
+      expect((screen.getByRole("button", { name: "Logout" }) as HTMLButtonElement).disabled).toBe(
+        false,
+      ),
+    );
+  });
+
+  it("shows the menu in Czech", async () => {
+    await i18n.changeLanguage("cs");
+    render(<TopBar />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Otevřít uživatelské menu" }));
+
+    expect(screen.getByRole("button", { name: "Odhlásit se" })).toBeTruthy();
   });
 });
