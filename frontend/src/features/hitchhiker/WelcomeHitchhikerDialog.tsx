@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ApiError } from "../../api/client";
 import { createEligibilityRequest } from "../../api/eligibility";
 import { listProjects } from "../../api/projects";
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
 import useDialog from "../../hooks/useDialog";
-import i18n from "../../i18n";
 import type { ProjectRef } from "../../types/project";
 import { projectInitials } from "../projects/ProjectOverview";
+import { eligibilityRequestErrorMessage } from "./eligibilityRequestError";
 import "../../styles/welcome-hitchhiker.css";
 
 interface WelcomeHitchhikerDialogProps {
@@ -19,22 +18,6 @@ type View = "form" | "sent";
 
 // Badge colors, in turn: teal, amber, blue, violet (the dashboard section tones).
 const TONES = ["teal", "amber", "blue", "violet"] as const;
-
-function submitErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    if (error.code === "eligibility_request_pending") {
-      return i18n.t("welcome.errorPending");
-    }
-
-    if (error.code === "permission_denied") {
-      return i18n.t("welcome.errorPermission");
-    }
-
-    return error.fields?.project_ids?.[0] ?? error.message;
-  }
-
-  return i18n.t("createRequest.errorGeneric");
-}
 
 // Figma "Welcome Hitchhiker" popup, shown the first time a Hitchhiker opens their workspace
 // (#169). Sends one eligibility request (api-plan §7.2, §10.3), then shows "Form sent!".
@@ -47,7 +30,8 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
   const [loadError, setLoadError] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  // The failed submit, translated at render so it follows the language switcher.
+  const [submitError, setSubmitError] = useState<unknown>(null);
 
   useEffect(() => {
     let active = true;
@@ -83,7 +67,7 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
   }
 
   async function handleSubmit() {
-    setSubmitError("");
+    setSubmitError(null);
     setIsSubmitting(true);
 
     try {
@@ -95,7 +79,7 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
       await createEligibilityRequest({ project_ids: projectIds });
       setView("sent");
     } catch (error) {
-      setSubmitError(submitErrorMessage(error));
+      setSubmitError(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -178,9 +162,9 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
           </fieldset>
         )}
 
-        {submitError && (
+        {submitError !== null && (
           <p className="welcome-dialog__error" role="alert">
-            {submitError}
+            {eligibilityRequestErrorMessage(submitError)}
           </p>
         )}
 
