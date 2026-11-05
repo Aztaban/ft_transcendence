@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { listEvaluationRequests } from "../api/evaluationRequests";
 import { DURATION_OPTIONS } from "../features/hitchhiker/slotRules";
 import { projectInitials } from "../features/projects/ProjectOverview";
@@ -34,6 +35,8 @@ function isWaitingLong(request: EvaluationRequest, now: number) {
 // in the background when the queue changes or after a reconnect (§9, #255).
 function HitchhikerRequestsPage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("hitchhikerRequests.title"));
   const [requests, setRequests] = useState<EvaluationRequest[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [projectFilter, setProjectFilter] = useState<string | null>(null);

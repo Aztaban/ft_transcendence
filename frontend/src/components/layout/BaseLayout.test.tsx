@@ -96,3 +96,17 @@ describe("BaseLayout sidebar drawer", () => {
     expect(getSidebar().className).toBe("sidebar");
   });
 });
+
+describe("BaseLayout skip link", () => {
+  it("is the first link on the page and moves the focus to the page content", () => {
+    renderLayout();
+    const skip = screen.getByRole("link", { name: "Skip to content" });
+
+    expect(screen.getAllByRole("link")[0]).toBe(skip);
+
+    fireEvent.click(skip);
+
+    expect(document.activeElement).toBe(screen.getByRole("main"));
+    expect(screen.getByRole("main").textContent).toBe("Page content");
+  });
+});

@@ -16,7 +16,8 @@
     "profile": "Perfil",
     "studentCouncil": "Consejo estudiantil",
     "messages": "Mensajes",
-    "eligibility": "Elegibilidad"
+    "eligibility": "Elegibilidad",
+    "skipToContent": "Saltar al contenido"
   },
   "workspace": {
     "select": "Elegir rol",
@@ -973,5 +974,14 @@
     "title": "Esta página no está disponible para tu rol actual.",
     "text": "El rol <strong>{{role}}</strong> no tiene permiso para ver esta página.",
     "back": "Volver al panel"
+  },
+  "pageTitle": {
+    "evaluation": "Evaluación",
+    "project": "Proyecto",
+    "person": "Perfil",
+    "login": "Iniciar sesión",
+    "register": "Crear una cuenta",
+    "notFound": "Página no encontrada",
+    "unauthorized": "Acceso restringido"
   }
 }

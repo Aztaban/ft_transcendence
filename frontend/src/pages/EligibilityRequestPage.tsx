@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import { createEligibilityRequest } from "../api/eligibility";
+import usePageTitle from "../components/layout/usePageTitle";
 import EligibilitySentDialog from "../features/hitchhiker/EligibilitySentDialog";
 import { eligibilityRequestErrorMessage } from "../features/hitchhiker/eligibilityRequestError";
 import ProjectMultiSelect from "../features/hitchhiker/ProjectMultiSelect";
@@ -64,6 +65,8 @@ function writeDraft(projects: ProjectRef[] | null) {
 // reviewed as a whole by a Head Tutor (api-plan §7.2, §10.3).
 function EligibilityRequestPage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("eligibility.title"));
   const navigate = useNavigate();
   const [stepId, setStepId] = useState<StepId>("projects");
   const [projects, setProjects] = useState<ProjectRef[]>(readDraft);
