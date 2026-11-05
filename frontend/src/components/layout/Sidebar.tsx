@@ -53,7 +53,6 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
     { labelKey: "nav.messages", to: "/council/inbox", icon: councilIcon },
     { labelKey: "nav.history", to: "/council/history", icon: historyIcon },
     { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
-    { labelKey: "nav.councilProfile", to: "/council", icon: profileIcon },
   ],
 };
 
