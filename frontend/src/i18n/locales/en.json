@@ -17,7 +17,8 @@
     "studentCouncil": "Student Council",
     "messages": "Messages",
     "councilProfile": "Council Profile",
-    "eligibility": "Eligibility"
+    "eligibility": "Eligibility",
+    "skipToContent": "Skip to content"
   },
   "workspace": {
     "select": "Select role",
