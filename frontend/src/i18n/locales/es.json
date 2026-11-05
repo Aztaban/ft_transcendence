@@ -930,6 +930,7 @@
     "pending": "Pendientes",
     "approved": "Aprobadas",
     "declined": "Rechazadas",
+    "badgePending": "Pendiente",
     "badgeApproved": "Aprobada",
     "badgeDeclined": "Rechazada",
     "noPending": "No hay solicitudes pendientes",
@@ -969,6 +970,24 @@
     "noteFor": "Nota para {{name}}",
     "optional": "(opcional)",
     "saving": "Guardando…"
+  },
+  "eligibilityDetail": {
+    "title": "Solicitud de elegibilidad",
+    "backToList": "Todas las solicitudes de elegibilidad",
+    "loading": "Cargando la solicitud…",
+    "loadError": "No se pudo cargar la solicitud. Inténtalo más tarde.",
+    "requestedBy": "Solicitada por",
+    "sent": "Enviada",
+    "reviewedBy": "Revisada por",
+    "decided": "Decidida",
+    "projects_one": "{{count}} proyecto",
+    "projects_many": "{{count}} proyectos",
+    "projects_other": "{{count}} proyectos",
+    "note": "Nota del Head Tutor",
+    "waitingOwn": "Un Head Tutor aprobará o rechazará la solicitud completa. Recibirás una notificación.",
+    "approvedOwn": "Ya puedes tomar solicitudes abiertas de estos proyectos.",
+    "declinedOwn": "Puedes enviar una nueva solicitud cuando quieras.",
+    "sendNew": "Enviar una nueva solicitud"
   },
   "unauthorized": {
     "eyebrow": "ACCESO RESTRINGIDO",

@@ -11,6 +11,7 @@ import CouncilInboxPage from "./pages/CouncilInboxPage";
 import CouncilMessagePage from "./pages/CouncilMessagePage";
 import CouncilPage from "./pages/CouncilPage";
 import CreateRequestPage from "./pages/CreateRequestPage";
+import EligibilityRequestDetailPage from "./pages/EligibilityRequestDetailPage";
 import EligibilityRequestPage from "./pages/EligibilityRequestPage";
 import EligibilityReviewPage from "./pages/EligibilityReviewPage";
 import EvaluationPage from "./pages/EvaluationPage";
@@ -135,6 +136,9 @@ function AuthenticatedApp() {
             </RoleGuard>
           }
         />
+        {/* The eligibility notifications link here (§8.8) for the requester, Head Tutors and Admins,
+            in whichever workspace they are: the API decides who may see it (§10.3). */}
+        <Route path="/eligibility-requests/:id" element={<EligibilityRequestDetailPage />} />
         <Route
           path="/eligibility-requests"
           element={

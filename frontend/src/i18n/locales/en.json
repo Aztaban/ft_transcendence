@@ -925,6 +925,7 @@
     "pending": "Pending",
     "approved": "Approved",
     "declined": "Declined",
+    "badgePending": "Pending",
     "badgeApproved": "Approved",
     "badgeDeclined": "Declined",
     "noPending": "No pending requests",
@@ -963,6 +964,23 @@
     "noteFor": "Note for {{name}}",
     "optional": "(optional)",
     "saving": "Saving…"
+  },
+  "eligibilityDetail": {
+    "title": "Eligibility request",
+    "backToList": "All eligibility requests",
+    "loading": "Loading the request…",
+    "loadError": "Could not load the request. Please try again later.",
+    "requestedBy": "Requested by",
+    "sent": "Sent",
+    "reviewedBy": "Reviewed by",
+    "decided": "Decided",
+    "projects_one": "{{count}} project",
+    "projects_other": "{{count}} projects",
+    "note": "Note from the Head Tutor",
+    "waitingOwn": "A Head Tutor will approve or decline the whole request. You will get a notification.",
+    "approvedOwn": "You can now pick open requests for these projects.",
+    "declinedOwn": "You can send a new request at any time.",
+    "sendNew": "Send a new request"
   },
   "unauthorized": {
     "eyebrow": "ACCESS RESTRICTED",
