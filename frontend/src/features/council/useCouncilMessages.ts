@@ -1,45 +1,61 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
+import { ApiError } from "../../api/client";
 import { listSCMessages } from "../../api/scMessages";
 import type { SCMessage } from "../../types/scMessage";
 import { useLiveRefresh } from "../../websocket/LiveProvider";
 
 type LoadState = "loading" | "ready" | "error";
 
-// Loads pages `first` to `last`, stopping early when the list has become shorter (§5.7: a page
-// past the end would be a 404).
-async function loadPages(unread: boolean, first: number, last: number, signal: AbortSignal) {
-  const results: SCMessage[] = [];
+// "Show more" adds this many messages; one request returns at most MAX_PAGE_SIZE (api-plan §5.7).
+const STEP = 20;
+const MAX_PAGE_SIZE = 100;
 
-  for (let page = first; ; page += 1) {
-    const answer = await listSCMessages({ unread, page, signal });
+interface Loaded {
+  messages: SCMessage[];
+  total: number;
+  hasMore: boolean;
+}
 
-    results.push(...answer.results);
+// The newest `limit` messages, always from the top of the list, so what is shown is one consistent
+// list: a message that moves between pages meanwhile is never shown twice or skipped. Up to 100
+// messages that is a single request; beyond, pages of 100 until `limit` is reached.
+async function loadNewest(unread: boolean, limit: number, signal: AbortSignal): Promise<Loaded> {
+  if (limit <= MAX_PAGE_SIZE) {
+    const answer = await listSCMessages({ unread, pageSize: limit, signal });
 
-    if (page >= last || answer.next === null) {
-      return { results, count: answer.count, hasMore: answer.next !== null, lastPage: page };
-    }
+    return { messages: answer.results, total: answer.count, hasMore: answer.next !== null };
   }
+
+  const messages: SCMessage[] = [];
+  let page = 1;
+  let answer;
+
+  do {
+    answer = await listSCMessages({ unread, page, pageSize: MAX_PAGE_SIZE, signal });
+    // Between two pages the list can move, so a message is added once.
+    messages.push(...answer.results.filter((item) => messages.every(({ id }) => id !== item.id)));
+    page += 1;
+  } while (answer.next !== null && messages.length < limit);
+
+  return { messages, total: answer.count, hasMore: answer.next !== null };
 }
 
 // A council message list, newest first (api-plan §10.6): `unread` limits it to the new messages.
-// "Show more" asks for one more page. A refresh reloads every page the user has asked for, so
-// they keep their place; it cancels a request still on its way, and a page asked for by then is
-// part of the refresh. Only one request is ever running, so an old answer cannot reach the list.
+// Every load asks for the newest `limit` messages: "Show more" raises it by 20, and a refresh
+// loads the same number again, so the user keeps their place. A new load cancels the one on its
+// way, so an old answer never reaches the list, and a "Show more" still waiting is part of it.
 // A new message notifies every council member, so the list refreshes then and after a reconnect.
 // Read state changes by colleagues send no event: it also refreshes when the tab is shown again
-// (§9.4). A failed refresh keeps what is shown.
+// (§9.4). A failed refresh keeps what is shown. Another `unread` value loads the other list.
 export function useCouncilMessages(unread: boolean) {
-  const [messages, setMessages] = useState<SCMessage[]>([]);
-  const [total, setTotal] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [moreFailed, setMoreFailed] = useState(false);
+  const [loaded, setLoaded] = useState<Loaded>({ messages: [], total: 0, hasMore: false });
   const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [shownPages, setShownPages] = useState(0);
-  const [wantedPages, setWantedPages] = useState(1);
+  // How many messages are wanted, and how many the shown list was loaded for.
+  const [limit, setLimit] = useState(STEP);
+  const [shownLimit, setShownLimit] = useState(0);
+  const [moreFailed, setMoreFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const shownPagesNow = useRef(0);
-  const finishedReload = useRef(-1);
 
   const refresh = useCallback(() => setReloadKey((key) => key + 1), []);
 
@@ -60,67 +76,55 @@ export function useCouncilMessages(unread: boolean) {
   }, [refresh]);
 
   useEffect(() => {
-    const isRefresh = finishedReload.current !== reloadKey;
-
-    if (!isRefresh && wantedPages <= shownPagesNow.current) {
-      return;
-    }
-
     const controller = new AbortController();
-    const firstPage = isRefresh ? 1 : wantedPages;
 
-    loadPages(unread, firstPage, wantedPages, controller.signal)
+    loadNewest(unread, limit, controller.signal)
       .then((answer) => {
-        if (controller.signal.aborted) {
-          return;
+        if (!controller.signal.aborted) {
+          setLoaded(answer);
+          setShownLimit(Math.max(limit, answer.messages.length));
+          setMoreFailed(false);
+          setLoadState("ready");
         }
-
-        finishedReload.current = reloadKey;
-        shownPagesNow.current = answer.lastPage;
-        setMessages((current) =>
-          isRefresh
-            ? answer.results
-            : // A message that moved between pages (new ones arrive on top) is not shown twice.
-              [
-                ...current,
-                ...answer.results.filter((message) =>
-                  current.every((shown) => shown.id !== message.id),
-                ),
-              ],
-        );
-        setShownPages(answer.lastPage);
-        setWantedPages(answer.lastPage);
-        setTotal(answer.count);
-        setHasMore(answer.hasMore);
-        setMoreFailed(false);
-        setLoadState("ready");
       })
-      .catch(() => {
+      .catch((error) => {
         if (controller.signal.aborted) {
           return;
         }
 
-        finishedReload.current = reloadKey;
-        setMoreFailed(wantedPages > shownPagesNow.current && shownPagesNow.current > 0);
-        setWantedPages(Math.max(shownPagesNow.current, 1));
+        // DRF answers 404 for a page past the end: beyond 100 messages, the list got shorter
+        // between two pages. Loading again stops where the list now ends.
+        if (error instanceof ApiError && error.status === 404) {
+          refresh();
+          return;
+        }
+
+        setMoreFailed(limit > shownLimit && shownLimit > 0);
         setLoadState((current) => (current === "ready" ? current : "error"));
       });
 
     return () => {
       controller.abort();
     };
-  }, [unread, wantedPages, reloadKey]);
+    // `shownLimit` is only read: it changes as the result of this effect.
+  }, [unread, limit, reloadKey, refresh]);
 
   const showMore = useCallback(() => {
     setMoreFailed(false);
-    setWantedPages(shownPagesNow.current + 1);
-  }, []);
+
+    if (limit > shownLimit) {
+      // The last "Show more" failed: ask for the same messages again.
+      refresh();
+    } else {
+      setLimit(shownLimit + STEP);
+    }
+  }, [limit, shownLimit, refresh]);
 
   return {
-    messages,
-    total,
-    hasMore,
-    isLoadingMore: loadState === "ready" && wantedPages > shownPages,
+    messages: loaded.messages,
+    total: loaded.total,
+    hasMore: loaded.hasMore,
+    isLoadingMore: loadState === "ready" && limit > shownLimit && !moreFailed,
     moreFailed,
     loadState,
     showMore,
