@@ -3,15 +3,6 @@ import { useTranslation } from "react-i18next";
 import { NavLink, useNavigate } from "react-router";
 
 import logo42 from "../../assets/figma/42.svg";
-import homeIcon from "../../assets/figma/home.svg";
-import requestIcon from "../../assets/figma/request.svg";
-import pendingIcon from "../../assets/figma/pending.svg";
-import historyIcon from "../../assets/figma/history.svg";
-import councilIcon from "../../assets/figma/student-council.svg";
-import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
-import profileIcon from "../../assets/figma/profile.svg";
-import roleChevron from "../../assets/figma/role-chevron.svg";
-import logoutIcon from "../../assets/figma/logout.svg";
 import sidebarLine from "../../assets/figma/sidebar-line.svg";
 import intraLogo from "../../assets/figma/intra.png";
 import notionLogo from "../../assets/figma/notion.svg";
@@ -20,46 +11,47 @@ import { useAuth } from "../../store/AuthContext";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import { useRole, type AppRole } from "../../store/RoleContext";
 import { canReviewEligibility } from "../../utils/permissions";
+import Icon, { type IconName } from "../ui/Icon";
 
 interface NavigationItem {
   // A key of the "nav" texts in src/i18n/locales.
   labelKey: string;
   to: string;
-  icon: string;
+  icon: IconName;
 }
 
 const navigationByRole: Record<AppRole, NavigationItem[]> = {
   STUDENT: [
-    { labelKey: "nav.home", to: "/", icon: homeIcon },
-    { labelKey: "nav.request", to: "/requests", icon: requestIcon },
-    { labelKey: "nav.pending", to: "/pending", icon: pendingIcon },
-    { labelKey: "nav.history", to: "/history", icon: historyIcon },
-    { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
-    { labelKey: "nav.profile", to: "/profile", icon: profileIcon },
-    { labelKey: "nav.studentCouncil", to: "/council", icon: councilIcon },
+    { labelKey: "nav.home", to: "/", icon: "home" },
+    { labelKey: "nav.request", to: "/requests", icon: "request" },
+    { labelKey: "nav.pending", to: "/pending", icon: "pending" },
+    { labelKey: "nav.history", to: "/history", icon: "history" },
+    { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: "hitchhikers" },
+    { labelKey: "nav.profile", to: "/profile", icon: "profile" },
+    { labelKey: "nav.studentCouncil", to: "/council", icon: "studentCouncil" },
   ],
 
   HITCHHIKER: [
-    { labelKey: "nav.home", to: "/", icon: homeIcon },
-    { labelKey: "nav.requests", to: "/requests", icon: requestIcon },
-    { labelKey: "nav.pending", to: "/pending", icon: pendingIcon },
-    { labelKey: "nav.history", to: "/history", icon: historyIcon },
-    { labelKey: "nav.studentCouncil", to: "/council", icon: councilIcon },
-    { labelKey: "nav.profile", to: "/profile", icon: profileIcon },
+    { labelKey: "nav.home", to: "/", icon: "home" },
+    { labelKey: "nav.requests", to: "/requests", icon: "request" },
+    { labelKey: "nav.pending", to: "/pending", icon: "pending" },
+    { labelKey: "nav.history", to: "/history", icon: "history" },
+    { labelKey: "nav.studentCouncil", to: "/council", icon: "studentCouncil" },
+    { labelKey: "nav.profile", to: "/profile", icon: "profile" },
   ],
 
   COUNCIL: [
-    { labelKey: "nav.home", to: "/", icon: homeIcon },
-    { labelKey: "nav.messages", to: "/council/inbox", icon: councilIcon },
-    { labelKey: "nav.history", to: "/council/history", icon: historyIcon },
-    { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: hitchhikersIcon },
+    { labelKey: "nav.home", to: "/", icon: "home" },
+    { labelKey: "nav.messages", to: "/council/inbox", icon: "studentCouncil" },
+    { labelKey: "nav.history", to: "/council/history", icon: "history" },
+    { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: "hitchhikers" },
   ],
 };
 
 const eligibilityItem: NavigationItem = {
   labelKey: "nav.eligibility",
   to: "/eligibility-requests",
-  icon: hitchhikersIcon,
+  icon: "hitchhikers",
 };
 
 interface SidebarProps {
@@ -187,7 +179,7 @@ function Sidebar({ isOpen = false }: SidebarProps) {
               }
             >
               <span className="sidebar__nav-icon">
-                <img src={item.icon} alt="" aria-hidden="true" />
+                <Icon name={item.icon} />
               </span>
 
               <span>{t(item.labelKey)}</span>
@@ -212,16 +204,14 @@ function Sidebar({ isOpen = false }: SidebarProps) {
           >
             <span>{t(`workspace.${activeRole}`)}</span>
 
-            <img
+            <Icon
+              name="roleChevron"
               className={[
                 "sidebar__role-chevron",
                 isRoleMenuOpen ? "sidebar__role-chevron--open" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
-              src={roleChevron}
-              alt=""
-              aria-hidden="true"
             />
           </button>
 
@@ -266,7 +256,7 @@ function Sidebar({ isOpen = false }: SidebarProps) {
           disabled={isLoggingOut}
         >
           <span>{isLoggingOut ? t("sidebar.loggingOut") : t("sidebar.logout")}</span>
-          <img src={logoutIcon} alt="" aria-hidden="true" />
+          <Icon name="logout" />
         </button>
 
         {logoutError && (

@@ -20,7 +20,7 @@
 }
 
 .person-profile__back:hover {
-  color: #00797b;
+  color: var(--color-accent-strong-text);
 }
 
 /* Banner: the profile card, laid out like the top of the 42 intra profile */
@@ -35,10 +35,11 @@
     "level level";
   gap: 24px 32px;
   padding: 28px 32px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-top: 5px solid var(--color-accent);
   border-radius: 16px;
-  background: radial-gradient(circle at 95% 0%, rgba(0, 186, 188, 0.1), transparent 40%), #ffffff;
+  background:
+    radial-gradient(circle at 95% 0%, rgba(0, 186, 188, 0.1), transparent 40%), var(--color-white);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
   animation: person-profile-rise 0.45s ease both;
 }
@@ -58,7 +59,7 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  border: 4px solid #ffffff;
+  border: 4px solid var(--color-white);
   border-radius: 50%;
   object-fit: cover;
   animation:
@@ -68,9 +69,9 @@
 
 .person-profile__avatar--initials {
   background: linear-gradient(135deg, var(--color-accent), #0b3c3d);
-  color: #ffffff;
+  color: var(--color-white);
   font-size: 2.6rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.04em;
 }
 
@@ -80,8 +81,8 @@
 
 .person-profile__who h1 {
   margin: 0;
-  font-size: 2rem;
-  font-weight: 600;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-semibold);
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
@@ -104,10 +105,10 @@
   padding: 5px 14px;
   border: 1.5px solid #3f4646;
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--color-white);
   color: #222222;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -121,7 +122,7 @@
   align-items: center;
   gap: 18px;
   padding-top: 18px;
-  border-top: 1px solid #e3e7e7;
+  border-top: 1px solid var(--color-neutral-200);
 }
 
 .person-profile__level-text {
@@ -138,7 +139,7 @@
 
 .person-profile__level-text strong {
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .person-profile__level-bar {
@@ -159,9 +160,9 @@
 
 .person-profile__level-percent {
   min-width: 3.5ch;
-  color: #00797b;
-  font-size: 1.15rem;
-  font-weight: 700;
+  color: var(--color-accent-strong-text);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
   text-align: right;
 }
 
@@ -180,12 +181,12 @@
   padding: 9px 16px;
   border: 1px solid var(--color-accent);
   border-radius: 999px;
-  background: #ffffff;
-  color: #00797b;
+  background: var(--color-white);
+  color: var(--color-accent-strong-text);
   cursor: pointer;
   font: inherit;
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
   text-decoration: none;
   transition:
     background-color 0.2s ease,
@@ -194,7 +195,7 @@
 }
 
 .person-profile__action:hover {
-  background: #e6f8f8;
+  background: var(--color-accent-surface);
   transform: translateY(-1px);
 }
 
@@ -226,9 +227,9 @@
 
 .person-profile__strip {
   padding: 20px 24px 24px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--color-white);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
   animation: person-profile-rise 0.45s ease 0.1s both;
 }
@@ -243,20 +244,20 @@
 
 .person-profile__strip-head h2 {
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .person-profile__legend {
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .person-profile__legend span {
   color: var(--color-accent-text);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .person-profile__segments {
@@ -281,11 +282,11 @@
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 8px;
   background: #f5f7f7;
   color: var(--color-text-secondary);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
   white-space: nowrap;
   transition:
@@ -310,7 +311,7 @@
   justify-content: center;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.06);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .person-profile__segment--on span[aria-hidden="true"] {
@@ -319,7 +320,7 @@
 
 .person-profile__segment:hover {
   border-color: var(--color-accent);
-  color: #00797b;
+  color: var(--color-accent-strong-text);
   transform: translateY(-2px);
 }
 
@@ -344,9 +345,9 @@
 
 .person-profile__panel {
   padding: 22px 24px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--color-white);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
   animation: person-profile-rise 0.45s ease 0.2s both;
 }
@@ -362,8 +363,8 @@
 
 .person-profile__panel-head h2 {
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -373,9 +374,9 @@
   padding: 6px 12px;
   border: 1px solid var(--color-accent);
   border-radius: 6px;
-  color: #00797b;
+  color: var(--color-accent-strong-text);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.04em;
   text-decoration: none;
   text-transform: uppercase;
@@ -403,7 +404,7 @@
   display: flex;
   gap: 14px;
   padding: 14px 16px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-left: 4px solid var(--color-accent);
   border-radius: 12px;
   animation: person-profile-slide-in 0.4s ease both;
@@ -428,8 +429,8 @@
 
 .person-profile__card h3 {
   margin: 2px 0 4px;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
 }
 
 .person-profile__card p {
@@ -447,8 +448,8 @@
 }
 
 .person-profile__row {
-  --tone: #9aa1a1;
-  --tone-soft: #f0f2f2;
+  --tone: var(--color-neutral-400);
+  --tone-soft: var(--color-neutral-100);
   --tone-ink: #5c6464;
 
   display: grid;
@@ -457,7 +458,7 @@
   align-items: center;
   gap: 14px;
   padding-right: 14px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 12px;
   color: inherit;
   text-decoration: none;
@@ -474,25 +475,25 @@
 }
 
 .person-profile__row--green {
-  --tone: #16a34a;
-  --tone-soft: #e7f6ec;
-  --tone-ink: #1c7c3c;
+  --tone: var(--color-success);
+  --tone-soft: var(--color-success-surface);
+  --tone-ink: var(--color-success-text);
 }
 
 .person-profile__row--red {
-  --tone: #d92d20;
-  --tone-soft: #fef3f2;
-  --tone-ink: #b42318;
+  --tone: var(--color-danger);
+  --tone-soft: var(--color-danger-surface);
+  --tone-ink: var(--color-danger-text);
 }
 
 .person-profile__row--teal {
   --tone: var(--color-accent);
-  --tone-soft: #e6f8f8;
-  --tone-ink: #00797b;
+  --tone-soft: var(--color-accent-surface);
+  --tone-ink: var(--color-accent-strong-text);
 }
 
 .person-profile__row--amber {
-  --tone: #f5a524;
+  --tone: var(--color-warning);
   --tone-soft: #fff6e5;
   --tone-ink: #9a5b00;
 }
@@ -512,8 +513,8 @@
   justify-content: center;
   /* The darker shade of the tone: white text stays above 4.5:1 on every row. */
   background: var(--tone-ink);
-  color: #ffffff;
-  font-size: 0.75rem;
+  color: var(--color-white);
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
 }
 
@@ -530,13 +531,13 @@
 }
 
 .person-profile__row-main strong {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .person-profile__row-main span {
   overflow: hidden;
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -547,7 +548,7 @@
   background: var(--tone-soft);
   color: var(--tone-ink);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   white-space: nowrap;
 }
 
@@ -573,9 +574,9 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 10px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .person-profile__manage-remove {
@@ -583,12 +584,12 @@
   padding: 6px 14px;
   border: 1px solid #f3b8b2;
   border-radius: 999px;
-  background: #ffffff;
-  color: #b42318;
+  background: var(--color-white);
+  color: var(--color-danger-text);
   cursor: pointer;
   font: inherit;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   transition: background-color 0.2s ease;
 }
 
@@ -605,8 +606,8 @@
 
 .person-profile__manage-form label {
   flex-basis: 100%;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
 }
 
 .person-profile__manage-form select {
@@ -615,7 +616,7 @@
   padding: 9px 12px;
   border: 1px solid #cfd6d6;
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--color-white);
   font: inherit;
 }
 
@@ -627,7 +628,7 @@
 
 .person-profile__manage-error {
   margin: 12px 0 0;
-  color: #b42318;
+  color: var(--color-danger-text);
 }
 
 .person-profile__manage-status {
@@ -658,7 +659,12 @@
 .person-profile__strip-skeleton,
 .person-profile__rows-skeleton {
   border-radius: 14px;
-  background: linear-gradient(90deg, #eceff0 0%, #f7f8f8 50%, #eceff0 100%);
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-150) 0%,
+    #f7f8f8 50%,
+    var(--color-neutral-150) 100%
+  );
   background-size: 200% 100%;
   animation: person-profile-shimmer 1.2s ease-in-out infinite;
 }
@@ -692,15 +698,15 @@
   padding: 40px 24px;
   border: 1px dashed #cfd5d5;
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--color-white);
   text-align: center;
   animation: person-profile-rise 0.35s ease both;
 }
 
 .person-profile__message h1 {
   margin: 0;
-  font-size: 1.3rem;
-  font-weight: 600;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
 }
 
 .person-profile__message p {
@@ -714,7 +720,7 @@
 }
 
 .person-profile__message--error p {
-  color: #b42318;
+  color: var(--color-danger-text);
 }
 
 .person-profile__message a,
@@ -722,11 +728,11 @@
   padding: 9px 20px;
   border: 1px solid var(--color-accent);
   border-radius: 999px;
-  background: #ffffff;
-  color: #00797b;
+  background: var(--color-white);
+  color: var(--color-accent-strong-text);
   cursor: pointer;
   font: inherit;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   text-decoration: none;
 }
 

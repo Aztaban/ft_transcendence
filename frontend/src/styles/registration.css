@@ -4,7 +4,7 @@
   align-items: flex-start;
   justify-content: center;
   padding: 150px 24px 60px;
-  background: #ffffff;
+  background: var(--color-white);
 }
 
 /* EN / CS / ES, so a visitor can switch before logging in. */
@@ -34,7 +34,7 @@
 
 .registration-brand span {
   font-size: 30px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   letter-spacing: -0.03em;
 }
 
@@ -61,7 +61,7 @@
   padding: 0 28px;
   border: 1px solid #d4d7d7;
   border-radius: 6px;
-  background: #ffffff;
+  background: var(--color-white);
   color: #000000;
   font-size: 20px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
@@ -84,9 +84,9 @@
   border-color: #000000;
   border-radius: 5px;
   background: #000000;
-  color: #ffffff;
+  color: var(--color-white);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0.02em;
 }
 
@@ -120,16 +120,16 @@
 
 .registration-form__message {
   margin: 4px 0 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   line-height: 1.4;
 }
 
 .registration-form__message--error {
   padding: 10px 12px;
-  border: 1px solid #fecdca;
+  border: 1px solid var(--color-danger-border);
   border-radius: 8px;
-  background: #fef3f2;
-  color: #b42318;
+  background: var(--color-danger-surface);
+  color: var(--color-danger-text);
 }
 
 .registration-form__message--success {
@@ -142,7 +142,7 @@
   gap: 12px;
   margin: 24px 0;
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   text-transform: uppercase;
 }
 
@@ -163,10 +163,10 @@
   min-height: 49px;
   border: 1px solid #000000;
   border-radius: 5px;
-  background: #ffffff;
+  background: var(--color-white);
   color: #000000;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0.02em;
   text-decoration: none;
 }
@@ -195,7 +195,7 @@
   border-radius: 8px;
   background: #f7f9f9;
   color: #5d6464;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .registration-switch a {
@@ -205,7 +205,7 @@
   padding-bottom: 1px;
   border-bottom: 2px solid var(--color-accent);
   color: #000000;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   text-decoration: none;
 }
 

@@ -2,14 +2,11 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
-import profileIcon from "../assets/figma/profile.svg";
-import requestIcon from "../assets/figma/request.svg";
-import searchIcon from "../assets/figma/search.svg";
 import { ApiError } from "../api/client";
 import { countPeople, searchPeople, type PeopleOrdering } from "../api/people";
 import { listProjects } from "../api/projects";
 import usePageTitle from "../components/layout/usePageTitle";
+import Icon, { type IconName } from "../components/ui/Icon";
 import PersonAvatar from "../features/people/PersonAvatar";
 import i18n from "../i18n";
 import { roleBadges } from "../features/people/roleBadges";
@@ -214,24 +211,24 @@ function HitchhikersPage() {
   const isFiltered = searchTerm !== undefined || project !== "";
   const projectName = projects?.find((item) => item.slug === project)?.name ?? project;
   // A fixed id as the key, so a language switch does not re-mount (and re-animate) the tiles.
-  const tiles = [
+  const tiles: { id: string; label: string; value?: number; icon: IconName }[] = [
     {
       id: "hitchhikers",
       label: t("nav.hitchhikers"),
       value: overview?.hitchhikers,
-      icon: hitchhikersIcon,
+      icon: "hitchhikers",
     },
     {
       id: "headTutors",
       label: t("hitchhikers.tileHeadTutors"),
       value: overview?.headTutors,
-      icon: profileIcon,
+      icon: "profile",
     },
     {
       id: "projects",
       label: t("hitchhikers.tileProjects"),
       value: projects?.length,
-      icon: requestIcon,
+      icon: "request",
     },
   ];
   const isTooShort = text.trim().length > 0 && text.trim().length < MIN_QUERY_LENGTH;
@@ -251,7 +248,7 @@ function HitchhikersPage() {
             style={{ "--index": index } as CSSProperties}
           >
             <span className="hitchhikers__tile-icon">
-              <img src={tile.icon} alt="" aria-hidden="true" />
+              <Icon name={tile.icon} />
             </span>
             <strong>{tile.value ?? "—"}</strong>
             <span>{tile.label}</span>
@@ -276,7 +273,7 @@ function HitchhikersPage() {
 
       <div className="hitchhikers__filters">
         <label className="hitchhikers__search">
-          <img src={searchIcon} alt="" aria-hidden="true" />
+          <Icon name="search" />
           <input
             type="search"
             value={text}

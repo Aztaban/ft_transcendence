@@ -33,13 +33,13 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid #111111;
+  border: 1px solid var(--color-neutral-950);
   border-radius: 8px;
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-white);
+  color: var(--color-neutral-950);
   cursor: pointer;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .pixel-banner__pause:hover {
@@ -47,7 +47,7 @@
 }
 
 .pixel-banner__pause:focus-visible {
-  outline: 3px solid #ffffff;
+  outline: 3px solid var(--color-white);
   outline-offset: 2px;
 }
 
