@@ -39,7 +39,7 @@ The backend image starts Daphne on port 8000 with `config.asgi:application`.
 Development Compose overrides that command with Daphne's Django `runserver`,
 which retains auto-reload. The Channels Redis layer shares `REDIS_URL` with
 Celery; Redis holds transient messages, while application state stays in MySQL.
-Rebuild the backend image after dependency changes: `docker compose build backend`.
+Rebuild after dependency changes: `make build`. The backend and both Celery services each have their own image.
 
 ## Production profile
 
