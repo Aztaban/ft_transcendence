@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
+  deleteSCMessage,
   getSCMessage,
+  revealSCMessageSender,
   listSCMessages,
   saveSCMessageNote,
   sendSCMessage,
@@ -146,5 +148,50 @@ describe("updating a message", () => {
         discussion_note_version: 4,
       }),
     );
+  });
+});
+
+describe("moderation", () => {
+  // The first call answers the CSRF cookie request, the second is the moderation request.
+  function mockWithCsrf(response: Response) {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    fetchMock.mockImplementationOnce(async () => {
+      document.cookie = "csrftoken=test-csrf-token; path=/";
+
+      return jsonResponse({ status: "ok", version: "v1" });
+    });
+    fetchMock.mockResolvedValueOnce(response);
+
+    return fetchMock;
+  }
+
+  test("deletes a message with the reason in the body", async () => {
+    const fetchMock = mockWithCsrf(new Response(null, { status: 204 }));
+
+    await deleteSCMessage(3, "Insults.");
+
+    const [path, options] = fetchMock.mock.calls[1];
+
+    expect(path).toBe("/api/v1/sc-messages/3/");
+    expect(options?.method).toBe("DELETE");
+    expect(new Headers(options?.headers).get("X-CSRFToken")).toBe("test-csrf-token");
+    expect(options?.body).toBe(JSON.stringify({ reason: "Insults." }));
+  });
+
+  test("reveals the sender with the reason", async () => {
+    const fetchMock = mockWithCsrf(
+      jsonResponse({ sender: { id: 7, display_name: "Alice", email: "alice@example.com" } }),
+    );
+
+    expect(await revealSCMessageSender(3, "Threats against a student.")).toEqual({
+      sender: { id: 7, display_name: "Alice", email: "alice@example.com" },
+    });
+
+    const [path, options] = fetchMock.mock.calls[1];
+
+    expect(path).toBe("/api/v1/sc-messages/3/reveal-sender/");
+    expect(options?.method).toBe("POST");
+    expect(options?.body).toBe(JSON.stringify({ reason: "Threats against a student." }));
   });
 });
