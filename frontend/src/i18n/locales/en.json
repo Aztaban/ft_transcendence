@@ -42,7 +42,8 @@
     "notifications": "Notifications",
     "notificationsUnread_one": "Notifications, {{count}} unread",
     "notificationsUnread_other": "Notifications, {{count}} unread",
-    "userMenu": "Open user menu"
+    "userMenu": "Open user menu",
+    "closeUserMenu": "Close user menu"
   },
   "connection": {
     "reconnecting": "Reconnecting…",

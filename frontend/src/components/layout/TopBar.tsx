@@ -3,13 +3,13 @@ import { useTranslation } from "react-i18next";
 
 import searchIcon from "../../assets/figma/search.svg";
 import bellIcon from "../../assets/figma/bell.svg";
-import userChevron from "../../assets/figma/user-chevron.svg";
 import NotificationPanel from "../../features/notifications/NotificationPanel";
 import PersonAvatar from "../../features/people/PersonAvatar";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import { useNotificationCount } from "../../store/NotificationCountContext";
 import ConnectionStatus from "./ConnectionStatus";
 import LanguageSwitcher from "./LanguageSwitcher";
+import UserMenu from "./UserMenu";
 
 interface TopBarProps {
   isMenuOpen?: boolean;
@@ -121,9 +121,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
 
         {user && <span className="topbar__username">{user.display_name}</span>}
 
-        <button className="topbar__user-menu" type="button" aria-label={t("topbar.userMenu")}>
-          <img src={userChevron} alt="" aria-hidden="true" />
-        </button>
+        <UserMenu />
       </div>
     </header>
   );
