@@ -49,6 +49,14 @@ def test_evaluation_exceptions_schema(schema):
     assert set(page["required"]) == {"count", "next", "previous", "results"}
     entry = _component(schema, page["properties"]["results"]["items"]["$ref"])
     base = schema["components"]["schemas"]["EvaluationRequest"]
+    # Hidden per viewer (R15, R18): all three stay a nullable UserRef in the schema.
+    nullable_ref = {
+        "allOf": [{"$ref": "#/components/schemas/UserRef"}],
+        "readOnly": True,
+        "nullable": True,
+    }
+    for field in ("student", "picked_by", "cancelled_by"):
+        assert base["properties"][field] == nullable_ref
     assert set(entry["properties"]) == {*base["properties"], "problem"}
     assert set(entry["required"]) == {*base["required"], "problem"}
     assert (

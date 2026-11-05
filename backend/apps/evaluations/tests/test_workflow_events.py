@@ -172,7 +172,6 @@ def test_release_uses_locked_picker_facts_after_clearing_pick(participants):
             "payload": {
                 "request_id": 17,
                 "project": {"id": 4, "slug": "libft", "name": "Libft"},
-                "tutor": {"id": 42, "display_name": "User"},
             },
             "target_url": "/evaluations/17",
             "read_at": None,

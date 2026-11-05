@@ -30,7 +30,7 @@ def notify_evaluation_created(evaluation: EvaluationRequest, *, recipient_ids) -
 def notify_evaluation_released(
     evaluation: EvaluationRequest, *, previous_picker, actor_id=None, exclude_user_ids=()
 ) -> None:
-    """Use the locked picker's facts after release has cleared the pick."""
+    """The payload never names the Hitchhiker: the slot may not have been confirmed (R18)."""
     recipients = {evaluation.student_id}
     if actor_id is not None and actor_id != previous_picker.pk:
         recipients.add(previous_picker.pk)
@@ -43,7 +43,6 @@ def notify_evaluation_released(
             payload={
                 "request_id": evaluation.pk,
                 "project": ProjectRefSerializer(evaluation.project).data,
-                "tutor": {"id": previous_picker.pk, "display_name": previous_picker.display_name},
             },
             target_url=f"/evaluations/{evaluation.pk}",
         )
@@ -97,7 +96,7 @@ def notify_evaluation_result_recorded(evaluation: EvaluationRequest) -> None:
 
 
 def notify_slot_picked(evaluation: EvaluationRequest) -> None:
-    """Store the student's confirmation prompt inside the successful pick transaction."""
+    """Store the student's prompt in the pick transaction, without the Hitchhiker (R18)."""
     timestamp = DateTimeField(default_timezone=timezone.utc)
     create_notification(
         recipient_id=evaluation.student_id,
@@ -105,10 +104,6 @@ def notify_slot_picked(evaluation: EvaluationRequest) -> None:
         payload={
             "request_id": evaluation.pk,
             "project": ProjectRefSerializer(evaluation.project).data,
-            "tutor": {
-                "id": evaluation.picked_by_id,
-                "display_name": evaluation.picked_by.display_name,
-            },
             "starts_at": timestamp.to_representation(evaluation.starts_at),
             "ends_at": timestamp.to_representation(evaluation.ends_at),
         },
@@ -164,13 +159,19 @@ def notify_evaluation_cancelled(evaluation: EvaluationRequest, *, exclude_user_i
     recipients.difference_update(exclude_user_ids)
     if not recipients:
         return
+    # The picker cancelling by override leaves only the student to notify (R18).
+    picker_cancelled = evaluation.cancelled_by_id == evaluation.picked_by_id
     payload = {
         "request_id": evaluation.pk,
         "project": ProjectRefSerializer(evaluation.project).data,
-        "cancelled_by": {
-            "id": evaluation.cancelled_by_id,
-            "display_name": evaluation.cancelled_by.display_name,
-        },
+        "cancelled_by": (
+            None
+            if picker_cancelled
+            else {
+                "id": evaluation.cancelled_by_id,
+                "display_name": evaluation.cancelled_by.display_name,
+            }
+        ),
     }
     for recipient_id in sorted(recipients):
         create_notification(
