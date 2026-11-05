@@ -69,7 +69,8 @@
     "duration": "Duration",
     "requestedAgo": "Requested {{time}}",
     "noNote": "No note from the student.",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "serverUnavailable": "The server did not answer. Please try again in a moment."
   },
   "time": {
     "justNow": "just now",

@@ -70,7 +70,8 @@
     "duration": "Délka",
     "requestedAgo": "Žádost odeslána {{time}}",
     "noNote": "Student nepřidal žádnou poznámku.",
-    "tryAgain": "Zkusit znovu"
+    "tryAgain": "Zkusit znovu",
+    "serverUnavailable": "Server neodpověděl. Zkuste to prosím za chvíli znovu."
   },
   "time": {
     "justNow": "právě teď",
