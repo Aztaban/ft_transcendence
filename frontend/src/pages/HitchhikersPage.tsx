@@ -9,6 +9,7 @@ import searchIcon from "../assets/figma/search.svg";
 import { ApiError } from "../api/client";
 import { countPeople, searchPeople, type PeopleOrdering } from "../api/people";
 import { listProjects } from "../api/projects";
+import usePageTitle from "../components/layout/usePageTitle";
 import PersonAvatar from "../features/people/PersonAvatar";
 import i18n from "../i18n";
 import { roleBadges } from "../features/people/roleBadges";
@@ -53,6 +54,7 @@ function searchErrorMessage(error: unknown) {
 // The filters live in the URL (?q=&project=&ordering=).
 function HitchhikersPage() {
   const { t } = useTranslation();
+  usePageTitle(t("nav.hitchhikers"));
   const { activeRole } = useRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";

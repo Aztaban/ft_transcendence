@@ -10,7 +10,9 @@ import { getTutorEligibility } from "../api/eligibility";
 import { listEvaluationRequests } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
 import { getPublicUser } from "../api/users";
+import usePageTitle from "../components/layout/usePageTitle";
 import PersonAvatar from "../features/people/PersonAvatar";
+import RoleManager from "../features/people/RoleManager";
 import { isHitchhiker, roleBadges } from "../features/people/roleBadges";
 import i18n, { dateLocale } from "../i18n";
 import { useAuth } from "../store/AuthContext";
@@ -121,6 +123,11 @@ function PersonProfilePage() {
   const [person, setPerson] = useState<PublicUser | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [retryKey, setRetryKey] = useState(0);
+  // The person's name once loaded, like the heading.
+  usePageTitle(
+    person?.display_name ??
+      (loadState === "not-found" ? t("person.notFoundTitle") : t("pageTitle.person")),
+  );
   // `null` while loading. The rest of the profile is shown even if these fail.
   const [eligible, setEligible] = useState<ProjectRef[] | null>(null);
   const [allProjects, setAllProjects] = useState<ProjectRef[] | null>(null);
@@ -470,6 +477,11 @@ function PersonProfilePage() {
                   ))}
                 </ul>
               </section>
+            )}
+
+            {/* Head Tutors, SC Members and Admins give or remove roles here (#679). */}
+            {user && !isMe && (
+              <RoleManager person={person} myRoles={user.roles} onChange={setPerson} />
             )}
 
             {showsTogether && (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 
 import { ApiError } from "../api/client";
 import {
@@ -9,6 +9,7 @@ import {
   SC_NOTE_MAX_LENGTH,
   setSCMessageRead,
 } from "../api/scMessages";
+import usePageTitle from "../components/layout/usePageTitle";
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
 import MarkedReadDialog from "../features/council/MarkedReadDialog";
@@ -36,10 +37,18 @@ function actionErrorMessage(error: unknown) {
 // shares one internal note per message, saved with the version it was loaded at; when another
 // member saved first (409 `edit_conflict`), their note is loaded and the draft stays for merging.
 // It is also the page council notifications open (`/council/inbox/{id}`, §8.8).
+// "Back" leads to the History when the message was opened there, otherwise to the inbox.
 function CouncilInboxMessagePage() {
   const { t } = useTranslation();
   const { id } = useParams();
+  usePageTitle(t("council.messageNumber", { id }));
+  const location = useLocation();
   const navigate = useNavigate();
+  // Only this one known value: the page never navigates to whatever the state holds.
+  const backTo =
+    (location.state as { from?: string } | null)?.from === "/council/history"
+      ? "/council/history"
+      : "/council/inbox";
   const [message, setMessage] = useState<SCMessage | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isUpdatingRead, setIsUpdatingRead] = useState(false);
@@ -150,7 +159,7 @@ function CouncilInboxMessagePage() {
           type="button"
           aria-label={t("council.backToMessages")}
           disabled={isBusy}
-          onClick={() => navigate("/council/inbox")}
+          onClick={() => navigate(backTo)}
         >
           ‹
         </button>
@@ -316,7 +325,7 @@ function CouncilInboxMessagePage() {
         </div>
       )}
 
-      {isMarkedRead && <MarkedReadDialog onClose={() => navigate("/council/inbox")} />}
+      {isMarkedRead && <MarkedReadDialog onClose={() => navigate(backTo)} />}
     </section>
   );
 }

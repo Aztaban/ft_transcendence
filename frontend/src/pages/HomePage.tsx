@@ -7,6 +7,7 @@ import historyIcon from "../assets/figma/history.svg";
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import pendingIcon from "../assets/figma/pending.svg";
 import requestIcon from "../assets/figma/request.svg";
+import usePageTitle from "../components/layout/usePageTitle";
 import AwaitingConfirmation from "../features/hitchhiker/AwaitingConfirmation";
 import EvaluationHistory from "../features/hitchhiker/EvaluationHistory";
 import OpenRequestQueue from "../features/hitchhiker/OpenRequestQueue";
@@ -364,6 +365,8 @@ function WorkspaceDashboard({ role }: { role: AppRole }) {
 
 function HomePage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("nav.home"));
   const { activeRole } = useRole();
 
   return (

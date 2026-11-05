@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import councilIcon from "../assets/figma/student-council.svg";
+import usePageTitle from "../components/layout/usePageTitle";
 import "../styles/council.css";
 
 // What happens to a message (api-plan §7.3): the council reads it, never who sent it, and
@@ -14,6 +15,7 @@ const howItWorks = ["Write", "Read", "Act"];
 // `role=sc_member` (api-plan §10.8, #44) is on main.
 function CouncilPage() {
   const { t } = useTranslation();
+  usePageTitle(t("council.title"));
 
   return (
     <section className="council-page">

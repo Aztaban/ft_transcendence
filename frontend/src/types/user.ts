@@ -3,6 +3,9 @@ export type Language = "en" | "cs" | "es";
 // Wire role names (api-plan §5.8).
 export type RoleName = "student" | "tutor" | "head_tutor" | "sc_member" | "admin";
 
+// The roles the API assigns and revokes; never `student` or `admin` (api-plan §5.8).
+export type ManagedRoleName = "tutor" | "head_tutor" | "sc_member";
+
 // api-plan §8.5.
 export interface UserRole {
   id: number;

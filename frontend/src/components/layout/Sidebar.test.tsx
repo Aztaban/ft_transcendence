@@ -166,6 +166,22 @@ describe("Sidebar active item", () => {
     expect(activeItems()).toEqual(["Messages"]);
   });
 
+  test("offers no message form in the Council workspace", () => {
+    currentUser.roles = ["student", "sc_member"];
+    currentUser.isLoaded = true;
+
+    renderSidebar("/council/inbox");
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+    fireEvent.click(screen.getByRole("option", { name: "COUNCIL" }));
+
+    expect(
+      screen
+        .getAllByRole("link")
+        .filter((link) => link.className.includes("sidebar__nav-link"))
+        .map((link) => link.textContent),
+    ).toEqual(["Home", "Messages", "History", "Hitchhikers"]);
+  });
+
   test("keeps Student Council highlighted on the message form", () => {
     renderSidebar("/council/send");
 
@@ -199,5 +215,73 @@ describe("Sidebar eligibility link", () => {
     switchToHitchhiker();
 
     expect(screen.queryByRole("link", { name: "Eligibility" })).toBeNull();
+  });
+});
+
+describe("Sidebar role menu keyboard", () => {
+  function openWithKeyboard() {
+    currentUser.roles = ["student", "tutor", "sc_member"];
+    currentUser.isLoaded = true;
+    renderSidebar();
+    const button = screen.getByRole("button", { name: /STUDENT/ });
+
+    button.focus();
+    fireEvent.keyDown(button, { key: "ArrowDown" });
+
+    return button;
+  }
+
+  test("opens with the arrow key on the current workspace", () => {
+    openWithKeyboard();
+
+    expect(document.activeElement?.textContent).toBe("STUDENT");
+  });
+
+  test("moves with the arrow keys, Home and End, and wraps around", () => {
+    openWithKeyboard();
+    const menu = screen.getByRole("listbox");
+
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(document.activeElement?.textContent).toBe("HITCHHIKER");
+
+    fireEvent.keyDown(menu, { key: "End" });
+    expect(document.activeElement?.textContent).toBe("COUNCIL");
+
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(document.activeElement?.textContent).toBe("STUDENT");
+
+    fireEvent.keyDown(menu, { key: "ArrowUp" });
+    expect(document.activeElement?.textContent).toBe("COUNCIL");
+
+    fireEvent.keyDown(menu, { key: "Home" });
+    expect(document.activeElement?.textContent).toBe("STUDENT");
+  });
+
+  test("closes on Escape and returns to the button", () => {
+    const button = openWithKeyboard();
+
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(document.activeElement).toBe(button);
+  });
+
+  test("closes on Tab and lets the focus move on", () => {
+    openWithKeyboard();
+
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Tab" });
+
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  test("selects a workspace and returns to the button", () => {
+    const button = openWithKeyboard();
+
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "ArrowDown" });
+    fireEvent.click(document.activeElement as HTMLElement);
+
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(button.textContent).toBe("HITCHHIKER");
+    expect(document.activeElement).toBe(button);
   });
 });

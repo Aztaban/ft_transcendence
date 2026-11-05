@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { registerUser } from "../api/auth";
 import { ApiError } from "../api/client";
 import logo42 from "../assets/figma/42.svg";
@@ -21,6 +22,8 @@ import "../styles/registration.css";
 
 function RegisterPage() {
   const { t, i18n } = useTranslation();
+
+  usePageTitle(t("pageTitle.register"));
   const navigate = useNavigate();
   const location = useLocation();
   // The page the login gate sent the user away from (#328), passed on to the Login page.
@@ -109,6 +112,8 @@ function RegisterPage() {
         </div>
 
         <div className="registration-brand__accent" />
+
+        <h1 className="registration-page__title">{t("pageTitle.register")}</h1>
 
         <form className="registration-form" onSubmit={handleSubmit} noValidate>
           <Input
