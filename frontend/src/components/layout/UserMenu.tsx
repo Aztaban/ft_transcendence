@@ -6,9 +6,9 @@ import logoutIcon from "../../assets/figma/logout.svg";
 import userChevron from "../../assets/figma/user-chevron.svg";
 import { useAuth } from "../../store/AuthContext";
 
-// The arrow next to the user's name: opens a small menu with "Logout", the same action as the
-// sidebar button (POST /auth/logout/, then the login page). Closes on Escape (focus back on the
-// arrow) or a click outside it.
+// The arrow next to the user's name: opens a small menu with "Logout", the same action and
+// texts as the sidebar button (POST /auth/logout/, then the login page). Closes on Escape (focus
+// back on the arrow) or a click outside it.
 function UserMenu() {
   const { t } = useTranslation();
   const { logout } = useAuth();
@@ -73,7 +73,7 @@ function UserMenu() {
         type="button"
         aria-label={isOpen ? t("topbar.closeUserMenu") : t("topbar.userMenu")}
         aria-expanded={isOpen}
-        aria-controls="user-menu"
+        aria-controls={isOpen ? "user-menu" : undefined}
         onClick={toggle}
       >
         <img src={userChevron} alt="" aria-hidden="true" />
@@ -88,12 +88,12 @@ function UserMenu() {
             onClick={() => void handleLogout()}
           >
             <img src={logoutIcon} alt="" aria-hidden="true" />
-            <span>{isLoggingOut ? t("topbar.loggingOut") : t("topbar.logout")}</span>
+            <span>{isLoggingOut ? t("sidebar.loggingOut") : t("sidebar.logout")}</span>
           </button>
 
           {logoutFailed && (
             <p className="user-menu__error" role="alert">
-              {t("topbar.logoutFailed")}
+              {t("sidebar.logoutFailed")}
             </p>
           )}
         </div>

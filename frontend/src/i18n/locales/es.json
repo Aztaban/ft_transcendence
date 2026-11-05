@@ -43,10 +43,7 @@
     "notificationsUnread_one": "Notificaciones, {{count}} sin leer",
     "notificationsUnread_other": "Notificaciones, {{count}} sin leer",
     "userMenu": "Abrir menú de usuario",
-    "closeUserMenu": "Cerrar el menú de usuario",
-    "logout": "Cerrar sesión",
-    "loggingOut": "Cerrando sesión…",
-    "logoutFailed": "No se pudo cerrar la sesión. Inténtalo de nuevo."
+    "closeUserMenu": "Cerrar el menú de usuario"
   },
   "connection": {
     "reconnecting": "Reconectando…",

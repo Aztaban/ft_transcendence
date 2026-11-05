@@ -44,10 +44,7 @@
     "notificationsUnread_few": "Oznámení, {{count}} nepřečtená",
     "notificationsUnread_other": "Oznámení, {{count}} nepřečtených",
     "userMenu": "Otevřít uživatelské menu",
-    "closeUserMenu": "Zavřít uživatelské menu",
-    "logout": "Odhlásit se",
-    "loggingOut": "Odhlašování…",
-    "logoutFailed": "Odhlášení se nepovedlo. Zkuste to prosím znovu."
+    "closeUserMenu": "Zavřít uživatelské menu"
   },
   "connection": {
     "reconnecting": "Obnovuji spojení…",

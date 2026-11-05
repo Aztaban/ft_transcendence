@@ -194,12 +194,14 @@ describe("TopBar user menu", () => {
     const arrow = screen.getByRole("button", { name: "Open user menu" });
 
     expect(arrow.getAttribute("aria-expanded")).toBe("false");
+    expect(arrow.getAttribute("aria-controls")).toBeNull();
     expect(screen.queryByRole("button", { name: "Logout" })).toBeNull();
 
     fireEvent.click(arrow);
 
     expect(arrow.getAttribute("aria-expanded")).toBe("true");
     expect(arrow.getAttribute("aria-label")).toBe("Close user menu");
+    expect(arrow.getAttribute("aria-controls")).toBe("user-menu");
     expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
 
     fireEvent.click(arrow);
