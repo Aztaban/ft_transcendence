@@ -1,11 +1,11 @@
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
-import { topicIcon } from "./topicIcons";
+import type { ProjectTopic } from "./projectContent";
 
 interface TopicsChartProps {
   projectName: string;
-  topics: string[];
+  topics: ProjectTopic[];
 }
 
 const WIDTH = 640;
@@ -68,7 +68,7 @@ function TopicsChart({ projectName, topics }: TopicsChartProps) {
           } as CSSProperties;
 
           return (
-            <g key={topic} className="topics-chart__slice" style={style}>
+            <g key={topic.label} className="topics-chart__slice" style={style}>
               <g className="topics-chart__wedge">
                 <path
                   d={
@@ -80,7 +80,7 @@ function TopicsChart({ projectName, topics }: TopicsChartProps) {
                 />
                 <path
                   className="topics-chart__icon"
-                  d={topicIcon(topic)}
+                  d={topic.icon}
                   stroke={color.ink}
                   transform={`translate(${icon.x - ICON_SIZE / 2} ${icon.y - ICON_SIZE / 2}) scale(${ICON_SIZE / 24})`}
                 />
@@ -88,7 +88,7 @@ function TopicsChart({ projectName, topics }: TopicsChartProps) {
               <g className="topics-chart__caption">
                 <line x1={tickStart.x} y1={tickStart.y} x2={tickEnd.x} y2={tickEnd.y} />
                 <text x={label.x} y={label.y} textAnchor={anchor}>
-                  <tspan className="topics-chart__label">{topic.toUpperCase()}</tspan>
+                  <tspan className="topics-chart__label">{topic.label.toUpperCase()}</tspan>
                   <tspan className="topics-chart__share" x={label.x} dy="16">
                     {share}
                   </tspan>
@@ -102,7 +102,7 @@ function TopicsChart({ projectName, topics }: TopicsChartProps) {
 
       <ul className="topics-chart__list">
         {topics.map((topic) => (
-          <li key={topic}>{topic}</li>
+          <li key={topic.label}>{topic.label}</li>
         ))}
       </ul>
     </figure>
