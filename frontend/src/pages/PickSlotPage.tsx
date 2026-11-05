@@ -274,7 +274,7 @@ function PickSlotPage() {
               )}
             </div>
 
-            <aside className="pick-slot__aside">
+            <div className="pick-slot__aside">
               <section className="pick-slot__panel">
                 <h2>{t("pickSlot.rulesTitle")}</h2>
                 <ul>
@@ -294,7 +294,7 @@ function PickSlotPage() {
                 <h2>{t("pickSlot.nextTitle")}</h2>
                 <p>{t("pickSlot.nextText")}</p>
               </section>
-            </aside>
+            </div>
           </div>
         </>
       )}

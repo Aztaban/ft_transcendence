@@ -260,7 +260,7 @@ function CouncilInboxMessagePage() {
             </div>
           </div>
 
-          <aside className="council-aside">
+          <div className="council-aside">
             <section className="council-panel council-note">
               <div className="council-note__head">
                 <h2>
@@ -321,7 +321,7 @@ function CouncilInboxMessagePage() {
                 </button>
               </div>
             </section>
-          </aside>
+          </div>
         </div>
       )}
 
