@@ -9,6 +9,7 @@ import {
   SC_NOTE_MAX_LENGTH,
   setSCMessageRead,
 } from "../api/scMessages";
+import usePageTitle from "../components/layout/usePageTitle";
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
 import MarkedReadDialog from "../features/council/MarkedReadDialog";
@@ -40,6 +41,7 @@ function actionErrorMessage(error: unknown) {
 function CouncilInboxMessagePage() {
   const { t } = useTranslation();
   const { id } = useParams();
+  usePageTitle(t("council.messageNumber", { id }));
   const location = useLocation();
   const navigate = useNavigate();
   // Only this one known value: the page never navigates to whatever the state holds.

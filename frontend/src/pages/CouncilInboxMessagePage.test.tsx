@@ -62,6 +62,7 @@ describe("CouncilInboxMessagePage", () => {
     expect(await screen.findByText(unread.body)).toBeTruthy();
     expect(getSCMessage).toHaveBeenCalledWith(3);
     expect(screen.getByRole("heading", { name: "Message #3" })).toBeTruthy();
+    expect(document.title).toBe("Message #3 · 42 Evals");
     expect(screen.getByText("Not read by the council yet")).toBeTruthy();
     expect(setSCMessageRead).not.toHaveBeenCalled();
   });

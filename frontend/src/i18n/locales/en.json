@@ -968,5 +968,14 @@
     "title": "This page is not available for your current role.",
     "text": "The <strong>{{role}}</strong> role does not have permission to view this page.",
     "back": "Back to dashboard"
+  },
+  "pageTitle": {
+    "evaluation": "Evaluation",
+    "project": "Project",
+    "person": "Profile",
+    "login": "Log in",
+    "register": "Create an account",
+    "notFound": "Page not found",
+    "unauthorized": "Access restricted"
   }
 }

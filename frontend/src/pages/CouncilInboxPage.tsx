@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
 import CouncilTabs from "../features/council/CouncilTabs";
@@ -19,6 +20,7 @@ const howItWorks = ["Open", "Mark", "Note"];
 // so a card shows its number and the first lines of the text.
 function CouncilInboxPage() {
   const { t } = useTranslation();
+  usePageTitle(t("council.messages"));
   const navigate = useNavigate();
   const { messages, total, hasMore, isLoadingMore, moreFailed, loadState, showMore } =
     useCouncilMessages(true);

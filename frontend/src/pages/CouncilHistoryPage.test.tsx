@@ -68,6 +68,8 @@ describe("CouncilHistoryPage", () => {
 
     renderPage();
 
+    expect(document.title).toBe("Message history · 42 Evals");
+
     expect(screen.getByText("Loading messages…")).toBeTruthy();
     expect(await screen.findByRole("heading", { name: "Message #4" })).toBeTruthy();
     expect(listSCMessages).toHaveBeenCalledWith(request(1));

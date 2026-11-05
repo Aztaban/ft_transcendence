@@ -78,6 +78,9 @@ describe("RegisterPage in another language", () => {
     await i18n.changeLanguage("es");
     renderPage();
 
+    expect(screen.getByRole("heading", { level: 1, name: "Crear una cuenta" })).toBeTruthy();
+    expect(document.title).toBe("Crear una cuenta · 42 Evals");
+
     fireEvent.click(screen.getByRole("button", { name: "REGISTRARSE" }));
 
     expect(screen.getByText("El nombre visible es obligatorio.")).toBeTruthy();

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router";
 import { ApiError } from "../api/client";
 import { SC_MESSAGE_MAX_LENGTH, sendSCMessage } from "../api/scMessages";
 import councilIcon from "../assets/figma/student-council.svg";
+import usePageTitle from "../components/layout/usePageTitle";
 import MessageSentDialog from "../features/council/MessageSentDialog";
 import i18n from "../i18n";
 import "../styles/council.css";
@@ -31,6 +32,7 @@ function sendErrorMessage(error: unknown) {
 // for abuse investigation and never shown to the council (api-plan §7.3, §10.6).
 function CouncilMessagePage() {
   const { t } = useTranslation();
+  usePageTitle(t("council.messageTitle"));
   const navigate = useNavigate();
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);

@@ -84,6 +84,7 @@ describe("HitchhikersPage", () => {
     const card = await findCard("Psimcak");
 
     expect(searchPeople).toHaveBeenCalledTimes(1);
+    expect(document.title).toBe("Hitchhikers · 42 Evals");
     expect(searchedWith()).toEqual({
       role: "tutor",
       q: undefined,

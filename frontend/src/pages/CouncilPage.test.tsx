@@ -16,6 +16,8 @@ describe("CouncilPage", () => {
       </MemoryRouter>,
     );
 
+    expect(document.title).toBe("Student Council · 42 Evals");
+
     expect(screen.getByRole("heading", { name: "Student Council" })).toBeTruthy();
     expect(screen.getByText(/Send us an anonymous message\./)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Send a message" }).getAttribute("href")).toBe(
