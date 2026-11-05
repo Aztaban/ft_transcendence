@@ -720,7 +720,7 @@
     "passwordNumeric": "Password cannot contain only numbers."
   },
   "legal": {
-    "copyright": "© transcendence 2026",
+    "copyright": "© transcendence {{year}}",
     "footerLabel": "Legal",
     "lastUpdated": "Last updated: {{date}}",
     "back": "Back to the application",

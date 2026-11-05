@@ -732,7 +732,7 @@
     "passwordNumeric": "Heslo nemůže obsahovat jen číslice."
   },
   "legal": {
-    "copyright": "© transcendence 2026",
+    "copyright": "© transcendence {{year}}",
     "footerLabel": "Právní informace",
     "lastUpdated": "Poslední aktualizace: {{date}}",
     "back": "Zpět do aplikace",
