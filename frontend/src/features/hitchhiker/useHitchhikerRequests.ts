@@ -17,6 +17,8 @@ export function useHitchhikerRequests() {
   const { isAuthenticated, isLoading: isCheckingSession } = useAuth();
   const [openRequests, setOpenRequests] = useState<EvaluationRequest[]>([]);
   const [pickedRequests, setPickedRequests] = useState<EvaluationRequest[]>([]);
+  // The whole open queue, not only the first page: Home shows it as a number (§5.7).
+  const [openCount, setOpenCount] = useState<number | null>(null);
   const [hasError, setHasError] = useState(false);
   // True until the first answers arrive or the first load fails; a background refresh keeps it
   // false, so the requests already shown stay on screen (#258).
@@ -41,6 +43,7 @@ export function useHitchhikerRequests() {
         if (active) {
           hasLoaded.current = true;
           setOpenRequests(open.results);
+          setOpenCount(open.count);
           setPickedRequests(picked.results);
           setHasError(false);
           setIsFirstLoad(false);
@@ -62,5 +65,5 @@ export function useHitchhikerRequests() {
   // nothing is loaded, so there is nothing to wait for.
   const isLoading = isCheckingSession || (isAuthenticated && isFirstLoad);
 
-  return { openRequests, pickedRequests, isLoading, hasError };
+  return { openRequests, openCount, pickedRequests, isLoading, hasError };
 }

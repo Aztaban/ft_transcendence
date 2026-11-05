@@ -19,11 +19,17 @@ const data = vi.hoisted(() => ({
   unreadCount: 0,
   totalCount: 0,
   hitchhikerCount: 0 as number | null,
+  openCount: null as number | null,
 }));
 
 // The student boxes load data from the API; that is tested in OpenRequests and the hook itself.
 vi.mock("../features/hitchhiker/useHitchhikerRequests", () => ({
-  useHitchhikerRequests: () => ({ openRequests: [], pickedRequests: [], ...load }),
+  useHitchhikerRequests: () => ({
+    openRequests: [],
+    openCount: data.openCount,
+    pickedRequests: [],
+    ...load,
+  }),
 }));
 vi.mock("../features/student/useStudentRequests", () => ({
   useStudentRequests: () => ({ requests: [], ...load, reload: vi.fn() }),
@@ -52,6 +58,7 @@ afterEach(() => {
   data.unreadCount = 0;
   data.totalCount = 0;
   data.hitchhikerCount = 0;
+  data.openCount = null;
 });
 
 // Switches the active role, as the role selector in the sidebar does.
@@ -191,7 +198,9 @@ describe("HomePage overview", () => {
   });
 
   it("shows the Hitchhiker's real totals", () => {
-    data.overview = { open: list(35), awaiting: list(2), done: list(12) };
+    // The open queue's total comes with the queue; the other two from the overview lists.
+    data.openCount = 35;
+    data.overview = { awaiting: list(2), done: list(12) };
     renderHomeAs("HITCHHIKER");
 
     expect(within(overviewBox("Open requests")).getByText("35")).toBeTruthy();

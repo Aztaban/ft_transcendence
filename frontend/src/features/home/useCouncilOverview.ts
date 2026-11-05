@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { countPeople } from "../../api/people";
 import { listSCMessages } from "../../api/scMessages";
+import useRefreshWhenVisible from "../../hooks/useRefreshWhenVisible";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import type { SCMessage } from "../../types/scMessage";
 import { useLiveRefresh } from "../../websocket/LiveProvider";
@@ -28,19 +29,7 @@ export function useCouncilOverview() {
 
   useLiveRefresh(["notification.created"], reload);
 
-  useEffect(() => {
-    function handleVisibilityChange() {
-      if (document.visibilityState === "visible") {
-        reload();
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [reload]);
+  useRefreshWhenVisible(reload);
 
   useEffect(() => {
     if (!isMember) {
@@ -67,7 +56,20 @@ export function useCouncilOverview() {
         }
       });
 
-    // Optional, and limited together with people search (§5.9): without it only its box is empty.
+    return () => {
+      active = false;
+    };
+  }, [isMember, reloadKey]);
+
+  // Optional, and limited together with people search (§5.9): without it only its box is empty.
+  // The number barely changes, so it is loaded once, not on every refresh.
+  useEffect(() => {
+    if (!isMember) {
+      return;
+    }
+
+    let active = true;
+
     countPeople("tutor")
       .then((count) => {
         if (active) {
@@ -79,7 +81,7 @@ export function useCouncilOverview() {
     return () => {
       active = false;
     };
-  }, [isMember, reloadKey]);
+  }, [isMember]);
 
   return { unread, unreadCount, totalCount, hitchhikerCount, isLoading: isFirstLoad, hasError };
 }

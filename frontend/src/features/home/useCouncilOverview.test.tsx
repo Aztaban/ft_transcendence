@@ -87,6 +87,18 @@ describe("useCouncilOverview", () => {
     await waitFor(() => expect(result.current.unreadCount).toBe(0));
   });
 
+  it("loads the Hitchhiker count once, not on every refresh", async () => {
+    const { result } = renderHook(() => useCouncilOverview());
+
+    await waitFor(() => expect(result.current.hitchhikerCount).toBe(9));
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() => expect(listSCMessages).toHaveBeenCalledTimes(4));
+    expect(countPeople).toHaveBeenCalledTimes(1);
+  });
+
   it("asks for nothing until the user's role is confirmed", async () => {
     currentUser.isLoaded = false;
 
