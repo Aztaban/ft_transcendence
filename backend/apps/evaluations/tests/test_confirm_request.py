@@ -587,9 +587,12 @@ def test_confirmation_notification_times_are_utc_and_retry_creates_no_duplicate(
     assert Notification.objects.count() == 1
 
 
-def test_stale_confirmation_notifies_actual_picker(evaluation):
+def test_stale_confirmation_refuses_a_replacement_picker(evaluation):
     new_picker = get_user_model().objects.create_user(id=43, email="new-picker@example.com")
     EvaluationRequest.objects.filter(pk=17).update(picked_by=new_picker)
     assert evaluation.picked_by_id == 42
-    confirm_request(evaluation)
-    assert Notification.objects.get().recipient_id == 43
+    before = EvaluationRequest.objects.values().get(pk=17)
+    with pytest.raises(InvalidStateTransition):
+        confirm_request(evaluation)
+    assert EvaluationRequest.objects.values().get(pk=17) == before
+    assert not Notification.objects.exists()

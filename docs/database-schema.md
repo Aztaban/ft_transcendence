@@ -220,6 +220,21 @@ MySQL locks the row for the statement, so of two simultaneous picks exactly one 
 
 The overlap checks (api-plan §7.1) read other rows, so the pick runs inside `transaction.atomic()` and first locks the `user` rows of both the Hitchhiker and the student with `select_for_update()`, in ascending id order so two picks can never deadlock. That serializes picks involving the same people without blocking anyone else.
 
+Workflows that notify multiple users discover recipients before acquiring user locks,
+and include those recipients in the same ascending-id lock set as the actor and
+participants. Notification creation uses that captured set, revalidated after locking;
+it must not discover and lock additional users afterward. This keeps request creation,
+eligibility submission and Council messages consistent with account deletion's lock order.
+
+Evaluation transitions re-check the picker after locking the request. If it differs
+from the picker whose user row was locked, they refuse with 409 `invalid_state_transition`.
+Council moderation locks the sender and audit actor in ascending user-id order before
+locking the message; its joined sender lookup does not acquire another user lock.
+
+Admin result forms carry the `updated_at` value loaded with the form. A result edit
+conditionally matches that value and advances it on success; a stale form is rejected
+with a reload message rather than overwriting another admin's result or feedback.
+
 The check constraints in §4.1 are the database-level safety net: a buggy code path that tries to write an inconsistent row fails instead of corrupting data.
 
 ### 4.3 Expiry
@@ -354,6 +369,7 @@ Append-only record of sensitive actions. Rows are never updated or deleted by th
 | --- | --- | --- |
 | `expire_evaluation_requests` | every 5 min | §4.3 |
 | `purge_old_notifications` | daily | §5.1 |
+| `clear_expired_sessions` | daily | Django `clearsessions`; remove expired session rows. Suspension and deletion scan only unexpired sessions. |
 
 Each task is idempotent: running it twice, or late, gives the same result.
 
