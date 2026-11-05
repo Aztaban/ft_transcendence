@@ -250,6 +250,14 @@ describe("Sidebar role menu keyboard", () => {
     expect(document.activeElement).toBe(button);
   });
 
+  test("closes on Tab and lets the focus move on", () => {
+    openWithKeyboard();
+
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Tab" });
+
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
   test("selects a workspace and returns to the button", () => {
     const button = openWithKeyboard();
 
