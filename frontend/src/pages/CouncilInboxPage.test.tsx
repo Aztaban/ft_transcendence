@@ -66,6 +66,7 @@ describe("CouncilInboxPage", () => {
     expect(screen.getByText("Loading messages…")).toBeTruthy();
     expect(await screen.findByRole("heading", { name: "Message #4" })).toBeTruthy();
     expect(listSCMessages).toHaveBeenCalledWith(request(1));
+    expect(document.title).toBe("Messages · 42 Evals");
     expect(titles()).toEqual(["Message #4", "Message #3"]);
     expect(screen.getByText("Quiet study areas, please.")).toBeTruthy();
     expect(screen.getByText("2 new")).toBeTruthy();

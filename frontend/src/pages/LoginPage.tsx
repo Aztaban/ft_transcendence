@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import logo42 from "../assets/figma/42.svg";
 import { ApiError } from "../api/client";
 import AuthSwitchLink from "../components/auth/AuthSwitchLink";
@@ -48,6 +49,8 @@ interface LoginLocationState {
 
 function LoginPage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("pageTitle.login"));
   const navigate = useNavigate();
   const location = useLocation();
   const registeredEmail = (location.state as LoginLocationState | null)?.registeredEmail;
@@ -117,6 +120,8 @@ function LoginPage() {
         </div>
 
         <div className="registration-brand__accent" />
+
+        <h1 className="registration-page__title">{t("pageTitle.login")}</h1>
 
         <form className="registration-form" onSubmit={handleSubmit}>
           <Input

@@ -561,6 +561,71 @@
   width: 18px;
   height: 18px;
   object-fit: contain;
+  transition: transform 150ms ease;
+}
+
+/* The arrow points down while the menu is open. */
+.topbar__user-menu--open img {
+  transform: rotate(180deg);
+}
+
+.topbar__user-menu-wrap {
+  position: relative;
+}
+
+.user-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1;
+  min-width: 180px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.user-menu__item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.user-menu__item:hover:not(:disabled) {
+  background: #f0f2f2;
+}
+
+.user-menu__item:disabled {
+  cursor: wait;
+}
+
+.user-menu__item img {
+  width: 20px;
+  height: 20px;
+}
+
+.user-menu__error {
+  margin: var(--space-2) 0 0;
+  padding: 0 12px;
+  color: #b42318;
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar__user-menu img {
+    transition: none;
+  }
 }
 
 /* Dims the page behind the open drawer (small screens only) */
@@ -813,4 +878,30 @@
   box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
   color: #ffffff;
   font-size: 14px;
+}
+
+/* "Skip to content": off screen until a keyboard user tabs to it (WCAG 2.4.1). */
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-on-accent, #0b2b2c);
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  outline: 2px solid var(--color-on-accent, #0b2b2c);
+  outline-offset: 2px;
+  transform: none;
+}
+
+/* <main> takes the focus from the skip link; it needs no ring of its own. */
+.app-shell__content:focus {
+  outline: none;
 }

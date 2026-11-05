@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { listProjects } from "../../api/projects";
+import i18n from "../../i18n";
 import ProjectMultiSelect from "./ProjectMultiSelect";
 
 vi.mock("../../api/projects", () => ({ listProjects: vi.fn() }));
@@ -104,5 +105,21 @@ describe("ProjectMultiSelect", () => {
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Could not load the projects. Please try again later.",
     );
+  });
+});
+
+describe("ProjectMultiSelect in another language", () => {
+  it("shows the list, the counter and the buttons in Czech", async () => {
+    vi.mocked(listProjects).mockResolvedValue(projects);
+    await i18n.changeLanguage("cs");
+
+    renderInRouter(<ProjectMultiSelect value={[projects[1]]} onChange={() => {}} />);
+
+    expect(await screen.findByText("Vybráno 1 z 3")).toBeTruthy();
+    expect(
+      screen.getByRole("group", { name: "Vyberte projekty, které chcete hodnotit" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Vybrat vše" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Detaily projektu push_swap" })).toBeTruthy();
   });
 });

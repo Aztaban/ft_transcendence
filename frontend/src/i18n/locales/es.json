@@ -16,8 +16,8 @@
     "profile": "Perfil",
     "studentCouncil": "Consejo estudiantil",
     "messages": "Mensajes",
-    "councilProfile": "Perfil del consejo",
-    "eligibility": "Elegibilidad"
+    "eligibility": "Elegibilidad",
+    "skipToContent": "Saltar al contenido"
   },
   "workspace": {
     "select": "Elegir rol",
@@ -42,7 +42,8 @@
     "notifications": "Notificaciones",
     "notificationsUnread_one": "Notificaciones, {{count}} sin leer",
     "notificationsUnread_other": "Notificaciones, {{count}} sin leer",
-    "userMenu": "Abrir menú de usuario"
+    "userMenu": "Abrir menú de usuario",
+    "closeUserMenu": "Cerrar el menú de usuario"
   },
   "connection": {
     "reconnecting": "Reconectando…",
@@ -552,7 +553,7 @@
     "selected": "{{count}} seleccionados",
     "notNow": "Ahora no",
     "sentTitle": "¡Formulario enviado!",
-    "sentText": "Tu formulario se ha enviado a los tutores principales. Cuando aprueben tus proyectos, te avisaremos y podrás empezar a tomar horarios.",
+    "sentText": "Tu formulario se ha enviado a los Head Tutors. Cuando aprueben tus proyectos, te avisaremos y podrás empezar a tomar horarios.",
     "thanks": "¡Gracias!",
     "errorPending": "Ya tienes una solicitud esperando revisión.",
     "errorPermission": "Solo los Hitchhikers pueden solicitar evaluar proyectos."
@@ -903,5 +904,85 @@
       ]
     },
     "opensInNewTab": "se abre en una pestaña nueva"
+  },
+  "eligibility": {
+    "title": "Proyectos que puedes evaluar",
+    "stepProjects": "Elegir proyectos",
+    "selectedCount_one": "{{count}} proyecto seleccionado",
+    "selectedCount_many": "{{count}} proyectos seleccionados",
+    "selectedCount_other": "{{count}} proyectos seleccionados",
+    "wholeRequest": "Un Head Tutor aprobará o rechazará la solicitud completa.",
+    "howChooseTitle": "Elige tus proyectos",
+    "howChooseText": "Selecciona todos los proyectos que quieras evaluar.",
+    "howReviewTitle": "Un Head Tutor revisa",
+    "howReviewText": "Aprueba o rechaza la solicitud completa.",
+    "howStartTitle": "Empieza a evaluar",
+    "howStartText": "Una vez aprobada, toma solicitudes abiertas de estos proyectos.",
+    "tipText": "Puedes enviar otra solicitud más tarde para añadir más proyectos.",
+    "legend": "Elige los proyectos que quieres evaluar",
+    "selectedOf": "{{selected}} de {{total}} seleccionados",
+    "selectAll": "Seleccionar todos",
+    "clearAll": "Quitar todos",
+    "sentTitle": "¡Tu solicitud se ha enviado a los <strong>HEAD TUTORS!</strong>",
+    "sentText": "Recibirás una notificación cuando decidan. Una vez aprobada, podrás tomar solicitudes de estos proyectos."
+  },
+  "review": {
+    "pending": "Pendientes",
+    "approved": "Aprobadas",
+    "declined": "Rechazadas",
+    "badgeApproved": "Aprobada",
+    "badgeDeclined": "Rechazada",
+    "noPending": "No hay solicitudes pendientes",
+    "noApproved": "No hay solicitudes aprobadas",
+    "noDeclined": "No hay solicitudes rechazadas",
+    "errorOwn": "No puedes revisar tu propia solicitud. Lo hará otro Head Tutor o un administrador.",
+    "errorReviewed": "Otro Head Tutor ya ha revisado esta solicitud.",
+    "errorGeneric": "No se pudo guardar la decisión. Inténtalo de nuevo.",
+    "approvedMessage": "Se ha aprobado la solicitud de {{name}}.",
+    "declinedMessage": "Se ha rechazado la solicitud de {{name}}.",
+    "loading": "Cargando…",
+    "loadingRequests": "Cargando solicitudes…",
+    "loadError": "No se pudieron cargar las solicitudes. Inténtalo más tarde.",
+    "title": "Solicitudes de elegibilidad",
+    "subtitle": "Hitchhikers que piden evaluar proyectos. Tu decisión cubre la solicitud completa.",
+    "tabsAria": "Estado de la solicitud",
+    "newRequests": "Las nuevas solicitudes de Hitchhikers aparecerán aquí.",
+    "requester": "Solicitante",
+    "projects": "Proyectos",
+    "requested": "Solicitada",
+    "decision": "Decisión",
+    "reviewedBy": "Revisada por",
+    "yourRequest": "Tu solicitud",
+    "approve": "Aprobar",
+    "decline": "Rechazar",
+    "approveAria": "Aprobar la solicitud de {{name}}",
+    "declineAria": "Rechazar la solicitud de {{name}}",
+    "by": "por {{name}}",
+    "moreError": "No se pudieron cargar más solicitudes. Inténtalo de nuevo.",
+    "showMore_one": "Ver más (queda {{count}})",
+    "showMore_many": "Ver más (quedan {{count}})",
+    "showMore_other": "Ver más (quedan {{count}})",
+    "approveTitle": "¿Aprobar la solicitud de {{name}}?",
+    "declineTitle": "¿Rechazar la solicitud de {{name}}?",
+    "approveText": "Podrá tomar solicitudes de todos los proyectos de abajo.",
+    "declineText": "No estará habilitado para ninguno de los proyectos de abajo. Puede enviar una nueva solicitud.",
+    "noteFor": "Nota para {{name}}",
+    "optional": "(opcional)",
+    "saving": "Guardando…"
+  },
+  "unauthorized": {
+    "eyebrow": "ACCESO RESTRINGIDO",
+    "title": "Esta página no está disponible para tu rol actual.",
+    "text": "El rol <strong>{{role}}</strong> no tiene permiso para ver esta página.",
+    "back": "Volver al panel"
+  },
+  "pageTitle": {
+    "evaluation": "Evaluación",
+    "project": "Proyecto",
+    "person": "Perfil",
+    "login": "Iniciar sesión",
+    "register": "Crear una cuenta",
+    "notFound": "Página no encontrada",
+    "unauthorized": "Acceso restringido"
   }
 }
