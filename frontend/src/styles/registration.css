@@ -93,6 +93,7 @@
 .registration-form__submit.ui-button:hover {
   border-color: var(--color-accent);
   background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 @media (max-width: 680px) {
