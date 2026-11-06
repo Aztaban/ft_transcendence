@@ -69,7 +69,8 @@
     "duration": "Duración",
     "requestedAgo": "Solicitado {{time}}",
     "noNote": "El estudiante no ha dejado ninguna nota.",
-    "tryAgain": "Intentar de nuevo"
+    "tryAgain": "Intentar de nuevo",
+    "serverUnavailable": "El servidor no respondió. Inténtalo de nuevo en un momento."
   },
   "time": {
     "justNow": "ahora mismo",
