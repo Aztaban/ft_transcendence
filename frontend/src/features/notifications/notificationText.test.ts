@@ -41,14 +41,6 @@ describe("notificationText", () => {
         notification("eligibility.requested", { request_id: 5, requester: bob, projects: [libft] }),
         notification("eligibility.revoked", { project: libft }),
         notification("sc_message.created", { message_id: 3 }),
-        notification("resource.created", {
-          file_id: 8,
-          title: "Libft tips",
-          project: libft,
-          owner: bob,
-        }),
-        notification("resource.updated", { file_id: 8, title: "Libft tips" }),
-        notification("resource.deleted", { title: "Libft tips" }),
       ].map(notificationText),
     ).toEqual([
       "New evaluation request for Libft",
@@ -58,9 +50,6 @@ describe("notificationText", () => {
       "Bob asked to evaluate new projects",
       "You can no longer evaluate Libft",
       "New anonymous message for the Student Council",
-      'Bob shared "Libft tips"',
-      'Your resource "Libft tips" was edited',
-      'Your resource "Libft tips" was deleted',
     ]);
   });
 
@@ -87,6 +76,35 @@ describe("notificationText", () => {
       "Bob confirmed the evaluation of Libft: Sun, 25 Oct, 15:00–15:45",
     ]);
     expect(formatSlot).toHaveBeenCalledWith("2026-10-25T14:00:00Z", "2026-10-25T14:45:00Z");
+  });
+
+  // A Record, so adding or removing a type in §8.8 does not compile until this list follows.
+  const everyType: Record<NotificationType, Record<string, unknown>> = {
+    "evaluation.created": { project: libft },
+    "evaluation.slot_picked": { project: libft, tutor: bob },
+    "evaluation.confirmed": { project: libft, student: bob },
+    "evaluation.declined": { project: libft, student: bob },
+    "evaluation.released": { project: libft, tutor: bob },
+    "evaluation.cancelled": { project: libft, cancelled_by: bob },
+    "evaluation.expired": { project: libft, previous_status: "pending" },
+    "evaluation.result_recorded": { project: libft, result: "passed" },
+    "eligibility.requested": { requester: bob },
+    "eligibility.decided": { decision: "approved" },
+    "eligibility.revoked": { project: libft },
+    "role.changed": { role: "tutor", action: "assigned" },
+    "account.updated": { fields: ["email"] },
+    "sc_message.created": { message_id: 3 },
+  };
+
+  test.each(["en", "cs", "es"])("has a sentence for every type in %s", async (language) => {
+    await i18n.changeLanguage(language);
+
+    for (const [type, payload] of Object.entries(everyType)) {
+      const text = notificationText(notification(type as NotificationType, payload));
+
+      expect(text).not.toContain("notifications.");
+      expect(text).not.toContain("{{");
+    }
   });
 
   test("picks the sentence for the status value", () => {
