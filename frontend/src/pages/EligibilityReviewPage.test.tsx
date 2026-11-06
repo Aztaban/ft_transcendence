@@ -1,8 +1,9 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
+import i18n from "../i18n";
 import { listEligibilityRequests, reviewEligibilityRequest } from "../api/eligibility";
 import { RoleProvider } from "../store/RoleContext";
 import type { EligibilityRequest } from "../types/eligibility";
@@ -69,6 +70,7 @@ afterEach(() => {
   currentUser.user = null;
   currentUser.roles = [];
   currentUser.isLoaded = false;
+  sessionStorage.clear();
 });
 
 function renderPage() {
@@ -205,6 +207,21 @@ describe("EligibilityReviewPage", () => {
     expect(within(screen.getByRole("dialog")).getByRole("alert")).toBe(alert);
   });
 
+  it("shows the generic error for an answer without a code, such as an HTML 502", async () => {
+    vi.mocked(listEligibilityRequests).mockResolvedValue(page([request(9, "dkolarov")]));
+    vi.mocked(reviewEligibilityRequest).mockRejectedValue(
+      new ApiError(502, "API request failed: 502 Bad Gateway"),
+    );
+
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Approve dkolarov's request" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Could not save the decision. Please try again.",
+    );
+  });
+
   it("shows reviewed requests with the decision on the other tabs", async () => {
     vi.mocked(listEligibilityRequests)
       .mockResolvedValueOnce(page([]))
@@ -300,5 +317,119 @@ describe("EligibilityReviewPage", () => {
       vi.mocked(listEligibilityRequests).mock.calls.filter(([, options]) => options?.page === 2),
     ).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
+  });
+});
+
+describe("EligibilityReviewPage in another language", () => {
+  it("shows the table and the approve dialog in Czech", async () => {
+    await i18n.changeLanguage("cs");
+    vi.mocked(listEligibilityRequests).mockResolvedValue(page([request(9, "dkolarov")]));
+
+    renderPage();
+
+    expect(await screen.findByRole("heading", { name: "Žádosti o oprávnění" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /Čekající/ })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Žadatel" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Schválit žádost uživatele dkolarov" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Schválit žádost uživatele dkolarov?" }),
+    ).toBeTruthy();
+  });
+
+  it("labels one reviewed request in the singular in Spanish", async () => {
+    await i18n.changeLanguage("es");
+    vi.mocked(listEligibilityRequests)
+      .mockResolvedValueOnce(page([]))
+      .mockResolvedValueOnce(
+        page([
+          request(9, "dkolarov", {
+            status: "approved",
+            reviewed_by: { id: 1, display_name: "headtut", avatar_url: null },
+          }),
+        ]),
+      );
+
+    renderPage();
+    await screen.findByText("No hay solicitudes pendientes");
+    fireEvent.click(screen.getByRole("tab", { name: "Aprobadas" }));
+
+    const row = (await screen.findByText("dkolarov")).closest("tr") as HTMLElement;
+
+    expect(row.querySelector(".eligibility-review__status")?.textContent).toBe("Aprobada");
+    expect(within(row).getByText("por headtut")).toBeTruthy();
+  });
+
+  it("counts the requests left with the Czech plural forms", async () => {
+    await i18n.changeLanguage("cs");
+    const first = Array.from({ length: 20 }, (_, index) =>
+      request(100 + index, `tutor${index}`, { status: "declined" }),
+    );
+
+    vi.mocked(listEligibilityRequests).mockImplementation(async (status) =>
+      status === "pending"
+        ? page([])
+        : page(first, 22, "https://localhost/api/v1/tutor-eligibility-requests/?page=2"),
+    );
+
+    renderPage();
+    await screen.findByText("Žádné čekající žádosti");
+    fireEvent.click(screen.getByRole("tab", { name: "Zamítnuté" }));
+
+    expect(await screen.findByRole("button", { name: "Zobrazit další (zbývají 2)" })).toBeTruthy();
+  });
+
+  it("follows the language switcher after a decision", async () => {
+    vi.mocked(listEligibilityRequests)
+      .mockResolvedValueOnce(page([request(9, "dkolarov")]))
+      .mockResolvedValueOnce(page([]));
+    vi.mocked(reviewEligibilityRequest).mockResolvedValue(
+      request(9, "dkolarov", { status: "approved" }),
+    );
+
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Approve dkolarov's request" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }));
+    await screen.findByText("No pending requests");
+
+    await act(() => i18n.changeLanguage("cs"));
+
+    expect(screen.getByRole("status").textContent).toBe(
+      "Žádost uživatele dkolarov byla schválena.",
+    );
+    expect(screen.getByText("Žádné čekající žádosti")).toBeTruthy();
+  });
+
+  it("follows the language switcher with an error on the page", async () => {
+    vi.mocked(listEligibilityRequests)
+      .mockResolvedValueOnce(page([request(9, "dkolarov")]))
+      .mockResolvedValueOnce(page([]));
+    vi.mocked(reviewEligibilityRequest).mockRejectedValue(
+      new ApiError(409, "Conflict", "eligibility_request_already_reviewed"),
+    );
+
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Approve dkolarov's request" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }));
+    await screen.findByText("No pending requests");
+
+    await act(() => i18n.changeLanguage("es"));
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Otro Head Tutor ya ha revisado esta solicitud.",
+    );
+  });
+
+  it("explains the restricted page in Spanish", async () => {
+    // The route lets only the Hitchhiker workspace in, so that is the role the page names.
+    sessionStorage.setItem("active-role", "HITCHHIKER");
+    await i18n.changeLanguage("es");
+    logIn(["tutor"]);
+
+    renderPage();
+
+    expect(await screen.findByText("ACCESO RESTRINGIDO")).toBeTruthy();
+    expect(screen.getByText("HITCHHIKER").tagName).toBe("STRONG");
   });
 });

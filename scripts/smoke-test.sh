@@ -5,13 +5,18 @@
 set -euo pipefail
 BASE=${BASE:-https://localhost}
 
+# Waits until the URL answers and, when given, its body contains the text.
 wait_for() {
-  for _ in $(seq 60); do curl -fsk -o /dev/null "$1" && return 0; sleep 5; done
-  echo "No answer from $1"
+  for _ in $(seq 60); do
+    body=$(curl -fsk "$1") && grep -q "${2:-}" <<< "$body" && return 0
+    sleep 5
+  done
+  echo "No answer from $1${2:+ containing $2}"
   return 1
 }
 
-wait_for "$BASE/health/"
+# The heartbeat reaches /health/ only when both the Celery worker and beat are running.
+wait_for "$BASE/health/" '"celery": "ok"'
 health=$(curl -fsk "$BASE/health/")
 echo "health: $health"
 grep -q '"status": "ok"' <<< "$health"

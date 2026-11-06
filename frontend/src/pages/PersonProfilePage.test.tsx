@@ -110,6 +110,8 @@ describe("PersonProfilePage", () => {
     await findProfile();
 
     expect(getPublicUser).toHaveBeenCalledWith(7);
+    // The tab name is set right after the page draws the loaded profile.
+    await waitFor(() => expect(document.title).toBe("Lenka Husarova · 42 Evals"));
     expect(screen.getByText("LH")).toBeTruthy();
     expect(screen.getByText("42 Prague")).toBeTruthy();
     expect(texts(screen.getByRole("list", { name: "Roles" }), "listitem")).toEqual([
@@ -382,6 +384,8 @@ describe("PersonProfilePage", () => {
     renderPage();
 
     expect(await screen.findByRole("heading", { name: "Profile not found" })).toBeTruthy();
+    // The tab name is set right after the page draws the loaded profile.
+    await waitFor(() => expect(document.title).toBe("Profile not found · 42 Evals"));
     expect(getTutorEligibility).not.toHaveBeenCalled();
   });
 

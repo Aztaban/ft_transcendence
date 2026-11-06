@@ -5,6 +5,7 @@ import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
 import PublicLayout from "./components/layout/PublicLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
+import CouncilHistoryPage from "./pages/CouncilHistoryPage";
 import CouncilInboxMessagePage from "./pages/CouncilInboxMessagePage";
 import CouncilInboxPage from "./pages/CouncilInboxPage";
 import CouncilMessagePage from "./pages/CouncilMessagePage";
@@ -198,6 +199,17 @@ function AuthenticatedApp() {
               switchWorkspace
             >
               <CouncilInboxMessagePage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/council/history"
+          element={
+            <RoleGuard
+              allowedRoles={routePermissions.councilHistory}
+              fallback={<UnauthorizedPage />}
+            >
+              <CouncilHistoryPage />
             </RoleGuard>
           }
         />

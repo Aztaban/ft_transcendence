@@ -8,7 +8,6 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.db import close_old_connections
 from django.urls import reverse
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
@@ -203,11 +202,12 @@ def test_unrelated_users_cannot_release_with_real_session(evaluation, expected, 
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
     )
     if role in ("head_tutor", "admin"):
-        assert response.status_code == 403
+        assert response.status_code == 400
         assert response.json() == {
             "error": {
-                "code": "permission_denied",
-                "message": "You do not have permission to perform this action.",
+                "code": "validation_error",
+                "message": "Please correct the highlighted fields.",
+                "fields": {"reason": ["This field is required."]},
             }
         }
     else:
@@ -367,7 +367,7 @@ def test_stale_snapshot_cannot_release_unpicked_request(tutor, evaluation, state
 def test_stale_snapshot_cannot_release_another_tutors_new_pick(tutor, evaluation):
     replacement = get_user_model().objects.create_user(id=43, email="cara@example.com")
     EvaluationRequest.objects.filter(pk=17).update(picked_by=replacement)
-    with pytest.raises(PermissionDenied):
+    with pytest.raises(InvalidStateTransition):
         release_slot(evaluation, tutor)
     evaluation.refresh_from_db()
     assert evaluation.picked_by_id == 43

@@ -26,6 +26,7 @@ describe("LegalPage", () => {
   it("shows the Privacy Policy with its sections and date", () => {
     renderPage("privacy");
 
+    expect(document.title).toBe("Privacy Policy · 42 Evals");
     expect(screen.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeTruthy();
     expect(screen.getByText("Last updated: 1 November 2026")).toBeTruthy();
     expect(headings()).toEqual([

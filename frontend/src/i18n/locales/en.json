@@ -16,8 +16,8 @@
     "profile": "Profile",
     "studentCouncil": "Student Council",
     "messages": "Messages",
-    "councilProfile": "Council Profile",
-    "eligibility": "Eligibility"
+    "eligibility": "Eligibility",
+    "skipToContent": "Skip to content"
   },
   "workspace": {
     "select": "Select role",
@@ -42,7 +42,8 @@
     "notifications": "Notifications",
     "notificationsUnread_one": "Notifications, {{count}} unread",
     "notificationsUnread_other": "Notifications, {{count}} unread",
-    "userMenu": "Open user menu"
+    "userMenu": "Open user menu",
+    "closeUserMenu": "Close user menu"
   },
   "connection": {
     "reconnecting": "Reconnecting…",
@@ -68,7 +69,8 @@
     "duration": "Duration",
     "requestedAgo": "Requested {{time}}",
     "noNote": "No note from the student.",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "serverUnavailable": "The server did not answer. Please try again in a moment."
   },
   "time": {
     "justNow": "just now",
@@ -366,7 +368,7 @@
     "loadingMessages": "Loading messages…",
     "loadMessagesError": "Could not load the messages. Please try again later.",
     "caughtUp": "All caught up!",
-    "caughtUpText": "There are no new messages.",
+    "caughtUpText": "There are no new messages. Messages that have been read are in the History.",
     "newListAria": "New messages",
     "messageNumber": "Message #{{id}}",
     "newPill": "New",
@@ -410,7 +412,22 @@
     "saveNote": "Save note",
     "markedReadTitle": "Done. The message is marked as read.",
     "loadMoreError": "Could not load more messages. Please try again.",
-    "saveNoteFirst": "Save the note before marking the message as read."
+    "saveNoteFirst": "Save the note before marking the message as read.",
+    "tabsAria": "Council messages",
+    "tabNew": "New",
+    "tabHistory": "History",
+    "openHistory": "Open History",
+    "historyTitle": "Message history",
+    "historyCount_one": "{{count}} message",
+    "historyCount_other": "{{count}} messages",
+    "historySubtitle": "The anonymous messages the council has received, read or not, newest first.",
+    "historyListAria": "All messages",
+    "historyEmpty": "No messages yet",
+    "historyEmptyText": "Messages sent to the council will appear here.",
+    "historyAboutTitle": "About the history",
+    "historyAboutText": "Read messages stay here too. Marking one as read or unread changes it for every council member.",
+    "open": "Open",
+    "openAria": "Open message #{{id}}"
   },
   "roles": {
     "student": "Student",
@@ -884,5 +901,83 @@
       ]
     },
     "opensInNewTab": "opens in a new tab"
+  },
+  "eligibility": {
+    "title": "Projects you can evaluate",
+    "stepProjects": "Select projects",
+    "selectedCount_one": "{{count}} project selected",
+    "selectedCount_other": "{{count}} projects selected",
+    "wholeRequest": "A Head Tutor will approve or decline the whole request.",
+    "howChooseTitle": "Choose your projects",
+    "howChooseText": "Select every project you want to evaluate.",
+    "howReviewTitle": "A Head Tutor reviews",
+    "howReviewText": "They approve or decline the whole request.",
+    "howStartTitle": "Start evaluating",
+    "howStartText": "Once approved, pick open requests for these projects.",
+    "tipText": "You can send another request later to add more projects.",
+    "legend": "Choose the projects you want to evaluate",
+    "selectedOf": "{{selected}} of {{total}} selected",
+    "selectAll": "Select all",
+    "clearAll": "Clear all",
+    "sentTitle": "Your request was sent to the <strong>HEAD TUTORS!</strong>",
+    "sentText": "You will get a notification when they decide. Once approved, you can pick requests for these projects."
+  },
+  "review": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "declined": "Declined",
+    "badgeApproved": "Approved",
+    "badgeDeclined": "Declined",
+    "noPending": "No pending requests",
+    "noApproved": "No approved requests",
+    "noDeclined": "No declined requests",
+    "errorOwn": "You can't review your own request. Another Head Tutor or an Admin will.",
+    "errorReviewed": "Another Head Tutor already reviewed this request.",
+    "errorGeneric": "Could not save the decision. Please try again.",
+    "approvedMessage": "{{name}}'s request was approved.",
+    "declinedMessage": "{{name}}'s request was declined.",
+    "loading": "Loading…",
+    "loadingRequests": "Loading requests…",
+    "loadError": "Could not load the requests. Please try again later.",
+    "title": "Eligibility requests",
+    "subtitle": "Hitchhikers asking to evaluate projects. Your decision covers the whole request.",
+    "tabsAria": "Request status",
+    "newRequests": "New requests from Hitchhikers will appear here.",
+    "requester": "Requester",
+    "projects": "Projects",
+    "requested": "Requested",
+    "decision": "Decision",
+    "reviewedBy": "Reviewed by",
+    "yourRequest": "Your request",
+    "approve": "Approve",
+    "decline": "Decline",
+    "approveAria": "Approve {{name}}'s request",
+    "declineAria": "Decline {{name}}'s request",
+    "by": "by {{name}}",
+    "moreError": "Could not load more requests. Please try again.",
+    "showMore_one": "Show more ({{count}} left)",
+    "showMore_other": "Show more ({{count}} left)",
+    "approveTitle": "Approve {{name}}'s request?",
+    "declineTitle": "Decline {{name}}'s request?",
+    "approveText": "They will be able to pick requests for every project below.",
+    "declineText": "They won't be eligible for any project below. They can send a new request.",
+    "noteFor": "Note for {{name}}",
+    "optional": "(optional)",
+    "saving": "Saving…"
+  },
+  "unauthorized": {
+    "eyebrow": "ACCESS RESTRICTED",
+    "title": "This page is not available for your current role.",
+    "text": "The <strong>{{role}}</strong> role does not have permission to view this page.",
+    "back": "Back to dashboard"
+  },
+  "pageTitle": {
+    "evaluation": "Evaluation",
+    "project": "Project",
+    "person": "Profile",
+    "login": "Log in",
+    "register": "Create an account",
+    "notFound": "Page not found",
+    "unauthorized": "Access restricted"
   }
 }

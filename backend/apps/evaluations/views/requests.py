@@ -15,11 +15,13 @@ from apps.core.schema import CSRF_HEADER, error_responses
 from apps.evaluations.models import EvaluationRequest, TutorEligibility
 from apps.evaluations.permissions import (
     OVERRIDE_ROLES,
+    CanCancelRequest,
     CanPickSlot,
     CanReleaseSlot,
     EvaluationRequestPermission,
 )
 from apps.evaluations.serializers.requests import (
+    EvaluationOverrideSerializer,
     EvaluationRequestCreateSerializer,
     EvaluationRequestNoteSerializer,
     EvaluationRequestPickSlotSerializer,
@@ -171,16 +173,21 @@ class EvaluationRequestObjectView(EvaluationRequestBaseView):
         return visible_evaluation_requests(self.request.user)
 
 
-def transition_schema(*conflicts, description=None):
-    """OpenAPI of a transition without a body that answers the updated request (§10.4)."""
+def transition_schema(*conflicts, description=None, override=False):
+    """Describe participant transitions and their optional override reason bodies."""
     return extend_schema(
         description=description,
         parameters=[CSRF_HEADER],
-        request=None,
+        request=EvaluationOverrideSerializer(partial=True) if override else None,
         responses={
             200: EvaluationRequestSerializer,
             **error_responses(
                 {
+                    **(
+                        {400: ("validation_error",), 415: ("unsupported_media_type",)}
+                        if override
+                        else {}
+                    ),
                     401: ("not_authenticated",),
                     403: ("permission_denied", "csrf_failed"),
                     404: ("not_found",),
@@ -245,30 +252,62 @@ class EvaluationRequestDeclineView(EvaluationRequestObjectView):
 
 
 class EvaluationRequestCancelView(EvaluationRequestObjectView):
-    """The owning student's POST /evaluation-requests/{id}/cancel/."""
+    """Student cancellation or a Head Tutor/Admin override."""
+
+    permission_classes = [IsAuthenticated, CanCancelRequest]
 
     @transition_schema(
         "invalid_state_transition",
         "evaluation_already_started",
-        description="Cancel your own evaluation request before its slot starts.",
+        description=(
+            "Students cancel before the slot starts. Head Tutors/Admins may override "
+            "another student's request at any time with a required reason (1–500 "
+            "characters), unless a result is recorded."
+        ),
+        override=True,
     )
     def post(self, request, pk):
-        evaluation = cancel_request(self.get_object())
+        evaluation = self.get_object()
+        if evaluation.student_id != request.user.pk:
+            serializer = EvaluationOverrideSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            evaluation = cancel_request(
+                evaluation, request.user, reason=serializer.validated_data["reason"]
+            )
+        else:
+            evaluation = cancel_request(evaluation)
         return Response(self.get_serializer(evaluation).data)
 
 
 class EvaluationRequestReleaseView(EvaluationRequestObjectView):
-    """The picking Hitchhiker's POST /evaluation-requests/{id}/release/."""
+    """Participant release or a Head Tutor/Admin override."""
 
     permission_classes = [IsAuthenticated, CanReleaseSlot]
 
     @transition_schema(
         "invalid_state_transition",
         "evaluation_already_started",
-        description="Release a slot you picked before it starts, returning the request to pending.",
+        description=(
+            "Release a picked slot before its start. The picking Hitchhiker sends no "
+            "body. Head Tutors/Admins overriding another student's request must supply "
+            "a reason (1–500 characters)."
+        ),
+        override=True,
     )
     def post(self, request, pk):
-        evaluation = release_slot(self.get_object(), request.user)
+        evaluation = self.get_object()
+        ordinary = (
+            evaluation.picked_by_id == request.user.pk
+            and request.user.roles.filter(name__in=HITCHHIKER_ROLES).exists()
+        )
+        if ordinary:
+            evaluation = release_slot(evaluation, request.user)
+        else:
+            serializer = EvaluationOverrideSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            evaluation = release_slot(
+                evaluation, request.user, reason=serializer.validated_data["reason"]
+            )
         return Response(self.get_serializer(evaluation).data)
 
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import usePageTitle from "../components/layout/usePageTitle";
 import { ApiError } from "../api/client";
 import {
   cancelEvaluationRequest,
@@ -96,6 +97,8 @@ function groupByDay(evaluations: EvaluationRequest[]) {
 // "Pending Evaluations", "Upcoming Evaluation Details", "Cancel Eval").
 function PendingPage() {
   const { t } = useTranslation();
+
+  usePageTitle(t("pending.title"));
   const { activeRole } = useRole();
   const viewer: PendingViewer = activeRole === "HITCHHIKER" ? "hitchhiker" : "student";
   const [evaluations, setEvaluations] = useState<EvaluationRequest[]>([]);

@@ -1,9 +1,12 @@
 """DELETE a council message and reveal its sender (api-plan §10.6, §5.5)."""
 
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, call
 
 import pytest
+from django.db import close_old_connections, connection
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -523,3 +526,71 @@ def test_a_rolled_back_delete_keeps_the_notifications(
     assert audit_rows() == []
     assert callbacks == []
     group_send.assert_not_awaited()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("call", [delete, reveal], ids=["delete", "reveal"])
+def test_moderation_and_sender_anonymization_follow_the_same_lock_order(
+    make_user, seeded_roles, monkeypatch, call, user_event_sender
+):
+    from apps.accounts.services import deletion
+
+    sender = make_user("sender@example.com", "Sender")
+    moderator = make_user("moderator@example.com", "Moderator", (Role.Name.ADMIN,))
+    deleting_admin = make_user("deleting@example.com", "Deleting admin", (Role.Name.ADMIN,))
+    message = message_from(sender)
+    users_locked = Event()
+    moderation_lock_attempted = Event()
+    original_lock_users = deletion.lock_users
+    locking_queries = []
+
+    def pause_deletion_after_user_locks(*user_ids):
+        original_lock_users(*user_ids)
+        users_locked.set()
+        assert moderation_lock_attempted.wait(timeout=10)
+
+    monkeypatch.setattr(deletion, "lock_users", pause_deletion_after_user_locks)
+
+    def anonymize():
+        close_old_connections()
+        try:
+            deletion.delete_account(actor=deleting_admin, user_id=sender.pk, reason="Requested")
+        finally:
+            close_old_connections()
+
+    def moderate():
+        close_old_connections()
+        try:
+            assert users_locked.wait(timeout=10)
+
+            def track_lock(execute, sql, params, many, context):
+                if "FOR UPDATE" in sql:
+                    locking_queries.append(sql)
+                    # Resume anonymization once moderation tries its first lock.
+                    moderation_lock_attempted.set()
+                return execute(sql, params, many, context)
+
+            client = APIClient()
+            client.force_authenticate(moderator)
+            with connection.execute_wrapper(track_lock):
+                response = call(client, message.pk)
+            assert response.status_code == (204 if call is delete else 200)
+            if call is reveal:
+                assert response.json() == {"sender": None}
+        finally:
+            close_old_connections()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        deletion_future = pool.submit(anonymize)
+        moderation_future = pool.submit(moderate)
+        deletion_future.result(timeout=20)
+        moderation_future.result(timeout=20)
+
+    assert "`user`" in locking_queries[0]
+    assert "sc_message" not in locking_queries[0]
+    sender.refresh_from_db()
+    assert sender.status == "deleted"
+    assert list(AuditLog.objects.order_by("pk").values_list("action", flat=True)) == [
+        "user.deleted",
+        "sc_message.deleted" if call is delete else "sc_message.sender_revealed",
+    ]
