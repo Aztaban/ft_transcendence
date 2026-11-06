@@ -691,6 +691,7 @@
     "or": "o",
     "continueWith42": "CONTINUAR CON 42",
     "registered": "Cuenta creada. Ya puedes iniciar sesión.",
+    "missingFields": "Introduce tu correo y tu contraseña.",
     "invalidCredentials": "Correo o contraseña incorrectos.",
     "loginError": "No se pudo iniciar sesión. Inténtalo de nuevo.",
     "register": "REGISTRARSE",

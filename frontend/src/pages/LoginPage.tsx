@@ -86,6 +86,14 @@ function LoginPage() {
     setErrorKey("");
     setServerError("");
     setShowRegistered(false);
+
+    // Checked here, not by the browser: its own bubble looks different in every browser and is in
+    // the browser's language, not the app's (#683).
+    if (!email.trim() || !password) {
+      setErrorKey("auth.missingFields");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -123,7 +131,7 @@ function LoginPage() {
 
         <h1 className="registration-page__title">{t("pageTitle.login")}</h1>
 
-        <form className="registration-form" onSubmit={handleSubmit}>
+        <form className="registration-form" onSubmit={handleSubmit} noValidate>
           <Input
             id="login-email"
             name="email"

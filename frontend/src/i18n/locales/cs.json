@@ -699,6 +699,7 @@
     "or": "nebo",
     "continueWith42": "POKRAČOVAT PŘES 42",
     "registered": "Účet je vytvořený. Teď se můžete přihlásit.",
+    "missingFields": "Zadejte e-mail a heslo.",
     "invalidCredentials": "Nesprávný e-mail nebo heslo.",
     "loginError": "Přihlášení se nepovedlo. Zkuste to prosím znovu.",
     "register": "ZAREGISTROVAT SE",
