@@ -124,4 +124,51 @@ describe("useCouncilMessages", () => {
     expect(result.current.moreFailed).toBe(false);
     expect(result.current.messages).toHaveLength(100);
   });
+
+  it("shows the error after one request when even the first page answers 404", async () => {
+    vi.mocked(listSCMessages).mockRejectedValue(new ApiError(404, "Not found.", "not_found"));
+    const { result } = renderHook(() => useCouncilMessages(true));
+
+    await waitFor(() => expect(result.current.loadState).toBe("error"));
+    // Give a loop the chance to show itself.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(listSCMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts again only once when a later page keeps answering 404", async () => {
+    const all = messages(130);
+
+    serve(all);
+    const { result } = renderHook(() => useCouncilMessages(false));
+
+    for (const shown of [20, 40, 60, 80, 100]) {
+      await waitFor(() => expect(result.current.messages).toHaveLength(shown));
+      act(() => result.current.showMore());
+    }
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(130));
+
+    // A broken backend: page 1 promises more, page 2 never exists.
+    vi.mocked(listSCMessages).mockClear();
+    vi.mocked(listSCMessages).mockImplementation(async ({ page = 1 } = {}) => {
+      if (page === 2) {
+        throw new ApiError(404, "Invalid page.", "not_found");
+      }
+
+      return { count: 130, next: "next", previous: null, results: all.slice(0, 100) };
+    });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() => expect(listSCMessages).toHaveBeenCalledTimes(4));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // page 1, page 2 (404), once more page 1 and page 2 (404), then a normal failed refresh:
+    // what is shown stays.
+    expect(listSCMessages).toHaveBeenCalledTimes(4);
+    expect(result.current.messages).toHaveLength(130);
+    expect(result.current.loadState).toBe("ready");
+  });
 });

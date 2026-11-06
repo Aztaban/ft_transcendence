@@ -19,8 +19,16 @@ interface Loaded {
 
 // The newest `limit` messages, always from the top of the list, so what is shown is one consistent
 // list: a message that moves between pages meanwhile is never shown twice or skipped. Up to 100
-// messages that is a single request; beyond, pages of 100 until `limit` is reached.
-async function loadNewest(unread: boolean, limit: number, signal: AbortSignal): Promise<Loaded> {
+// messages that is a single request; beyond, pages of 100 until `limit` is reached. DRF answers
+// 404 for a page past the end: on a later page that means the list got shorter between two
+// requests, so it starts again once. Any other failure, a 404 on the first page included, is a
+// normal error.
+async function loadNewest(
+  unread: boolean,
+  limit: number,
+  signal: AbortSignal,
+  isRetry = false,
+): Promise<Loaded> {
   if (limit <= MAX_PAGE_SIZE) {
     const answer = await listSCMessages({ unread, pageSize: limit, signal });
 
@@ -32,7 +40,16 @@ async function loadNewest(unread: boolean, limit: number, signal: AbortSignal): 
   let answer;
 
   do {
-    answer = await listSCMessages({ unread, page, pageSize: MAX_PAGE_SIZE, signal });
+    try {
+      answer = await listSCMessages({ unread, page, pageSize: MAX_PAGE_SIZE, signal });
+    } catch (error) {
+      if (page > 1 && !isRetry && error instanceof ApiError && error.status === 404) {
+        return loadNewest(unread, limit, signal, true);
+      }
+
+      throw error;
+    }
+
     // Between two pages the list can move, so a message is added once.
     messages.push(...answer.results.filter((item) => messages.every(({ id }) => id !== item.id)));
     page += 1;
@@ -92,13 +109,6 @@ export function useCouncilMessages(unread: boolean) {
           return;
         }
 
-        // DRF answers 404 for a page past the end: beyond 100 messages, the list got shorter
-        // between two pages. Loading again stops where the list now ends.
-        if (error instanceof ApiError && error.status === 404) {
-          refresh();
-          return;
-        }
-
         setMoreFailed(limit > shownLimit && shownLimit > 0);
         setLoadState((current) => (current === "ready" ? current : "error"));
       });
@@ -107,7 +117,7 @@ export function useCouncilMessages(unread: boolean) {
       controller.abort();
     };
     // `shownLimit` is only read: it changes as the result of this effect.
-  }, [unread, limit, reloadKey, refresh]);
+  }, [unread, limit, reloadKey]);
 
   const showMore = useCallback(() => {
     setMoreFailed(false);
