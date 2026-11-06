@@ -15,15 +15,13 @@ from rest_framework.throttling import UserRateThrottle
 
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
-from apps.core.events import publish_user_event
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
 from apps.core.throttling import SCMessageSendRateThrottle
-from apps.notifications.models import Notification
 
 from .models import SCMessage
-from .notifications import notify_sc_message_created
+from .notifications import delete_sc_message_created_notifications, notify_sc_message_created
 from .permissions import CanAccessCouncilMessage, CanModerateCouncilMessage, CanReadCouncilInbox
 from .serializers import (
     SCMessageCreatedSerializer,
@@ -125,14 +123,8 @@ def _delete_sc_message(request, pk):
             target_id=message.pk,
             reason=serializer.validated_data["reason"],
         )
-        matching = Notification.objects.filter(
-            type=Notification.Type.SC_MESSAGE_CREATED,
-            payload__message_id=message.pk,
-        )
-        recipient_ids = list(matching.values_list("recipient_id", flat=True))
-        matching.delete()
+        delete_sc_message_created_notifications(message)
         message.delete()
-        publish_user_event(event="notification.updated", data={}, user_ids=recipient_ids)
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
