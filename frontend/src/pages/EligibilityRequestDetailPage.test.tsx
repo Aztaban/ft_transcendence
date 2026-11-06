@@ -271,6 +271,24 @@ describe("EligibilityRequestDetailPage", () => {
     );
   });
 
+  // Another Head Tutor's decision sends this one no event (§9.3), so the tab being shown does.
+  it("loads the request again when the tab is shown", async () => {
+    vi.mocked(getEligibilityRequest)
+      .mockResolvedValueOnce(eligibilityRequest())
+      .mockResolvedValueOnce(approved);
+
+    renderPage();
+    await screen.findByRole("button", { name: "Approve Bob's request" });
+
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(await within(card()).findByText("Approved")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Approve Bob's request" })).toBeNull();
+    expect(getEligibilityRequest).toHaveBeenCalledTimes(2);
+  });
+
   it("loads the request again when it is decided elsewhere, ignoring other requests", async () => {
     logIn(42, ["student", "tutor"]);
     vi.mocked(getEligibilityRequest)

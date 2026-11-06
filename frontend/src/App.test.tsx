@@ -3,7 +3,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { getSession, loginUser } from "./api/auth";
-import { getEligibilityRequest } from "./api/eligibility";
+import { getEligibilityRequest, listEligibilityRequests } from "./api/eligibility";
 import { listEvaluationRequests } from "./api/evaluationRequests";
 import { listProjects } from "./api/projects";
 import { getCurrentUser } from "./api/users";
@@ -144,7 +144,31 @@ describe("logged in", () => {
     expect(getEligibilityRequest).toHaveBeenCalledWith(9);
   });
 
+  // The eligibility request page links to both from any workspace (#685).
+  test.each([
+    ["/eligibility-requests", "Eligibility requests"],
+    ["/eligibility-requests/new", "Projects you can evaluate"],
+  ])("opens %s from the Student workspace by switching to Hitchhiker", async (path, title) => {
+    currentUser.roles = ["student", "tutor", "head_tutor"];
+    currentUser.isLoaded = true;
+    vi.mocked(listEligibilityRequests).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    });
+
+    renderAt(path);
+
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeDefined();
+    expect(screen.queryByText("ACCESS RESTRICTED")).toBeNull();
+    expect(sessionStorage.getItem("active-role")).toBe("HITCHHIKER");
+  });
+
   test("keeps /eligibility-requests/new for the request form, not as a request id", async () => {
+    // A student without a Hitchhiker workspace: the form's guard refuses, nothing is loaded.
+    currentUser.roles = ["student"];
+    currentUser.isLoaded = true;
     renderAt("/eligibility-requests/new");
 
     expect(await screen.findByText("ACCESS RESTRICTED")).toBeDefined();

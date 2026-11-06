@@ -59,16 +59,35 @@ function EligibilityRequestDetailPage() {
   const [pageError, setPageError] = useState<unknown>(null);
   const [decided, setDecided] = useState<EligibilityDecision | null>(null);
 
-  // This request was decided (by someone else, or in another tab), or the connection is back
-  // (§9.3, §9.4). Events about other requests are ignored.
+  const refreshInBackground = useCallback(() => {
+    isLiveRefresh.current = true;
+    setReloadKey((key) => key + 1);
+  }, []);
+
+  // This request was decided, or the connection is back (§9.3, §9.4). Events about other requests
+  // are ignored. `eligibility.decided` goes to the requester only, so another Head Tutor's
+  // decision sends nothing to this one: the page also loads again when the tab is shown (§9.4).
   useLiveRefresh(["eligibility.requested", "eligibility.decided"], (message) => {
     if (message && "id" in message.data && message.data.id !== requestId) {
       return;
     }
 
-    isLiveRefresh.current = true;
-    setReloadKey((key) => key + 1);
+    refreshInBackground();
   });
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        refreshInBackground();
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshInBackground]);
 
   useEffect(() => {
     if (!Number.isInteger(requestId) || requestId <= 0) {
