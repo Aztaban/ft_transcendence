@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { EligibilityDecision } from "../../api/eligibility";
 import useDialog from "../../hooks/useDialog";
@@ -26,6 +27,8 @@ function ReviewDialog({
   onConfirm,
   onClose,
 }: ReviewDialogProps) {
+  const { t } = useTranslation();
+  const name = request.requester.display_name;
   const cardRef = useDialog<HTMLDivElement>(onClose);
   const [note, setNote] = useState("");
   const isApproval = decision === "approved";
@@ -42,12 +45,10 @@ function ReviewDialog({
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id="review-dialog-title">
-          {isApproval ? "Approve" : "Decline"} {request.requester.display_name}'s request?
+          {t(isApproval ? "review.approveTitle" : "review.declineTitle", { name })}
         </h2>
         <p className="review-dialog__text">
-          {isApproval
-            ? "They will be able to pick requests for every project below."
-            : "They won't be eligible for any project below. They can send a new request."}
+          {isApproval ? t("review.approveText") : t("review.declineText")}
         </p>
 
         <ul className="review-dialog__projects">
@@ -58,7 +59,7 @@ function ReviewDialog({
 
         <label className="review-dialog__note">
           <span>
-            Note for {request.requester.display_name} <em>(optional)</em>
+            {t("review.noteFor", { name })} <em>{t("review.optional")}</em>
           </span>
           <textarea
             value={note}
@@ -79,7 +80,7 @@ function ReviewDialog({
 
         <div className="review-dialog__actions">
           <button className="review-dialog__cancel" type="button" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             className={`review-dialog__confirm review-dialog__confirm--${decision}`}
@@ -87,7 +88,11 @@ function ReviewDialog({
             disabled={isSubmitting}
             onClick={() => onConfirm(note.trim())}
           >
-            {isSubmitting ? "Saving…" : isApproval ? "Approve" : "Decline"}
+            {isSubmitting
+              ? t("review.saving")
+              : isApproval
+                ? t("review.approve")
+                : t("review.decline")}
           </button>
         </div>
       </div>

@@ -160,8 +160,7 @@ def test_release_uses_locked_picker_facts_after_clearing_pick(participants):
         starts_at=timezone.now() + timedelta(days=1),
         ends_at=timezone.now() + timedelta(days=1, minutes=45),
     )
-    # A stale caller must not supply the tutor identity used by the notification.
-    evaluation.picked_by = users[43]
+    # Notification facts must survive clearing the request's picker below.
     release_slot(evaluation, users[42])
     assert evaluation.picked_by_id is None
     assert list(

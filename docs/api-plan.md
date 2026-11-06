@@ -981,6 +981,11 @@ Only active users holding `tutor`, `head_tutor` or `sc_member` appear; students 
 | `participant_inactive` | Active request whose student or Hitchhiker is suspended. |
 | `result_missing` | `confirmed`, `ends_at` more than 7 days ago, `result` still null. |
 
+Each request appears once. If several conditions match, `problem` uses this priority:
+`participant_inactive`, then `tutor_lost_eligibility`, then `result_missing`.
+Results are ordered newest first (`-created_at`, then `-id` for ties).
+The 7-day threshold is the setting `EVALUATION_RESULT_MISSING_DAYS`.
+
 Resolution uses the normal endpoints with an override (`release`, `cancel` with a `reason`). Results are entered in the Django admin.
 
 **Audit log.** Filters: `actor` (user id), `action`, `target_type`, `target_id`, `from` and `to` (datetimes). Ordering: `-created_at` (default). Each entry:

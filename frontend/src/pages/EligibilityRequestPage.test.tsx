@@ -1,10 +1,11 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
 import { createEligibilityRequest } from "../api/eligibility";
 import { listProjects } from "../api/projects";
+import i18n from "../i18n";
 import EligibilityRequestPage from "./EligibilityRequestPage";
 
 vi.mock("../api/projects", () => ({ listProjects: vi.fn() }));
@@ -155,6 +156,21 @@ describe("EligibilityRequestPage", () => {
     );
   });
 
+  it("shows the generic error for an answer without a code, such as an HTML 502", async () => {
+    vi.mocked(createEligibilityRequest).mockRejectedValue(
+      new ApiError(502, "API request failed: 502 Bad Gateway"),
+    );
+    renderPage();
+    await chooseProjects("push_swap");
+    fireEvent.click(getButton("Next"));
+
+    fireEvent.click(getButton("Submit"));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Could not send your request. Please try again.",
+    );
+  });
+
   it("disables Edit and Back while the request is being sent", async () => {
     vi.mocked(createEligibilityRequest).mockReturnValue(new Promise(() => {}));
     renderPage();
@@ -224,5 +240,68 @@ describe("EligibilityRequestPage", () => {
     })) as HTMLInputElement;
 
     expect(pushSwap.checked).toBe(false);
+  });
+});
+
+describe("EligibilityRequestPage in another language", () => {
+  it("counts the chosen projects with the Czech plural forms", async () => {
+    vi.mocked(listProjects).mockResolvedValue([
+      ...projects,
+      { id: 4, slug: "libft", name: "libft" },
+      { id: 5, slug: "so_long", name: "so_long" },
+    ]);
+    await i18n.changeLanguage("cs");
+    renderPage();
+
+    await chooseProjects("push_swap");
+    fireEvent.click(getButton("Další"));
+
+    expect(screen.getByText("Krok 2 / 2 · Potvrďte žádost")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Vybrán 1 projekt" })).toBeTruthy();
+
+    fireEvent.click(getButton("Upravit"));
+    await chooseProjects("libft");
+    fireEvent.click(getButton("Další"));
+
+    expect(screen.getByRole("heading", { name: "Vybrány 2 projekty" })).toBeTruthy();
+
+    fireEvent.click(getButton("Upravit"));
+    await chooseProjects("born2beroot", "minishell", "so_long");
+    fireEvent.click(getButton("Další"));
+
+    expect(screen.getByRole("heading", { name: "Vybráno 5 projektů" })).toBeTruthy();
+  });
+
+  it("follows the language switcher, the error included", async () => {
+    vi.mocked(createEligibilityRequest).mockRejectedValue(
+      new ApiError(409, "Conflict", "eligibility_request_pending"),
+    );
+    renderPage();
+    await chooseProjects("push_swap", "born2beroot");
+    fireEvent.click(getButton("Next"));
+    fireEvent.click(getButton("Submit"));
+    await screen.findByRole("alert");
+
+    await act(() => i18n.changeLanguage("cs"));
+
+    expect(screen.getByRole("heading", { name: "Vybrány 2 projekty" })).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toBe("Už máte žádost, která čeká na posouzení.");
+  });
+
+  it("shows the sent popup in Spanish", async () => {
+    vi.mocked(createEligibilityRequest).mockResolvedValue(sentRequest);
+    await i18n.changeLanguage("es");
+    renderPage();
+    await chooseProjects("push_swap");
+    fireEvent.click(getButton("Siguiente"));
+
+    fireEvent.click(getButton("Enviar"));
+
+    const dialog = await screen.findByRole("dialog");
+
+    expect(dialog.querySelector("#eligibility-dialog-title")?.innerHTML).toBe(
+      "¡Tu solicitud se ha enviado a los <strong>HEAD TUTORS!</strong>",
+    );
+    expect(within(dialog).getByText(/Recibirás una notificación cuando decidan/)).toBeTruthy();
   });
 });

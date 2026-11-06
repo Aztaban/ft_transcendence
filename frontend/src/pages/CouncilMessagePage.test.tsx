@@ -43,6 +43,7 @@ describe("CouncilMessagePage", () => {
   it("says who reads the message and how the identity is kept", () => {
     renderPage();
 
+    expect(document.title).toBe("Anonymous Message · 42 Evals");
     expect(screen.getByRole("heading", { name: "Anonymous Message" })).toBeTruthy();
     expect(
       screen.getByText(

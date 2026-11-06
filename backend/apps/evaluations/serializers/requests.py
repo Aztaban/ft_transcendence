@@ -9,6 +9,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.references import UserRefSerializer
+from apps.core.serializers import ReasonSerializer
 from apps.evaluations.models import EvaluationRequest, Project
 from apps.evaluations.permissions import OVERRIDE_ROLES
 from apps.evaluations.references import ProjectRefSerializer
@@ -75,6 +76,17 @@ class EvaluationRequestSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class EvaluationExceptionSerializer(EvaluationRequestSerializer):
+    problem = serializers.ChoiceField(
+        choices=("tutor_lost_eligibility", "participant_inactive", "result_missing"),
+        read_only=True,
+    )
+
+    class Meta(EvaluationRequestSerializer.Meta):
+        fields = (*EvaluationRequestSerializer.Meta.fields, "problem")
+        read_only_fields = fields
+
+
 class EvaluationRequestCreateSerializer(serializers.Serializer):
     project_id = serializers.PrimaryKeyRelatedField(queryset=Project.objects.filter(is_active=True))
     note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
@@ -82,6 +94,11 @@ class EvaluationRequestCreateSerializer(serializers.Serializer):
 
 class EvaluationRequestNoteSerializer(serializers.Serializer):
     note = serializers.CharField(max_length=500, required=False, allow_blank=True)
+
+
+class EvaluationOverrideSerializer(ReasonSerializer):
+    # Retain the existing OpenAPI component name.
+    pass
 
 
 class TimezoneRequiredDateTimeField(serializers.DateTimeField):

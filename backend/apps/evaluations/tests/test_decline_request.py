@@ -519,34 +519,20 @@ def test_decline_event_refreshes_only_active_eligible_queues(
     ]
 
 
-def test_stale_decline_notifies_actual_picker_before_clearing_pick(
+def test_stale_decline_refuses_a_replacement_picker(
     evaluation, event_sender, django_capture_on_commit_callbacks
 ):
     new_picker = get_user_model().objects.create_user(id=43, email="new-picker@example.com")
     new_picker.roles.add(Role.objects.get(name="tutor"))
     EvaluationRequest.objects.filter(pk=17).update(picked_by=new_picker)
-    assert evaluation.picked_by_id == 42
-    with django_capture_on_commit_callbacks(execute=True):
-        decline_request(evaluation)
-    message = {
-        "type": "user.event",
-        "event": "evaluation.declined",
-        "data": {"id": 17, "status": "pending"},
-    }
-    assert event_sender.await_args_list == [
-        call("user_7", message),
-        call("user_43", message),
-        call(
-            "user_43",
-            {
-                "type": "user.event",
-                "event": "notification.created",
-                "data": {"id": Notification.objects.get().pk},
-            },
-        ),
-    ]
-    assert Notification.objects.get().recipient_id == 43
-    assert evaluation.picked_by_id is None
+    before = EvaluationRequest.objects.values().get(pk=17)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(InvalidStateTransition):
+            decline_request(evaluation)
+    assert EvaluationRequest.objects.values().get(pk=17) == before
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    event_sender.assert_not_awaited()
 
 
 def test_rolled_back_decline_sends_no_event(
