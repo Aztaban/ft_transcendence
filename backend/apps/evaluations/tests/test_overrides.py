@@ -81,9 +81,7 @@ def test_override_response_audit_notifications_and_events(
     ]
     project = {"id": evaluation.project_id, "slug": "override_project", "name": "Override project"}
     payload = {"request_id": evaluation.pk, "project": project}
-    if action == "release":
-        payload["tutor"] = {"id": picker.pk, "display_name": "Bob"}
-    else:
+    if action == "cancel":
         payload["cancelled_by"] = {"id": actor.pk, "display_name": "Ada"}
     event = "evaluation.released" if action == "release" else "evaluation.cancelled"
     assert list(
@@ -246,6 +244,7 @@ def test_privileged_participant_keeps_ordinary_behavior(
         override_response.update(
             status="cancelled",
             is_history=True,
+            picked_by=None,
             cancelled_by={"id": student.pk, "display_name": "Alice", "avatar_url": None},
             cancelled_at="2026-10-31T10:00:00Z",
         )

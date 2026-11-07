@@ -233,8 +233,11 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
         "project": {"id": 4, "slug": "libft", "name": "Libft"},
         "note": "Private student note",
         "status": expected_event["data"]["status"],
+        # The student who cancels no longer sees the Hitchhiker (R18).
         "picked_by": (
-            {"id": 42, "display_name": "Picker", "avatar_url": None} if response_picked else None
+            {"id": 42, "display_name": "Picker", "avatar_url": None}
+            if response_picked and action != "cancel"
+            else None
         ),
         "starts_at": "2026-10-12T15:00:00Z" if response_picked else None,
         "ends_at": "2026-10-12T15:45:00Z" if response_picked else None,

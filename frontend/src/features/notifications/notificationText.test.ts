@@ -32,7 +32,7 @@ describe("notificationText", () => {
       [
         notification("evaluation.created", { request_id: 17, project: libft }),
         notification("evaluation.declined", { request_id: 17, project: libft, student: bob }),
-        notification("evaluation.released", { request_id: 17, project: libft, tutor: bob }),
+        notification("evaluation.released", { request_id: 17, project: libft }),
         notification("evaluation.cancelled", {
           request_id: 17,
           project: libft,
@@ -45,12 +45,53 @@ describe("notificationText", () => {
     ).toEqual([
       "New evaluation request for Libft",
       "Bob declined your slot for Libft",
-      "Bob released your evaluation request for Libft",
+      "The slot for Libft was released",
       "Bob cancelled the evaluation of Libft",
       "Bob asked to evaluate new projects",
       "You can no longer evaluate Libft",
       "New anonymous message for the Student Council",
     ]);
+  });
+
+  // The student is not told which Hitchhiker it was: no name in any language (R18).
+  test.each([
+    [
+      "en",
+      "A Hitchhiker picked a slot for Libft: Sun, 25 Oct, 15:00–15:45. Please confirm it",
+      "The slot for Libft was released",
+      "The evaluation of Libft was cancelled",
+    ],
+    [
+      "cs",
+      "Pro Libft je vybraný termín Sun, 25 Oct, 15:00–15:45. Potvrďte ho prosím",
+      "Termín evaluace Libft byl uvolněn",
+      "Evaluace projektu Libft byla zrušena",
+    ],
+    [
+      "es",
+      "Un Hitchhiker eligió un horario para Libft: Sun, 25 Oct, 15:00–15:45. Confírmalo, por favor",
+      "Se liberó el horario de Libft",
+      "Se canceló la evaluación de Libft",
+    ],
+  ])("names no Hitchhiker in %s", async (language, picked, released, cancelled) => {
+    await i18n.changeLanguage(language);
+
+    expect(
+      [
+        notification("evaluation.slot_picked", {
+          request_id: 17,
+          project: libft,
+          starts_at: "2026-10-25T14:00:00Z",
+          ends_at: "2026-10-25T14:45:00Z",
+        }),
+        notification("evaluation.released", { request_id: 17, project: libft }),
+        notification("evaluation.cancelled", {
+          request_id: 17,
+          project: libft,
+          cancelled_by: null,
+        }),
+      ].map(notificationText),
+    ).toEqual([picked, released, cancelled]);
   });
 
   test("adds the time slot in local time", () => {
@@ -61,7 +102,6 @@ describe("notificationText", () => {
         notification("evaluation.slot_picked", {
           request_id: 17,
           project: libft,
-          tutor: bob,
           ...slot,
         }),
         notification("evaluation.confirmed", {
@@ -72,7 +112,7 @@ describe("notificationText", () => {
         }),
       ].map(notificationText),
     ).toEqual([
-      "Bob picked a slot for Libft: Sun, 25 Oct, 15:00–15:45. Please confirm it",
+      "A Hitchhiker picked a slot for Libft: Sun, 25 Oct, 15:00–15:45. Please confirm it",
       "Bob confirmed the evaluation of Libft: Sun, 25 Oct, 15:00–15:45",
     ]);
     expect(formatSlot).toHaveBeenCalledWith("2026-10-25T14:00:00Z", "2026-10-25T14:45:00Z");

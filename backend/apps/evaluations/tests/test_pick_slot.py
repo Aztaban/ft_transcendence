@@ -198,7 +198,6 @@ def test_pick_slot_real_session(
             "payload": {
                 "request_id": 17,
                 "project": {"id": 4, "slug": "libft", "name": "Libft"},
-                "tutor": {"id": 42, "display_name": "Bob"},
                 "starts_at": "2026-10-12T15:00:00Z",
                 "ends_at": "2026-10-12T15:45:00Z",
             },
@@ -339,7 +338,6 @@ def test_slot_notification_times_are_utc(hitchhiker, evaluation):
     assert Notification.objects.get().payload == {
         "request_id": 17,
         "project": {"id": 4, "slug": "libft", "name": "Libft"},
-        "tutor": {"id": 42, "display_name": "Bob"},
         "starts_at": "2026-10-12T15:00:00Z",
         "ends_at": "2026-10-12T15:45:00Z",
     }
@@ -850,10 +848,6 @@ def test_only_one_hitchhiker_wins(
             "payload": {
                 "request_id": 17,
                 "project": {"id": 4, "slug": "libft", "name": "Libft"},
-                "tutor": {
-                    "id": evaluation.picked_by_id,
-                    "display_name": "Bob" if evaluation.picked_by_id == 42 else "Fay",
-                },
                 "starts_at": "2026-10-12T15:00:00Z",
                 "ends_at": "2026-10-12T15:45:00Z",
             },

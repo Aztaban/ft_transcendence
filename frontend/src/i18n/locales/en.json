@@ -448,11 +448,12 @@
   "notifications": {
     "evaluation": {
       "created": "New evaluation request for {{project.name}}",
-      "slot_picked": "{{tutor.display_name}} picked a slot for {{project.name}}: {{slot}}. Please confirm it",
+      "slot_picked": "A Hitchhiker picked a slot for {{project.name}}: {{slot}}. Please confirm it",
       "confirmed": "{{student.display_name}} confirmed the evaluation of {{project.name}}: {{slot}}",
       "declined": "{{student.display_name}} declined your slot for {{project.name}}",
-      "released": "{{tutor.display_name}} released your evaluation request for {{project.name}}",
+      "released": "The slot for {{project.name}} was released",
       "cancelled": "{{cancelled_by.display_name}} cancelled the evaluation of {{project.name}}",
+      "cancelled_hidden": "The evaluation of {{project.name}} was cancelled",
       "expired_pending": "Your evaluation request for {{project.name}} expired: nobody picked it",
       "expired_awaiting_confirmation": "The evaluation of {{project.name}} expired before the slot was confirmed",
       "result_recorded_passed": "Result for {{project.name}}: passed",
@@ -517,7 +518,7 @@
   "dashboard": {
     "openRequests": "Open Requests",
     "studentOpenEmpty": "Your active evaluation requests will appear here.",
-    "proposed": "{{name}} proposed <time>{{slot}}</time>",
+    "proposed": "A Hitchhiker proposed <time>{{slot}}</time>",
     "evaluationRequest": "Evaluation request",
     "pending": "Pending",
     "reviewProposal": "Review proposal",
