@@ -17,6 +17,10 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? "
 "1 : 2;\n"
 
+#: apps/accounts/models.py
+msgid "display name"
+msgstr "nombre para mostrar"
+
 #: apps/accounts/serializers/authentication.py:30
 #: apps/accounts/views/authentication.py:37
 msgid "An account with this email already exists."
