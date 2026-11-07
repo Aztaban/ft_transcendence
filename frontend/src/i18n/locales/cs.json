@@ -330,6 +330,158 @@
     "notAdded": "Zatím nepřidáno.",
     "topics": "Témata projektu"
   },
+  "projectContent": {
+    "push_swap": {
+      "topics": [
+        "Algoritmy",
+        "Parsování",
+        "Zásobníky",
+        "Operace",
+        "Optimalizace tahů",
+        "Ošetření chyb",
+        "Správa paměti",
+        "Kvalita kódu"
+      ],
+      "tested": ["Volba algoritmu", "Porozumění kódu", "Ošetření chyb", "Omezení projektu"]
+    },
+    "born2beroot": {
+      "topics": [
+        "Virtualizace",
+        "Oddíly a LVM",
+        "Uživatelé a skupiny",
+        "Pravidla hesel",
+        "SSH",
+        "Firewall",
+        "Sudo",
+        "Monitorovací skript"
+      ],
+      "tested": [
+        "Nastavení virtuálního stroje",
+        "Nastavení zabezpečení",
+        "Monitorovací skript",
+        "Porozumění systému"
+      ]
+    },
+    "minishell": {
+      "topics": [
+        "Parsování",
+        "Uvozovky a expanze",
+        "Roury",
+        "Přesměrování",
+        "Vestavěné příkazy",
+        "Signály",
+        "Prostředí",
+        "Správa paměti"
+      ],
+      "tested": ["Spouštění příkazů", "Okrajové případy", "Ošetření chyb", "Porozumění kódu"]
+    },
+    "cpp09": {
+      "topics": [
+        "Kontejnery STL",
+        "Algoritmy",
+        "Parsování vstupu",
+        "Výjimky",
+        "Řazení",
+        "Složitost"
+      ],
+      "tested": ["Volba kontejnerů", "Správnost algoritmu", "Ošetření chyb", "Porozumění kódu"]
+    },
+    "codexion": {
+      "topics": [
+        "Vlákna",
+        "Mutexy",
+        "Podmínkové proměnné",
+        "Prevence deadlocku",
+        "Plánování (FIFO / EDF)",
+        "Prioritní fronta",
+        "Hlídání vyhoření",
+        "Správa paměti"
+      ],
+      "tested": [
+        "Žádný deadlock ani hladovění",
+        "Vyhoření zaznamenané do 10 ms",
+        "Prodleva donglu a férové plánování",
+        "Čisté logy bez souběhů a úniků paměti",
+        "Porozumění kódu"
+      ]
+    },
+    "fly-in": {
+      "topics": [
+        "Parsování",
+        "Modelování grafu",
+        "Hledání cest",
+        "Kapacita zón a spojů",
+        "Plánování tahů",
+        "Cena pohybu",
+        "Vizualizace",
+        "Typová bezpečnost"
+      ],
+      "tested": [
+        "Parser a chybové hlášky",
+        "Počet tahů oproti cílům",
+        "Dodržení pravidel kapacity",
+        "Vysvětlení algoritmu",
+        "Porozumění kódu"
+      ]
+    },
+    "rag-against-the-machine": {
+      "topics": [
+        "Dělení textu",
+        "Indexování",
+        "BM25 / TF-IDF",
+        "Vyhledávání",
+        "Generování odpovědí",
+        "Recall@k",
+        "CLI (Fire)",
+        "Datové modely (pydantic)"
+      ],
+      "tested": [
+        "Recall@5: 80 % dokumentace, 50 % kódu",
+        "Rychlost indexování a vyhledávání",
+        "Podložené odpovědi",
+        "Okrajové případy CLI",
+        "Porozumění kódu"
+      ]
+    },
+    "agent-smith": {
+      "topics": [
+        "Smyčka agenta",
+        "Extrakce kódu",
+        "Bezpečnost sandboxu",
+        "Nástroje MCP",
+        "Poskytovatelé LLM",
+        "Návrh promptů",
+        "Sledování spotřeby",
+        "Benchmarky"
+      ],
+      "tested": [
+        "Povinné nástroje",
+        "Uvažovací smyčka agenta",
+        "Izolace sandboxu",
+        "Zpráva z benchmarku",
+        "Živá úprava agenta"
+      ]
+    },
+    "the-answer-protocol": {
+      "topics": [
+        "TCP server",
+        "Dodržení protokolu",
+        "Souběžnost",
+        "Předměty a inventář",
+        "Boj",
+        "Úkoly",
+        "Klienti CLI a GUI",
+        "Logování serveru"
+      ],
+      "tested": [
+        "Každý příkaz a událost protokolu",
+        "Hra více hráčů a odpojení",
+        "Boj a úkoly",
+        "Klienti zaměnitelní mezi skupinami",
+        "Přínos každého člena"
+      ]
+    }
+  },
   "council": {
     "title": "Studentská rada",
     "subtitle": "Podělte se o nápad, problém nebo zpětnou vazbu s lidmi, kteří vás zastupují.",
