@@ -1,10 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-const legalPages = [
-  { to: "/privacy", label: "legal.privacy.title" },
-  { to: "/terms", label: "legal.terms.title" },
-];
+import { LEGAL_PAGES } from "./legalPages";
 
 interface FooterProps {
   // On Login and Register: leaving in the same tab would lose the form and the page to return to.
@@ -17,25 +14,23 @@ function Footer({ legalLinksInNewTab = false }: FooterProps) {
 
   return (
     <footer className="app-footer">
-      <p className="app-footer__copyright">{t("legal.copyright")}</p>
+      <p className="app-footer__copyright">
+        {t("legal.copyright", { year: new Date().getFullYear() })}
+      </p>
       <nav className="app-footer__links" aria-label={t("legal.footerLabel")}>
-        {legalPages.map((page) =>
-          legalLinksInNewTab ? (
-            <Link
-              key={page.to}
-              to={page.to}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={`${t(page.label)} (${t("legal.opensInNewTab")})`}
-            >
-              {t(page.label)}
-            </Link>
-          ) : (
-            <Link key={page.to} to={page.to}>
-              {t(page.label)}
-            </Link>
-          ),
-        )}
+        {LEGAL_PAGES.map((page) => (
+          <Link
+            key={page.path}
+            to={page.path}
+            {...(legalLinksInNewTab && {
+              target: "_blank",
+              rel: "noreferrer",
+              "aria-label": `${t(page.titleKey)} (${t("legal.opensInNewTab")})`,
+            })}
+          >
+            {t(page.titleKey)}
+          </Link>
+        ))}
       </nav>
     </footer>
   );
