@@ -32,7 +32,7 @@ const psimcak: PersonResult = {
 const lenka: PersonResult = {
   id: 9,
   display_name: "Lenka Husarova",
-  avatar_url: "/api/v1/files/3/download/",
+  avatar_url: "/avatar.png",
   roles: [
     { id: 1, name: "student" },
     { id: 3, name: "head_tutor" },
@@ -109,7 +109,7 @@ describe("HitchhikersPage", () => {
 
     const lenkaCard = await findCard("Lenka Husarova");
 
-    expect(lenkaCard.querySelector("img")?.getAttribute("src")).toBe("/api/v1/files/3/download/");
+    expect(lenkaCard.querySelector("img")?.getAttribute("src")).toBe("/avatar.png");
     expect(
       within(within(lenkaCard).getByRole("list", { name: "Roles" }))
         .getAllByRole("listitem")
