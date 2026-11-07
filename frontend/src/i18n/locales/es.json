@@ -721,7 +721,7 @@
     "passwordNumeric": "La contraseña no puede contener solo números."
   },
   "legal": {
-    "copyright": "© transcendence 2026",
+    "copyright": "© transcendence {{year}}",
     "footerLabel": "Información legal",
     "lastUpdated": "Última actualización: {{date}}",
     "back": "Volver a la aplicación",

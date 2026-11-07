@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react
 
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
+import { LEGAL_PAGES, legalDocumentAt } from "./components/layout/legalPages";
 import PublicLayout from "./components/layout/PublicLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
 import CouncilHistoryPage from "./pages/CouncilHistoryPage";
@@ -18,7 +19,7 @@ import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
 import HitchhikersPage from "./pages/HitchhikersPage";
 import HomePage from "./pages/HomePage";
-import LegalPage, { type LegalDocument } from "./pages/LegalPage";
+import LegalPage from "./pages/LegalPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import PendingPage from "./pages/PendingPage";
@@ -56,16 +57,14 @@ function ReturnAfterLogin() {
   return null;
 }
 
-// The pages that need no session: logged in they stay inside the application shell.
-const legalPages: Record<string, LegalDocument> = { "/privacy": "privacy", "/terms": "terms" };
-
 // Every page except login, registration and the legal pages needs a session (#328). Nothing is
 // rendered, and so no API is called, until the session check has answered; logged out, the user
 // goes to the login page, which brings them back here afterwards.
 function AuthenticatedApp() {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
-  const legalPage = legalPages[location.pathname.replace(/\/$/, "")];
+  // The legal pages need no session: logged in they stay inside the application shell.
+  const legalPage = legalDocumentAt(location.pathname);
 
   if (isLoading) {
     return null;
@@ -214,8 +213,9 @@ function AuthenticatedApp() {
           }
         />
         <Route path="/projects/:slug" element={<ProjectDetailsPage />} />
-        <Route path="/privacy" element={<LegalPage kind="privacy" />} />
-        <Route path="/terms" element={<LegalPage kind="terms" />} />
+        {LEGAL_PAGES.map((page) => (
+          <Route key={page.path} path={page.path} element={<LegalPage kind={page.kind} />} />
+        ))}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <HitchhikerOnboarding />
@@ -223,21 +223,37 @@ function AuthenticatedApp() {
   );
 }
 
+// Every new page opens at its top, logged in or not: a link at the bottom of a page (the footer,
+// a card on Home) would otherwise open the next page scrolled down, with its title out of view.
+// Only the path counts, so a filter in the query string keeps the place.
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    document.documentElement.scrollTop = 0;
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   return (
-    <Routes>
-      <Route
-        element={
-          <PublicLayout legalLinksInNewTab>
-            <Outlet />
-          </PublicLayout>
-        }
-      >
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/login" element={<LoginPage />} />
-      </Route>
-      <Route path="*" element={<AuthenticatedApp />} />
-    </Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route
+          element={
+            <PublicLayout legalLinksInNewTab>
+              <Outlet />
+            </PublicLayout>
+          }
+        >
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
+        <Route path="*" element={<AuthenticatedApp />} />
+      </Routes>
+    </>
   );
 }
 
