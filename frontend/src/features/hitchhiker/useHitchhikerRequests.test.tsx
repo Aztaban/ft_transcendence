@@ -40,6 +40,26 @@ afterEach(() => {
 });
 
 describe("useHitchhikerRequests", () => {
+  it("gives the whole open queue's count, not only the first page", async () => {
+    loggedIn(true);
+    vi.mocked(listEvaluationRequests).mockImplementation(async (params) =>
+      params?.scope === "open"
+        ? { ...page([makeRequest(1, "minishell", "pending")]), count: 35 }
+        : page([]),
+    );
+
+    function Count() {
+      const { openCount } = useHitchhikerRequests();
+
+      return <p>{openCount === null ? "unknown" : `open count ${openCount}`}</p>;
+    }
+
+    render(<Count />);
+
+    expect(screen.getByText("unknown")).toBeTruthy();
+    expect(await screen.findByText("open count 35")).toBeTruthy();
+  });
+
   it("does not call the API when nobody is logged in", () => {
     loggedIn(false);
 

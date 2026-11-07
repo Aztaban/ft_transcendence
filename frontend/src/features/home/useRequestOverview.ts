@@ -16,10 +16,13 @@ export type RequestOverview<Key extends string> = Partial<
 
 // The numbers of the Home overview, from filtered lists: each list's `count` is its real total,
 // not what fits on one page (api-plan §5.7, §10.4). Every list stands alone, so a failure only
-// leaves its own box without a number, and a failed refresh keeps the last answer.
+// leaves its own box without a number, and a failed refresh keeps the last answer. `enabled`
+// waits for /users/me/ to confirm the workspace's role: the workspace is restored from the tab's
+// storage, and asking with a role that was removed meanwhile would put 403s in the console.
 export function useRequestOverview<Key extends string>(
   queries: Record<Key, ListEvaluationRequestsParams>,
   events: readonly LiveEventName[],
+  enabled: boolean,
 ) {
   const { isAuthenticated } = useAuth();
   const [overview, setOverview] = useState<RequestOverview<Key>>({});
@@ -28,7 +31,7 @@ export function useRequestOverview<Key extends string>(
   useLiveRefresh(events, () => setReloadKey((key) => key + 1));
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !enabled) {
       return;
     }
 
@@ -56,7 +59,7 @@ export function useRequestOverview<Key extends string>(
     return () => {
       active = false;
     };
-  }, [queries, isAuthenticated, reloadKey]);
+  }, [queries, isAuthenticated, enabled, reloadKey]);
 
   return overview;
 }

@@ -41,12 +41,17 @@ describe("PixelBanner", () => {
   });
 
   it("gives every scene a clock as long as its animation", () => {
-    render(<PixelBanner />);
+    const { container } = render(<PixelBanner />);
+    // One length per scene, read by its animations and its clock in pixel-banner.css.
+    const sceneLength = () =>
+      (container.querySelector(".pixel-banner") as HTMLElement).style.getPropertyValue(
+        "--scene-length",
+      );
 
-    expect(screen.getByTestId("pixel-banner-clock").style.animationDuration).toBe("16s");
+    expect(sceneLength()).toBe("16s");
 
     finishScene();
-    expect(screen.getByTestId("pixel-banner-clock").style.animationDuration).toBe("14s");
+    expect(sceneLength()).toBe("14s");
   });
 
   it("goes to the still rocket when reduced motion is turned on while it plays", () => {

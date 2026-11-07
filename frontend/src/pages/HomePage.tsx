@@ -19,7 +19,8 @@ import { useCouncilOverview } from "../features/home/useCouncilOverview";
 import { useRequestOverview } from "../features/home/useRequestOverview";
 import OpenRequests from "../features/student/OpenRequests";
 import { useStudentRequests } from "../features/student/useStudentRequests";
-import { useRole, type AppRole } from "../store/RoleContext";
+import { useCurrentUser } from "../store/CurrentUserContext";
+import { useRole, workspacesFor, type AppRole } from "../store/RoleContext";
 import { formatSlotStart } from "../utils/dateTime";
 import { EVALUATION_EVENTS, OPEN_QUEUE_EVENTS } from "../websocket/events";
 import "../styles/dashboard.css";
@@ -73,8 +74,8 @@ const studentQueries = {
   upcoming: { scope: "mine", status: ["confirmed"], history: false, ordering: "starts_at" },
 } satisfies Record<string, ListEvaluationRequestsParams>;
 
+// The open queue's count comes with the queue itself (`useHitchhikerRequests`).
 const hitchhikerQueries = {
-  open: { scope: "open" },
   awaiting: { scope: "picked", status: ["awaiting_confirmation"] },
   done: { scope: "picked", status: ["confirmed"], history: true },
 } satisfies Record<string, ListEvaluationRequestsParams>;
@@ -157,7 +158,8 @@ function Dashboard({ overview, action, children }: DashboardProps) {
 function StudentDashboard() {
   const { t } = useTranslation();
   const { requests, isLoading, hasError } = useStudentRequests();
-  const counts = useRequestOverview(studentQueries, EVALUATION_EVENTS);
+  const { isLoaded } = useCurrentUser();
+  const counts = useRequestOverview(studentQueries, EVALUATION_EVENTS, isLoaded);
   const now = useCurrentMinute();
   const next = counts.upcoming?.results.find(
     (request) => request.ends_at !== null && Date.parse(request.ends_at) > now,
@@ -216,12 +218,17 @@ function StudentDashboard() {
 // Skeletons during the first load, only the error when it fails (#258).
 function HitchhikerDashboard() {
   const { t } = useTranslation();
-  const { openRequests, pickedRequests, isLoading, hasError } = useHitchhikerRequests();
-  const counts = useRequestOverview(hitchhikerQueries, OPEN_QUEUE_EVENTS);
+  const { openRequests, openCount, pickedRequests, isLoading, hasError } = useHitchhikerRequests();
+  const { roles, isLoaded } = useCurrentUser();
+  const counts = useRequestOverview(
+    hitchhikerQueries,
+    OPEN_QUEUE_EVENTS,
+    isLoaded && workspacesFor(roles).includes("HITCHHIKER"),
+  );
 
   const overview: OverviewItem[] = [
     {
-      value: countText(counts.open?.count),
+      value: countText(openCount),
       label: "home.openRequests",
       icon: requestIcon,
       tone: "teal",
