@@ -9,7 +9,7 @@ import {
   type EligibilityDecision,
 } from "../api/eligibility";
 import ReviewDialog from "../features/headTutor/ReviewDialog";
-import i18n from "../i18n";
+import { reviewErrorMessage } from "../features/headTutor/reviewErrorMessage";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { EligibilityRequest, EligibilityRequestStatus } from "../types/eligibility";
 import { formatTimeAgo } from "../utils/dateTime";
@@ -43,24 +43,6 @@ interface OpenReview {
 interface Decision {
   decision: EligibilityDecision;
   name: string;
-}
-
-// Called at render with the kept error. An answer without a code (e.g. nginx's HTML 502) gets the
-// generic text, never the English developer message.
-function reviewErrorMessage(error: unknown) {
-  if (error instanceof ApiError && error.code) {
-    if (error.code === "cannot_review_own_request") {
-      return i18n.t("review.errorOwn");
-    }
-
-    if (error.code === "eligibility_request_already_reviewed") {
-      return i18n.t("review.errorReviewed");
-    }
-
-    return error.fields?.review_note?.[0] ?? error.fields?.decision?.[0] ?? error.message;
-  }
-
-  return i18n.t("review.errorGeneric");
 }
 
 // "dkolarov" → "DK"

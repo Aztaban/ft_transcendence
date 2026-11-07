@@ -593,7 +593,97 @@
 
 /* Phones: each row becomes a card */
 
+/* One request: /eligibility-requests/{id} (#685) */
+
+.eligibility-detail {
+  max-width: 760px;
+}
+
+.eligibility-detail__back {
+  align-self: flex-start;
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+
+.eligibility-detail__back:hover {
+  color: var(--color-text-primary);
+}
+
+.eligibility-detail__back:focus-visible,
+.eligibility-detail__card a:focus-visible {
+  outline: 3px solid rgba(0, 186, 188, 0.45);
+  outline-offset: 2px;
+}
+
+.eligibility-detail__card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 32px;
+  border: 1px solid #e3e7e7;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: var(--shadow-card);
+}
+
+.eligibility-detail__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eligibility-detail__label {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.eligibility-detail__top a {
+  color: var(--color-text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.eligibility-detail__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 40px;
+  margin: 0;
+}
+
+.eligibility-detail__facts dt {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.eligibility-detail__facts dd {
+  margin: 2px 0 0;
+  font-weight: 500;
+}
+
+.eligibility-detail__subtitle {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.eligibility-detail__hint {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f5f7f7;
+  color: #3d4444;
+}
+
 @media (max-width: 760px) {
+  .eligibility-detail__card {
+    padding: 22px 18px;
+  }
+
   .eligibility-review__table thead {
     position: absolute;
     width: 1px;
