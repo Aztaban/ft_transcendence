@@ -192,7 +192,7 @@ Check constraints (`Meta.constraints`, one `CheckConstraint` each):
 
 A student may have at most one active request per project (api-plan §7.1). MySQL cannot express this as an index, so the create endpoint enforces it in code: it locks the student's `user` row with `select_for_update()` and checks for an active request inside the same transaction.
 
-Decline, release and expire clear the pick: `picked_by_id`, `starts_at` and `ends_at` are reset to NULL, because the request goes back to the queue or ends unpicked. Cancel keeps the pick, so a cancelled evaluation stays in the history of both the student and the Hitchhiker (`scope=picked`).
+Decline, release and expire clear the pick: `picked_by_id`, `starts_at` and `ends_at` are reset to NULL, because the request goes back to the queue or ends unpicked. Cancel keeps the pick, so a cancelled evaluation stays in the history of both the student and the Hitchhiker (the API hides `picked_by` from the student, api-plan R18) (`scope=picked`).
 
 Indexes:
 

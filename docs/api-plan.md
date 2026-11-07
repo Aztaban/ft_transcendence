@@ -57,6 +57,7 @@ Django ── MySQL (all state)
 | R14 | Backend messages (`message` and `fields`) are returned in the user's language, because the i18n module requires all user-facing text to be translatable (§5.5). | Architect, Oct 2026 |
 | R15 | A `pending` request is anonymous to Hitchhikers: they see the student only once they pick it (§8.7). | Team, Oct 2026 |
 | R16 | Students do not offer time slots. The Hitchhiker proposes one, and the student can say when they are free in the request's `note` (§7.1). | Team, Oct 2026 |
+| R18 | The Hitchhiker is anonymous to the student until the student confirms the slot. The student does not see `picked_by` on `awaiting_confirmation` or `cancelled` requests (the backend does not record whether a cancelled request had been confirmed, so all of them are hidden), and notifications to the student do not name the Hitchhiker (§8.7, §8.8). | Team, Nov 2026 |
 
 ### 3.2 Open (not to be built until decided)
 
@@ -286,7 +287,7 @@ Decline goes back from `awaiting_confirmation`; release goes back from `awaiting
 | cancel | `POST …/{id}/cancel/` | `pending`, `awaiting_confirmation`, `confirmed` | `cancelled` | Own student, or override | Before `starts_at`; an override any time, unless a result is recorded |
 | expire | Celery job | `pending` (14 days old), `awaiting_confirmation` (`starts_at` passed) | `expired` | System | |
 
-Decline, release and expire clear `picked_by`, `starts_at` and `ends_at`. Cancel keeps them, so a cancelled evaluation stays in the Hitchhiker's history too.
+Decline, release and expire clear `picked_by`, `starts_at` and `ends_at`. Cancel keeps them, so a cancelled evaluation stays in the Hitchhiker's history too. The student still does not see `picked_by` on it (R18, §8.7).
 
 **Rules:**
 
@@ -421,10 +422,10 @@ Returned by the admin user endpoints only. `Me` plus:
 | project | ProjectRef | |
 | note | string | Up to 500 chars. Empty string when none. |
 | status | `pending`, `awaiting_confirmation`, `confirmed`, `cancelled`, `expired` | |
-| picked_by | UserRef or null | Set in `awaiting_confirmation` and `confirmed`, and kept on a `cancelled` request that had been picked. |
-| starts_at | datetime or null | Same as `picked_by`. |
-| ends_at | datetime or null | Same as `picked_by`. |
-| cancelled_by | UserRef or null | |
+| picked_by | UserRef or null | Set in `awaiting_confirmation` and `confirmed`, and kept on a `cancelled` request that had been picked. `null` for the request's student while `awaiting_confirmation` and on `cancelled` requests, whatever other roles they hold (R18). |
+| starts_at | datetime or null | Set whenever a Hitchhiker holds the slot. The student sees it even while `picked_by` is hidden: R18 hides the name, not the time. |
+| ends_at | datetime or null | Same as `starts_at`. |
+| cancelled_by | UserRef or null | `null` for the request's student when it is the same person as `picked_by`: a Head Tutor who picked the request and then cancelled it by override (R18). |
 | cancelled_at | datetime or null | |
 | expired_at | datetime or null | |
 | result | `"passed"`, `"failed"` or null | Manual entry by the team. |
@@ -483,11 +484,11 @@ Every create, update or delete action that affects another user notifies that us
 | type | Recipients | payload | target_url |
 |---|---|---|---|
 | `evaluation.created` | Eligible Hitchhikers of the project (except the student) | `{request_id, project}` (no `student`: R15) | `/requests/{id}` |
-| `evaluation.slot_picked` | Student | `{request_id, project, tutor, starts_at, ends_at}` | `/evaluations/{id}` |
+| `evaluation.slot_picked` | Student | `{request_id, project, starts_at, ends_at}` (no `tutor`: R18) | `/evaluations/{id}` |
 | `evaluation.confirmed` | Picking Hitchhiker | `{request_id, project, student, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.declined` | Picking Hitchhiker | `{request_id, project, student}` | `/evaluations/{id}` |
-| `evaluation.released` | Student; also the picking Hitchhiker when released by override | `{request_id, project, tutor}` | `/evaluations/{id}` |
-| `evaluation.cancelled` | Picking Hitchhiker if any; the student if cancelled by override | `{request_id, project, cancelled_by}` | `/evaluations/{id}` |
+| `evaluation.released` | Student; also the picking Hitchhiker when released by override | `{request_id, project}` (no `tutor`: R18) | `/evaluations/{id}` |
+| `evaluation.cancelled` | Picking Hitchhiker if any; the student if cancelled by override | `{request_id, project, cancelled_by}`: `cancelled_by` is `null` when the picking Hitchhiker cancelled by override (R18) | `/evaluations/{id}` |
 | `evaluation.expired` | Student; also the Hitchhiker if it was `awaiting_confirmation` | `{request_id, project, previous_status}` | `/evaluations/{id}` |
 | `evaluation.result_recorded` | Student and Hitchhiker | `{request_id, project, result}` | `/evaluations/{id}` |
 | `eligibility.requested` | All Head Tutors except the requester | `{request_id, requester, projects}` | `/eligibility-requests/{id}` |
@@ -854,7 +855,7 @@ How the pages map: a student's Requests page is `scope=mine&history=false`; a Hi
 
 **Cancel.** `POST …/{id}/cancel/`. The student sends no body; an override sends `{"reason": "..."}`.
 
-- 200 with `status: "cancelled"`, `cancelled_by` and `cancelled_at` set; `picked_by`, `starts_at` and `ends_at` are kept. 409 `evaluation_already_started` for the student once `starts_at` has passed. An override can cancel at any time, except a request whose result is recorded (409 `invalid_state_transition`).
+- 200 with `status: "cancelled"`, `cancelled_by` and `cancelled_at` set; `picked_by`, `starts_at` and `ends_at` are kept, and `picked_by` is hidden from the student (R18). 409 `evaluation_already_started` for the student once `starts_at` has passed. An override can cancel at any time, except a request whose result is recorded (409 `invalid_state_transition`).
 - Notification and event `evaluation.cancelled`. Overrides also write audit `evaluation.cancelled_by_override`.
 
 ### 10.5 Notifications

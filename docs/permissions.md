@@ -56,7 +56,7 @@ Who may call each endpoint, by role. It is a view of the contract: the rules com
 | `POST …/release/` | — | own pick | own pick, or override | — | override |
 | `POST …/cancel/` | own | own | own, or override | own | own, or override |
 
-An override needs a `reason` and writes an audit entry (§5.8). Eligible Hitchhikers never see who asked while a request is `pending` (R15, §8.7). Evaluation results are entered in the Django admin (`/admin/`) by team members, not through the API (§7.1).
+An override needs a `reason` and writes an audit entry (§5.8). Eligible Hitchhikers never see who asked while a request is `pending` (R15, §8.7), and the student never sees who picked until they confirm, nor on a cancelled request (R18, §8.7). Evaluation results are entered in the Django admin (`/admin/`) by team members, not through the API (§7.1).
 
 ## Notifications (§10.5)
 

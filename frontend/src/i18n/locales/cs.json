@@ -456,11 +456,12 @@
   "notifications": {
     "evaluation": {
       "created": "Nová žádost o evaluaci projektu {{project.name}}",
-      "slot_picked": "Pro {{project.name}} je vybraný termín {{slot}} ({{tutor.display_name}}). Potvrďte ho prosím",
+      "slot_picked": "Pro {{project.name}} je vybraný termín {{slot}}. Potvrďte ho prosím",
       "confirmed": "Evaluace projektu {{project.name}} je potvrzená: {{slot}} ({{student.display_name}})",
       "declined": "Váš termín pro evaluaci {{project.name}} byl odmítnut ({{student.display_name}})",
-      "released": "Vaše žádost o evaluaci {{project.name}} byla uvolněna ({{tutor.display_name}}), čeká na nového Hitchhikera",
+      "released": "Termín evaluace {{project.name}} byl uvolněn",
       "cancelled": "Evaluace projektu {{project.name}} byla zrušena ({{cancelled_by.display_name}})",
+      "cancelled_hidden": "Evaluace projektu {{project.name}} byla zrušena",
       "expired_pending": "Vaše žádost o evaluaci projektu {{project.name}} vypršela: nikdo si ji nevybral",
       "expired_awaiting_confirmation": "Evaluace projektu {{project.name}} vypršela před potvrzením termínu",
       "result_recorded_passed": "Výsledek evaluace projektu {{project.name}}: úspěch",
@@ -530,7 +531,7 @@
   "dashboard": {
     "openRequests": "Otevřené žádosti",
     "studentOpenEmpty": "Vaše aktivní žádosti o hodnocení se objeví tady.",
-    "proposed": "{{name}} navrhl(a) <time>{{slot}}</time>",
+    "proposed": "Hitchhiker navrhl(a) <time>{{slot}}</time>",
     "evaluationRequest": "Žádost o hodnocení",
     "pending": "Čeká",
     "reviewProposal": "Zobrazit návrh",

@@ -451,11 +451,12 @@
   "notifications": {
     "evaluation": {
       "created": "Nueva solicitud de evaluación para {{project.name}}",
-      "slot_picked": "{{tutor.display_name}} eligió un horario para {{project.name}}: {{slot}}. Confírmalo, por favor",
+      "slot_picked": "Un Hitchhiker eligió un horario para {{project.name}}: {{slot}}. Confírmalo, por favor",
       "confirmed": "{{student.display_name}} confirmó la evaluación de {{project.name}}: {{slot}}",
       "declined": "{{student.display_name}} rechazó tu horario para {{project.name}}",
-      "released": "{{tutor.display_name}} liberó tu solicitud de evaluación de {{project.name}}",
+      "released": "Se liberó el horario de {{project.name}}",
       "cancelled": "{{cancelled_by.display_name}} canceló la evaluación de {{project.name}}",
+      "cancelled_hidden": "Se canceló la evaluación de {{project.name}}",
       "expired_pending": "Tu solicitud de evaluación de {{project.name}} caducó: nadie la eligió",
       "expired_awaiting_confirmation": "La evaluación de {{project.name}} caducó antes de confirmar el horario",
       "result_recorded_passed": "Resultado de {{project.name}}: aprobado",
@@ -525,7 +526,7 @@
   "dashboard": {
     "openRequests": "Solicitudes abiertas",
     "studentOpenEmpty": "Tus solicitudes de evaluación activas aparecerán aquí.",
-    "proposed": "{{name}} propuso <time>{{slot}}</time>",
+    "proposed": "Un Hitchhiker propuso <time>{{slot}}</time>",
     "evaluationRequest": "Solicitud de evaluación",
     "pending": "Pendiente",
     "reviewProposal": "Ver propuesta",

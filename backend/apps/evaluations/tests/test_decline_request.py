@@ -260,7 +260,7 @@ def test_declined_request_returns_anonymously_to_queue_and_can_be_picked_again(
     assert response.json() == picked
     response = owner_client.get(detail_url, HTTP_HOST="localhost")
     assert response.status_code == 200
-    assert response.json() == picked
+    assert response.json() == {**picked, "picked_by": None}
     for client in clients.values():
         response = client.get(list_url, {"scope": "open"})
         assert response.status_code == 200

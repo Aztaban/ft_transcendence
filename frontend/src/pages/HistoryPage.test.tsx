@@ -124,6 +124,18 @@ describe("HistoryPage", () => {
     expect(within(cardOf("Fly-In")).getByText(/^Requested on /)).toBeTruthy();
   });
 
+  it("shows no Hitchhiker on a cancelled request when the API hides it (R18)", async () => {
+    vi.mocked(listEvaluationRequests).mockResolvedValue(
+      page([{ ...makeRequest(4, "born2beroot", "cancelled"), starts_at: "2026-10-12T15:00:00Z" }]),
+    );
+
+    renderPage();
+    await screen.findByRole("heading", { name: "born2beroot" });
+
+    expect(within(cardOf("born2beroot")).queryByText(/^Hitchhiker:/)).toBeNull();
+    expect(within(cardOf("born2beroot")).getByText(/^Cancelled on /)).toBeTruthy();
+  });
+
   it("shows no student to a Hitchhiker when the API hides it (R15)", async () => {
     vi.mocked(listEvaluationRequests).mockResolvedValue(
       page([{ ...makeRequest(5, "Fly-In", "expired"), student: null }]),
