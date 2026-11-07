@@ -72,12 +72,10 @@ describe("TopBar user", () => {
   });
 
   it("shows the user's avatar when there is one", () => {
-    current.user = { ...lenka, avatar_url: "/api/v1/files/31/download/" };
+    current.user = { ...lenka, avatar_url: "/avatar.png" };
     const { container } = render(<TopBar />);
 
-    expect(container.querySelector("img.topbar__avatar")?.getAttribute("src")).toBe(
-      "/api/v1/files/31/download/",
-    );
+    expect(container.querySelector("img.topbar__avatar")?.getAttribute("src")).toBe("/avatar.png");
     expect(screen.queryByText("LH")).toBeNull();
   });
 

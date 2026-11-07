@@ -473,11 +473,6 @@
     },
     "sc_message": {
       "created": "New anonymous message for the Student Council"
-    },
-    "resource": {
-      "created": "{{owner.display_name}} shared \"{{title}}\"",
-      "updated": "Your resource \"{{title}}\" was edited",
-      "deleted": "Your resource \"{{title}}\" was deleted"
     }
   },
   "home": {

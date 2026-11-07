@@ -45,7 +45,7 @@ Makefile         make up = the single deployment command
 .env.example
 ```
 
-Notifications and files get their own apps when they are built. `AGENTS.md` keeps the detailed map.
+`AGENTS.md` keeps the detailed map.
 
 ---
 

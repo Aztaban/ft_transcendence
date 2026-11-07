@@ -19,7 +19,6 @@ __pycache__/
 venv/
 *.egg-info/
 staticfiles/
-media/
 
 # --- Node / Vite ---
 node_modules/

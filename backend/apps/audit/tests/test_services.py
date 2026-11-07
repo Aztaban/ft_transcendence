@@ -86,3 +86,21 @@ def test_record_audit_rolls_back_with_the_caller_transaction(actor):
             raise RuntimeError("action failed")
 
     assert AuditLog.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    "action,target_type,field",
+    [
+        ("file.updated_by_moderator", AuditLog.TargetType.USER, "action"),
+        ("file.deleted_by_moderator", AuditLog.TargetType.USER, "action"),
+        (AuditLog.Action.ROLE_ASSIGNED, "file", "target_type"),
+    ],
+)
+def test_record_audit_rejects_the_values_of_the_dropped_files_module(
+    actor, action, target_type, field
+):
+    with pytest.raises(ValidationError) as exc:
+        record_audit(actor=actor, action=action, target_type=target_type, target_id=1)
+
+    assert set(exc.value.message_dict) == {field}
+    assert AuditLog.objects.count() == 0
