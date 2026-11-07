@@ -688,6 +688,7 @@
     "or": "or",
     "continueWith42": "CONTINUE WITH 42",
     "registered": "Account created. You can log in now.",
+    "missingFields": "Enter your email and password.",
     "invalidCredentials": "Invalid email or password.",
     "loginError": "Unable to log in. Please try again.",
     "register": "REGISTER",
