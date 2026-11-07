@@ -290,6 +290,22 @@ def test_pagination_keeps_the_filter(make_user, monkeypatch):
             "Datetime has wrong format. Use one of these formats instead: "
             "YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z].",
         ),
+        ({"actor": ""}, "actor", "A valid integer is required."),
+        ({"action": ""}, "action", "This field may not be blank."),
+        ({"target_type": ""}, "target_type", "This field may not be blank."),
+        ({"target_id": ""}, "target_id", "A valid integer is required."),
+        (
+            {"from": ""},
+            "from",
+            "Datetime has wrong format. Use one of these formats instead: "
+            "YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z].",
+        ),
+        (
+            {"to": ""},
+            "to",
+            "Datetime has wrong format. Use one of these formats instead: "
+            "YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z].",
+        ),
     ],
 )
 def test_filter_validation(make_user, params, field, message):
