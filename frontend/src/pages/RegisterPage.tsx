@@ -102,14 +102,19 @@ function RegisterPage() {
     }
   }
 
-  // Someone who already has a session gets Home instead of the form (#671), with nothing shown
-  // while the session check runs.
+  // Someone who already has a session goes to the page the login gate sent them from, or Home
+  // (#328, #671), with nothing shown while the session check runs.
   if (auth?.isLoading) {
     return null;
   }
 
   if (auth?.isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return (
+      <Navigate
+        to={from ? `${from.pathname}${from.search ?? ""}${from.hash ?? ""}` : "/"}
+        replace
+      />
+    );
   }
 
   return (

@@ -195,4 +195,29 @@ describe("Login and Register with a session (#671)", () => {
       await waitFor(() => expect(whereNow()).toBe("/earlier"));
     },
   );
+
+  it.each(["/login", "/register"])(
+    "send a logged-in user from %s to the page the login gate kept",
+    async (path) => {
+      vi.mocked(getSession).mockResolvedValue({ authenticated: true, user });
+      render(
+        <MemoryRouter
+          initialEntries={[
+            { pathname: path, state: { from: { pathname: "/history", search: "?page=2" } } },
+          ]}
+        >
+          <AuthProvider>
+            <Where />
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="*" element={null} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>,
+      );
+
+      await waitFor(() => expect(whereNow()).toBe("/history?page=2"));
+    },
+  );
 });

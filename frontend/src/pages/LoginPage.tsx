@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router";
+import { Navigate, useLocation, useSearchParams } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
 import logo42 from "../assets/figma/42.svg";
@@ -51,7 +51,6 @@ function LoginPage() {
   const { t } = useTranslation();
 
   usePageTitle(t("pageTitle.login"));
-  const navigate = useNavigate();
   const location = useLocation();
   const registeredEmail = (location.state as LoginLocationState | null)?.registeredEmail;
   const from = (location.state as LoginLocationState | null)?.from;
@@ -88,15 +87,16 @@ function LoginPage() {
     setShowRegistered(false);
     setIsSubmitting(true);
 
-    try {
-      await login({ email, password });
-      // A failed 42 login comes back here without the gate's page; the one kept for it applies.
-      const keptForOAuth = takeReturnPath();
+    // The gate's page wins over one kept for an earlier 42 login (#328). Without the gate's page,
+    // the kept one stays and Home opens it after the redirect below (ReturnAfterLogin).
+    if (from) {
+      takeReturnPath();
+    }
 
-      // `isSubmitting` stays on: the page is leaving. Turning it off here would let the redirect
-      // below run first (the navigation is a lower-priority update) and send the user Home
-      // instead of to the page they came from (#328, #671).
-      navigate(from ? afterLogin : (keptForOAuth ?? "/"), { replace: true });
+    try {
+      // Once the session is set, the redirect below leaves the page: one navigation only, so the
+      // order of React's updates cannot change where the user lands (#671).
+      await login({ email, password });
     } catch (error) {
       if (error instanceof ApiError && error.code === "invalid_credentials") {
         setErrorKey("auth.invalidCredentials");
@@ -105,20 +105,20 @@ function LoginPage() {
       } else {
         setErrorKey("auth.loginError");
       }
-
+    } finally {
       setIsSubmitting(false);
     }
   }
 
-  // Someone who already has a session gets Home instead of the form (#671), with nothing shown
-  // while the session check runs. Not during this page's own login: that one goes on to the page
-  // the user came from (#328).
+  // Someone with a session goes to the page the login gate sent them from, or Home (#328, #671).
+  // This covers this page's own login and a session that already exists, for example from
+  // another tab. Nothing is shown while the session check runs.
   if (isLoading) {
     return null;
   }
 
-  if (isAuthenticated && !isSubmitting) {
-    return <Navigate to="/" replace />;
+  if (isAuthenticated) {
+    return <Navigate to={afterLogin} replace />;
   }
 
   return (
