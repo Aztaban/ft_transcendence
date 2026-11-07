@@ -65,7 +65,12 @@ def assign_role(request, user_id):
                 target_id=target.pk,
                 metadata={"role": role.name},
             )
-            notify_role_changed(target.pk, role.name, "assigned")
+            notify_role_changed(
+                target.pk,
+                role.name,
+                "assigned",
+                store_notification=target.pk != request.user.pk,
+            )
     return Response(
         RoleAssignmentResultSerializer(target).data,
         status=status.HTTP_200_OK,
