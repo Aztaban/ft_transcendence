@@ -16,13 +16,91 @@ from apps.evaluations.models import EvaluationRequest, Project
 pytestmark = pytest.mark.django_db
 
 PASSWORD = "secret"
+EMOJI_NAME = "Ada 😀"
 EMOJI_BODY = "🍕 🍰 Fridge 🍓 🍣 ☕ 🧋"
+EMOJI_NOTE = "Forwarded 😀"
 EMOJI_EVALUATION_NOTE = "Need help 😀 ✨ 🔥"
 NOW = datetime(2026, 11, 6, 12, 0, tzinfo=timezone.utc)
 
 
 def iso(dt):
     return DateTimeField().to_representation(dt)
+
+
+def test_display_name_round_trips_emoji(make_user):
+    user = make_user("ada@example.com", display_name="Ada")
+    client = APIClient()
+    # A session loads the user from the database on each request.
+    client.force_login(user)
+
+    updated = client.patch(reverse("api:me"), {"display_name": EMOJI_NAME}, format="json")
+    fetched = client.get(reverse("api:me"))
+
+    assert updated.status_code == status.HTTP_204_NO_CONTENT
+    assert updated.content == b""
+    user.refresh_from_db()
+    assert user.display_name == EMOJI_NAME
+    assert fetched.status_code == status.HTTP_200_OK
+    assert fetched.json() == {
+        "id": user.id,
+        "email": "ada@example.com",
+        "display_name": EMOJI_NAME,
+        "avatar_url": None,
+        "language": "en",
+        "roles": [{"id": Role.objects.get(name="student").id, "name": "student"}],
+        "intra_login": None,
+    }
+
+
+def test_display_name_limit_counts_each_emoji_as_one_character(make_user):
+    user = make_user("ada@example.com", display_name="Ada")
+    client = APIClient()
+    client.force_login(user)
+
+    saved = client.patch(reverse("api:me"), {"display_name": "😀" * 64}, format="json")
+
+    assert saved.status_code == status.HTTP_204_NO_CONTENT
+    user.refresh_from_db()
+    assert user.display_name == "😀" * 64
+
+    rejected = client.patch(reverse("api:me"), {"display_name": "😀" * 65}, format="json")
+
+    assert rejected.status_code == status.HTTP_400_BAD_REQUEST
+    assert rejected.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the profile fields.",
+            "fields": {"display_name": ["Ensure this field has no more than 64 characters."]},
+        }
+    }
+    user.refresh_from_db()
+    assert user.display_name == "😀" * 64
+
+
+def test_discussion_note_round_trips_emoji(make_user):
+    member = make_user("council@example.com", roles=(Role.Name.SC_MEMBER,))
+    message = SCMessage.objects.create(body="The fridge is broken.")
+    client = APIClient()
+    client.force_authenticate(user=member)
+
+    response = client.patch(
+        reverse("api:sc-message-detail", args=[message.id]),
+        {"discussion_note": EMOJI_NOTE, "discussion_note_version": 0},
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    message.refresh_from_db()
+    assert message.discussion_note == EMOJI_NOTE
+    assert message.discussion_note_version == 1
+    assert response.json() == {
+        "id": message.id,
+        "body": "The fridge is broken.",
+        "read_at": None,
+        "discussion_note": EMOJI_NOTE,
+        "discussion_note_version": 1,
+        "created_at": iso(message.created_at),
+    }
 
 
 def test_council_message_round_trips_emoji_through_a_session(make_user):

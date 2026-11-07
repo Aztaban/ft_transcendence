@@ -296,7 +296,7 @@ function CouncilInboxMessagePage() {
                 }}
               />
               <span className="council-message__count">
-                {note.length} / {SC_NOTE_MAX_LENGTH}
+                {Array.from(note).length} / {SC_NOTE_MAX_LENGTH}
               </span>
 
               {noteError && (

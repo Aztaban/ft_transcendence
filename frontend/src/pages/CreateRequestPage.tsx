@@ -189,7 +189,7 @@ function CreateRequestPage() {
                     onChange={(event) => setNote(event.target.value)}
                   />
                   <span className="create-request__note-count" aria-live="polite">
-                    {note.length} / {NOTE_MAX_LENGTH}
+                    {Array.from(note).length} / {NOTE_MAX_LENGTH}
                   </span>
                 </div>
               </div>
