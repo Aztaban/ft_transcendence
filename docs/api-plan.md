@@ -58,6 +58,7 @@ Django ── MySQL (all state)
 | R15 | A `pending` request is anonymous to Hitchhikers: they see the student only once they pick it (§8.7). | Team, Oct 2026 |
 | R16 | Students do not offer time slots. The Hitchhiker proposes one, and the student can say when they are free in the request's `note` (§7.1). | Team, Oct 2026 |
 | R19 | Files are out of scope: no uploads, no avatars, no tutor resources. `avatar_url` stays in the representations and is always `null`; the frontend shows initials. | Team, Nov 2026 |
+| R20 | An empty filter value is rejected like an unknown one: `?status=` is 400 `validation_error` (§5.7). | Team, Nov 2026 |
 
 ### 3.2 Open (not to be built until decided)
 
@@ -181,7 +182,7 @@ New codes are added to this table before they are used.
   ```json
   { "count": 57, "next": "https://localhost/api/v1/notifications/?page=2", "previous": null, "results": [ ... ] }
   ```
-- Filters are query parameters named after the field (`?status=pending`). Multiple values are comma-separated (`?status=pending,awaiting_confirmation`). Unknown filter values give 400 `validation_error`.
+- Filters are query parameters named after the field (`?status=pending`). Multiple values are comma-separated (`?status=pending,awaiting_confirmation`). Unknown or empty filter values (`?status=`) give 400 `validation_error`, unless the endpoint says otherwise.
 - Sorting: `?ordering=field` ascending, `?ordering=-field` descending. Each endpoint lists its allowed fields and its default.
 
 ### 5.8 Roles and permissions
@@ -700,7 +701,7 @@ This endpoint never answers 401, so the startup check never shows up as a failed
 
 **Admin user list.** `GET /admin/users/`
 
-- Filters: `q` (case-insensitive match on email, display name or 42 login), `role`, `status`.
+- Filters: `q` (case-insensitive match on email, display name or 42 login; an empty `q` is ignored), `role`, `status`.
 - Ordering: `display_name` (default), `email`, `created_at`, `last_login`.
 
 **Admin edit.** `PATCH /admin/users/{id}/` with any of `display_name`, `email`, `language`. 200 `AdminUser`. 409 `email_already_exists`. 409 `invalid_user_status` for deleted users. Notification `account.updated`, audit `user.updated` with old and new values.
