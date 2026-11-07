@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { getSession, loginUser } from "./api/auth";
 import { listEvaluationRequests } from "./api/evaluationRequests";
 import { listProjects } from "./api/projects";
-import { getCurrentUser } from "./api/users";
 import App from "./App";
+import type { UserProfile } from "./types/user";
 import { AuthProvider } from "./store/AuthContext";
 import { RoleProvider } from "./store/RoleContext";
 
@@ -26,10 +26,19 @@ vi.mock("./api/users", () => ({
 
 // The user's real roles from /users/me/. By default nothing is loaded, as without a provider; a
 // test sets `roles` and `isLoaded` when a page depends on them.
-const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
+const currentUser = vi.hoisted(() => ({
+  user: null as UserProfile | null,
+  roles: [] as string[],
+  isLoaded: false,
+}));
 
 vi.mock("./store/CurrentUserContext", () => ({
-  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+  useCurrentUser: () => ({
+    ...currentUser,
+    loadFailed: false,
+    refresh: () => {},
+    update: () => Promise.resolve(),
+  }),
 }));
 
 const user = { id: 1, email: "student@example.com", display_name: "Student" };
@@ -48,6 +57,7 @@ afterEach(() => {
   cleanup();
   vi.resetAllMocks();
   sessionStorage.clear();
+  currentUser.user = null;
   currentUser.roles = [];
   currentUser.isLoaded = false;
 });
@@ -117,7 +127,7 @@ describe("logged in", () => {
     sessionStorage.setItem("active-role", "COUNCIL");
     currentUser.roles = ["student", "tutor", "sc_member"];
     currentUser.isLoaded = true;
-    vi.mocked(getCurrentUser).mockResolvedValue({
+    currentUser.user = {
       ...user,
       display_name: "Bob",
       avatar_url: null,
@@ -128,7 +138,7 @@ describe("logged in", () => {
         { id: 3, name: "tutor" },
       ],
       intra_login: null,
-    });
+    };
 
     renderAt("/profile");
 
