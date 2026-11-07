@@ -12,6 +12,7 @@ import usePageTitle from "../components/layout/usePageTitle";
 import ReviewDialog from "../features/headTutor/ReviewDialog";
 import { reviewErrorMessage } from "../features/headTutor/reviewErrorMessage";
 import { useCurrentUser } from "../store/CurrentUserContext";
+import { workspacesFor } from "../store/RoleContext";
 import type { EligibilityRequest } from "../types/eligibility";
 import { formatDate, formatTimeAgo } from "../utils/dateTime";
 import { canReviewEligibility } from "../utils/permissions";
@@ -169,11 +170,14 @@ function EligibilityRequestDetailPage() {
   }
 
   const isOwn = request !== null && user !== null && request.requester.id === user.id;
+  // The list and the request form open in the Hitchhiker workspace: only offered to someone who
+  // has it, so an Admin without a tutor role or a former Hitchhiker never lands on Unauthorized.
+  const hasHitchhikerWorkspace = workspacesFor(roles).includes("HITCHHIKER");
   const mayReview = request?.status === "pending" && canReviewEligibility(roles) && !isOwn;
 
   return (
     <section className="eligibility-review eligibility-detail">
-      {canReviewEligibility(roles) ? (
+      {canReviewEligibility(roles) && hasHitchhikerWorkspace ? (
         <Link className="eligibility-detail__back" to="/eligibility-requests">
           <span aria-hidden="true">‹</span> {t("eligibilityDetail.backToList")}
         </Link>
@@ -287,7 +291,7 @@ function EligibilityRequestDetailPage() {
             <p className="eligibility-detail__hint">{t("eligibilityDetail.approvedOwn")}</p>
           )}
 
-          {request.status === "declined" && isOwn && (
+          {request.status === "declined" && isOwn && hasHitchhikerWorkspace && (
             <p className="eligibility-detail__hint">
               {t("eligibilityDetail.declinedOwn")}{" "}
               <Link to="/eligibility-requests/new">{t("eligibilityDetail.sendNew")}</Link>
@@ -329,6 +333,14 @@ function EligibilityRequestDetailPage() {
       )}
     </section>
   );
+}
+
+// The route renders a new page for every request id: moving between requests (the bell, Back)
+// then never carries a review popup, its note or a "was approved" banner over to another request.
+export function EligibilityRequestRoute() {
+  const { id } = useParams();
+
+  return <EligibilityRequestDetailPage key={id} />;
 }
 
 export default EligibilityRequestDetailPage;

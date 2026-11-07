@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
@@ -8,7 +8,7 @@ import i18n from "../i18n";
 import type { EligibilityRequest } from "../types/eligibility";
 import type { UserProfile } from "../types/user";
 import type { LiveMessage } from "../websocket/events";
-import EligibilityRequestDetailPage from "./EligibilityRequestDetailPage";
+import { EligibilityRequestRoute } from "./EligibilityRequestDetailPage";
 
 // The shared /users/me/ store, as loaded for the logged-in user.
 const currentUser = vi.hoisted(() => ({
@@ -68,11 +68,25 @@ const approved = eligibilityRequest({
   review_note: "Welcome!",
 });
 
-function renderPage(path = "/eligibility-requests/9") {
+function BrowserBack() {
+  const navigate = useNavigate();
+
+  return (
+    <button type="button" onClick={() => navigate(-1)}>
+      Browser back
+    </button>
+  );
+}
+
+// `paths` are the pages opened in this tab, the last one shown: Back goes to the one before.
+function renderPage(...paths: string[]) {
+  const entries = paths.length > 0 ? paths : ["/eligibility-requests/9"];
+
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
+      <BrowserBack />
       <Routes>
-        <Route path="/eligibility-requests/:id" element={<EligibilityRequestDetailPage />} />
+        <Route path="/eligibility-requests/:id" element={<EligibilityRequestRoute />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -232,6 +246,44 @@ describe("EligibilityRequestDetailPage", () => {
     expect(screen.getByRole("link", { name: "Send a new request" }).getAttribute("href")).toBe(
       "/eligibility-requests/new",
     );
+  });
+
+  it.each([
+    ["an Admin without a tutor role", 1, ["student", "admin"]],
+    ["a requester who lost the tutor role", 42, ["student"]],
+  ])("offers %s no page of the Hitchhiker workspace, only Home", async (_who, userId, roles) => {
+    logIn(userId, roles);
+    vi.mocked(getEligibilityRequest).mockResolvedValue({ ...approved, status: "declined" });
+
+    renderPage();
+
+    expect(await within(await screen.findByRole("article")).findByText("Declined")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Back to home/ }).getAttribute("href")).toBe("/");
+    expect(screen.queryByRole("link", { name: /All eligibility requests/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Send a new request" })).toBeNull();
+  });
+
+  // Moving between requests keeps the route: without a new page per id, the popup and its note
+  // would land on the other request.
+  it("starts fresh on another request: Back during a review does not approve that one", async () => {
+    const first = eligibilityRequest({
+      id: 5,
+      requester: { id: 43, display_name: "Alice", avatar_url: null },
+    });
+
+    vi.mocked(getEligibilityRequest).mockImplementation(async (id) =>
+      id === 5 ? first : eligibilityRequest(),
+    );
+    renderPage("/eligibility-requests/5", "/eligibility-requests/9");
+    await screen.findByRole("link", { name: "Bob" });
+
+    fireEvent.click(screen.getByRole("button", { name: /Approve/ }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }));
+
+    expect(await screen.findByRole("link", { name: "Alice" })).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(reviewEligibilityRequest).not.toHaveBeenCalled();
   });
 
   it("leads a Head Tutor back to all requests", async () => {
