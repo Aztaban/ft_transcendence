@@ -94,6 +94,10 @@ describe("CouncilMessagePage", () => {
     write("The fridge is broken.");
 
     expect(screen.getByText("Characters: 21 / 5000")).toBeTruthy();
+
+    write("😀");
+
+    expect(screen.getByText("Characters: 1 / 5000")).toBeTruthy();
     expect(sendButton().disabled).toBe(false);
   });
 

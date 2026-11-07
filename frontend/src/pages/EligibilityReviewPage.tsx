@@ -9,6 +9,7 @@ import {
   type EligibilityDecision,
 } from "../api/eligibility";
 import ReviewDialog from "../features/headTutor/ReviewDialog";
+import { initials } from "../features/people/PersonAvatar";
 import i18n from "../i18n";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { EligibilityRequest, EligibilityRequestStatus } from "../types/eligibility";
@@ -61,14 +62,6 @@ function reviewErrorMessage(error: unknown) {
   }
 
   return i18n.t("review.errorGeneric");
-}
-
-// "dkolarov" → "DK"
-function initials(name: string) {
-  return name
-    .replace(/[^a-z0-9]/gi, "")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 // Head Tutor table of eligibility requests (#175, #176, #177): requester and full project list,

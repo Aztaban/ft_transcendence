@@ -40,7 +40,9 @@ function CouncilMessagePage() {
   const [isSent, setIsSent] = useState(false);
 
   const message = body.trim();
-  const fill = body.length / SC_MESSAGE_MAX_LENGTH;
+  // Array.from counts an emoji as one character. String length counts it as two.
+  const characters = Array.from(body).length;
+  const fill = characters / SC_MESSAGE_MAX_LENGTH;
 
   async function handleSend() {
     setSendError("");
@@ -107,7 +109,7 @@ function CouncilMessagePage() {
               />
               <div className="council-message__footer">
                 <span className="council-message__count" aria-live="polite">
-                  {t("council.characters", { length: body.length, max: SC_MESSAGE_MAX_LENGTH })}
+                  {t("council.characters", { length: characters, max: SC_MESSAGE_MAX_LENGTH })}
                 </span>
                 <span
                   className={`council-meter${fill >= NEARLY_FULL ? " council-meter--full" : ""}`}
