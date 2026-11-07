@@ -17,6 +17,8 @@ interface Loaded {
   hasMore: boolean;
 }
 
+const EMPTY: Loaded = { messages: [], total: 0, hasMore: false };
+
 // The newest `limit` messages, always from the top of the list, so what is shown is one consistent
 // list: a message that moves between pages meanwhile is never shown twice or skipped. Up to 100
 // messages that is a single request; beyond, pages of 100 until `limit` is reached. DRF answers
@@ -55,7 +57,12 @@ async function loadNewest(
     page += 1;
   } while (answer.next !== null && messages.length < limit);
 
-  return { messages, total: answer.count, hasMore: answer.next !== null };
+  // The last page of 100 can go past `limit`: "Show more" still adds 20 at a time.
+  return {
+    messages: messages.slice(0, limit),
+    total: answer.count,
+    hasMore: answer.next !== null || messages.length > limit,
+  };
 }
 
 // A council message list, newest first (api-plan §10.6): `unread` limits it to the new messages.
@@ -64,15 +71,28 @@ async function loadNewest(
 // way, so an old answer never reaches the list, and a "Show more" still waiting is part of it.
 // A new message notifies every council member, so the list refreshes then and after a reconnect.
 // Read state changes by colleagues send no event: it also refreshes when the tab is shown again
-// (§9.4). A failed refresh keeps what is shown. Another `unread` value loads the other list.
+// (§9.4). A failed refresh keeps what is shown. Another `unread` value starts the other list from
+// the beginning: its first 20 messages, loading until they arrive, an error if they fail.
 export function useCouncilMessages(unread: boolean) {
-  const [loaded, setLoaded] = useState<Loaded>({ messages: [], total: 0, hasMore: false });
+  const [loaded, setLoaded] = useState<Loaded>(EMPTY);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   // How many messages are wanted, and how many the shown list was loaded for.
   const [limit, setLimit] = useState(STEP);
   const [shownLimit, setShownLimit] = useState(0);
   const [moreFailed, setMoreFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [listUnread, setListUnread] = useState(unread);
+
+  // The other list: nothing of this one stays on screen (reset while rendering, so the old list
+  // is never shown under the new filter, not even for one frame).
+  if (listUnread !== unread) {
+    setListUnread(unread);
+    setLoaded(EMPTY);
+    setLoadState("loading");
+    setLimit(STEP);
+    setShownLimit(0);
+    setMoreFailed(false);
+  }
 
   const refresh = useCallback(() => setReloadKey((key) => key + 1), []);
 
@@ -104,7 +124,7 @@ export function useCouncilMessages(unread: boolean) {
           setLoadState("ready");
         }
       })
-      .catch((error) => {
+      .catch(() => {
         if (controller.signal.aborted) {
           return;
         }

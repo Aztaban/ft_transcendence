@@ -68,11 +68,52 @@ describe("useCouncilMessages", () => {
     ]);
   });
 
+  it("shows nothing of the old list under the new filter, and its error if it fails", async () => {
+    serve(messages(30));
+    const { result, rerender } = renderHook(({ unread }) => useCouncilMessages(unread), {
+      initialProps: { unread: false },
+    });
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(20));
+    act(() => result.current.showMore());
+    await waitFor(() => expect(result.current.messages).toHaveLength(30));
+
+    vi.mocked(listSCMessages).mockRejectedValue(new Error("network"));
+    rerender({ unread: true });
+
+    // At once: the old 30 messages are gone and the new list is loading.
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.loadState).toBe("loading");
+
+    await waitFor(() => expect(result.current.loadState).toBe("error"));
+    expect(result.current.messages).toEqual([]);
+    // The new list starts again at 20, not at the 40 of the old one.
+    expect(requests().slice(-1)).toEqual([{ unread: true, page: undefined, pageSize: 20 }]);
+  });
+
+  it("adds 20 messages at a time beyond the first 100 too", async () => {
+    serve(messages(250));
+    const { result } = renderHook(() => useCouncilMessages(false));
+
+    for (const shown of [20, 40, 60, 80, 100]) {
+      await waitFor(() => expect(result.current.messages).toHaveLength(shown));
+      act(() => result.current.showMore());
+    }
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(120));
+    expect(result.current.hasMore).toBe(true);
+    expect(result.current.total).toBe(250);
+
+    act(() => result.current.showMore());
+    await waitFor(() => expect(result.current.messages).toHaveLength(140));
+    expect(result.current.messages.map(({ id }) => id).slice(-2)).toEqual([112, 111]);
+  });
+
   it("loads pages of 100 beyond the first 100 messages", async () => {
     serve(messages(130));
     const { result } = renderHook(() => useCouncilMessages(false));
 
-    for (const shown of [20, 40, 60, 80, 100]) {
+    for (const shown of [20, 40, 60, 80, 100, 120]) {
       await waitFor(() => expect(result.current.messages).toHaveLength(shown));
       act(() => result.current.showMore());
     }
@@ -142,7 +183,7 @@ describe("useCouncilMessages", () => {
     serve(all);
     const { result } = renderHook(() => useCouncilMessages(false));
 
-    for (const shown of [20, 40, 60, 80, 100]) {
+    for (const shown of [20, 40, 60, 80, 100, 120]) {
       await waitFor(() => expect(result.current.messages).toHaveLength(shown));
       act(() => result.current.showMore());
     }
