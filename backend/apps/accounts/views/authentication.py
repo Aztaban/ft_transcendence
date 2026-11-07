@@ -244,6 +244,7 @@ class LogoutView(APIView):
                 transaction.on_commit(
                     lambda: async_to_sync(get_channel_layer().group_send)(
                         f"session_{session_key}", {"type": "session.ended", "data": {}}
-                    )
+                    ),
+                    robust=True,
                 )
         return Response(status=status.HTTP_204_NO_CONTENT)
