@@ -14,6 +14,7 @@ from apps.accounts.serializers.people_search import (
     PeopleSearchSerializer,
 )
 from apps.core.pagination import APIPageNumberPagination
+from apps.core.schema import error_responses
 from apps.evaluations.models import TutorEligibility
 
 
@@ -43,6 +44,10 @@ class PeopleSearchThrottle(UserRateThrottle):
             description="Display name order; ascending by default.",
         ),
     ],
+    responses={
+        200: PeopleSearchSerializer(many=True),
+        **error_responses({400: ("validation_error",), 401: ("not_authenticated",)}),
+    },
 )
 class PeopleSearchView(ListAPIView):
     permission_classes = [IsAuthenticated]

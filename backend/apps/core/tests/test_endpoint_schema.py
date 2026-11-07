@@ -256,6 +256,7 @@ def test_root_and_shared_error_component_shapes(schema):
 @pytest.mark.parametrize(
     "path,method,errors",
     [
+        ("search/people/", "get", {400: "validation_error"}),
         ("users/me/", "get", {}),
         (
             "users/me/",

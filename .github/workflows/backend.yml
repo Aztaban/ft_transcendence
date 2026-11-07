@@ -53,6 +53,8 @@ jobs:
       - run: black --check .
       - run: isort --check .
       - run: pytest
+      # A new schema warning, such as an operationId collision, fails the build.
+      - run: python manage.py spectacular --validate --fail-on-warn --file /dev/null
       # Production settings load and pass Django's deployment checks (warnings are printed).
       - run: python manage.py check --deploy
         env:

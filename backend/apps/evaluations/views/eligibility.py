@@ -172,6 +172,7 @@ def _create_eligibility_request(request):
 
 @extend_schema(
     methods=["GET"],
+    operation_id="v1_tutor_eligibility_requests_list",
     summary="List eligibility requests",
     parameters=[
         OpenApiParameter(
