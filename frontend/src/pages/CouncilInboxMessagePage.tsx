@@ -37,13 +37,9 @@ function actionErrorMessage(error: unknown) {
   return i18n.t("council.errorSomething");
 }
 
-// Called at render with the kept error, so it follows the language switcher. A 404 means the
-// message is gone (another Admin deleted it); an answer without a code gets the generic text.
+// Called at render with the kept error, so it follows the language switcher. An answer without a
+// code gets the generic text. (A 404 does not reach the popup: the page shows the message is gone.)
 function moderationErrorMessage(error: unknown) {
-  if (error instanceof ApiError && error.status === 404) {
-    return i18n.t("council.missing");
-  }
-
   if (error instanceof ApiError && error.code) {
     return error.fields?.reason?.[0] ?? error.message;
   }
@@ -194,7 +190,14 @@ function CouncilInboxMessagePage() {
 
       setModeration(null);
     } catch (error) {
-      setModerationError(error);
+      if (error instanceof ApiError && error.status === 404) {
+        // Another Admin deleted it first: the message and its buttons go, so nothing is retried.
+        setModeration(null);
+        setMessage(null);
+        setLoadState("missing");
+      } else {
+        setModerationError(error);
+      }
     } finally {
       setIsModerating(false);
     }
@@ -450,6 +453,14 @@ function CouncilInboxMessagePage() {
       )}
     </section>
   );
+}
+
+// The route renders a new page for every message id: moving between messages (the bell, Back)
+// then never carries a popup, a reason, a revealed sender or "deleted" over to another message.
+export function CouncilMessageRoute() {
+  const { id } = useParams();
+
+  return <CouncilInboxMessagePage key={id} />;
 }
 
 export default CouncilInboxMessagePage;

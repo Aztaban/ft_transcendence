@@ -102,6 +102,6 @@ The role switcher shows one workspace per group of roles. It is UI state only: i
 |---|---|
 | Student | every account |
 | Hitchhiker | `tutor` or `head_tutor` |
-| Student Council | `sc_member` |
+| Student Council | `sc_member` or `admin` |
 
 Head Tutor and Admin features appear inside these workspaces when the user holds the role (for example the eligibility review table). The Admin endpoints of §10.2 and §10.9 have no pages yet.

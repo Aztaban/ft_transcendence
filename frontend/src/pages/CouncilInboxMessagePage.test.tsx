@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
@@ -12,7 +12,7 @@ import {
 } from "../api/scMessages";
 import i18n from "../i18n";
 import type { SCMessage } from "../types/scMessage";
-import CouncilInboxMessagePage from "./CouncilInboxMessagePage";
+import { CouncilMessageRoute } from "./CouncilInboxMessagePage";
 
 vi.mock("../api/scMessages", () => ({
   SC_NOTE_MAX_LENGTH: 5000,
@@ -50,14 +50,29 @@ afterEach(() => {
   currentUser.roles = ["student", "sc_member"];
 });
 
-// `from` is the router state the History's "Open" link sets.
-function renderPage(from?: string) {
+function BrowserBack() {
+  const navigate = useNavigate();
+
+  return (
+    <button type="button" onClick={() => navigate(-1)}>
+      Browser back
+    </button>
+  );
+}
+
+// `from` is the router state the History's "Open" link sets. `earlier` is a message opened
+// before this one, so the browser's Back goes there.
+function renderPage(from?: string, earlier?: number) {
+  const current = { pathname: "/council/inbox/3", state: from ? { from } : null };
+
   return render(
     <MemoryRouter
-      initialEntries={[{ pathname: "/council/inbox/3", state: from ? { from } : null }]}
+      initialEntries={earlier ? [`/council/inbox/${earlier}`, current] : [current]}
+      initialIndex={earlier ? 1 : 0}
     >
+      <BrowserBack />
       <Routes>
-        <Route path="/council/inbox/:id" element={<CouncilInboxMessagePage />} />
+        <Route path="/council/inbox/:id" element={<CouncilMessageRoute />} />
         <Route path="/council/inbox" element={<div>Messages page</div>} />
         <Route path="/council/history" element={<div>History page</div>} />
       </Routes>
@@ -364,19 +379,76 @@ describe("CouncilInboxMessagePage moderation", () => {
     expect(screen.getByText(unread.body)).toBeTruthy();
   });
 
-  it("explains when another Admin already deleted the message", async () => {
-    vi.mocked(deleteSCMessage).mockRejectedValue(new ApiError(404, "Not found.", "not_found"));
-    await openAsAdmin();
+  it.each([
+    ["Delete message", "Insults."],
+    ["Reveal sender", "Threats against a student."],
+  ])(
+    "shows the message is gone when another Admin deleted it first (%s)",
+    async (action, reason) => {
+      const gone = new ApiError(404, "Not found.", "not_found");
+
+      vi.mocked(deleteSCMessage).mockRejectedValue(gone);
+      vi.mocked(revealSCMessageSender).mockRejectedValue(gone);
+      await openAsAdmin();
+
+      fireEvent.click(button(action));
+      fireEvent.change(reasonBox(), { target: { value: reason } });
+      fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: action }));
+
+      expect((await screen.findByRole("alert")).textContent).toBe(
+        "This message does not exist or was removed.",
+      );
+      // Nothing left to retry: the popup, the message and its buttons are gone.
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.queryByText(unread.body)).toBeNull();
+      expect(screen.queryByRole("button", { name: "Delete message" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Reveal sender" })).toBeNull();
+    },
+  );
+
+  // Moving between messages keeps the route: without a new page per id, the popup, its reason
+  // and the result of an action would land on the other message.
+  it("starts fresh on another message: Back during a delete does not delete that one", async () => {
+    const first: SCMessage = { ...unread, id: 1, body: "The first message." };
+
+    currentUser.roles = ["student", "admin"];
+    vi.mocked(getSCMessage).mockImplementation(async (id) => (id === 1 ? first : unread));
+    renderPage(undefined, 1);
+    await screen.findByText(unread.body);
 
     fireEvent.click(button("Delete message"));
     fireEvent.change(reasonBox(), { target: { value: "Insults." } });
-    fireEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", { name: "Delete message" }),
-    );
+    fireEvent.click(button("Browser back"));
 
-    expect((await within(screen.getByRole("dialog")).findByRole("alert")).textContent).toBe(
-      "This message does not exist or was removed.",
+    expect(await screen.findByText(first.body)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Message #1" })).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(deleteSCMessage).not.toHaveBeenCalled();
+  });
+
+  it("starts fresh on another message: a revealed sender stays with its message", async () => {
+    const first: SCMessage = { ...unread, id: 1, body: "The first message." };
+
+    currentUser.roles = ["student", "admin"];
+    vi.mocked(getSCMessage).mockImplementation(async (id) => (id === 1 ? first : unread));
+    vi.mocked(revealSCMessageSender).mockResolvedValue({
+      sender: { id: 7, display_name: "Alice", email: "alice@example.com" },
+    });
+    renderPage(undefined, 1);
+    await screen.findByText(unread.body);
+
+    fireEvent.click(button("Reveal sender"));
+    fireEvent.change(reasonBox(), { target: { value: "Threats against a student." } });
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Reveal sender" }),
     );
+    await screen.findByRole("link", { name: "Alice" });
+
+    fireEvent.click(button("Browser back"));
+
+    expect(await screen.findByText(first.body)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Alice" })).toBeNull();
+    expect(button("Reveal sender")).toBeTruthy();
   });
 
   it("does not close on Escape while the request is being sent", async () => {
