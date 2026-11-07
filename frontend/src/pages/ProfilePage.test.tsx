@@ -53,11 +53,11 @@ describe("ProfilePage", () => {
   });
 
   it("shows the user's avatar when there is one", async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue({ ...lenka, avatar_url: "/api/v1/files/31/" });
+    vi.mocked(getCurrentUser).mockResolvedValue({ ...lenka, avatar_url: "/avatar.png" });
     const { container } = await renderPage();
 
     expect(container.querySelector("img.profile-card__avatar")?.getAttribute("src")).toBe(
-      "/api/v1/files/31/",
+      "/avatar.png",
     );
   });
 

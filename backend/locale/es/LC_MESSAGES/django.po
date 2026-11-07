@@ -140,14 +140,6 @@ msgstr "Remitente del mensaje al consejo revelado"
 msgid "Council message deleted"
 msgstr "Mensaje del consejo eliminado"
 
-#: apps/audit/models.py:72
-msgid "File updated by moderator"
-msgstr "Archivo actualizado por un moderador"
-
-#: apps/audit/models.py:73
-msgid "File deleted by moderator"
-msgstr "Archivo eliminado por un moderador"
-
 #: apps/audit/models.py:76
 msgid "User"
 msgstr "Usuario"
@@ -167,10 +159,6 @@ msgstr "Habilitación de tutor"
 #: apps/audit/models.py:80
 msgid "Council message"
 msgstr "Mensaje del consejo"
-
-#: apps/audit/models.py:81
-msgid "File"
-msgstr "Archivo"
 
 #: apps/audit/services.py:20
 msgid "Audit metadata must be an object."
@@ -425,18 +413,6 @@ msgstr "Cuenta actualizada"
 #: apps/notifications/models.py:25
 msgid "Student Council message created"
 msgstr "Mensaje al Consejo estudiantil creado"
-
-#: apps/notifications/models.py:26
-msgid "Resource created"
-msgstr "Recurso creado"
-
-#: apps/notifications/models.py:27
-msgid "Resource updated"
-msgstr "Recurso actualizado"
-
-#: apps/notifications/models.py:28
-msgid "Resource deleted"
-msgstr "Recurso eliminado"
 
 #: apps/notifications/services.py:22
 msgid "Notification payload must be an object."

@@ -476,11 +476,6 @@
     },
     "sc_message": {
       "created": "Nuevo mensaje anónimo para el Consejo estudiantil"
-    },
-    "resource": {
-      "created": "{{owner.display_name}} compartió «{{title}}»",
-      "updated": "Tu recurso «{{title}}» fue editado",
-      "deleted": "Tu recurso «{{title}}» fue eliminado"
     }
   },
   "home": {

@@ -20,10 +20,7 @@ export type NotificationType =
   | "eligibility.revoked"
   | "role.changed"
   | "account.updated"
-  | "sc_message.created"
-  | "resource.created"
-  | "resource.updated"
-  | "resource.deleted";
+  | "sc_message.created";
 
 export interface Notification {
   id: number;
