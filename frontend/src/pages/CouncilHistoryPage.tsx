@@ -12,8 +12,8 @@ import "../styles/council.css";
 // Council "History" (#279): the messages the council has received, read or not, newest first,
 // from GET /sc-messages/ without a filter (api-plan §10.6). The contract has no "read only"
 // filter, so the read state is shown on each card instead. The list, "Show more" and the live
-// refresh are the inbox's (`useCouncilMessages`); a refresh keeps the pages already loaded (§5.7,
-// §9.4). A message opened from here goes back to the History.
+// refresh are the inbox's (`useCouncilMessages`); a refresh keeps the messages already loaded
+// (§5.7, §9.4). A message opened from here goes back to the History.
 function CouncilHistoryPage() {
   const { t } = useTranslation();
   usePageTitle(t("council.historyTitle"));

@@ -85,12 +85,16 @@ describe("listSCMessages", () => {
     await listSCMessages({ unread: true });
     await listSCMessages({ unread: false, page: 2 });
     await listSCMessages({ unread: true, page: 1 });
+    await listSCMessages({ unread: true, pageSize: 40 });
+    await listSCMessages({ page: 2, pageSize: 100 });
 
     expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
       "/api/v1/sc-messages/",
       "/api/v1/sc-messages/?unread=true",
       "/api/v1/sc-messages/?page=2",
       "/api/v1/sc-messages/?unread=true",
+      "/api/v1/sc-messages/?unread=true&page_size=40",
+      "/api/v1/sc-messages/?page=2&page_size=100",
     ]);
   });
 });
