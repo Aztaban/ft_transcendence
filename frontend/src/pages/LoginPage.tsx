@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
 import logo42 from "../assets/figma/42.svg";
@@ -57,7 +57,7 @@ function LoginPage() {
   const from = (location.state as LoginLocationState | null)?.from;
   const afterLogin = from ? `${from.pathname}${from.search ?? ""}${from.hash ?? ""}` : "/";
   const [searchParams, setSearchParams] = useSearchParams();
-  const { login } = useAuth();
+  const { login, isLoading, isAuthenticated } = useAuth();
 
   // Our own messages are kept as keys, so they follow a language switch; a message from the
   // backend is already in the language it was asked in (api-plan §5.5).
@@ -93,6 +93,9 @@ function LoginPage() {
       // A failed 42 login comes back here without the gate's page; the one kept for it applies.
       const keptForOAuth = takeReturnPath();
 
+      // `isSubmitting` stays on: the page is leaving. Turning it off here would let the redirect
+      // below run first (the navigation is a lower-priority update) and send the user Home
+      // instead of to the page they came from (#328, #671).
       navigate(from ? afterLogin : (keptForOAuth ?? "/"), { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.code === "invalid_credentials") {
@@ -102,9 +105,20 @@ function LoginPage() {
       } else {
         setErrorKey("auth.loginError");
       }
-    } finally {
+
       setIsSubmitting(false);
     }
+  }
+
+  // Someone who already has a session gets Home instead of the form (#671), with nothing shown
+  // while the session check runs. Not during this page's own login: that one goes on to the page
+  // the user came from (#328).
+  if (isLoading) {
+    return null;
+  }
+
+  if (isAuthenticated && !isSubmitting) {
+    return <Navigate to="/" replace />;
   }
 
   return (
