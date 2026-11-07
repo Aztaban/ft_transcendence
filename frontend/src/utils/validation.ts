@@ -4,7 +4,8 @@ export const DISPLAY_NAME_MAX_LENGTH = 64;
 export const EMAIL_MAX_LENGTH = 254;
 export const PASSWORD_MIN_LENGTH = 8;
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Shared by the Register and Login forms, which check fields themselves (noValidate, #683).
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NUMERIC_ONLY_PATTERN = /^\d+$/;
 
 export interface RegistrationValues {

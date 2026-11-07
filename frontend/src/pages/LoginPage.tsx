@@ -10,6 +10,7 @@ import LanguageSwitcher from "../components/layout/LanguageSwitcher";
 import { Button, Input } from "../components/ui";
 import { useAuth } from "../store/AuthContext";
 import { rememberReturnPath, takeReturnPath, type ReturnPage } from "../utils/loginReturn";
+import { EMAIL_PATTERN } from "../utils/validation";
 import "../styles/registration.css";
 
 const OAUTH_42_REDIRECT_URL = "/api/v1/auth/42/redirect/";
@@ -91,6 +92,12 @@ function LoginPage() {
     // the browser's language, not the app's (#683).
     if (!email.trim() || !password) {
       setErrorKey("auth.missingFields");
+      return;
+    }
+
+    // Without the browser's check a malformed email would reach the API and come back as a 400.
+    if (!EMAIL_PATTERN.test(email.trim())) {
+      setErrorKey("validation.emailInvalid");
       return;
     }
 

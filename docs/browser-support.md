@@ -49,7 +49,7 @@ Each row is tested in each browser. Mark ✅ (works), ❌ (bug, with a link to t
 | | Evaluation page: accept and decline a proposed slot | | | | |
 | | Pending: preview and cancel popups; History | | | | |
 | | Hitchhikers: name search, Who, project, sort, Show more | | | | |
-| | Profile: display name, language, avatar | | | | |
+| | Profile: display name, language | | | | |
 | **Hitchhiker** | Welcome popup, eligibility request, open queue | | | | |
 | | Pick a slot (date and time choice), awaiting confirmation | | | | |
 | **Head Tutor** | Eligibility table and request page: approve and decline | | | | |
