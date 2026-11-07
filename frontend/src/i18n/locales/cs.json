@@ -37,8 +37,8 @@
   "topbar": {
     "openMenu": "Otevřít menu",
     "closeMenu": "Zavřít menu",
-    "search": "Hledat",
-    "searchPlaceholder": "hledat",
+    "search": "Hledat lidi",
+    "searchPlaceholder": "hledat lidi",
     "notifications": "Oznámení",
     "notificationsUnread_one": "Oznámení, {{count}} nepřečtené",
     "notificationsUnread_few": "Oznámení, {{count}} nepřečtená",
@@ -640,7 +640,19 @@
     "total_other": "{{count}} Hitchhikerů",
     "projectCount_one": "{{count}} projekt",
     "projectCount_few": "{{count}} projekty",
-    "projectCount_other": "{{count}} projektů"
+    "projectCount_other": "{{count}} projektů",
+    "who": "Kdo",
+    "whoHitchhikers": "Hitchhikeři",
+    "whoCouncil": "Studentská rada",
+    "whoEveryone": "Všichni",
+    "searchPeopleAria": "Hledat lidi podle jména",
+    "totalPeople_one": "{{count}} osoba",
+    "totalPeople_few": "{{count}} osoby",
+    "totalPeople_many": "{{count}} osoby",
+    "totalPeople_other": "{{count}} osob",
+    "nobodyFound": "Nikdo nenalezen",
+    "nobodyYet": "Zatím tu nikdo není",
+    "nobodyYetText": "Lidé se tu objeví, jakmile dostanou roli Hitchhiker nebo Studentská rada."
   },
   "person": {
     "headTutorText": "Hodnotí studenty a posuzuje, které projekty může každý Hitchhiker hodnotit.",
