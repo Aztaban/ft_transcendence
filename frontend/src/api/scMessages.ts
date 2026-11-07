@@ -28,14 +28,19 @@ export interface ListSCMessagesParams {
   unread?: boolean;
   // 1-based page number (§5.7).
   page?: number;
+  // Messages per page: 20 by default, at most 100 (§5.7).
+  pageSize?: number;
   // Cancels the request, e.g. when a newer one replaces it.
   signal?: AbortSignal;
 }
 
 // GET /api/v1/sc-messages/ (api-plan §10.6): SC Members and Admins. Newest first, paginated.
-export function listSCMessages({ unread, page, signal }: ListSCMessagesParams = {}): Promise<
-  Paginated<SCMessage>
-> {
+export function listSCMessages({
+  unread,
+  page,
+  pageSize,
+  signal,
+}: ListSCMessagesParams = {}): Promise<Paginated<SCMessage>> {
   const query = new URLSearchParams();
 
   if (unread) {
@@ -44,6 +49,10 @@ export function listSCMessages({ unread, page, signal }: ListSCMessagesParams = 
 
   if (page && page > 1) {
     query.set("page", String(page));
+  }
+
+  if (pageSize) {
+    query.set("page_size", String(pageSize));
   }
 
   const search = query.toString();

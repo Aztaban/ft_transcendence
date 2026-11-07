@@ -43,12 +43,39 @@ function renderPage() {
 }
 
 // No `unread` filter: the History shows read and unread messages (api-plan §10.6).
-function request(pageNumber: number) {
-  return { unread: false, page: pageNumber, signal: expect.any(AbortSignal) };
+function request(pageSize: number) {
+  return { unread: false, pageSize, signal: expect.any(AbortSignal) };
 }
 
-function requestedPages() {
-  return vi.mocked(listSCMessages).mock.calls.map(([params]) => params?.page);
+// The page sizes asked for: each load asks for the newest N messages (§5.7).
+function requestedSizes() {
+  return vi.mocked(listSCMessages).mock.calls.map(([params]) => params?.pageSize);
+}
+
+// `count` messages, newest (highest id) first; the even ones were read.
+function history(count: number) {
+  return Array.from({ length: count }, (_, index) => {
+    const id = count - index;
+
+    return scMessage(id, `Message text ${id}`, id % 2 === 0 ? "2026-10-18T09:00:00Z" : null);
+  });
+}
+
+// A fake GET /sc-messages/: answers the newest `pageSize` of `all` (§5.7).
+function answer(all: SCMessage[], pageNumber = 1, pageSize = 20) {
+  const start = (pageNumber - 1) * pageSize;
+
+  return page(
+    all.slice(start, start + pageSize),
+    all.length,
+    start + pageSize < all.length ? "next" : null,
+  );
+}
+
+function serve(all: SCMessage[]) {
+  vi.mocked(listSCMessages).mockImplementation(
+    async ({ page: pageNumber = 1, pageSize = 20 } = {}) => answer(all, pageNumber, pageSize),
+  );
 }
 
 function titles() {
@@ -72,7 +99,7 @@ describe("CouncilHistoryPage", () => {
 
     expect(screen.getByText("Loading messages…")).toBeTruthy();
     expect(await screen.findByRole("heading", { name: "Message #4" })).toBeTruthy();
-    expect(listSCMessages).toHaveBeenCalledWith(request(1));
+    expect(listSCMessages).toHaveBeenCalledWith(request(20));
     expect(titles()).toEqual(["Message #4", "Message #3"]);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Message history2 messages");
 
@@ -122,30 +149,24 @@ describe("CouncilHistoryPage", () => {
   });
 
   it("loads older messages with Show more", async () => {
-    const firstPage = Array.from({ length: 20 }, (_, index) =>
-      scMessage(30 - index, `Message text ${index}`),
-    );
-
-    vi.mocked(listSCMessages).mockImplementation(async ({ page: pageNumber } = {}) =>
-      pageNumber === 2
-        ? page([scMessage(1, "The oldest one.", "2026-10-18T09:00:00Z")], 21)
-        : page(firstPage, 21, "https://localhost/api/v1/sc-messages/?page=2"),
-    );
+    serve(history(21));
 
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Show more (1 left)" }));
 
     expect(await screen.findByRole("heading", { name: "Message #1" })).toBeTruthy();
     expect(titles()).toHaveLength(21);
-    expect(listSCMessages).toHaveBeenLastCalledWith(request(2));
+    expect(requestedSizes()).toEqual([20, 40]);
     expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
   });
 
-  it("asks for the same page again after Show more failed, and says so", async () => {
+  it("asks for the same messages again after Show more failed, and says so", async () => {
+    const all = history(21);
+
     vi.mocked(listSCMessages)
-      .mockResolvedValueOnce(page([scMessage(4, "First.")], 2, "page-2"))
+      .mockResolvedValueOnce(answer(all, 1, 20))
       .mockRejectedValueOnce(new Error("network"))
-      .mockResolvedValueOnce(page([scMessage(3, "Second.")], 2));
+      .mockResolvedValueOnce(answer(all, 1, 40));
     renderPage();
 
     fireEvent.click(await screen.findByRole("button", { name: "Show more (1 left)" }));
@@ -156,39 +177,36 @@ describe("CouncilHistoryPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Show more (1 left)" }));
 
-    await screen.findByRole("heading", { name: "Message #3" });
-    expect(requestedPages()).toEqual([1, 2, 2]);
-    expect(titles()).toEqual(["Message #4", "Message #3"]);
+    await screen.findByRole("heading", { name: "Message #1" });
+    expect(requestedSizes()).toEqual([20, 40, 40]);
+    expect(titles()).toHaveLength(21);
   });
 
   // A member who scrolled far back keeps their place when the list refreshes.
-  it("keeps every page already shown when the list refreshes", async () => {
-    vi.mocked(listSCMessages).mockImplementation(async ({ page: pageNumber } = {}) =>
-      pageNumber === 2
-        ? page([scMessage(5, "Fifth.", "2026-10-18T09:00:00Z")], 2)
-        : page([scMessage(6, "Sixth.")], 2, "page-2"),
-    );
+  it("keeps every message already shown when the list refreshes, in one request", async () => {
+    serve(history(30));
     renderPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Show more (1 left)" }));
-    await screen.findByRole("heading", { name: "Message #5" });
+    fireEvent.click(await screen.findByRole("button", { name: "Show more (10 left)" }));
+    await screen.findByRole("heading", { name: "Message #1" });
     vi.mocked(listSCMessages).mockClear();
 
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
 
-    await waitFor(() => expect(listSCMessages).toHaveBeenCalledTimes(2));
-    expect(requestedPages()).toEqual([1, 2]);
-    expect(titles()).toEqual(["Message #6", "Message #5"]);
+    await waitFor(() => expect(listSCMessages).toHaveBeenCalledTimes(1));
+    expect(requestedSizes()).toEqual([40]);
+    expect(titles()).toHaveLength(30);
   });
 
   // #676: a refresh cancels a "Show more" still on its way and loads that page itself.
   it("shows no error and frees the button when a refresh replaces Show more", async () => {
     const waiting: { signal?: AbortSignal; fail: (error: Error) => void } = { fail: () => {} };
+    const all = history(21);
 
     vi.mocked(listSCMessages)
-      .mockResolvedValueOnce(page([scMessage(6, "Sixth.")], 2, "page-2"))
+      .mockResolvedValueOnce(answer(all, 1, 20))
       .mockImplementationOnce(({ signal } = {}) => {
         waiting.signal = signal;
 
@@ -196,8 +214,7 @@ describe("CouncilHistoryPage", () => {
           waiting.fail = reject;
         });
       })
-      .mockResolvedValueOnce(page([scMessage(6, "Sixth.")], 2, "page-2"))
-      .mockResolvedValueOnce(page([scMessage(5, "Fifth.")], 2));
+      .mockResolvedValueOnce(answer(all, 1, 40));
     renderPage();
 
     fireEvent.click(await screen.findByRole("button", { name: "Show more (1 left)" }));
@@ -206,7 +223,7 @@ describe("CouncilHistoryPage", () => {
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    await waitFor(() => expect(titles()).toEqual(["Message #6", "Message #5"]));
+    await waitFor(() => expect(titles()).toHaveLength(21));
     await act(async () => waiting.fail(new Error("network")));
 
     expect(waiting.signal?.aborted).toBe(true);
@@ -299,7 +316,7 @@ describe("CouncilHistoryPage", () => {
 
     expect(screen.queryByText("Loading messages…")).toBeNull();
     expect(await screen.findByRole("heading", { name: "Message #5" })).toBeTruthy();
-    expect(listSCMessages).toHaveBeenLastCalledWith(request(1));
+    expect(listSCMessages).toHaveBeenLastCalledWith(request(20));
   });
 });
 
