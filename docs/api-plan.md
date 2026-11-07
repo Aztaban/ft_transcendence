@@ -57,6 +57,8 @@ Django ── MySQL (all state)
 | R14 | Backend messages (`message` and `fields`) are returned in the user's language, because the i18n module requires all user-facing text to be translatable (§5.5). | Architect, Oct 2026 |
 | R15 | A `pending` request is anonymous to Hitchhikers: they see the student only once they pick it (§8.7). | Team, Oct 2026 |
 | R16 | Students do not offer time slots. The Hitchhiker proposes one, and the student can say when they are free in the request's `note` (§7.1). | Team, Oct 2026 |
+| R21 | A request that passed its permission check may finish, even if a role change or suspension commits while it runs (§5.8). | Team, Nov 2026 |
+| R22 | An evaluation has started once `starts_at` has passed, whatever its status (schema §2.4). | Team, Nov 2026 |
 
 ### 3.2 Open (not to be built until decided)
 
@@ -211,7 +213,7 @@ Role assignment rules:
 
 `student` and `admin` are never assigned through the API: asking for them returns 403 `role_not_assignable`.
 
-Role changes take effect on the user's next request, because permissions are read from the database every time.
+Role changes take effect on the user's next request, because permissions are read from the database every time. A request that already passed its permission check may finish, even if a role change or suspension commits while it runs. Eligibility is stricter: pick-slot reads `tutor_eligibility` under its lock, so a revocation that commits first still refuses the pick.
 
 The endpoint-by-role view of these rules is `docs/permissions.md`.
 

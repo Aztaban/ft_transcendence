@@ -82,7 +82,7 @@ Users are never removed with `DELETE FROM user`, because their rows are referenc
 - `status` = `deleted`, `email` = `deleted-<id>@deleted.invalid`, `display_name` = `Deleted user`
 - `intra_id`, `intra_login`, `avatar_file_id` = NULL; the avatar `file` row and its bytes are deleted
 - password set unusable; all `user_roles` rows deleted; all sessions of the user ended
-- the user's evaluation requests that have not started (`pending`, `awaiting_confirmation`, or `confirmed` with `starts_at` in the future) are cancelled, with `cancelled_by` = the admin who deleted the account; slots they picked as a Hitchhiker that have not started are released (back to `pending`). Started evaluations are left as they are. The other party gets the notifications and events of an override cancel or release (api-plan §10.2)
+- the user's evaluation requests that have not started (`pending`, or `awaiting_confirmation` or `confirmed` with `starts_at` in the future) are cancelled, with `cancelled_by` = the admin who deleted the account; slots they picked as a Hitchhiker that have not started are released (back to `pending`). The other party gets the notifications and events of an override cancel or release (api-plan §10.2). Started evaluations, those whose `starts_at` has passed, are left as they are whatever their status; an `awaiting_confirmation` one then expires (§4.3)
 - their pending eligibility request, if any, is declined (`reviewed_by` = the admin); their `tutor_eligibility` rows are deleted
 - `sender_id` is set to NULL on the messages they sent to the Student Council
 - their notifications are deleted
