@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -271,6 +271,9 @@ describe("42 login", () => {
 
     expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
+    // The kept page was dropped at login, so nothing opens it once the app is shown.
+    await act(async () => {});
+    expect(screen.getByRole("heading", { name: "History" })).toBeDefined();
   });
 
   test("uses the page kept for 42 when the 42 login failed and the form is used instead", async () => {
