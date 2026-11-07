@@ -33,7 +33,7 @@ Django ── MySQL (all state)
 - **Backend:** validates input, enforces permissions and business rules, writes to MySQL, creates notifications, pushes WebSocket events.
 - **HTTP is the source of truth.** A WebSocket event only tells the frontend that something changed. The frontend then re-fetches the affected data over REST (§9).
 - **MySQL is never reached by the frontend.** Evaluation results are the one thing written outside the API: the team enters them in the Django admin (§7.1), which is why Nginx routes `/admin/` and its `/static/` assets to Django.
-- **Nginx accepts request bodies up to 11 MB** (`client_max_body_size 11m`), so uploads up to the limits in §10.7 reach Django's validation.
+- **Nginx keeps its default limit of 1 MB on request bodies.** No endpoint takes a larger body.
 
 ## 3. Decisions
 
@@ -50,7 +50,7 @@ Django ── MySQL (all state)
 | R7 | Requests expire automatically: `pending` after 14 days, `awaiting_confirmation` once the proposed start time passes. | Team, Oct 2026 |
 | R8 | Evaluation results (`result`, `feedback`, `completed_at`) are columns on the request, entered manually in the Django admin. | Team, Oct 2026 |
 | R9 | The Student Council inbox has read/unread and an internal note. No statuses, no archive, no replies. | Team, Oct 2026 |
-| R10 | Users have no `bio`. Profiles show display name, avatar and roles. | Team, Oct 2026 |
+| R10 | Users have no `bio`. Profiles show display name, initials and roles (R19). | Team, Oct 2026 |
 | R11 | Search is people-only: Hitchhikers, Head Tutors and Student Council members. | Team, Oct 2026 |
 | R12 | The GDPR module is out of scope: no data export, no self-service deletion, no email. | Team, Oct 2026 |
 | R13 | All errors use one envelope (§5.5). A missing or expired session is 401 everywhere except `GET /auth/session/`, which answers 200 with `authenticated: false` so loading the app never logs a failed request in the browser console (a mandatory subject rule). | Architect, Oct 2026 |
@@ -58,6 +58,7 @@ Django ── MySQL (all state)
 | R15 | A `pending` request is anonymous to Hitchhikers: they see the student only once they pick it (§8.7). | Team, Oct 2026 |
 | R16 | Students do not offer time slots. The Hitchhiker proposes one, and the student can say when they are free in the request's `note` (§7.1). | Team, Oct 2026 |
 | R18 | The Hitchhiker is anonymous to the student until the student confirms the slot. The student does not see `picked_by` on `awaiting_confirmation` or `cancelled` requests (the backend does not record whether a cancelled request had been confirmed, so all of them are hidden), and notifications to the student do not name the Hitchhiker (§8.7, §8.8). | Team, Nov 2026 |
+| R19 | Files are out of scope: no uploads, no avatars, no tutor resources. `avatar_url` stays in the representations and is always `null`; the frontend shows initials. | Team, Nov 2026 |
 
 ### 3.2 Open (not to be built until decided)
 
@@ -74,7 +75,7 @@ Django ── MySQL (all state)
 | Evaluation requests | YES | §10.4 | Core product; Real-time (major) |
 | Notifications | YES | §10.5, §8.8 | Notification system (minor) |
 | Student Council inbox | YES | §10.6 | Core product |
-| Files: avatars, tutor resources | YES | §10.7 | File upload and management (minor) |
+| Files: avatars, tutor resources | NO (R19) | — | — |
 | People search | YES | §10.8 | Advanced search (minor) |
 | Administration: exceptions, audit log | YES | §10.9 | Advanced permissions (major) |
 | Real-time events | YES | §9 | Real-time (major) |
@@ -93,7 +94,7 @@ These rules apply to every endpoint unless the endpoint says otherwise.
 
 ### 5.2 Request and response bodies
 
-- JSON (`Content-Type: application/json`) both ways. File uploads use `multipart/form-data`.
+- JSON (`Content-Type: application/json`) both ways.
 - Field names are `snake_case`. Enum values are lowercase `snake_case` strings (`"awaiting_confirmation"`, `"head_tutor"`). The UI translates them into labels; it never displays them raw.
 - **Datetimes** are ISO 8601 in UTC with `Z`, e.g. `"2026-10-12T15:00:00Z"`. Responses may include fractional seconds (`"2026-10-12T15:00:00.123456Z"`). Inputs must include a timezone (`Z` or an offset); a datetime without one is rejected with 400.
 - **References to other objects** are embedded objects, never bare ids: a user is a `UserRef` (§8.1), a project a `ProjectRef` (§8.6). Inputs refer to objects by id with an `_id` suffix (`"project_id": 4`).
@@ -170,7 +171,7 @@ Every error response has this body:
 | 429 | `throttled` | Rate limit hit (§5.9). The `Retry-After` header gives the wait in seconds. |
 | 500 | `server_error` | Unexpected failure. The message never contains internal details. |
 
-The 406 and 415 responses use the normal error envelope without `fields`. The one exception to the envelope is 413: Nginx rejects bodies over 11 MB before Django sees them (§2, §10.7), so that response has no `code`, and the frontend treats any 413 as "file too large". Malformed JSON sent with a supported `Content-Type` remains 400 `validation_error`, with the parse error in `fields.non_field_errors`.
+The 406 and 415 responses use the normal error envelope without `fields`. The one exception to the envelope is 413: Nginx rejects bodies over 1 MB before Django sees them (§2), so that response has no `code`. Malformed JSON sent with a supported `Content-Type` remains 400 `validation_error`, with the parse error in `fields.non_field_errors`.
 
 New codes are added to this table before they are used.
 
@@ -222,7 +223,6 @@ The endpoint-by-role view of these rules is `docs/permissions.md`.
 |---|---|
 | `POST /auth/login/`, `POST /auth/register/` | 10 per minute per IP |
 | `POST /sc-messages/` | 10 per hour per user |
-| File uploads | 30 per hour per user |
 | `GET /search/people/` | 60 per minute per user |
 | Everything else | 1000 per hour per user |
 
@@ -239,12 +239,11 @@ The frontend's TypeScript types for API data must match §8 field for field. The
 | Module | Endpoints | Section |
 |---|---|---|
 | Authentication | 7 | §10.1 |
-| Users, roles, admin user management | 13 | §10.2 |
+| Users, roles, admin user management | 11 | §10.2 |
 | Projects and eligibility | 8 | §10.3 |
 | Evaluation requests | 9 | §10.4 |
 | Notifications | 5 | §10.5 |
 | Student Council inbox | 6 | §10.6 |
-| Files | 6 | §10.7 |
 | Search | 1 | §10.8 |
 | Administration | 2 | §10.9 |
 
@@ -362,7 +361,7 @@ Returned by `GET /users/me/`. The only representation with private fields of the
 | id | integer | no | |
 | email | string | no | Login identifier. |
 | display_name | string, 1–64 chars | yes | Leading and trailing spaces are trimmed. Not unique. |
-| avatar_url | string or null | no | Relative URL of the avatar download (§10.7). `null` means use the default avatar. Changed through `/users/me/avatar/`. |
+| avatar_url | string or null | no | Always `null`: avatars are not built (R19), so the frontend shows initials. |
 | language | `"en"`, `"cs"`, `"es"` | yes | `cs` is the language code; `cz` is invalid. |
 | roles | Role[] | no | Always present, sorted by name. Every account has at least `student`; only a deleted account has none (schema §2.4). |
 | intra_login | string or null | no | 42 login when the account came from 42 OAuth. |
@@ -372,7 +371,7 @@ Returned by `GET /users/me/`. The only representation with private fields of the
   "id": 7,
   "email": "alice@example.com",
   "display_name": "Alice",
-  "avatar_url": "/api/v1/files/31/download/",
+  "avatar_url": null,
   "language": "en",
   "roles": [{ "id": 1, "name": "student" }, { "id": 2, "name": "tutor" }],
   "intra_login": "alice42"
@@ -497,9 +496,6 @@ Every create, update or delete action that affects another user notifies that us
 | `role.changed` | The user | `{role, action}`: `role` is the role name, `action` is `"assigned"` or `"revoked"` | `/profile` |
 | `account.updated` | The user | `{fields}`: names of fields an admin changed | `/profile` |
 | `sc_message.created` | All SC Members | `{message_id}` | `/council/inbox/{id}` |
-| `resource.created` | All Hitchhikers (except the uploader) | `{file_id, title, project, owner}` | `/resources/{id}` |
-| `resource.updated` | Owner, when edited by someone else | `{file_id, title}` | `/resources/{id}` |
-| `resource.deleted` | Owner, when deleted by someone else | `{title}` | empty |
 
 `evaluation.result_recorded` is created by a Django admin save hook when `result` changes from `null`.
 
@@ -527,28 +523,6 @@ Never contains anything that identifies the sender.
 ```json
 { "id": 3, "body": "The 3rd floor fridge is broken again.", "read_at": null, "discussion_note": "", "discussion_note_version": 0, "created_at": "2026-10-08T12:00:00Z" }
 ```
-
-### 8.11 File
-
-```json
-{
-  "id": 31,
-  "kind": "tutor_resource",
-  "title": "Libft evaluation checklist",
-  "description": "",
-  "project": { "id": 4, "slug": "libft", "name": "Libft" },
-  "owner": { "id": 42, "display_name": "Bob", "avatar_url": null },
-  "original_name": "libft-checklist.pdf",
-  "content_type": "application/pdf",
-  "size_bytes": 183204,
-  "visibility": "tutors",
-  "download_url": "/api/v1/files/31/download/",
-  "created_at": "2026-10-09T08:00:00Z",
-  "updated_at": "2026-10-09T08:00:00Z"
-}
-```
-
-`kind` is `avatar` or `tutor_resource`. `visibility` is `authenticated` or `tutors`.
 
 ## 9. Real-time (WebSocket)
 
@@ -585,7 +559,7 @@ Events carry ids, never full objects. On receipt the frontend re-fetches what it
 | `eligibility.revoked` | `{project_id}` | The Hitchhiker |
 | `role.changed` | `{}` | The user. The frontend re-fetches `/users/me/` and rebuilds navigation. |
 | `notification.created` | `{id}` | Recipient. The frontend refreshes the unread count. |
-| `notification.updated` | `{}` | The user, after marking one or all notifications read or deleting one. The frontend refreshes the unread count and any notification list it shows, so other tabs and devices stay in sync. |
+| `notification.updated` | `{}` | The user, after marking one or all notifications read, deleting one, or losing an `sc_message.created` notification because an Admin deleted that message (§10.6). The frontend refreshes the unread count and any notification list it shows, so other tabs and devices stay in sync. |
 | `session.ended` | `{}` | On logout: the connections of that session. On suspension or deletion: all of the user's connections. The server closes them with 4401 right after. |
 
 Events are sent with `transaction.on_commit`, so a client never re-fetches before the change is visible.
@@ -595,7 +569,7 @@ Events are sent with `transaction.on_commit`, so a client never re-fetches befor
 - Events missed while disconnected are not replayed. After reconnecting, the frontend re-fetches everything it displays.
 - Reconnect with backoff: 1 s, 2 s, 4 s, … up to 30 s, with jitter. Do not reconnect after 4401.
 - The UI shows a small "reconnecting" indicator while disconnected. It keeps working over HTTP.
-- Some changes have no event because they would only refresh views of other people with the same role: the eligibility review table after a colleague's decision, the council inbox (read state, discussion note, deletion), profiles in the user's other tabs, file lists, `scope=all` and the exceptions list. Pages showing such data re-fetch it when the browser tab becomes visible again (`visibilitychange`).
+- Some changes have no event because they would only refresh views of other people with the same role: the eligibility review table after a colleague's decision, the council inbox (read state, discussion note, deletion), profiles in the user's other tabs, `scope=all` and the exceptions list. Pages showing such data re-fetch it when the browser tab becomes visible again (`visibilitychange`).
 
 ## 10. Endpoints
 
@@ -685,8 +659,6 @@ This endpoint never answers 401, so the startup check never shows up as a failed
 |---|---|---|---|
 | GET | `/api/v1/users/me/` | Own | `Me`. |
 | PATCH | `/api/v1/users/me/` | Own | `display_name`, `language`. 204. |
-| PUT | `/api/v1/users/me/avatar/` | Own | Upload or replace the avatar. |
-| DELETE | `/api/v1/users/me/avatar/` | Own | Back to the default avatar. 204. |
 | GET | `/api/v1/users/{id}/` | Authenticated | `PublicUser`. 404 for deleted users. |
 | POST | `/api/v1/users/{id}/roles/` | Head Tutor, SC Member, Admin | Assign a role (rules in §5.8). |
 | DELETE | `/api/v1/users/{id}/roles/{role_id}/` | Admin | Revoke a role. |
@@ -714,12 +686,6 @@ This endpoint never answers 401, so the startup check never shows up as a failed
   }
 }
 ```
-
-**Avatar.** `PUT /users/me/avatar/`, `multipart/form-data` with field `file`.
-
-- PNG, JPEG or WebP, max 2 MB. The type is detected from the content and the image must decode (Pillow). Anything else: 400 `validation_error` on `file`.
-- Replaces the previous avatar file, which is deleted.
-- 200: `{"avatar_url": "/api/v1/files/31/download/"}`.
 
 **Assign a role.** `POST /users/{id}/roles/` with `{"role": "tutor"}`.
 
@@ -893,6 +859,8 @@ Notifications are created only by the backend. Other users' notifications return
 
 The note is saved only if the version still matches, and the version goes up by one. If another member saved in between: 409 `edit_conflict` and nothing changes; re-fetch, merge, retry. `is_read` alone needs no version.
 
+**Delete.** `DELETE /sc-messages/{id}/` also deletes the `sc_message.created` notifications whose `payload.message_id` is that message, read or unread, in the same transaction. After commit, each SC Member who lost one receives `notification.updated` with `{}` (§9.3). A 400, 404 or rolled-back delete leaves the notifications in place.
+
 **Reveal sender.** `POST /sc-messages/{id}/reveal-sender/` with `{"reason": "..."}` (required, 10–500 chars).
 
 - 200 `{"sender": {"id": 7, "display_name": "Alice", "email": "alice@example.com"}}`, or `{"sender": null}` if the account was deleted.
@@ -900,43 +868,7 @@ The note is saved only if the version still matches, and the version goes up by 
 
 ### 10.7 Files
 
-| Method | Path | Auth | Notes |
-|---|---|---|---|
-| POST | `/api/v1/files/` | Hitchhiker, Admin | Upload a tutor resource. |
-| GET | `/api/v1/files/` | Authenticated | Paginated tutor resources the caller may see. |
-| GET | `/api/v1/files/{id}/` | By visibility | `File` metadata. |
-| GET | `/api/v1/files/{id}/download/` | By visibility | The bytes. |
-| PATCH | `/api/v1/files/{id}/` | Owner, Head Tutor, Admin | Edit `title`, `description`, `project_id`, `visibility`. 200 `File`. |
-| DELETE | `/api/v1/files/{id}/` | Owner, Head Tutor, Admin | 204. |
-
-Avatars are uploaded through `/users/me/avatar/` (§10.2), never through `POST /files/`, and cannot be edited or deleted here.
-
-**Upload.** `POST /files/`, `multipart/form-data`:
-
-| Field | Required | Notes |
-|---|---|---|
-| file | yes | PDF, PNG, JPEG, WebP, plain text or Markdown. Max 10 MB. |
-| title | no | Up to 200 chars. Defaults to the file name. |
-| description | no | Up to 1000 chars. |
-| project_id | no | Active project the resource belongs to. |
-| visibility | no | `tutors` (default) or `authenticated`. |
-
-- The type is detected from the file contents; the extension and the browser's `Content-Type` are not trusted. Rejected types and sizes: 400 `validation_error` on `file`. The frontend validates type and size before uploading too, and shows upload progress (XHR `upload.onprogress`).
-- 201 `File`. Notification `resource.created`.
-- Nginx rejects bodies over 11 MB with 413 before Django sees them, so the frontend must check the size before uploading.
-
-**List.** Filters: `project` (slug), `owner` (user id), `q` (title). Ordering: `-created_at` (default), `title`.
-
-**Visibility.** `authenticated`: any logged-in user. `tutors`: Hitchhikers and Admins. A file the caller may not see returns 404.
-
-**Download.** `GET /files/{id}/download/`
-
-- Sent with `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`.
-- `?inline=true` serves PNG, JPEG, WebP and PDF with `Content-Disposition: inline` for preview. Other types ignore it.
-
-**Edit.** When a Head Tutor or Admin edits someone else's file: notification `resource.updated` to the owner and audit `file.updated_by_moderator`.
-
-**Delete.** When a Head Tutor or Admin deletes someone else's file: notification `resource.deleted` to the owner and audit `file.deleted_by_moderator`.
+Out of scope (R19). This section number stays free so the ones after it do not move.
 
 ### 10.8 People search
 
@@ -1003,7 +935,7 @@ Resolution uses the normal endpoints with an override (`release`, `cancel` with 
 }
 ```
 
-Audited actions: `role.assigned`, `role.revoked`, `user.updated`, `user.suspended`, `user.reactivated`, `user.deleted`, `eligibility.reviewed`, `eligibility.revoked`, `evaluation.released_by_override`, `evaluation.cancelled_by_override`, `sc_message.sender_revealed`, `sc_message.deleted`, `file.updated_by_moderator`, `file.deleted_by_moderator`.
+Audited actions: `role.assigned`, `role.revoked`, `user.updated`, `user.suspended`, `user.reactivated`, `user.deleted`, `eligibility.reviewed`, `eligibility.revoked`, `evaluation.released_by_override`, `evaluation.cancelled_by_override`, `sc_message.sender_revealed`, `sc_message.deleted`.
 
 ## 11. Changing this contract
 

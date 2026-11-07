@@ -43,7 +43,7 @@ def test_notification_round_trips_event_facts_and_defaults(recipient):
 
 def test_notification_can_have_no_target_and_persist_a_read_timestamp(recipient):
     notification = Notification.objects.create(
-        recipient=recipient, type="resource.deleted", payload={"title": "Guide"}
+        recipient=recipient, type="account.updated", payload={"fields": ["email"]}
     )
     notification.full_clean()
     notification.refresh_from_db()
@@ -58,10 +58,10 @@ def test_notification_can_have_no_target_and_persist_a_read_timestamp(recipient)
 def test_deleting_recipient_deletes_only_their_notifications(recipient):
     other = get_user_model().objects.create_user(email="other@example.com", display_name="Other")
     Notification.objects.create(
-        recipient=recipient, type="resource.deleted", payload={"title": "Guide"}
+        recipient=recipient, type="account.updated", payload={"fields": ["email"]}
     )
     kept = Notification.objects.create(
-        recipient=other, type="resource.deleted", payload={"title": "Another guide"}
+        recipient=other, type="account.updated", payload={"fields": ["language"]}
     )
 
     recipient.delete()
@@ -81,9 +81,13 @@ def test_database_has_recipient_read_created_index():
     ]
 
 
-def test_notification_rejects_undocumented_type_on_validation(recipient):
+@pytest.mark.parametrize(
+    "notification_type",
+    ["system_message", "resource.created", "resource.updated", "resource.deleted"],
+)
+def test_notification_rejects_undocumented_type_on_validation(recipient, notification_type):
     notification = Notification(
-        recipient=recipient, type="system_message", payload={"title": "Unsupported"}
+        recipient=recipient, type=notification_type, payload={"title": "Unsupported"}
     )
 
     with pytest.raises(ValidationError) as exc:

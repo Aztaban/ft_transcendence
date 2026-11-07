@@ -23,7 +23,7 @@ from apps.core.schema import CSRF_HEADER, error_responses
 from apps.core.throttling import SCMessageSendRateThrottle
 
 from .models import SCMessage
-from .notifications import notify_sc_message_created
+from .notifications import delete_sc_message_created_notifications, notify_sc_message_created
 from .permissions import CanAccessCouncilMessage, CanModerateCouncilMessage, CanReadCouncilInbox
 from .serializers import (
     SCMessageCreatedSerializer,
@@ -127,7 +127,11 @@ def _lock_message(pk, actor_id):
 
 
 def _delete_sc_message(request, pk):
-    """Remove one message. The audit row survives because target_id is not a foreign key."""
+    """Remove one message and its sc_message.created notifications (§10.6).
+
+    The audit row survives because target_id is not a foreign key. A validation
+    error, a missing message or a rolled-back delete leaves the notifications.
+    """
     with transaction.atomic():
         message = _lock_message(pk, request.user.pk)
         if message is None:
@@ -141,6 +145,7 @@ def _delete_sc_message(request, pk):
             target_id=message.pk,
             reason=serializer.validated_data["reason"],
         )
+        delete_sc_message_created_notifications(message)
         message.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 

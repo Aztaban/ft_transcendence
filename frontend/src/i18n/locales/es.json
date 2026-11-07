@@ -69,7 +69,8 @@
     "duration": "Duración",
     "requestedAgo": "Solicitado {{time}}",
     "noNote": "El estudiante no ha dejado ninguna nota.",
-    "tryAgain": "Intentar de nuevo"
+    "tryAgain": "Intentar de nuevo",
+    "serverUnavailable": "El servidor no respondió. Inténtalo de nuevo en un momento."
   },
   "time": {
     "justNow": "ahora mismo",
@@ -476,11 +477,6 @@
     },
     "sc_message": {
       "created": "Nuevo mensaje anónimo para el Consejo estudiantil"
-    },
-    "resource": {
-      "created": "{{owner.display_name}} compartió «{{title}}»",
-      "updated": "Tu recurso «{{title}}» fue editado",
-      "deleted": "Tu recurso «{{title}}» fue eliminado"
     }
   },
   "home": {
