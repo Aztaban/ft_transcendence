@@ -69,8 +69,6 @@ class AuditLog(TimeStampedModel):
         )
         SC_MESSAGE_SENDER_REVEALED = "sc_message.sender_revealed", _("Council sender revealed")
         SC_MESSAGE_DELETED = "sc_message.deleted", _("Council message deleted")
-        FILE_UPDATED_BY_MODERATOR = "file.updated_by_moderator", _("File updated by moderator")
-        FILE_DELETED_BY_MODERATOR = "file.deleted_by_moderator", _("File deleted by moderator")
 
     class TargetType(models.TextChoices):
         USER = "user", _("User")
@@ -78,7 +76,6 @@ class AuditLog(TimeStampedModel):
         TUTOR_ELIGIBILITY_REQUEST = "tutor_eligibility_request", _("Tutor eligibility request")
         TUTOR_ELIGIBILITY = "tutor_eligibility", _("Tutor eligibility")
         SC_MESSAGE = "sc_message", _("Council message")
-        FILE = "file", _("File")
 
     id = models.BigAutoField(primary_key=True)
     actor = models.ForeignKey(

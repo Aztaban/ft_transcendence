@@ -214,6 +214,12 @@
   opacity: 0.6;
 }
 
+/* Chrome and Edge add their own clear button to a search field, Firefox does not: the name chip
+   clears the search in every browser (#683). */
+.hitchhikers__search input::-webkit-search-cancel-button {
+  display: none;
+}
+
 .hitchhikers__search input {
   width: 100%;
   height: 100%;

@@ -10,12 +10,13 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotAuthenticated, PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import HITCHHIKER_ROLES
+from apps.accounts.services.locking import lock_users
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
@@ -52,7 +53,7 @@ User = get_user_model()
 def tutor_eligibility(request, user_id):
     """Return projects this hitchhiker is approved to evaluate (public listing)."""
     _ = request
-    tutor = get_object_or_404(User, pk=user_id)
+    tutor = get_object_or_404(User.objects.exclude(status=User.Status.DELETED), pk=user_id)
     projects = list_approved_projects_for_tutor(tutor)
     return Response(ProjectRefSerializer(projects, many=True).data)
 
@@ -142,8 +143,14 @@ def _create_eligibility_request(request):
         )
 
     with transaction.atomic():
-        # Schema §3.2: lock the requester row, then check pending in the same transaction.
-        User.objects.select_for_update().get(pk=request.user.pk)
+        heads = User.objects.filter(roles__name=Role.Name.HEAD_TUTOR)
+        head_ids = list(heads.values_list("pk", flat=True).distinct())
+        # Notification recipients belong in the same ordered lock set as the requester.
+        lock_users(request.user.pk, *head_ids)
+        current = User.objects.get(pk=request.user.pk)
+        if not current.is_active:
+            raise NotAuthenticated()
+        head_ids = list(heads.filter(pk__in=head_ids).values_list("pk", flat=True).distinct())
         if TutorEligibilityRequest.objects.filter(
             requester=request.user,
             status=TutorEligibilityRequest.Status.PENDING,
@@ -155,7 +162,7 @@ def _create_eligibility_request(request):
             )
         eligibility_request = TutorEligibilityRequest.objects.create(requester=request.user)
         eligibility_request.projects.set(projects)
-        notify_eligibility_requested(eligibility_request)
+        notify_eligibility_requested(eligibility_request, head_ids=head_ids)
 
     return Response(
         EligibilityRequestSerializer(eligibility_request).data,
@@ -292,6 +299,9 @@ def tutor_eligibility_request_review(request, request_id):
     reviewed_at = timezone.now()
 
     with transaction.atomic():
+        # Deletion declines pending reviews and removes grants while holding
+        # these user rows. A late reviewer must not recreate eligibility.
+        lock_users(request.user.pk, eligibility_request.requester_id)
         updated = TutorEligibilityRequest.objects.filter(
             pk=request_id,
             status=TutorEligibilityRequest.Status.PENDING,

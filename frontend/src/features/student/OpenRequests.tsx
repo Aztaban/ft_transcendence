@@ -54,10 +54,7 @@ function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
                   <p>
                     <Trans
                       i18nKey="dashboard.proposed"
-                      values={{
-                        name: request.picked_by?.display_name ?? "",
-                        slot: formatSlot(request.starts_at, request.ends_at),
-                      }}
+                      values={{ slot: formatSlot(request.starts_at, request.ends_at) }}
                       components={{ time: <time dateTime={request.starts_at} /> }}
                     />
                   </p>

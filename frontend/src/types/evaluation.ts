@@ -16,6 +16,7 @@ export interface EvaluationRequest {
   project: ProjectRef;
   note: string;
   status: EvaluationRequestStatus;
+  // null for the student while `awaiting_confirmation` and on `cancelled` requests (R18, §8.7).
   picked_by: UserRef | null;
   starts_at: string | null;
   ends_at: string | null;

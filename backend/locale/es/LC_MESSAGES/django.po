@@ -140,14 +140,6 @@ msgstr "Remitente del mensaje al consejo revelado"
 msgid "Council message deleted"
 msgstr "Mensaje del consejo eliminado"
 
-#: apps/audit/models.py:72
-msgid "File updated by moderator"
-msgstr "Archivo actualizado por un moderador"
-
-#: apps/audit/models.py:73
-msgid "File deleted by moderator"
-msgstr "Archivo eliminado por un moderador"
-
 #: apps/audit/models.py:76
 msgid "User"
 msgstr "Usuario"
@@ -167,10 +159,6 @@ msgstr "Habilitación de tutor"
 #: apps/audit/models.py:80
 msgid "Council message"
 msgstr "Mensaje del consejo"
-
-#: apps/audit/models.py:81
-msgid "File"
-msgstr "Archivo"
 
 #: apps/audit/services.py:20
 msgid "Audit metadata must be an object."
@@ -426,18 +414,6 @@ msgstr "Cuenta actualizada"
 msgid "Student Council message created"
 msgstr "Mensaje al Consejo estudiantil creado"
 
-#: apps/notifications/models.py:26
-msgid "Resource created"
-msgstr "Recurso creado"
-
-#: apps/notifications/models.py:27
-msgid "Resource updated"
-msgstr "Recurso actualizado"
-
-#: apps/notifications/models.py:28
-msgid "Resource deleted"
-msgstr "Recurso eliminado"
-
 #: apps/notifications/services.py:22
 msgid "Notification payload must be an object."
 msgstr "Los datos de la notificación deben ser un objeto."
@@ -453,3 +429,35 @@ msgstr "Checo"
 #: config/settings/base.py:125
 msgid "Spanish"
 msgstr "Español"
+
+#: apps/accounts/models.py:38
+msgid "Active"
+msgstr "Activo"
+
+#: apps/accounts/models.py:39
+msgid "Suspended"
+msgstr "Suspendido"
+
+#: apps/accounts/models.py:40
+msgid "Deleted"
+msgstr "Eliminado"
+
+#: apps/accounts/views/admin_users.py
+msgid "Deleted accounts cannot be edited."
+msgstr "Las cuentas eliminadas no se pueden editar."
+
+#: apps/accounts/exceptions.py
+msgid "You cannot change your own account status."
+msgstr "No puedes cambiar el estado de tu propia cuenta."
+
+#: apps/accounts/exceptions.py
+msgid "This action is not allowed in the user's current status."
+msgstr "Esta acción no está permitida en el estado actual del usuario."
+
+#: apps/accounts/services/deletion.py
+msgid "Deleted user"
+msgstr "Usuario eliminado"
+
+#: apps/evaluations/admin.py
+msgid "This evaluation changed since you loaded it. Reload the page and try again."
+msgstr "Esta evaluación ha cambiado desde que la cargaste. Recarga la página e inténtalo de nuevo."

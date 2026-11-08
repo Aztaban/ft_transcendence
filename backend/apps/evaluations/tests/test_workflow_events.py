@@ -160,8 +160,7 @@ def test_release_uses_locked_picker_facts_after_clearing_pick(participants):
         starts_at=timezone.now() + timedelta(days=1),
         ends_at=timezone.now() + timedelta(days=1, minutes=45),
     )
-    # A stale caller must not supply the tutor identity used by the notification.
-    evaluation.picked_by = users[43]
+    # Notification facts must survive clearing the request's picker below.
     release_slot(evaluation, users[42])
     assert evaluation.picked_by_id is None
     assert list(
@@ -173,7 +172,6 @@ def test_release_uses_locked_picker_facts_after_clearing_pick(participants):
             "payload": {
                 "request_id": 17,
                 "project": {"id": 4, "slug": "libft", "name": "Libft"},
-                "tutor": {"id": 42, "display_name": "User"},
             },
             "target_url": "/evaluations/17",
             "read_at": None,
@@ -225,21 +223,21 @@ def test_notification_failure_rolls_back_lifecycle_action(
 
 
 @pytest.mark.parametrize("previous_status", ["pending", "awaiting_confirmation"])
-def test_expiry_notification_helper_retains_previous_status_and_picker(
+def test_expiry_notification_helper_keeps_previous_status_and_notifies_only_the_student(
     participants, previous_status
 ):
     project, users = participants
-    # The expiry task is pending; its caller must capture these facts before updating.
+    # The caller captures the previous status before the expiry update changes it.
     evaluation = EvaluationRequest.objects.create(
         id=17, student=users[7], project=project, status="expired", expired_at=timezone.now()
     )
     with transaction.atomic():
-        notify_evaluation_expired(
-            evaluation,
-            previous_status=previous_status,
-            previous_picker_id=42 if previous_status == "awaiting_confirmation" else None,
+        notify_evaluation_expired(evaluation, previous_status=previous_status)
+    assert list(
+        Notification.objects.order_by("recipient_id").values(
+            "recipient_id", "type", "payload", "target_url", "read_at"
         )
-    expected = [
+    ) == [
         {
             "recipient_id": 7,
             "type": "evaluation.expired",
@@ -252,25 +250,3 @@ def test_expiry_notification_helper_retains_previous_status_and_picker(
             "read_at": None,
         }
     ]
-    if previous_status == "awaiting_confirmation":
-        expected.append(
-            {
-                "recipient_id": 42,
-                "type": "evaluation.expired",
-                "payload": {
-                    "request_id": 17,
-                    "project": {"id": 4, "slug": "libft", "name": "Libft"},
-                    "previous_status": "awaiting_confirmation",
-                },
-                "target_url": "/evaluations/17",
-                "read_at": None,
-            }
-        )
-    assert (
-        list(
-            Notification.objects.order_by("recipient_id").values(
-                "recipient_id", "type", "payload", "target_url", "read_at"
-            )
-        )
-        == expected
-    )

@@ -43,8 +43,8 @@ def notifications(people):
     first = Notification.objects.create(
         id=41,
         recipient=people[0],
-        type="resource.deleted",
-        payload={"title": "Old guide"},
+        type="account.updated",
+        payload={"fields": ["email"]},
         read_at=READ,
     )
     second = Notification.objects.create(
@@ -57,8 +57,8 @@ def notifications(people):
     Notification.objects.create(
         id=43,
         recipient=people[1],
-        type="resource.deleted",
-        payload={"title": "Private"},
+        type="account.updated",
+        payload={"fields": ["language"]},
     )
     Notification.objects.filter(pk__in=[41, 42]).update(created_at=CREATED)
     return first, second
@@ -110,8 +110,8 @@ def test_list_returns_exact_own_representation_newest_first(client, notification
             },
             {
                 "id": 41,
-                "type": "resource.deleted",
-                "payload": {"title": "Old guide"},
+                "type": "account.updated",
+                "payload": {"fields": ["email"]},
                 "target_url": "",
                 "read_at": "2026-10-20T13:00:00Z",
                 "created_at": "2026-10-20T12:00:00Z",
@@ -178,8 +178,8 @@ def test_list_paginates_with_links(client, notifications):
         "results": [
             {
                 "id": 41,
-                "type": "resource.deleted",
-                "payload": {"title": "Old guide"},
+                "type": "account.updated",
+                "payload": {"fields": ["email"]},
                 "target_url": "",
                 "read_at": "2026-10-20T13:00:00Z",
                 "created_at": "2026-10-20T12:00:00Z",
@@ -192,7 +192,7 @@ def test_list_paginates_with_links(client, notifications):
 def test_pagination_default_and_maximum(client, people, query, size):
     Notification.objects.bulk_create(
         [
-            Notification(recipient=people[0], type="resource.deleted", payload={"title": "Guide"})
+            Notification(recipient=people[0], type="account.updated", payload={"fields": ["email"]})
             for _ in range(101)
         ]
     )

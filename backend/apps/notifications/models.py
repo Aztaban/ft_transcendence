@@ -23,9 +23,6 @@ class Notification(TimeStampedModel):
         ROLE_CHANGED = "role.changed", _("Role changed")
         ACCOUNT_UPDATED = "account.updated", _("Account updated")
         SC_MESSAGE_CREATED = "sc_message.created", _("Student Council message created")
-        RESOURCE_CREATED = "resource.created", _("Resource created")
-        RESOURCE_UPDATED = "resource.updated", _("Resource updated")
-        RESOURCE_DELETED = "resource.deleted", _("Resource deleted")
 
     id = models.BigAutoField(primary_key=True)
     recipient = models.ForeignKey(
