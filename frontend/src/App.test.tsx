@@ -222,7 +222,7 @@ describe("logged out", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
     fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
   });
 
   test("shows nothing while the session check runs", () => {
@@ -253,7 +253,7 @@ describe("42 login", () => {
     sessionStorage.setItem("login-return-to", "/history?status=cancelled");
     renderAt("/");
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
   });
 
@@ -269,11 +269,11 @@ describe("42 login", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
     fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
     // The kept page was dropped at login, so nothing opens it once the app is shown.
     await act(async () => {});
-    expect(screen.getByRole("heading", { name: "History" })).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1, name: "History" })).toBeDefined();
   });
 
   test("uses the page kept for 42 when the 42 login failed and the form is used instead", async () => {
@@ -288,7 +288,7 @@ describe("42 login", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
     fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
   });
 });
