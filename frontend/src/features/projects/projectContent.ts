@@ -48,9 +48,11 @@ export function projectTexts(slug: string): ProjectTexts | null {
 
   const labels = i18n.t(`${key}.topics`, { returnObjects: true }) as string[];
   const english = i18n.t(`${key}.topics`, { lng: "en", returnObjects: true }) as string[];
+  // A missing list comes back as the key itself: then there is nothing tested to show.
+  const tested: unknown = i18n.t(`${key}.tested`, { returnObjects: true });
 
   return {
     topics: labels.map((label, index) => ({ label, icon: topicIcon(english[index] ?? label) })),
-    tested: i18n.t(`${key}.tested`, { returnObjects: true }) as string[],
+    tested: Array.isArray(tested) ? tested : [],
   };
 }

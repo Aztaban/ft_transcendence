@@ -14,6 +14,8 @@ const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
 const RADIUS = 140;
 const ICON_SIZE = 28;
+// Labels are 13px Courier New: every character is 0.6em wide.
+const CHAR_WIDTH = 7.8;
 // Slice fill and the deeper shade used for its icon (app palette: turquoise, amber, blue, violet).
 const SLICE_COLORS = [
   { fill: "#e6f8f8", ink: "#00989a" },
@@ -30,6 +32,31 @@ function formatShare(count: number) {
   const share = 100 / count;
 
   return `${Number.isInteger(share) ? share : share.toFixed(1)}%`;
+}
+
+// A label that is wider than the room beside the chart goes on two lines, split at the space
+// that keeps the longer line shortest ("CUMPLIMIENTO" / "DEL PROTOCOLO" in Spanish).
+export function wrapLabel(text: string, room: number): string[] {
+  const maxChars = Math.floor(room / CHAR_WIDTH);
+  const words = text.split(" ");
+
+  if (text.length <= maxChars || words.length < 2) {
+    return [text];
+  }
+
+  let best = [text];
+
+  for (let index = 1; index < words.length; index += 1) {
+    const lines = [words.slice(0, index).join(" "), words.slice(index).join(" ")];
+
+    if (
+      Math.max(...lines.map((line) => line.length)) < Math.max(...best.map((line) => line.length))
+    ) {
+      best = lines;
+    }
+  }
+
+  return best;
 }
 
 // "Project topics" pie from the Figma: one equal slice per topic, an icon inside each slice,
@@ -61,6 +88,9 @@ function TopicsChart({ projectName, topics }: TopicsChartProps) {
           const cos = Math.cos(middle);
           const anchor = Math.abs(cos) < 0.2 ? "middle" : cos > 0 ? "start" : "end";
           const color = SLICE_COLORS[index % SLICE_COLORS.length];
+          // Room between the label and the edge of the chart, on the side the text runs to.
+          const room = anchor === "start" ? WIDTH - label.x : anchor === "end" ? label.x : WIDTH;
+          const lines = wrapLabel(topic.label.toUpperCase(), room);
           const style = {
             "--i": index,
             "--dx": `${Math.cos(middle) * 8}px`,
@@ -88,7 +118,16 @@ function TopicsChart({ projectName, topics }: TopicsChartProps) {
               <g className="topics-chart__caption">
                 <line x1={tickStart.x} y1={tickStart.y} x2={tickEnd.x} y2={tickEnd.y} />
                 <text x={label.x} y={label.y} textAnchor={anchor}>
-                  <tspan className="topics-chart__label">{topic.label.toUpperCase()}</tspan>
+                  {lines.map((line, lineIndex) => (
+                    <tspan
+                      key={line}
+                      className="topics-chart__label"
+                      x={label.x}
+                      dy={lineIndex === 0 ? undefined : 15}
+                    >
+                      {line}
+                    </tspan>
+                  ))}
                   <tspan className="topics-chart__share" x={label.x} dy="16">
                     {share}
                   </tspan>
