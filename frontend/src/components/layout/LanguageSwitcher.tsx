@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 
-import { updateCurrentUser } from "../../api/users";
 import { changeLanguage, isLanguage, LANGUAGES } from "../../i18n";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import type { Language } from "../../types/user";
@@ -10,7 +9,7 @@ import "../../styles/language-switcher.css";
 // saved as their language (PATCH /users/me/), so it follows them to other devices (#310).
 function LanguageSwitcher() {
   const { t, i18n } = useTranslation();
-  const { user, refresh } = useCurrentUser();
+  const { user, update } = useCurrentUser();
   const current = isLanguage(i18n.resolvedLanguage) ? i18n.resolvedLanguage : "en";
 
   const select = (language: Language) => {
@@ -21,11 +20,9 @@ function LanguageSwitcher() {
     changeLanguage(language);
 
     if (user && user.language !== language) {
-      updateCurrentUser({ language })
-        .then(refresh)
-        .catch(() => {
-          // The page stays in the chosen language; the saved one is kept for the next login.
-        });
+      update({ language }).catch(() => {
+        // The page stays in the chosen language; the saved one is kept for the next login.
+      });
     }
   };
 
