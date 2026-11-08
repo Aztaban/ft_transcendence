@@ -156,7 +156,7 @@
 }
 
 .hitchhikers__how-link:hover {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
   box-shadow: 0 6px 14px rgba(0, 186, 188, 0.3);
   transform: translateY(-1px);
 }

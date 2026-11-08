@@ -205,7 +205,7 @@
 }
 
 .person-profile__action--primary:hover {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
 }
 
 .person-profile__action span {
@@ -325,7 +325,7 @@
 }
 
 .person-profile__segment--on:hover {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
   color: var(--color-on-accent);
 }
 

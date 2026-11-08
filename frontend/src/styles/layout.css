@@ -139,6 +139,11 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* The selected role keeps its teal on hover: its dark text would be unreadable on #383838. */
+.sidebar__role-option--selected:hover {
+  background: var(--color-accent);
+}
+
 /* Navigation */
 
 .sidebar__nav {
@@ -188,6 +193,12 @@
   background: var(--color-accent);
   color: var(--color-on-accent);
   font-weight: var(--font-weight-medium);
+}
+
+/* The active link keeps its teal on hover: its dark text and icon would vanish on #303030. */
+.sidebar__nav-link--active:hover {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 .sidebar__nav-icon {

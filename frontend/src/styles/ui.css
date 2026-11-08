@@ -30,7 +30,7 @@
 }
 
 .ui-button--primary:hover:not(:disabled) {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
   filter: brightness(0.96);
 }
 
