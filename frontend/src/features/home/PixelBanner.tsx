@@ -11,7 +11,7 @@ interface Scene {
   Art: ComponentType;
   // A key of the "home" texts in src/i18n/locales.
   label: string;
-  // Must match the animation length of the scene in pixel-banner.css.
+  // Sets `--scene-length`, which pixel-banner.css reads.
   seconds: number;
 }
 

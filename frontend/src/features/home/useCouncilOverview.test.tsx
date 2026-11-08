@@ -99,6 +99,21 @@ describe("useCouncilOverview", () => {
     expect(countPeople).toHaveBeenCalledTimes(1);
   });
 
+  it("tries the Hitchhiker count again on the next refresh until it loads", async () => {
+    vi.mocked(countPeople).mockRejectedValueOnce(new Error("throttled")).mockResolvedValue(9);
+    const { result } = renderHook(() => useCouncilOverview());
+
+    await waitFor(() => expect(countPeople).toHaveBeenCalledTimes(1));
+    expect(result.current.hitchhikerCount).toBeNull();
+
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() => expect(result.current.hitchhikerCount).toBe(9));
+    expect(countPeople).toHaveBeenCalledTimes(2);
+  });
+
   it("asks for nothing until the user's role is confirmed", async () => {
     currentUser.isLoaded = false;
 

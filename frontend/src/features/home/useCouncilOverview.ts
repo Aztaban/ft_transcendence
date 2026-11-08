@@ -62,9 +62,10 @@ export function useCouncilOverview() {
   }, [isMember, reloadKey]);
 
   // Optional, and limited together with people search (§5.9): without it only its box is empty.
-  // The number barely changes, so it is loaded once, not on every refresh.
+  // The number barely changes, so once it has loaded it is not asked again; until then every
+  // refresh tries again.
   useEffect(() => {
-    if (!isMember) {
+    if (!isMember || hitchhikerCount !== null) {
       return;
     }
 
@@ -81,7 +82,7 @@ export function useCouncilOverview() {
     return () => {
       active = false;
     };
-  }, [isMember]);
+  }, [isMember, reloadKey, hitchhikerCount]);
 
   return { unread, unreadCount, totalCount, hitchhikerCount, isLoading: isFirstLoad, hasError };
 }

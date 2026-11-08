@@ -107,6 +107,48 @@ describe("useHitchhikerRequests", () => {
     expect(screen.getByText("loading")).toBeTruthy();
   });
 
+  it("asks for nothing until it is enabled", async () => {
+    loggedIn(true);
+    vi.mocked(listEvaluationRequests).mockResolvedValue(page([]));
+
+    function Gate({ enabled }: { enabled: boolean }) {
+      const { isLoading } = useHitchhikerRequests(enabled);
+
+      return <p>{isLoading ? "loading" : "loaded"}</p>;
+    }
+
+    const { rerender } = render(<Gate enabled={false} />);
+
+    expect(screen.getByText("loading")).toBeTruthy();
+    expect(listEvaluationRequests).not.toHaveBeenCalled();
+
+    rerender(<Gate enabled />);
+
+    expect(await screen.findByText("loaded")).toBeTruthy();
+    expect(listEvaluationRequests).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the open count when only the picked list fails", async () => {
+    loggedIn(true);
+    vi.mocked(listEvaluationRequests).mockImplementation(async (params) => {
+      if (params?.scope === "picked") {
+        throw new Error("network");
+      }
+
+      return { ...page([]), count: 12 };
+    });
+
+    function Count() {
+      const { openCount } = useHitchhikerRequests();
+
+      return <p>{openCount === null ? "unknown" : `open count ${openCount}`}</p>;
+    }
+
+    render(<Count />);
+
+    expect(await screen.findByText("open count 12")).toBeTruthy();
+  });
+
   it("reports when the requests cannot be loaded", async () => {
     loggedIn(true);
     vi.mocked(listEvaluationRequests).mockRejectedValue(new Error("network"));

@@ -158,8 +158,8 @@ function Dashboard({ overview, action, children }: DashboardProps) {
 function StudentDashboard() {
   const { t } = useTranslation();
   const { requests, isLoading, hasError } = useStudentRequests();
-  const { isLoaded } = useCurrentUser();
-  const counts = useRequestOverview(studentQueries, EVALUATION_EVENTS, isLoaded);
+  // Every account is a student: the numbers need no role, so they do not wait for /users/me/.
+  const counts = useRequestOverview(studentQueries, EVALUATION_EVENTS, true);
   const now = useCurrentMinute();
   const next = counts.upcoming?.results.find(
     (request) => request.ends_at !== null && Date.parse(request.ends_at) > now,
@@ -218,13 +218,12 @@ function StudentDashboard() {
 // Skeletons during the first load, only the error when it fails (#258).
 function HitchhikerDashboard() {
   const { t } = useTranslation();
-  const { openRequests, openCount, pickedRequests, isLoading, hasError } = useHitchhikerRequests();
+  // Both wait until /users/me/ confirms the role of the restored workspace, so no 403s.
   const { roles, isLoaded } = useCurrentUser();
-  const counts = useRequestOverview(
-    hitchhikerQueries,
-    OPEN_QUEUE_EVENTS,
-    isLoaded && workspacesFor(roles).includes("HITCHHIKER"),
-  );
+  const enabled = isLoaded && workspacesFor(roles).includes("HITCHHIKER");
+  const { openRequests, openCount, pickedRequests, isLoading, hasError } =
+    useHitchhikerRequests(enabled);
+  const counts = useRequestOverview(hitchhikerQueries, OPEN_QUEUE_EVENTS, enabled);
 
   const overview: OverviewItem[] = [
     {

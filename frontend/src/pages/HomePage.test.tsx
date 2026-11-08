@@ -13,6 +13,12 @@ import HomePage from "./HomePage";
 
 // What the mocked hooks report; each test may change it before rendering.
 const load = vi.hoisted(() => ({ isLoading: false, hasError: false }));
+// The real roles from /users/me/, and the `enabled` each list hook was last called with.
+const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
+const enabledWith = vi.hoisted(() => ({
+  hitchhiker: undefined as boolean | undefined,
+  overview: undefined as boolean | undefined,
+}));
 const data = vi.hoisted(() => ({
   overview: {} as Record<string, Paginated<EvaluationRequest>>,
   unread: [] as SCMessage[],
@@ -23,19 +29,25 @@ const data = vi.hoisted(() => ({
 }));
 
 // The student boxes load data from the API; that is tested in OpenRequests and the hook itself.
+vi.mock("../store/CurrentUserContext", () => ({
+  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+}));
 vi.mock("../features/hitchhiker/useHitchhikerRequests", () => ({
-  useHitchhikerRequests: () => ({
-    openRequests: [],
-    openCount: data.openCount,
-    pickedRequests: [],
-    ...load,
-  }),
+  useHitchhikerRequests: (enabled?: boolean) => {
+    enabledWith.hitchhiker = enabled;
+
+    return { openRequests: [], openCount: data.openCount, pickedRequests: [], ...load };
+  },
 }));
 vi.mock("../features/student/useStudentRequests", () => ({
   useStudentRequests: () => ({ requests: [], ...load, reload: vi.fn() }),
 }));
 vi.mock("../features/home/useRequestOverview", () => ({
-  useRequestOverview: () => data.overview,
+  useRequestOverview: (_queries: unknown, _events: unknown, enabled: boolean) => {
+    enabledWith.overview = enabled;
+
+    return data.overview;
+  },
 }));
 vi.mock("../features/home/useCouncilOverview", () => ({
   useCouncilOverview: () => ({
@@ -59,6 +71,10 @@ afterEach(() => {
   data.totalCount = 0;
   data.hitchhikerCount = 0;
   data.openCount = null;
+  currentUser.roles = [];
+  currentUser.isLoaded = false;
+  enabledWith.hitchhiker = undefined;
+  enabledWith.overview = undefined;
 });
 
 // Switches the active role, as the role selector in the sidebar does.
@@ -84,6 +100,33 @@ function renderHomeAs(role: AppRole) {
 }
 
 describe("HomePage", () => {
+  // A Hitchhiker workspace restored from the tab is only trusted once /users/me/ has the role.
+  it("asks for no Hitchhiker list until the role is confirmed", () => {
+    const view = renderHomeAs("HITCHHIKER");
+
+    expect(screen.getByText("Ready to evaluate?")).toBeTruthy();
+    expect(enabledWith).toEqual({ hitchhiker: false, overview: false });
+
+    currentUser.roles = ["student", "tutor"];
+    currentUser.isLoaded = true;
+    view.rerender(
+      <MemoryRouter>
+        <RoleProvider>
+          <HomePage />
+        </RoleProvider>
+      </MemoryRouter>,
+    );
+
+    expect(enabledWith).toEqual({ hitchhiker: true, overview: true });
+  });
+
+  it("loads the student numbers without waiting for /users/me/", () => {
+    renderHomeAs("STUDENT");
+
+    expect(currentUser.isLoaded).toBe(false);
+    expect(enabledWith.overview).toBe(true);
+  });
+
   it("shows the student call to action for students", () => {
     renderHomeAs("STUDENT");
 
