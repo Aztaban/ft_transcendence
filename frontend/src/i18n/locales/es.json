@@ -430,7 +430,26 @@
     "historyAboutTitle": "Sobre el historial",
     "historyAboutText": "Los mensajes leídos también se quedan aquí. Marcar uno como leído o no leído lo cambia para todos los miembros del consejo.",
     "open": "Abrir",
-    "openAria": "Abrir el mensaje n.º {{id}}"
+    "openAria": "Abrir el mensaje n.º {{id}}",
+    "moderation": {
+      "title": "Moderación",
+      "hint": "Solo para administradores. Cada acción se guarda en el registro de auditoría con tu motivo.",
+      "revealButton": "Mostrar remitente",
+      "deleteButton": "Eliminar mensaje",
+      "revealTitle": "¿Mostrar quién envió el mensaje n.º {{id}}?",
+      "revealText": "Solo para investigar un abuso. Tu nombre y el motivo se guardan en el registro de auditoría, y el consejo sigue sin ver al remitente.",
+      "revealConfirm": "Mostrar remitente",
+      "deleteTitle": "¿Eliminar el mensaje n.º {{id}}?",
+      "deleteText": "El mensaje desaparece para todos los miembros del consejo y no se puede recuperar. Tu nombre y el motivo se guardan en el registro de auditoría.",
+      "deleteConfirm": "Eliminar mensaje",
+      "reason": "Motivo",
+      "reasonHint_one": "Al menos {{count}} carácter",
+      "reasonHint_many": "Al menos {{count}} caracteres",
+      "reasonHint_other": "Al menos {{count}} caracteres",
+      "sender": "Remitente",
+      "senderDeleted": "La cuenta del remitente fue eliminada.",
+      "deleted": "El mensaje se ha eliminado. El motivo queda guardado en el registro de auditoría."
+    }
   },
   "roles": {
     "student": "Estudiante",

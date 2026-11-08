@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 
 import { ApiError } from "../api/client";
 import {
+  deleteSCMessage,
   getSCMessage,
+  revealSCMessageSender,
   saveSCMessageNote,
   SC_NOTE_MAX_LENGTH,
   setSCMessageRead,
@@ -13,9 +15,12 @@ import usePageTitle from "../components/layout/usePageTitle";
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
 import MarkedReadDialog from "../features/council/MarkedReadDialog";
+import ModerationDialog, { type ModerationAction } from "../features/council/ModerationDialog";
 import i18n from "../i18n";
-import type { SCMessage } from "../types/scMessage";
+import { useCurrentUser } from "../store/CurrentUserContext";
+import type { SCMessage, SCSenderReveal } from "../types/scMessage";
 import { formatDate, formatTimeAgo } from "../utils/dateTime";
+import { canModerateCouncil } from "../utils/permissions";
 import "../styles/council.css";
 
 type LoadState = "loading" | "ready" | "missing" | "error";
@@ -32,12 +37,24 @@ function actionErrorMessage(error: unknown) {
   return i18n.t("council.errorSomething");
 }
 
+// Called at render with the kept error, so it follows the language switcher. An answer without a
+// code gets the generic text. (A 404 does not reach the popup: the page shows the message is gone.)
+function moderationErrorMessage(error: unknown) {
+  if (error instanceof ApiError && error.code) {
+    return error.fields?.reason?.[0] ?? error.message;
+  }
+
+  return i18n.t("council.errorSomething");
+}
+
 // One council message (#277, #278, Figma "new message" and "history review"). Opening it does
 // not mark it read (api-plan §10.6): the member does, and can mark it unread again. The council
 // shares one internal note per message, saved with the version it was loaded at; when another
 // member saved first (409 `edit_conflict`), their note is loaded and the draft stays for merging.
 // It is also the page council notifications open (`/council/inbox/{id}`, §8.8).
 // "Back" leads to the History when the message was opened there, otherwise to the inbox.
+// Admins also moderate here (#280): they delete abusive messages and, for an abuse investigation,
+// reveal the sender. Both need a reason, which goes into the audit log (§10.6).
 function CouncilInboxMessagePage() {
   const { t } = useTranslation();
   const { id } = useParams();
@@ -61,6 +78,14 @@ function CouncilInboxMessagePage() {
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteStatus, setNoteStatus] = useState<"" | "saved" | "conflict">("");
   const [noteError, setNoteError] = useState("");
+  // The real roles from /users/me/; the backend checks them again (§10.6).
+  const { roles } = useCurrentUser();
+  const mayModerate = canModerateCouncil(roles);
+  const [moderation, setModeration] = useState<ModerationAction | null>(null);
+  const [isModerating, setIsModerating] = useState(false);
+  const [moderationError, setModerationError] = useState<unknown>(null);
+  const [revealed, setRevealed] = useState<SCSenderReveal | null>(null);
+  const [isDeleted, setIsDeleted] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -147,8 +172,44 @@ function CouncilInboxMessagePage() {
     }
   }
 
+  async function confirmModeration(reason: string) {
+    if (!message || !moderation) {
+      return;
+    }
+
+    setModerationError(null);
+    setIsModerating(true);
+
+    try {
+      if (moderation === "delete") {
+        await deleteSCMessage(message.id, reason);
+        setIsDeleted(true);
+      } else {
+        setRevealed(await revealSCMessageSender(message.id, reason));
+      }
+
+      setModeration(null);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        // Another Admin deleted it first: the message and its buttons go, so nothing is retried.
+        setModeration(null);
+        setMessage(null);
+        setLoadState("missing");
+      } else {
+        setModerationError(error);
+      }
+    } finally {
+      setIsModerating(false);
+    }
+  }
+
+  function closeModeration() {
+    setModeration(null);
+    setModerationError(null);
+  }
+
   const isRead = message?.read_at != null;
-  const isBusy = isUpdatingRead || isSavingNote;
+  const isBusy = isUpdatingRead || isSavingNote || isModerating;
   const noteChanged = message !== null && note !== noteBase.text;
 
   return (
@@ -201,7 +262,16 @@ function CouncilInboxMessagePage() {
         </p>
       )}
 
-      {loadState === "ready" && message && (
+      {isDeleted && (
+        <div className="council-card council-deleted" role="status">
+          <p>{t("council.moderation.deleted")}</p>
+          <Link className="council-button" to={backTo}>
+            {t("council.backToMessages")}
+          </Link>
+        </div>
+      )}
+
+      {loadState === "ready" && message && !isDeleted && (
         <div className="council-layout">
           <div className="council-message__body">
             <article className="council-card council-letter">
@@ -321,13 +391,76 @@ function CouncilInboxMessagePage() {
                 </button>
               </div>
             </section>
+
+            {mayModerate && (
+              <section className="council-panel council-moderation">
+                <h2>{t("council.moderation.title")}</h2>
+                <p>{t("council.moderation.hint")}</p>
+
+                {revealed && (
+                  <div className="council-moderation__sender" role="status">
+                    <strong>{t("council.moderation.sender")}</strong>
+                    {revealed.sender ? (
+                      <>
+                        <Link to={`/people/${revealed.sender.id}`}>
+                          {revealed.sender.display_name}
+                        </Link>
+                        <span>{revealed.sender.email}</span>
+                      </>
+                    ) : (
+                      <span>{t("council.moderation.senderDeleted")}</span>
+                    )}
+                  </div>
+                )}
+
+                <div className="council-moderation__actions">
+                  {!revealed && (
+                    <button
+                      className="council-more"
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => setModeration("reveal")}
+                    >
+                      {t("council.moderation.revealButton")}
+                    </button>
+                  )}
+                  <button
+                    className="council-danger"
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => setModeration("delete")}
+                  >
+                    {t("council.moderation.deleteButton")}
+                  </button>
+                </div>
+              </section>
+            )}
           </aside>
         </div>
       )}
 
       {isMarkedRead && <MarkedReadDialog onClose={() => navigate(backTo)} />}
+
+      {moderation && message && (
+        <ModerationDialog
+          action={moderation}
+          messageId={message.id}
+          isSubmitting={isModerating}
+          error={moderationError === null ? "" : moderationErrorMessage(moderationError)}
+          onConfirm={confirmModeration}
+          onClose={closeModeration}
+        />
+      )}
     </section>
   );
+}
+
+// The route renders a new page for every message id: moving between messages (the bell, Back)
+// then never carries a popup, a reason, a revealed sender or "deleted" over to another message.
+export function CouncilMessageRoute() {
+  const { id } = useParams();
+
+  return <CouncilInboxMessagePage key={id} />;
 }
 
 export default CouncilInboxMessagePage;

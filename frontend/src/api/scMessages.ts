@@ -1,6 +1,6 @@
 import { apiRequest } from "./client";
 import type { Paginated } from "../types/pagination";
-import type { SCMessage, SCMessageReceipt } from "../types/scMessage";
+import type { SCMessage, SCMessageReceipt, SCSenderReveal } from "../types/scMessage";
 
 // api-plan §10.6: a message and the council's note are up to 5000 characters.
 export const SC_MESSAGE_MAX_LENGTH = 5000;
@@ -88,4 +88,33 @@ export function setSCMessageRead(id: number, isRead: boolean): Promise<SCMessage
 // current one; otherwise 409 `edit_conflict` and nothing changes: re-fetch, merge, retry.
 export function saveSCMessageNote(id: number, note: string, version: number): Promise<SCMessage> {
   return patchSCMessage(id, { discussion_note: note, discussion_note_version: version });
+}
+
+// api-plan §10.6: the reason for deleting is 1–500 characters, for revealing the sender 10–500.
+export const SC_DELETE_REASON_MAX_LENGTH = 500;
+export const SC_REVEAL_REASON_MIN_LENGTH = 10;
+export const SC_REVEAL_REASON_MAX_LENGTH = 500;
+
+// DELETE /api/v1/sc-messages/{id}/ (api-plan §10.6): Admins only, to remove abusive content. The
+// reason is required and goes into the audit log (`sc_message.deleted`). 204.
+export function deleteSCMessage(id: number, reason: string): Promise<void> {
+  return apiRequest<void>(`/api/v1/sc-messages/${id}/`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ reason }),
+  });
+}
+
+// POST /api/v1/sc-messages/{id}/reveal-sender/ (api-plan §10.6): Admins only, for abuse
+// investigations. Every call writes the audit row `sc_message.sender_revealed` with the reason.
+export function revealSCMessageSender(id: number, reason: string): Promise<SCSenderReveal> {
+  return apiRequest<SCSenderReveal>(`/api/v1/sc-messages/${id}/reveal-sender/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ reason }),
+  });
 }
