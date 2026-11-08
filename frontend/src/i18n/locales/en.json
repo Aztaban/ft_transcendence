@@ -18,6 +18,7 @@
     "messages": "Messages",
     "eligibility": "Eligibility",
     "users": "Users",
+    "exceptions": "Exceptions",
     "skipToContent": "Skip to content"
   },
   "workspace": {
@@ -448,6 +449,34 @@
       "senderDeleted": "The sender's account was deleted.",
       "deleted": "The message was deleted. The reason is saved in the audit log."
     }
+  },
+  "exceptions": {
+    "title": "Evaluation exceptions",
+    "subtitle": "Evaluation requests that need a human decision, newest first.",
+    "loading": "Loading the exceptions…",
+    "error": "We couldn't load the exceptions. Please try again later.",
+    "emptyTitle": "Nothing needs a decision",
+    "emptyText": "Requests show up here when a participant is suspended, a Hitchhiker loses eligibility or a result is missing.",
+    "columns": {
+      "problem": "Problem",
+      "request": "Request",
+      "student": "Student",
+      "hitchhiker": "Hitchhiker",
+      "slot": "Slot"
+    },
+    "problems": {
+      "participant_inactive": "Participant suspended",
+      "tutor_lost_eligibility": "Hitchhiker not eligible",
+      "result_missing": "Result missing"
+    },
+    "hints": {
+      "participant_inactive": "The student or the Hitchhiker is suspended. Release or cancel the request, or reactivate the account.",
+      "tutor_lost_eligibility": "The Hitchhiker can no longer evaluate this project. Release the slot or cancel the request.",
+      "result_missing": "The evaluation is over but has no result. Enter it in the Django admin."
+    },
+    "noSlot": "No slot yet",
+    "pagesAria": "Exception pages",
+    "page": "Page {{page}} of {{count}}"
   },
   "adminUser": {
     "title": "User",

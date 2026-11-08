@@ -613,6 +613,63 @@
   outline-offset: 2px;
 }
 
+/* Evaluation exceptions (/manage/exceptions) */
+
+.admin-users__empty p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+}
+
+.exceptions__problem,
+.exceptions__request {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.exceptions__badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.exceptions__badge--participant_inactive {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.exceptions__badge--tutor_lost_eligibility {
+  background: #fff4dc;
+  color: #8a5300;
+}
+
+.exceptions__badge--result_missing {
+  background: #eaf1fc;
+  color: #2f5ea8;
+}
+
+.exceptions__hint,
+.exceptions__request span {
+  color: #5b6262;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.exceptions__hint {
+  max-width: 320px;
+}
+
+@media (max-width: 640px) {
+  .exceptions__problem,
+  .exceptions__request {
+    align-items: flex-end;
+  }
+}
+
 @keyframes admin-users-shimmer {
   from {
     background-position: 200% 0;

@@ -94,7 +94,7 @@ The role switcher shows one workspace per group of roles. It is UI state only: i
 | Student Council | `sc_member` or `admin` |
 | Administration | `admin` |
 
-Head Tutor and Admin features also appear inside the other workspaces when the user holds the role (for example the eligibility review table). The Administration workspace holds the Admin pages under `/manage/`: user management (`/manage/users`, §10.2) for now. Its Home sends the user to `/manage/users`. The frontend never uses `/admin/`, which Nginx routes to the Django admin.
+Head Tutor and Admin features also appear inside the other workspaces when the user holds the role (for example the eligibility review table). The Administration workspace holds the Admin pages under `/manage/`: user management (`/manage/users`, §10.2) and the evaluation exceptions (`/manage/exceptions`, §10.9). Head Tutors open the exceptions page from the Hitchhiker workspace. Its Home sends the user to `/manage/users`. The frontend never uses `/admin/`, which Nginx routes to the Django admin.
 
 ## Administrative permission implementation (#330)
 

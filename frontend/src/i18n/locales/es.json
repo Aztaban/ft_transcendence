@@ -18,6 +18,7 @@
     "messages": "Mensajes",
     "eligibility": "Elegibilidad",
     "users": "Usuarios",
+    "exceptions": "Excepciones",
     "skipToContent": "Saltar al contenido"
   },
   "workspace": {
@@ -452,6 +453,34 @@
       "senderDeleted": "La cuenta del remitente fue eliminada.",
       "deleted": "El mensaje se ha eliminado. El motivo queda guardado en el registro de auditoría."
     }
+  },
+  "exceptions": {
+    "title": "Excepciones de evaluación",
+    "subtitle": "Solicitudes de evaluación que necesitan una decisión humana, de la más reciente a la más antigua.",
+    "loading": "Cargando las excepciones…",
+    "error": "No pudimos cargar las excepciones. Inténtalo de nuevo más tarde.",
+    "emptyTitle": "Nada necesita una decisión",
+    "emptyText": "Las solicitudes aparecen aquí cuando un participante está suspendido, un Hitchhiker pierde la elegibilidad o falta un resultado.",
+    "columns": {
+      "problem": "Problema",
+      "request": "Solicitud",
+      "student": "Estudiante",
+      "hitchhiker": "Hitchhiker",
+      "slot": "Horario"
+    },
+    "problems": {
+      "participant_inactive": "Participante suspendido",
+      "tutor_lost_eligibility": "Hitchhiker no elegible",
+      "result_missing": "Falta el resultado"
+    },
+    "hints": {
+      "participant_inactive": "El estudiante o el Hitchhiker está suspendido. Libera o cancela la solicitud, o reactiva la cuenta.",
+      "tutor_lost_eligibility": "El Hitchhiker ya no puede evaluar este proyecto. Libera el horario o cancela la solicitud.",
+      "result_missing": "La evaluación terminó pero no tiene resultado. Introdúcelo en el admin de Django."
+    },
+    "noSlot": "Aún sin horario",
+    "pagesAria": "Páginas de excepciones",
+    "page": "Página {{page}} de {{count}}"
   },
   "adminUser": {
     "title": "Usuario",

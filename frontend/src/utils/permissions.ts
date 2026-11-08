@@ -15,6 +15,9 @@ export const routePermissions = {
   councilHistory: ["COUNCIL"],
   // The backend also checks the real admin role (api-plan §10.2).
   adminUsers: ["ADMIN"],
+  // Head Tutors open it in the Hitchhiker workspace, Admins in the Admin one; the page also checks
+  // the real head_tutor / admin role.
+  evaluationExceptions: ["HITCHHIKER", "ADMIN"],
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export function hasRolePermission(role: AppRole, allowedRoles: readonly AppRole[]): boolean {
@@ -36,4 +39,10 @@ export function canReadCouncilMessages(userRoles: readonly string[]): boolean {
 // Only Admins delete a council message or reveal its sender (api-plan §10.6).
 export function canModerateCouncil(userRoles: readonly string[]): boolean {
   return userRoles.includes("admin");
+}
+
+// Head Tutors and Admins see the evaluation requests that need a human decision (api-plan §10.9).
+// Takes the user's real roles (wire names, §5.8).
+export function canSeeEvaluationExceptions(userRoles: readonly string[]): boolean {
+  return userRoles.includes("head_tutor") || userRoles.includes("admin");
 }

@@ -19,7 +19,7 @@ import slackLogo from "../../assets/figma/slack.svg";
 import { useAuth } from "../../store/AuthContext";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import { useRole, type AppRole } from "../../store/RoleContext";
-import { canReviewEligibility } from "../../utils/permissions";
+import { canReviewEligibility, canSeeEvaluationExceptions } from "../../utils/permissions";
 
 interface NavigationItem {
   // A key of the "nav" texts in src/i18n/locales.
@@ -56,14 +56,23 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
   ],
 
   // The Admin pages live under /manage/ (/admin/ belongs to the Django admin). No Home: in this
-  // workspace Home opens Users.
-  ADMIN: [{ labelKey: "nav.users", to: "/manage/users", icon: hitchhikersIcon }],
+  // workspace Home opens Users. Exceptions is shared with Head Tutors (Hitchhiker workspace).
+  ADMIN: [
+    { labelKey: "nav.users", to: "/manage/users", icon: hitchhikersIcon },
+    { labelKey: "nav.exceptions", to: "/manage/exceptions", icon: pendingIcon },
+  ],
 };
 
 const eligibilityItem: NavigationItem = {
   labelKey: "nav.eligibility",
   to: "/eligibility-requests",
   icon: hitchhikersIcon,
+};
+
+const exceptionsItem: NavigationItem = {
+  labelKey: "nav.exceptions",
+  to: "/manage/exceptions",
+  icon: pendingIcon,
 };
 
 interface SidebarProps {
@@ -83,11 +92,16 @@ function Sidebar({ isOpen = false }: SidebarProps) {
   const roleButtonRef = useRef<HTMLButtonElement>(null);
   const roleMenuRef = useRef<HTMLDivElement>(null);
 
-  // Head Tutors and Admins also review eligibility requests in the Hitchhiker workspace.
+  // Head Tutors and Admins also review eligibility requests and see the evaluation exceptions in
+  // the Hitchhiker workspace.
   const { roles: userRoles } = useCurrentUser();
   const visibleNavigation =
-    activeRole === "HITCHHIKER" && canReviewEligibility(userRoles)
-      ? [...navigationByRole.HITCHHIKER, eligibilityItem]
+    activeRole === "HITCHHIKER"
+      ? [
+          ...navigationByRole.HITCHHIKER,
+          ...(canReviewEligibility(userRoles) ? [eligibilityItem] : []),
+          ...(canSeeEvaluationExceptions(userRoles) ? [exceptionsItem] : []),
+        ]
       : navigationByRole[activeRole];
 
   // Opening the drawer moves the focus to its first link.

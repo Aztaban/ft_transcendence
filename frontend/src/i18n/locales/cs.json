@@ -18,6 +18,7 @@
     "messages": "Zprávy",
     "eligibility": "Oprávnění",
     "users": "Uživatelé",
+    "exceptions": "Výjimky",
     "skipToContent": "Přeskočit na obsah"
   },
   "workspace": {
@@ -458,6 +459,34 @@
       "senderDeleted": "Účet odesílatele byl smazán.",
       "deleted": "Zpráva byla smazána. Důvod je uložen v auditním záznamu."
     }
+  },
+  "exceptions": {
+    "title": "Výjimky v hodnoceních",
+    "subtitle": "Žádosti o hodnocení, o kterých musí rozhodnout člověk, od nejnovějších.",
+    "loading": "Načítám výjimky…",
+    "error": "Výjimky se nepodařilo načíst. Zkuste to prosím později.",
+    "emptyTitle": "Nic nečeká na rozhodnutí",
+    "emptyText": "Žádosti se tu objeví, když je účastník pozastaven, Hitchhiker přijde o oprávnění nebo chybí výsledek.",
+    "columns": {
+      "problem": "Problém",
+      "request": "Žádost",
+      "student": "Student",
+      "hitchhiker": "Hitchhiker",
+      "slot": "Termín"
+    },
+    "problems": {
+      "participant_inactive": "Účastník pozastaven",
+      "tutor_lost_eligibility": "Hitchhiker bez oprávnění",
+      "result_missing": "Chybí výsledek"
+    },
+    "hints": {
+      "participant_inactive": "Student nebo Hitchhiker je pozastaven. Uvolněte nebo zrušte žádost, nebo účet obnovte.",
+      "tutor_lost_eligibility": "Hitchhiker už tento projekt hodnotit nemůže. Uvolněte termín nebo zrušte žádost.",
+      "result_missing": "Hodnocení skončilo, ale nemá výsledek. Zadejte ho v administraci Django."
+    },
+    "noSlot": "Zatím bez termínu",
+    "pagesAria": "Stránky výjimek",
+    "page": "Strana {{page}} z {{count}}"
   },
   "adminUser": {
     "title": "Uživatel",

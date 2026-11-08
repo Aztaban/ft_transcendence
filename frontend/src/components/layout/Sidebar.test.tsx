@@ -112,7 +112,7 @@ describe("Sidebar role switcher", () => {
     ]);
   });
 
-  test("offers the Admin workspace to an Admin, with Users as its only item", () => {
+  test("offers the Admin workspace to an Admin, with Users and Exceptions", () => {
     currentUser.roles = ["student", "admin"];
     currentUser.isLoaded = true;
 
@@ -134,7 +134,10 @@ describe("Sidebar role switcher", () => {
       within(navigation)
         .getAllByRole("link")
         .map((link) => [link.textContent, link.getAttribute("href")]),
-    ).toEqual([["Users", "/manage/users"]]);
+    ).toEqual([
+      ["Users", "/manage/users"],
+      ["Exceptions", "/manage/exceptions"],
+    ]);
   });
 
   test("does not offer the Admin workspace without the admin role", () => {
@@ -246,6 +249,18 @@ describe("Sidebar eligibility link", () => {
     );
   });
 
+  test("shows Exceptions to a Head Tutor in the Hitchhiker workspace", () => {
+    currentUser.roles = ["tutor", "head_tutor"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    switchToHitchhiker();
+
+    expect(screen.getByRole("link", { name: "Exceptions" }).getAttribute("href")).toBe(
+      "/manage/exceptions",
+    );
+  });
+
   test("hides Eligibility from a Hitchhiker who is not a Head Tutor", () => {
     currentUser.roles = ["tutor"];
     currentUser.isLoaded = true;
@@ -254,6 +269,7 @@ describe("Sidebar eligibility link", () => {
     switchToHitchhiker();
 
     expect(screen.queryByRole("link", { name: "Eligibility" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Exceptions" })).toBeNull();
   });
 });
 
