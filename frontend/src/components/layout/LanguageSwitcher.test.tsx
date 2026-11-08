@@ -17,7 +17,6 @@ vi.mock("../../store/CurrentUserContext", () => ({
     roles: [],
     isLoaded: true,
     loadFailed: false,
-    refresh: vi.fn(),
     update: current.update,
   }),
 }));

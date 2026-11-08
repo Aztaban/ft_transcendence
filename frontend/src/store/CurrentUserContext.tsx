@@ -22,9 +22,8 @@ interface CurrentUserValue {
   isLoaded: boolean;
   // True when the last GET /users/me/ failed; with `user` still null nothing can be shown.
   loadFailed: boolean;
-  refresh: () => void;
   // PATCH /users/me/ (204, §10.2), then re-fetch, so every reader of `user` sees the change.
-  // Rejects when the PATCH fails; a failed re-fetch keeps the previous profile.
+  // Rejects when either request fails; the previous profile is kept until a later load.
   update: (payload: UpdateUserProfilePayload) => Promise<void>;
 }
 
@@ -49,30 +48,41 @@ export function CurrentUserProvider({ children }: CurrentUserProviderProps) {
   const [reloadKey, setReloadKey] = useState(0);
   // Only the newest request may set state: a logout or a later load wins over an older answer.
   const requestId = useRef(0);
+  // Read at call time, so a save that finishes after a logout does not fetch without a session.
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  isAuthenticatedRef.current = isAuthenticated;
 
+  // Resolves to whether the profile was fetched. An answer that a newer request has overtaken
+  // counts as fetched: the newer one shows the result.
   const load = useCallback(async () => {
+    if (!isAuthenticatedRef.current) {
+      return false;
+    }
+
     const id = ++requestId.current;
 
     try {
       const profile = await getCurrentUser();
 
-      if (id !== requestId.current) {
-        return;
+      if (id === requestId.current) {
+        setUser(profile);
+        setIsLoaded(true);
+        setLoadFailed(false);
+
+        // The language saved in the profile wins over this device's choice (#309).
+        if (isLanguage(profile.language)) {
+          changeLanguage(profile.language);
+        }
       }
 
-      setUser(profile);
-      setIsLoaded(true);
-      setLoadFailed(false);
-
-      // The language saved in the profile wins over this device's choice (#309).
-      if (isLanguage(profile.language)) {
-        changeLanguage(profile.language);
-      }
+      return true;
     } catch {
       if (id === requestId.current) {
         // Keep what was loaded before; the next refresh tries again.
         setLoadFailed(true);
       }
+
+      return false;
     }
   }, []);
 
@@ -81,7 +91,11 @@ export function CurrentUserProvider({ children }: CurrentUserProviderProps) {
   const update = useCallback(
     async (payload: UpdateUserProfilePayload) => {
       await updateCurrentUser(payload);
-      await load();
+
+      // Saved, but not shown: the caller must not report success for a profile nobody can see.
+      if (!(await load())) {
+        throw new Error("The profile was saved but could not be re-fetched.");
+      }
     },
     [load],
   );
@@ -102,7 +116,7 @@ export function CurrentUserProvider({ children }: CurrentUserProviderProps) {
 
   return (
     <CurrentUserContext.Provider
-      value={{ user, roles: roleNames(user), isLoaded, loadFailed, refresh, update }}
+      value={{ user, roles: roleNames(user), isLoaded, loadFailed, update }}
     >
       {children}
     </CurrentUserContext.Provider>
@@ -114,8 +128,7 @@ const noCurrentUser: CurrentUserValue = {
   roles: [],
   isLoaded: false,
   loadFailed: false,
-  refresh: () => {},
-  update: () => Promise.resolve(),
+  update: () => Promise.reject(new Error("No CurrentUserProvider above this component.")),
 };
 
 // Without a provider (e.g. in component tests) nothing is loaded.

@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import usePageTitle from "../components/layout/usePageTitle";
@@ -63,10 +63,13 @@ function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
-  // The language picked but not saved yet; `null` shows the saved one, also after a switch in
-  // the top bar.
+  // The language picked but not saved yet; `null` shows the saved one.
   const [draftLanguage, setDraftLanguage] = useState<Language | null>(null);
   const settingsLanguage: Language = draftLanguage ?? profile?.language ?? "en";
+
+  // A change of the saved language, here or in the top bar, drops the pick: otherwise Save would
+  // write the stale pick over the top bar's choice.
+  useEffect(() => setDraftLanguage(null), [profile?.language]);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState("");
   const [settingsMessage, setSettingsMessage] = useState("");
@@ -137,7 +140,6 @@ function ProfilePage() {
       // The context switches the page to the saved language once it has re-fetched.
       await update({ language: settingsLanguage });
 
-      setDraftLanguage(null);
       setSettingsMessage(t("profile.settingsUpdated"));
     } catch (error) {
       if (error instanceof ApiError) {

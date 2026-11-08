@@ -1,4 +1,5 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getCurrentUser, updateCurrentUser } from "../api/users";
@@ -28,14 +29,36 @@ function me(roles: RoleName[]): UserProfile {
   };
 }
 
+// A promise settled by the test, to order the answers of two requests.
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
+
 function Probe() {
   const { user, roles, isLoaded, loadFailed, update } = useCurrentUser();
+  const [saved, setSaved] = useState("");
 
   return (
     <>
       <p>{isLoaded ? `roles: ${roles.join(",")}` : loadFailed ? "failed" : "not loaded"}</p>
       <p>{user ? `name: ${user.display_name}` : "no name"}</p>
-      <button type="button" onClick={() => update({ display_name: "Diana K." }).catch(() => {})}>
+      <p>{saved}</p>
+      <button
+        type="button"
+        onClick={() =>
+          update({ display_name: "Diana K." }).then(
+            () => setSaved("save ok"),
+            () => setSaved("save failed"),
+          )
+        }
+      >
         rename
       </button>
     </>
@@ -143,8 +166,67 @@ describe("CurrentUserProvider", () => {
     act(() => screen.getByRole("button", { name: "rename" }).click());
 
     expect(await screen.findByText("name: Diana K.")).toBeTruthy();
+    expect(await screen.findByText("save ok")).toBeTruthy();
     expect(updateCurrentUser).toHaveBeenCalledWith({ display_name: "Diana K." });
     expect(getCurrentUser).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects the save when the re-fetch fails, and keeps the old profile", async () => {
+    vi.mocked(getCurrentUser)
+      .mockResolvedValueOnce(me(["student"]))
+      .mockRejectedValueOnce(new Error("network"));
+    vi.mocked(updateCurrentUser).mockResolvedValue(undefined);
+
+    renderWithSocket();
+    await screen.findByText("name: dkolarov");
+
+    act(() => screen.getByRole("button", { name: "rename" }).click());
+
+    expect(await screen.findByText("save failed")).toBeTruthy();
+    expect(screen.getByText("name: dkolarov")).toBeTruthy();
+    expect(getCurrentUser).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the newest answer when an older request resolves later", async () => {
+    const first = deferred<UserProfile>();
+    const second = deferred<UserProfile>();
+    vi.mocked(getCurrentUser)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+
+    renderWithSocket();
+    act(() => FakeSocket.latest().serverSend({ event: "role.changed", data: {} }));
+
+    await act(async () => second.resolve(me(["student", "tutor"])));
+    expect(screen.getByText("roles: student,tutor")).toBeTruthy();
+
+    await act(async () => first.resolve(me(["student"])));
+    expect(screen.getByText("roles: student,tutor")).toBeTruthy();
+  });
+
+  it("does not fetch the profile when a save finishes after the logout", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(me(["student"]));
+    const patch = deferred<void>();
+    vi.mocked(updateCurrentUser).mockReturnValue(patch.promise);
+
+    const view = renderWithSocket();
+    await screen.findByText("name: dkolarov");
+    act(() => screen.getByRole("button", { name: "rename" }).click());
+
+    session.isAuthenticated = false;
+    view.rerender(
+      <LiveContext.Provider value={null}>
+        <CurrentUserProvider>
+          <Probe />
+        </CurrentUserProvider>
+      </LiveContext.Provider>,
+    );
+    await waitFor(() => expect(screen.getByText("not loaded")).toBeTruthy());
+
+    await act(async () => patch.resolve());
+
+    expect(await screen.findByText("save failed")).toBeTruthy();
+    expect(getCurrentUser).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the profile when the PATCH fails", async () => {
@@ -156,7 +238,7 @@ describe("CurrentUserProvider", () => {
 
     act(() => screen.getByRole("button", { name: "rename" }).click());
 
-    await waitFor(() => expect(updateCurrentUser).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("save failed")).toBeTruthy();
     expect(screen.getByText("name: dkolarov")).toBeTruthy();
     expect(getCurrentUser).toHaveBeenCalledTimes(1);
   });

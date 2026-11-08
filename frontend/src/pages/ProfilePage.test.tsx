@@ -18,7 +18,6 @@ vi.mock("../store/CurrentUserContext", () => ({
     roles: current.user ? current.user.roles.map((role) => role.name) : [],
     isLoaded: current.user !== null,
     loadFailed: current.loadFailed,
-    refresh: vi.fn(),
     update: current.update,
   }),
 }));
@@ -165,17 +164,37 @@ describe("ProfilePage", () => {
     expect(current.update).toHaveBeenCalledWith({ language: "cs" });
   });
 
-  it("follows a language saved from the top bar", async () => {
+  it("follows a language saved from the top bar, dropping an unsaved pick", async () => {
     const { rerender } = await renderPage();
+    const languages = screen.getByRole("group", { name: "Language" });
+
+    fireEvent.click(within(languages).getByRole("radio", { name: /Czech/ }));
 
     current.user = { ...lenka, language: "es" };
     rerender(<ProfilePage />);
 
-    const languages = screen.getByRole("group", { name: "Language" });
     expect(
       (within(languages).getByRole("radio", { name: /Spanish/ }) as HTMLInputElement).checked,
     ).toBe(true);
     expect(texts("Account details", ".profile-tile__value")[1]).toBe("Spanish");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(current.update).toHaveBeenCalledWith({ language: "es" });
+  });
+
+  it("shows the save error when the profile was saved but could not be re-fetched", async () => {
+    current.update.mockRejectedValue(
+      new Error("The profile was saved but could not be re-fetched."),
+    );
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit profile" }));
+    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Lenka H." } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe("Unable to save profile changes.");
+    expect(screen.queryByText("Profile updated.")).toBeNull();
   });
 
   it("says when the profile cannot be loaded", async () => {

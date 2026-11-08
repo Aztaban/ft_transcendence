@@ -36,7 +36,6 @@ vi.mock("./store/CurrentUserContext", () => ({
   useCurrentUser: () => ({
     ...currentUser,
     loadFailed: false,
-    refresh: () => {},
     update: () => Promise.resolve(),
   }),
 }));
