@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -108,7 +108,8 @@ describe("AdminUserDetailPage", () => {
       "/manage/users",
     );
     expect(getAdminUser).toHaveBeenCalledWith(1);
-    expect(document.title).toBe("Anna · 42 Evals");
+    // The title is set by an effect that runs just after the heading appears.
+    await waitFor(() => expect(document.title).toBe("Anna · 42 Evals"));
   });
 
   it("sends only the changed fields, trimmed", async () => {

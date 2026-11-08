@@ -56,8 +56,12 @@ describe("workspacesFor", () => {
     expect(workspacesFor(["tutor", "sc_member"])).toEqual(["STUDENT", "HITCHHIKER", "COUNCIL"]);
   });
 
-  it("opens Administration only for the admin role", () => {
-    expect(workspacesFor(["student", "admin"])).toEqual(["STUDENT", "ADMIN"]);
+  it("gives Admins the Student Council workspace, where they read and moderate messages", () => {
+    expect(workspacesFor(["student", "admin"])).toContain("COUNCIL");
+  });
+
+  it("opens the Admin workspace only for the admin role", () => {
+    expect(workspacesFor(["student", "admin"])).toEqual(["STUDENT", "COUNCIL", "ADMIN"]);
     expect(workspacesFor(["student", "tutor", "head_tutor", "sc_member", "admin"])).toEqual([
       "STUDENT",
       "HITCHHIKER",

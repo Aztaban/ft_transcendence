@@ -429,7 +429,25 @@
     "historyAboutTitle": "About the history",
     "historyAboutText": "Read messages stay here too. Marking one as read or unread changes it for every council member.",
     "open": "Open",
-    "openAria": "Open message #{{id}}"
+    "openAria": "Open message #{{id}}",
+    "moderation": {
+      "title": "Moderation",
+      "hint": "Admins only. Each action is saved in the audit log with your reason.",
+      "revealButton": "Reveal sender",
+      "deleteButton": "Delete message",
+      "revealTitle": "Reveal who sent message #{{id}}?",
+      "revealText": "Only for an abuse investigation. Your name and reason are saved in the audit log, and the sender stays hidden from the council.",
+      "revealConfirm": "Reveal sender",
+      "deleteTitle": "Delete message #{{id}}?",
+      "deleteText": "The message is removed for every council member and cannot be restored. Your name and reason are saved in the audit log.",
+      "deleteConfirm": "Delete message",
+      "reason": "Reason",
+      "reasonHint_one": "At least {{count}} character",
+      "reasonHint_other": "At least {{count}} characters",
+      "sender": "Sender",
+      "senderDeleted": "The sender's account was deleted.",
+      "deleted": "The message was deleted. The reason is saved in the audit log."
+    }
   },
   "adminUser": {
     "title": "User",
@@ -764,6 +782,7 @@
     "or": "or",
     "continueWith42": "CONTINUE WITH 42",
     "registered": "Account created. You can log in now.",
+    "missingFields": "Enter your email and password.",
     "invalidCredentials": "Invalid email or password.",
     "loginError": "Unable to log in. Please try again.",
     "register": "REGISTER",

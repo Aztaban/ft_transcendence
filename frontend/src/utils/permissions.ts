@@ -26,3 +26,14 @@ export function hasRolePermission(role: AppRole, allowedRoles: readonly AppRole[
 export function canReviewEligibility(userRoles: readonly string[]): boolean {
   return userRoles.includes("head_tutor") || userRoles.includes("admin");
 }
+
+// SC Members and Admins read council messages (api-plan §10.6), so both get the Student Council
+// workspace. Takes the user's real roles (wire names, §5.8).
+export function canReadCouncilMessages(userRoles: readonly string[]): boolean {
+  return userRoles.includes("sc_member") || userRoles.includes("admin");
+}
+
+// Only Admins delete a council message or reveal its sender (api-plan §10.6).
+export function canModerateCouncil(userRoles: readonly string[]): boolean {
+  return userRoles.includes("admin");
+}

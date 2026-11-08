@@ -9,7 +9,7 @@ import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
 import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import CouncilHistoryPage from "./pages/CouncilHistoryPage";
-import CouncilInboxMessagePage from "./pages/CouncilInboxMessagePage";
+import { CouncilMessageRoute } from "./pages/CouncilInboxMessagePage";
 import CouncilInboxPage from "./pages/CouncilInboxPage";
 import CouncilMessagePage from "./pages/CouncilMessagePage";
 import CouncilPage from "./pages/CouncilPage";
@@ -207,7 +207,7 @@ function AuthenticatedApp() {
               fallback={<UnauthorizedPage />}
               switchWorkspace
             >
-              <CouncilInboxMessagePage />
+              <CouncilMessageRoute />
             </RoleGuard>
           }
         />

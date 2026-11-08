@@ -116,6 +116,52 @@ describe("LoginPage", () => {
     );
   });
 
+  // The browser's own "fill out this field" bubble differs per browser and ignores the app's
+  // language, so the form checks this itself (#683).
+  test.each([
+    ["en", "Enter your email and password.", "LOGIN"],
+    ["cs", "Zadejte e-mail a heslo.", "PŘIHLÁSIT SE"],
+  ])("asks for both fields itself in %s, without a request", async (language, text, button) => {
+    const fetchMock = mockFetch();
+
+    mockAnonymousSession(fetchMock);
+    await i18n.changeLanguage(language);
+    renderLoginPage();
+
+    fireEvent.change(await screen.findByLabelText(language === "en" ? "Email" : "E-mail"), {
+      target: { value: "login@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: button }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(text);
+    expect(document.querySelector("form")?.noValidate).toBe(true);
+    // Only the session check: nothing was sent.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test.each([
+    ["en", "Enter a valid email address.", "LOGIN"],
+    ["cs", "Zadejte platnou e-mailovou adresu.", "PŘIHLÁSIT SE"],
+  ])("checks the email format itself in %s, without a request", async (language, text, button) => {
+    const fetchMock = mockFetch();
+
+    mockAnonymousSession(fetchMock);
+    await i18n.changeLanguage(language);
+    renderLoginPage();
+
+    fireEvent.change(await screen.findByLabelText(language === "en" ? "Email" : "E-mail"), {
+      target: { value: "abs" },
+    });
+    fireEvent.change(screen.getByLabelText(language === "en" ? "Password" : "Heslo"), {
+      target: { value: "secret-pass" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: button }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(text);
+    // Only the session check: the malformed email never reached the API.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   test("shows an error when credentials are invalid", async () => {
     const fetchMock = mockFetch();
 

@@ -119,8 +119,10 @@ describe("Sidebar role switcher", () => {
     renderSidebar();
     fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
 
+    // Admins also read the council messages (#725), so they get COUNCIL as well.
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
       "STUDENT",
+      "COUNCIL",
       "ADMIN",
     ]);
 

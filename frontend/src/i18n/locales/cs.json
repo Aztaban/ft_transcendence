@@ -437,7 +437,27 @@
     "historyAboutTitle": "O historii",
     "historyAboutText": "Přečtené zprávy tu zůstávají také. Označení jako přečtené nebo nepřečtené platí pro všechny členy rady.",
     "open": "Otevřít",
-    "openAria": "Otevřít zprávu č. {{id}}"
+    "openAria": "Otevřít zprávu č. {{id}}",
+    "moderation": {
+      "title": "Moderace",
+      "hint": "Jen pro administrátory. Každá akce se uloží do auditního záznamu i s vaším důvodem.",
+      "revealButton": "Zobrazit odesílatele",
+      "deleteButton": "Smazat zprávu",
+      "revealTitle": "Zobrazit, kdo poslal zprávu č. {{id}}?",
+      "revealText": "Jen kvůli vyšetření zneužití. Vaše jméno a důvod se uloží do auditního záznamu a radě zůstane odesílatel skrytý.",
+      "revealConfirm": "Zobrazit odesílatele",
+      "deleteTitle": "Smazat zprávu č. {{id}}?",
+      "deleteText": "Zpráva zmizí všem členům rady a nepůjde obnovit. Vaše jméno a důvod se uloží do auditního záznamu.",
+      "deleteConfirm": "Smazat zprávu",
+      "reason": "Důvod",
+      "reasonHint_one": "Alespoň {{count}} znak",
+      "reasonHint_few": "Alespoň {{count}} znaky",
+      "reasonHint_many": "Alespoň {{count}} znaku",
+      "reasonHint_other": "Alespoň {{count}} znaků",
+      "sender": "Odesílatel",
+      "senderDeleted": "Účet odesílatele byl smazán.",
+      "deleted": "Zpráva byla smazána. Důvod je uložen v auditním záznamu."
+    }
   },
   "adminUser": {
     "title": "Uživatel",
@@ -776,6 +796,7 @@
     "or": "nebo",
     "continueWith42": "POKRAČOVAT PŘES 42",
     "registered": "Účet je vytvořený. Teď se můžete přihlásit.",
+    "missingFields": "Zadejte e-mail a heslo.",
     "invalidCredentials": "Nesprávný e-mail nebo heslo.",
     "loginError": "Přihlášení se nepovedlo. Zkuste to prosím znovu.",
     "register": "ZAREGISTROVAT SE",
