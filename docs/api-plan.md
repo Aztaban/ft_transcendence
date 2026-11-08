@@ -488,9 +488,9 @@ Every create, update or delete action that affects another user notifies that us
 | `evaluation.slot_picked` | Student | `{request_id, project, starts_at, ends_at}` (no `tutor`: R18) | `/evaluations/{id}` |
 | `evaluation.confirmed` | Picking Hitchhiker | `{request_id, project, student, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.declined` | Picking Hitchhiker | `{request_id, project, student}` | `/evaluations/{id}` |
-| `evaluation.expired` | Student | `{request_id, project, previous_status}` | `/evaluations/{id}` |
+| `evaluation.released` | Student; also the picking Hitchhiker when released by override | `{request_id, project}` (no `tutor`: R18) | `/evaluations/{id}` |
 | `evaluation.cancelled` | Picking Hitchhiker if any; the student if cancelled by override | `{request_id, project, cancelled_by}`: `cancelled_by` is `null` when the picking Hitchhiker cancelled by override (R18) | `/evaluations/{id}` |
-| `evaluation.expired` | Student; also the Hitchhiker if it was `awaiting_confirmation` | `{request_id, project, previous_status}` | `/evaluations/{id}` |
+| `evaluation.expired` | Student | `{request_id, project, previous_status}` | `/evaluations/{id}` |
 | `evaluation.result_recorded` | Student and Hitchhiker | `{request_id, project, result}` | `/evaluations/{id}` |
 | `eligibility.requested` | All Head Tutors except the requester | `{request_id, requester, projects}` | `/eligibility-requests/{id}` |
 | `eligibility.decided` | Requester | `{request_id, decision, review_note}` | `/eligibility-requests/{id}` |
