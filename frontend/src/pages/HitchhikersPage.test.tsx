@@ -59,11 +59,25 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
+function LocationProbe() {
+  const location = useLocation();
+
+  return <output data-testid="location">{location.search}</output>;
+}
+
 function renderPage(path = "/hitchhikers") {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/hitchhikers" element={<HitchhikersPage />} />
+        <Route
+          path="/hitchhikers"
+          element={
+            <>
+              <HitchhikersPage />
+              <LocationProbe />
+            </>
+          }
+        />
       </Routes>
     </MemoryRouter>,
   );
@@ -330,30 +344,6 @@ describe("HitchhikersPage", () => {
 
 // Search interface (#361): what the user sees and keeps while searching (api-plan §10.8).
 describe("HitchhikersPage search interface", () => {
-  function LocationProbe() {
-    const location = useLocation();
-
-    return <output data-testid="location">{location.search}</output>;
-  }
-
-  function renderWithLocation(path = "/hitchhikers") {
-    return render(
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route
-            path="/hitchhikers"
-            element={
-              <>
-                <HitchhikersPage />
-                <LocationProbe />
-              </>
-            }
-          />
-        </Routes>
-      </MemoryRouter>,
-    );
-  }
-
   function searchBox() {
     return screen.getByRole("searchbox", { name: "Search Hitchhikers by name" });
   }
@@ -390,6 +380,39 @@ describe("HitchhikersPage search interface", () => {
     expect(screen.queryByRole("heading", { name: "Mjusta" })).toBeNull();
   });
 
+  it("ignores an older search that fails while a newer one is running", async () => {
+    let failOld: (reason: Error) => void = () => {};
+    let answerNew: (value: ReturnType<typeof resultPage>) => void = () => {};
+
+    renderPage();
+    await findCard("Psimcak");
+    vi.mocked(searchPeople).mockImplementation(
+      ({ q } = {}) =>
+        new Promise((resolve, reject) => {
+          if (q === "le") {
+            failOld = reject;
+          } else {
+            answerNew = resolve;
+          }
+        }),
+    );
+
+    fireEvent.change(searchBox(), { target: { value: "le" } });
+    await waitFor(() => expect(searchedWith()?.q).toBe("le"));
+    fireEvent.change(searchBox(), { target: { value: "len" } });
+    await waitFor(() => expect(searchedWith()?.q).toBe("len"));
+
+    await act(async () => failOld(new Error("network")));
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(status()).toBe("Searching…");
+
+    await act(async () => answerNew(resultPage([lenka])));
+
+    expect(status()).toBe("1 Hitchhiker");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("keeps the results while a new search runs and announces the outcome", async () => {
     let answer: (value: ReturnType<typeof resultPage>) => void = () => {};
 
@@ -397,6 +420,10 @@ describe("HitchhikersPage search interface", () => {
     await findCard("Psimcak");
 
     expect(status()).toBe("2 Hitchhikers");
+    // Screen readers announce the status line when it changes.
+    expect(document.getElementById("hitchhikers-search-hint")?.getAttribute("aria-live")).toBe(
+      "polite",
+    );
 
     vi.mocked(searchPeople).mockImplementation(
       () =>
@@ -435,16 +462,20 @@ describe("HitchhikersPage search interface", () => {
   });
 
   it("shows the server's message when the search is not valid", async () => {
+    // §10.8 allows 2–64 characters; a shared link can still carry a longer name.
+    const tooLong = "a".repeat(65);
+
     vi.mocked(searchPeople).mockRejectedValue(
       new ApiError(400, "Invalid input.", "validation_error", {
-        q: ["Ensure this field has no more than 100 characters."],
+        q: ["Ensure this field has no more than 64 characters."],
       }),
     );
-    renderPage("/hitchhikers?q=ab");
+    renderPage(`/hitchhikers?q=${tooLong}`);
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "Ensure this field has no more than 100 characters.",
+      "Ensure this field has no more than 64 characters.",
     );
+    expect(searchedWith()?.q).toBe(tooLong);
   });
 
   it("still searches when the project list cannot be loaded", async () => {
@@ -472,10 +503,23 @@ describe("HitchhikersPage search interface", () => {
   });
 
   it("puts the typed name and the sort in the URL, so a search can be shared", async () => {
-    renderWithLocation();
+    renderPage();
     await findCard("Psimcak");
 
     fireEvent.change(searchBox(), { target: { value: "  lenka " } });
+    await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("?q=lenka"));
+
+    fireEvent.change(screen.getByRole("combobox", { name: /Sort/ }), {
+      target: { value: "-display_name" },
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("location").textContent).toBe("?q=lenka&ordering=-display_name"),
+    );
+
+    // A to Z is the default, so it leaves the URL.
+    fireEvent.change(screen.getByRole("combobox", { name: /Sort/ }), {
+      target: { value: "display_name" },
+    });
     await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("?q=lenka"));
 
     fireEvent.change(screen.getByRole("combobox", { name: /Sort/ }), {
