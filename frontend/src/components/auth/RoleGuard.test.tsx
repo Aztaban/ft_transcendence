@@ -38,6 +38,42 @@ function renderGuard(switchWorkspace: boolean) {
 }
 
 describe("RoleGuard", () => {
+  // #770: a workspace restored from the tab is only trusted once /users/me/ has the role.
+  it("shows a page of a restored workspace only once the role is confirmed", () => {
+    sessionStorage.setItem("active-role", "COUNCIL");
+
+    const view = renderGuard(false);
+
+    expect(screen.queryByText("Council page")).toBeNull();
+    expect(screen.queryByText("Unauthorized")).toBeNull();
+
+    currentUser.roles = ["student", "sc_member"];
+    currentUser.isLoaded = true;
+    view.rerender(
+      <RoleProvider>
+        <RoleGuard allowedRoles={["COUNCIL"]} fallback={<p>Unauthorized</p>}>
+          <p>Council page</p>
+        </RoleGuard>
+        <ActiveRole />
+      </RoleProvider>,
+    );
+
+    expect(screen.getByText("Council page")).toBeTruthy();
+  });
+
+  it("shows a Student page at once: every account is a student", () => {
+    render(
+      <RoleProvider>
+        <RoleGuard allowedRoles={["STUDENT", "HITCHHIKER"]}>
+          <p>Pending page</p>
+        </RoleGuard>
+      </RoleProvider>,
+    );
+
+    expect(currentUser.isLoaded).toBe(false);
+    expect(screen.getByText("Pending page")).toBeTruthy();
+  });
+
   it("shows the fallback in another workspace", () => {
     currentUser.roles = ["student", "sc_member"];
     currentUser.isLoaded = true;

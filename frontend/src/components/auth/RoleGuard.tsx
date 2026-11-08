@@ -35,7 +35,10 @@ function RoleGuard({
   }, [target, setActiveRole]);
 
   if (isAllowed) {
-    return <>{children}</>;
+    // A workspace other than Student is restored from the tab's storage: it only counts once
+    // /users/me/ confirms the role, so a page never asks the API with a role the user lost
+    // (403s in the console, #770). Every account is a student, so that one needs no wait.
+    return isLoaded || activeRole === "STUDENT" ? <>{children}</> : null;
   }
 
   // Waiting for the user's roles, or switching: nothing yet (no API call, no Unauthorized flash).
