@@ -61,6 +61,8 @@ Django ── MySQL (all state)
 | R18 | The Hitchhiker is anonymous to the student until the student confirms the slot. The student does not see `picked_by` on `awaiting_confirmation` or `cancelled` requests (the backend does not record whether a cancelled request had been confirmed, so all of them are hidden), and notifications to the student do not name the Hitchhiker (§8.7, §8.8). | Team, Nov 2026 |
 | R19 | Files are out of scope: no uploads, no avatars, no tutor resources. `avatar_url` stays in the representations and is always `null`; the frontend shows initials. | Team, Nov 2026 |
 | R20 | An empty filter value is rejected like an unknown one: `?status=` is 400 `validation_error` (§5.7). | Team, Nov 2026 |
+| R21 | A request that passed its permission check may finish, even if a role change or suspension commits while it runs (§5.8). | Team, Nov 2026 |
+| R22 | An evaluation has started once `starts_at` has passed, whatever its status (schema §2.4). | Team, Nov 2026 |
 
 ### 3.2 Open (not to be built until decided)
 
@@ -215,7 +217,7 @@ Role assignment rules:
 
 `student` and `admin` are never assigned through the API: asking for them returns 403 `role_not_assignable`.
 
-Role changes take effect on the user's next request, because permissions are read from the database every time.
+Role changes take effect on the user's next request, because permissions are read from the database every time. A request that already passed its permission check may finish, even if a role change or suspension commits while it runs. Eligibility is stricter: pick-slot reads `tutor_eligibility` under its lock, so a revocation that commits first still refuses the pick.
 
 The endpoint-by-role view of these rules is `docs/permissions.md`.
 
