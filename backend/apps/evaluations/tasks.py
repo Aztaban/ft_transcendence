@@ -63,10 +63,6 @@ def expire_evaluation_requests() -> int:
                 previous_status=previous_status,
                 previous_picker_id=previous_picker_id,
             )
-            notify_evaluation_expired(
-                evaluation,
-                previous_status=previous_status,
-                previous_picker_id=previous_picker_id,
-            )
+            notify_evaluation_expired(evaluation, previous_status=previous_status)
             expired += 1
     return expired

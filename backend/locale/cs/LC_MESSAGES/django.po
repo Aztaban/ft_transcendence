@@ -140,14 +140,6 @@ msgstr "Odesílatel zprávy radě odhalen"
 msgid "Council message deleted"
 msgstr "Zpráva radě smazána"
 
-#: apps/audit/models.py:72
-msgid "File updated by moderator"
-msgstr "Soubor upraven moderátorem"
-
-#: apps/audit/models.py:73
-msgid "File deleted by moderator"
-msgstr "Soubor smazán moderátorem"
-
 #: apps/audit/models.py:76
 msgid "User"
 msgstr "Uživatel"
@@ -167,10 +159,6 @@ msgstr "Způsobilost tutora"
 #: apps/audit/models.py:80
 msgid "Council message"
 msgstr "Zpráva radě"
-
-#: apps/audit/models.py:81
-msgid "File"
-msgstr "Soubor"
 
 #: apps/audit/services.py:20
 msgid "Audit metadata must be an object."
@@ -419,18 +407,6 @@ msgstr "Účet upraven"
 #: apps/notifications/models.py:25
 msgid "Student Council message created"
 msgstr "Zpráva Studentské radě vytvořena"
-
-#: apps/notifications/models.py:26
-msgid "Resource created"
-msgstr "Zdroj vytvořen"
-
-#: apps/notifications/models.py:27
-msgid "Resource updated"
-msgstr "Zdroj upraven"
-
-#: apps/notifications/models.py:28
-msgid "Resource deleted"
-msgstr "Zdroj smazán"
 
 #: apps/notifications/services.py:22
 msgid "Notification payload must be an object."

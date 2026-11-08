@@ -35,8 +35,8 @@ def test_purge_uses_creation_time_and_preserves_cutoff_for_all_recipients(
             ]:
                 notification = Notification.objects.create(
                     recipient=user,
-                    type="resource.deleted",
-                    payload={"title": "Guide"},
+                    type="account.updated",
+                    payload={"fields": ["email"]},
                     read_at=read_at,
                 )
                 Notification.objects.filter(pk=notification.pk).update(created_at=created_at)
@@ -64,8 +64,8 @@ def test_retained_history_remains_listed_and_purged_rows_leave_unread_count(monk
         Notification.objects.create(
             id=pk,
             recipient=user,
-            type="resource.deleted",
-            payload={"title": "Guide"},
+            type="account.updated",
+            payload={"fields": ["email"]},
             read_at=read_at,
         )
         Notification.objects.filter(pk=pk).update(created_at=created_at)
@@ -84,8 +84,8 @@ def test_retained_history_remains_listed_and_purged_rows_leave_unread_count(monk
         "results": [
             {
                 "id": 201,
-                "type": "resource.deleted",
-                "payload": {"title": "Guide"},
+                "type": "account.updated",
+                "payload": {"fields": ["email"]},
                 "target_url": "",
                 "read_at": "2026-10-21T12:00:00Z",
                 "created_at": "2026-10-21T12:00:00Z",

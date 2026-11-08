@@ -469,11 +469,8 @@ def test_other_parties_receive_exact_override_notifications(deletion_graph, user
                 "name": "Deletion " + label,
             },
         }
-        payload.update(
-            {"tutor": {"id": graph.target.pk, "display_name": "Deleted user"}}
-            if released
-            else {"cancelled_by": {"id": graph.actor.pk, "display_name": "Zed"}}
-        )
+        if not released:
+            payload["cancelled_by"] = {"id": graph.actor.pk, "display_name": "Zed"}
         assert list(
             Notification.objects.filter(payload__request_id=evaluation.pk).values(
                 "recipient_id", "type", "payload", "target_url"
