@@ -57,6 +57,7 @@ Django ── MySQL (all state)
 | R14 | Backend messages (`message` and `fields`) are returned in the user's language, because the i18n module requires all user-facing text to be translatable (§5.5). | Architect, Oct 2026 |
 | R15 | A `pending` request is anonymous to Hitchhikers: they see the student only once they pick it (§8.7). | Team, Oct 2026 |
 | R16 | Students do not offer time slots. The Hitchhiker proposes one, and the student can say when they are free in the request's `note` (§7.1). | Team, Oct 2026 |
+| R17 | Notifications link only to what the recipient can open: an `evaluation.*` link comes back empty once the request is hidden from them (§8.7), because a 404 logs a console error, which the subject forbids. The Hitchhiker whose proposed slot expires gets no notification, and the expired request leaves their history (expiry clears the pick, §7.1). | Team, Nov 2026 |
 | R18 | The Hitchhiker is anonymous to the student until the student confirms the slot. The student does not see `picked_by` on `awaiting_confirmation` or `cancelled` requests (the backend does not record whether a cancelled request had been confirmed, so all of them are hidden), and notifications to the student do not name the Hitchhiker (§8.7, §8.8). | Team, Nov 2026 |
 | R19 | Files are out of scope: no uploads, no avatars, no tutor resources. `avatar_url` stays in the representations and is always `null`; the frontend shows initials. | Team, Nov 2026 |
 | R20 | An empty filter value is rejected like an unknown one: `?status=` is 400 `validation_error` (§5.7). | Team, Nov 2026 |
@@ -471,13 +472,13 @@ Returned by the admin user endpoints only. `Me` plus:
 | id | integer | |
 | type | string | One of the types below. |
 | payload | object | Shape depends on `type`. |
-| target_url | string | Frontend route to open; empty when the notification has no target. |
+| target_url | string | Frontend route to open; empty when the notification has no target. For `evaluation.*` types it is returned only while the recipient can still open the request (§8.7), and is empty after that (R17). |
 | read_at | datetime or null | `null` = unread. |
 | created_at | datetime | |
 
 The frontend builds the displayed sentence from `type` and `payload` in the current language. The backend never sends sentences. `target_url` values are routes the frontend must provide.
 
-Every create, update or delete action that affects another user notifies that user, as listed below. Actions that affect only the person performing them notify no one. Deliberate exceptions, which notify no one: editing a request's note, read state and the discussion note of the shared council inbox, and suspending, reactivating or deleting an account (the user cannot log in to read it); open views catch up through §9.3 events or §9.4.
+Every create, update or delete action that affects another user notifies that user, as listed below. Actions that affect only the person performing them notify no one. Deliberate exceptions, which notify no one: editing a request's note, read state and the discussion note of the shared council inbox, and suspending, reactivating or deleting an account (the user cannot log in to read it). Expiry notifies the student only, not the Hitchhiker whose proposed slot expired (R17). Open views catch up through §9.3 events or §9.4.
 
 **Types**, with recipients and payload. `user` objects in payloads are `{id, display_name}`; `project` objects are `ProjectRef`.
 
@@ -487,7 +488,7 @@ Every create, update or delete action that affects another user notifies that us
 | `evaluation.slot_picked` | Student | `{request_id, project, starts_at, ends_at}` (no `tutor`: R18) | `/evaluations/{id}` |
 | `evaluation.confirmed` | Picking Hitchhiker | `{request_id, project, student, starts_at, ends_at}` | `/evaluations/{id}` |
 | `evaluation.declined` | Picking Hitchhiker | `{request_id, project, student}` | `/evaluations/{id}` |
-| `evaluation.released` | Student; also the picking Hitchhiker when released by override | `{request_id, project}` (no `tutor`: R18) | `/evaluations/{id}` |
+| `evaluation.expired` | Student | `{request_id, project, previous_status}` | `/evaluations/{id}` |
 | `evaluation.cancelled` | Picking Hitchhiker if any; the student if cancelled by override | `{request_id, project, cancelled_by}`: `cancelled_by` is `null` when the picking Hitchhiker cancelled by override (R18) | `/evaluations/{id}` |
 | `evaluation.expired` | Student; also the Hitchhiker if it was `awaiting_confirmation` | `{request_id, project, previous_status}` | `/evaluations/{id}` |
 | `evaluation.result_recorded` | Student and Hitchhiker | `{request_id, project, result}` | `/evaluations/{id}` |

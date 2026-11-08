@@ -357,7 +357,8 @@ def test_expiry_job_delivers_events_to_participants_and_affected_queues(
             for _, communicator in sockets:
                 assert await communicator.connect() == (True, None)
             notification_ids = await database_sync_to_async(expire)()
-            assert set(notification_ids) == ({7, 42} if picked else {7})
+            # Only the student is notified; the picker still gets the event below (R17).
+            assert set(notification_ids) == {7}
             for user_id, communicator in sockets:
                 if user_id in ({7, 42} if picked else {7, 42, 43}):
                     assert await communicator.receive_json_from(timeout=3) == {
