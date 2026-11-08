@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 import { listAdminUsers } from "../api/admin";
 import usePageTitle from "../components/layout/usePageTitle";
+import UserStatusBadge, { rolesText } from "../features/admin/UserStatusBadge";
 import type { AdminUser, UserStatus } from "../types/adminUser";
 import type { RoleName } from "../types/user";
 import { formatDate } from "../utils/dateTime";
@@ -173,18 +175,13 @@ function AdminUsersPage() {
               <tbody>
                 {users.map((user) => (
                   <tr key={user.id}>
-                    <td data-label={t("adminUsers.columns.name")}>{user.display_name}</td>
-                    <td data-label={t("adminUsers.columns.email")}>{user.email}</td>
-                    <td data-label={t("adminUsers.columns.roles")}>
-                      {/* A deleted account has no roles left (api-plan §8.2). */}
-                      {user.roles.length > 0
-                        ? user.roles.map((item) => t(`roles.${item.name}`)).join(", ")
-                        : "—"}
+                    <td data-label={t("adminUsers.columns.name")}>
+                      <Link to={`/manage/users/${user.id}`}>{user.display_name}</Link>
                     </td>
+                    <td data-label={t("adminUsers.columns.email")}>{user.email}</td>
+                    <td data-label={t("adminUsers.columns.roles")}>{rolesText(user)}</td>
                     <td data-label={t("adminUsers.columns.status")}>
-                      <span className={`admin-users__status admin-users__status--${user.status}`}>
-                        {t(`adminUsers.statuses.${user.status}`)}
-                      </span>
+                      <UserStatusBadge status={user.status} />
                     </td>
                     <td data-label={t("adminUsers.columns.lastLogin")}>
                       {user.last_login ? (

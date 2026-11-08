@@ -431,6 +431,27 @@
     "open": "Open",
     "openAria": "Open message #{{id}}"
   },
+  "adminUser": {
+    "title": "User",
+    "back": "All users",
+    "loading": "Loading the user…",
+    "loadError": "We couldn't load this user. Please try again later.",
+    "email": "Email",
+    "intraLogin": "42 login",
+    "language": "Language",
+    "roles": "Roles",
+    "createdAt": "Account created",
+    "lastLogin": "Last login",
+    "deletedNote": "This account was deleted. Deleted accounts cannot be edited.",
+    "editTitle": "Edit account",
+    "displayName": "Display name",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saved": "Changes saved.",
+    "emailTaken": "Another account already uses this email.",
+    "deletedMeanwhile": "This account was deleted in the meantime, so the changes were not saved.",
+    "saveError": "The changes could not be saved. Please try again."
+  },
   "adminUsers": {
     "title": "Users",
     "subtitle": "Every account, with its roles and status.",

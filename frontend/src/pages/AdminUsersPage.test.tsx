@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { listAdminUsers } from "../api/admin";
@@ -25,6 +26,15 @@ function adminUser(id: number, name: string, extra: Partial<AdminUser> = {}): Ad
 
 function page(results: AdminUser[], count = results.length, next: string | null = null) {
   return { count, next, previous: null, results };
+}
+
+// The names link to the user pages, so the page needs a router.
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <AdminUsersPage />
+    </MemoryRouter>,
+  );
 }
 
 // The parameters of each listAdminUsers call, in order.
@@ -62,7 +72,7 @@ describe("AdminUsersPage", () => {
       ]),
     );
 
-    render(<AdminUsersPage />);
+    renderPage();
 
     const table = await screen.findByRole("table", { name: "Users" });
     const rows = within(table)
@@ -79,12 +89,15 @@ describe("AdminUsersPage", () => {
       ["Boris", "boris@example.com", "Student", "Suspended", "Never"],
       ["Deleted user", "deleted-3@example.com", "—", "Deleted", "2 November 2026"],
     ]);
+    expect(within(table).getByRole("link", { name: "Anna" }).getAttribute("href")).toBe(
+      "/manage/users/1",
+    );
     expect(requests()).toEqual([{ ...noFilters, page: 1 }]);
     expect(document.title).toBe("Users · 42 Evals");
   });
 
   it("searches only when the form is submitted", async () => {
-    render(<AdminUsersPage />);
+    renderPage();
     await screen.findByText("No users yet");
 
     fireEvent.change(screen.getByLabelText("Search"), { target: { value: "  ann  " } });
@@ -105,7 +118,7 @@ describe("AdminUsersPage", () => {
       page([adminUser(1, "Anna")], 45, "/api/v1/admin/users/?page=2"),
     );
 
-    render(<AdminUsersPage />);
+    renderPage();
     fireEvent.click(await screen.findByRole("button", { name: /Next/ }));
     await screen.findByText("Page 2 of 3");
 
@@ -132,7 +145,7 @@ describe("AdminUsersPage", () => {
       .mockResolvedValueOnce(page([adminUser(1, "Anna")], 21, "/api/v1/admin/users/?page=2"))
       .mockResolvedValueOnce(page([adminUser(21, "Zoe")], 21, null));
 
-    render(<AdminUsersPage />);
+    renderPage();
 
     expect(await screen.findByText("Page 1 of 2")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Previous/ }).hasAttribute("disabled")).toBe(true);
@@ -151,7 +164,7 @@ describe("AdminUsersPage", () => {
   it("shows no page buttons when everything fits on one page", async () => {
     vi.mocked(listAdminUsers).mockResolvedValue(page([adminUser(1, "Anna")]));
 
-    render(<AdminUsersPage />);
+    renderPage();
 
     expect(await screen.findByText("Anna")).toBeTruthy();
     expect(screen.queryByRole("navigation", { name: "User pages" })).toBeNull();
@@ -160,7 +173,7 @@ describe("AdminUsersPage", () => {
   it("shows an error when the users cannot be loaded", async () => {
     vi.mocked(listAdminUsers).mockRejectedValue(new Error("network"));
 
-    render(<AdminUsersPage />);
+    renderPage();
 
     expect((await screen.findByRole("alert")).textContent).toBe(
       "We couldn't load the users. Please try again later.",

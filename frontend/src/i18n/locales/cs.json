@@ -439,6 +439,27 @@
     "open": "Otevřít",
     "openAria": "Otevřít zprávu č. {{id}}"
   },
+  "adminUser": {
+    "title": "Uživatel",
+    "back": "Všichni uživatelé",
+    "loading": "Načítám uživatele…",
+    "loadError": "Uživatele se nepodařilo načíst. Zkuste to prosím později.",
+    "email": "E-mail",
+    "intraLogin": "Login 42",
+    "language": "Jazyk",
+    "roles": "Role",
+    "createdAt": "Účet vytvořen",
+    "lastLogin": "Poslední přihlášení",
+    "deletedNote": "Tento účet byl smazán. Smazané účty nelze upravovat.",
+    "editTitle": "Upravit účet",
+    "displayName": "Zobrazované jméno",
+    "save": "Uložit změny",
+    "saving": "Ukládám…",
+    "saved": "Změny byly uloženy.",
+    "emailTaken": "Tento e-mail už používá jiný účet.",
+    "deletedMeanwhile": "Tento účet byl mezitím smazán, změny se proto neuložily.",
+    "saveError": "Změny se nepodařilo uložit. Zkuste to prosím znovu."
+  },
   "adminUsers": {
     "title": "Uživatelé",
     "subtitle": "Všechny účty s jejich rolemi a stavem.",

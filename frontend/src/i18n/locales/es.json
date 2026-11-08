@@ -434,6 +434,27 @@
     "open": "Abrir",
     "openAria": "Abrir el mensaje n.º {{id}}"
   },
+  "adminUser": {
+    "title": "Usuario",
+    "back": "Todos los usuarios",
+    "loading": "Cargando el usuario…",
+    "loadError": "No pudimos cargar este usuario. Inténtalo de nuevo más tarde.",
+    "email": "Correo",
+    "intraLogin": "Login de 42",
+    "language": "Idioma",
+    "roles": "Roles",
+    "createdAt": "Cuenta creada",
+    "lastLogin": "Último acceso",
+    "deletedNote": "Esta cuenta fue eliminada. Las cuentas eliminadas no se pueden editar.",
+    "editTitle": "Editar cuenta",
+    "displayName": "Nombre visible",
+    "save": "Guardar cambios",
+    "saving": "Guardando…",
+    "saved": "Cambios guardados.",
+    "emailTaken": "Otra cuenta ya usa este correo.",
+    "deletedMeanwhile": "Esta cuenta se eliminó mientras tanto, así que los cambios no se guardaron.",
+    "saveError": "No se pudieron guardar los cambios. Inténtalo de nuevo."
+  },
   "adminUsers": {
     "title": "Usuarios",
     "subtitle": "Todas las cuentas, con sus roles y su estado.",
