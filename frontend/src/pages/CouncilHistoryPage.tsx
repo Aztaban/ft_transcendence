@@ -139,12 +139,12 @@ function CouncilHistoryPage() {
           )}
         </div>
 
-        <aside className="council-aside">
+        <div className="council-aside">
           <section className="council-panel">
             <h2>{t("council.historyAboutTitle")}</h2>
             <p>{t("council.historyAboutText")}</p>
           </section>
-        </aside>
+        </div>
       </div>
     </section>
   );

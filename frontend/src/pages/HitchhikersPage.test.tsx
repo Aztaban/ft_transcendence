@@ -166,7 +166,7 @@ describe("HitchhikersPage", () => {
     await findCard("Psimcak");
 
     expect(
-      within(screen.getByRole("complementary", { name: "How it works" }))
+      within(screen.getByRole("note", { name: "How it works" }))
         .getByRole("link", { name: /Create a request/ })
         .getAttribute("href"),
     ).toBe("/requests");
@@ -177,7 +177,7 @@ describe("HitchhikersPage", () => {
     renderPage();
     await findCard("Psimcak");
 
-    expect(screen.getByRole("complementary", { name: "How it works" })).toBeTruthy();
+    expect(screen.getByRole("note", { name: "How it works" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: /Create a request/ })).toBeNull();
   });
 
