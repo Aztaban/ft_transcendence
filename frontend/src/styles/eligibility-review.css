@@ -28,7 +28,8 @@
 }
 
 .eligibility-review__tab {
-  --tab: var(--color-accent-dark);
+  /* Text on the light tab and the white count's background: 5:1 and 5.5:1 (WCAG AA). */
+  --tab: var(--color-accent-text);
   --tab-soft: #e6f8f8;
 
   display: inline-flex;

@@ -292,7 +292,7 @@
 }
 
 .evaluation__button--primary:hover:enabled {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
 }
 
 /* A link styled as a button, e.g. "Pick a slot" (#690): links have no :enabled state. */
@@ -301,7 +301,7 @@ a.evaluation__button {
 }
 
 a.evaluation__button--primary:hover {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
   transform: translateY(-1px);
 }
 
@@ -439,7 +439,7 @@ a.evaluation__button--primary:hover {
 }
 
 .evaluation-dialog__button:hover {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
   color: var(--color-on-accent);
 }
 

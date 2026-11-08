@@ -6,8 +6,10 @@
   /* 5.4:1 on the page background, 6:1 on white (WCAG AA). */
   --color-text-secondary: #5f6464;
   --color-accent: #00babc;
-  /* Hover shade of the teal; dark text on it stays readable (5.1:1). */
-  --color-accent-dark: #00a8aa;
+  /* Darker teal for decoration only (gradients, underlines), never for text. */
+  --color-accent-dark: #00989a;
+  /* Hover background of teal buttons; their dark text stays readable on it (5.1:1). */
+  --color-accent-hover: #00a8aa;
   /* Text on a teal surface: dark, because white on #00babc is only 2.4:1 (WCAG AA needs 4.5). */
   --color-on-accent: #0b2b2c;
   /* Teal for text on white or light surfaces (5.5:1). */
