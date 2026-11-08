@@ -7,6 +7,8 @@ import {
   declineEvaluationRequest,
   getEvaluationRequest,
   listEvaluationRequests,
+  overrideCancelEvaluationRequest,
+  overrideReleaseEvaluationRequest,
   pickSlot,
   releaseEvaluationRequest,
 } from "./evaluationRequests";
@@ -237,5 +239,43 @@ describe("listEvaluationRequests history filters", () => {
       "/api/v1/evaluation-requests/?history=true&project=push_swap&page=2",
     );
     expect(fetchMock.mock.calls[1][0]).toBe("/api/v1/evaluation-requests/?history=true");
+  });
+});
+
+describe("overrides", () => {
+  afterEach(() => {
+    document.cookie = "csrftoken=; Max-Age=0; path=/";
+  });
+
+  test("release and cancel send the reason as JSON with the CSRF token", async () => {
+    document.cookie = "csrftoken=test-csrf-token; path=/";
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() => Promise.resolve(jsonResponse({ id: 7, status: "pending" })));
+
+    await overrideReleaseEvaluationRequest(7, "The Hitchhiker is suspended");
+    await overrideCancelEvaluationRequest(7, "The student left 42");
+
+    expect(
+      fetchMock.mock.calls.map(([path, options]) => [
+        path,
+        options?.method,
+        options?.body,
+        new Headers(options?.headers).get("X-CSRFToken"),
+      ]),
+    ).toEqual([
+      [
+        "/api/v1/evaluation-requests/7/release/",
+        "POST",
+        JSON.stringify({ reason: "The Hitchhiker is suspended" }),
+        "test-csrf-token",
+      ],
+      [
+        "/api/v1/evaluation-requests/7/cancel/",
+        "POST",
+        JSON.stringify({ reason: "The student left 42" }),
+        "test-csrf-token",
+      ],
+    ]);
   });
 });

@@ -14,7 +14,6 @@ import type { AdminUser } from "../types/adminUser";
 import AdminUserDetailPage from "./AdminUserDetailPage";
 
 vi.mock("../api/admin", () => ({
-  REASON_MAX_LENGTH: 500,
   getAdminUser: vi.fn(),
   updateAdminUser: vi.fn(),
   suspendAdminUser: vi.fn(),

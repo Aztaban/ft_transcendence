@@ -254,7 +254,26 @@
     "errorGeneric": "Algo ha salido mal. Inténtalo de nuevo.",
     "acceptedTitle": "¡El tutor ha aceptado la evaluación y el estudiante la ha confirmado!",
     "acceptedText": "Tu evaluación de <strong>{{project}}</strong> ya está en tus evaluaciones pendientes.",
-    "orClickToClose": "o haz clic en cualquier sitio para cerrar"
+    "orClickToClose": "o haz clic en cualquier sitio para cerrar",
+    "override": {
+      "title": "Intervención",
+      "text": "Como Head Tutor o Admin puedes liberar el horario o cancelar esta solicitud. Ambas acciones necesitan un motivo, y el estudiante y el Hitchhiker reciben un aviso.",
+      "release": "Liberar el horario",
+      "cancel": "Cancelar la solicitud",
+      "releaseTitle": "¿Liberar el horario de {{project}}?",
+      "releaseText": "La solicitud vuelve a la cola para que un Hitchhiker elija un nuevo horario. El Hitchhiker y el estudiante reciben un aviso.",
+      "cancelTitle": "¿Cancelar la solicitud de {{project}}?",
+      "cancelText": "La solicitud termina definitivamente. El estudiante y el Hitchhiker, si lo hay, reciben un aviso. No se puede deshacer.",
+      "releaseConfirm": "Liberar",
+      "cancelConfirm": "Cancelar la solicitud",
+      "releaseWorking": "Liberando…",
+      "cancelWorking": "Cancelando…",
+      "releaseDone": "El horario se liberó. La solicitud vuelve a estar en la cola.",
+      "cancelDone": "La solicitud se canceló.",
+      "alreadyStarted": "El horario ya empezó, así que no se puede liberar.",
+      "changed": "La solicitud cambió mientras tanto, así que no se hizo nada. Se muestra su estado actual.",
+      "error": "No funcionó. Inténtalo de nuevo."
+    }
   },
   "pickSlot": {
     "back": "Volver a las solicitudes",
@@ -482,6 +501,10 @@
     "pagesAria": "Páginas de excepciones",
     "page": "Página {{page}} de {{count}}"
   },
+  "reasonDialog": {
+    "reason": "Motivo",
+    "hint": "Obligatorio. Se guarda en el registro de auditoría."
+  },
   "adminUser": {
     "title": "Usuario",
     "back": "Todos los usuarios",
@@ -514,8 +537,6 @@
       "suspendText": "Se cerrará su sesión al momento y no podrá iniciarla hasta que se reactive la cuenta. Sus solicitudes de evaluación no cambian.",
       "reactivateText": "Podrá volver a iniciar sesión.",
       "deleteText": "La cuenta se anonimiza: se borran su nombre, correo y login de 42, se le quitan los roles y sus evaluaciones que aún no han empezado se cancelan o se liberan. No se puede deshacer.",
-      "reason": "Motivo",
-      "reasonHint": "Obligatorio. Se guarda en el registro de auditoría.",
       "suspendConfirm": "Suspender",
       "reactivateConfirm": "Reactivar",
       "deleteConfirm": "Eliminar definitivamente",

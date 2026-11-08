@@ -251,7 +251,26 @@
     "errorGeneric": "Something went wrong. Please try again.",
     "acceptedTitle": "The evaluation has been accepted by the tutor and confirmed by the student!",
     "acceptedText": "Your <strong>{{project}}</strong> evaluation is now in your Pending Evaluations.",
-    "orClickToClose": "or click anywhere to close"
+    "orClickToClose": "or click anywhere to close",
+    "override": {
+      "title": "Override",
+      "text": "As a Head Tutor or Admin you can release the slot or cancel this request. Both need a reason, and the student and the Hitchhiker are notified.",
+      "release": "Release the slot",
+      "cancel": "Cancel the request",
+      "releaseTitle": "Release the slot for {{project}}?",
+      "releaseText": "The request goes back to the queue, so a Hitchhiker can pick a new slot. The Hitchhiker and the student are notified.",
+      "cancelTitle": "Cancel the {{project}} request?",
+      "cancelText": "The request ends for good. The student and the Hitchhiker, if any, are notified. This cannot be undone.",
+      "releaseConfirm": "Release",
+      "cancelConfirm": "Cancel the request",
+      "releaseWorking": "Releasing…",
+      "cancelWorking": "Cancelling…",
+      "releaseDone": "The slot was released. The request is back in the queue.",
+      "cancelDone": "The request was cancelled.",
+      "alreadyStarted": "The slot has already started, so it can no longer be released.",
+      "changed": "The request changed in the meantime, so nothing was done. It is shown as it is now.",
+      "error": "That did not work. Please try again."
+    }
   },
   "pickSlot": {
     "back": "Back to requests",
@@ -478,6 +497,10 @@
     "pagesAria": "Exception pages",
     "page": "Page {{page}} of {{count}}"
   },
+  "reasonDialog": {
+    "reason": "Reason",
+    "hint": "Required. It is kept in the audit log."
+  },
   "adminUser": {
     "title": "User",
     "back": "All users",
@@ -510,8 +533,6 @@
       "suspendText": "They are logged out at once and cannot log in until the account is reactivated. Their evaluation requests stay as they are.",
       "reactivateText": "They can log in again.",
       "deleteText": "The account is anonymized: its name, email and 42 login are removed, its roles are taken away, and its evaluations that have not started are cancelled or released. This cannot be undone.",
-      "reason": "Reason",
-      "reasonHint": "Required. It is kept in the audit log.",
       "suspendConfirm": "Suspend",
       "reactivateConfirm": "Reactivate",
       "deleteConfirm": "Delete for good",

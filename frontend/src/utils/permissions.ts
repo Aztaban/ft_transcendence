@@ -46,3 +46,9 @@ export function canModerateCouncil(userRoles: readonly string[]): boolean {
 export function canSeeEvaluationExceptions(userRoles: readonly string[]): boolean {
   return userRoles.includes("head_tutor") || userRoles.includes("admin");
 }
+
+// Head Tutors and Admins may release or cancel someone else's evaluation request with a reason
+// (an override, api-plan §5.8). Takes the user's real roles (wire names, §5.8).
+export function canOverrideEvaluations(userRoles: readonly string[]): boolean {
+  return userRoles.includes("head_tutor") || userRoles.includes("admin");
+}

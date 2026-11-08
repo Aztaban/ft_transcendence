@@ -258,7 +258,26 @@
     "errorGeneric": "Něco se pokazilo. Zkuste to prosím znovu.",
     "acceptedTitle": "Hodnocení přijal tutor a potvrdil student!",
     "acceptedText": "Vaše hodnocení <strong>{{project}}</strong> je teď mezi čekajícími hodnoceními.",
-    "orClickToClose": "nebo zavřete kliknutím kamkoli"
+    "orClickToClose": "nebo zavřete kliknutím kamkoli",
+    "override": {
+      "title": "Zásah",
+      "text": "Jako Head Tutor nebo Admin můžete uvolnit termín nebo zrušit tuto žádost. Obojí vyžaduje důvod a student i Hitchhiker dostanou oznámení.",
+      "release": "Uvolnit termín",
+      "cancel": "Zrušit žádost",
+      "releaseTitle": "Uvolnit termín žádosti {{project}}?",
+      "releaseText": "Žádost se vrátí do fronty a Hitchhiker může vybrat nový termín. Hitchhiker i student dostanou oznámení.",
+      "cancelTitle": "Zrušit žádost {{project}}?",
+      "cancelText": "Žádost skončí natrvalo. Student a případný Hitchhiker dostanou oznámení. Tuto akci nelze vrátit.",
+      "releaseConfirm": "Uvolnit",
+      "cancelConfirm": "Zrušit žádost",
+      "releaseWorking": "Uvolňuji…",
+      "cancelWorking": "Ruším…",
+      "releaseDone": "Termín byl uvolněn. Žádost je zpět ve frontě.",
+      "cancelDone": "Žádost byla zrušena.",
+      "alreadyStarted": "Termín už začal, proto ho nelze uvolnit.",
+      "changed": "Žádost se mezitím změnila, proto se nic neprovedlo. Zobrazuje se její aktuální stav.",
+      "error": "Nepodařilo se to. Zkuste to prosím znovu."
+    }
   },
   "pickSlot": {
     "back": "Zpět na žádosti",
@@ -488,6 +507,10 @@
     "pagesAria": "Stránky výjimek",
     "page": "Strana {{page}} z {{count}}"
   },
+  "reasonDialog": {
+    "reason": "Důvod",
+    "hint": "Povinné. Uloží se do auditního záznamu."
+  },
   "adminUser": {
     "title": "Uživatel",
     "back": "Všichni uživatelé",
@@ -520,8 +543,6 @@
       "suspendText": "Uživatel bude hned odhlášen a nepřihlásí se, dokud účet neobnovíte. Jeho žádosti o hodnocení zůstanou beze změny.",
       "reactivateText": "Uživatel se bude moci znovu přihlásit.",
       "deleteText": "Účet bude anonymizován: odstraní se jméno, e-mail a login 42, odeberou se role a hodnocení, která ještě nezačala, se zruší nebo uvolní. Tuto akci nelze vrátit.",
-      "reason": "Důvod",
-      "reasonHint": "Povinné. Uloží se do auditního záznamu.",
       "suspendConfirm": "Pozastavit",
       "reactivateConfirm": "Obnovit",
       "deleteConfirm": "Smazat natrvalo",
