@@ -112,7 +112,7 @@ describe("Sidebar role switcher", () => {
     ]);
   });
 
-  test("offers Administration to an Admin, with Users as its only item", () => {
+  test("offers the Admin workspace to an Admin, with Users as its only item", () => {
     currentUser.roles = ["student", "admin"];
     currentUser.isLoaded = true;
 
@@ -121,10 +121,10 @@ describe("Sidebar role switcher", () => {
 
     expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
       "STUDENT",
-      "ADMINISTRATION",
+      "ADMIN",
     ]);
 
-    fireEvent.click(screen.getByRole("option", { name: "ADMINISTRATION" }));
+    fireEvent.click(screen.getByRole("option", { name: "ADMIN" }));
 
     const navigation = screen.getByRole("navigation", { name: "Primary navigation" });
 
@@ -135,7 +135,7 @@ describe("Sidebar role switcher", () => {
     ).toEqual([["Users", "/manage/users"]]);
   });
 
-  test("does not offer Administration without the admin role", () => {
+  test("does not offer the Admin workspace without the admin role", () => {
     currentUser.roles = ["student", "tutor", "head_tutor", "sc_member"];
     currentUser.isLoaded = true;
 

@@ -25,7 +25,7 @@
     "STUDENT": "STUDENT",
     "HITCHHIKER": "HITCHHIKER",
     "COUNCIL": "RADA",
-    "ADMIN": "ADMINISTRACE"
+    "ADMIN": "ADMIN"
   },
   "sidebar": {
     "logout": "Odhlásit se",

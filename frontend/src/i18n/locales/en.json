@@ -25,7 +25,7 @@
     "STUDENT": "STUDENT",
     "HITCHHIKER": "HITCHHIKER",
     "COUNCIL": "COUNCIL",
-    "ADMIN": "ADMINISTRATION"
+    "ADMIN": "ADMIN"
   },
   "sidebar": {
     "logout": "Logout",
