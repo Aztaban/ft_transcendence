@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 
 import searchIcon from "../../assets/figma/search.svg";
 import bellIcon from "../../assets/figma/bell.svg";
+import { PEOPLE_QUERY_MAX_LENGTH } from "../../api/people";
 import NotificationPanel from "../../features/notifications/NotificationPanel";
 import PersonAvatar from "../../features/people/PersonAvatar";
 import { useCurrentUser } from "../../store/CurrentUserContext";
@@ -11,9 +12,6 @@ import { useNotificationCount } from "../../store/NotificationCountContext";
 import ConnectionStatus from "./ConnectionStatus";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserMenu from "./UserMenu";
-
-// api-plan §10.8: a name to search is at most 64 characters.
-const MAX_SEARCH_LENGTH = 64;
 
 interface TopBarProps {
   isMenuOpen?: boolean;
@@ -100,7 +98,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
           type="search"
           name="q"
           value={searchText}
-          maxLength={MAX_SEARCH_LENGTH}
+          maxLength={PEOPLE_QUERY_MAX_LENGTH}
           placeholder={t("topbar.searchPlaceholder")}
           aria-label={t("topbar.search")}
           onChange={(event) => setSearchText(event.target.value)}

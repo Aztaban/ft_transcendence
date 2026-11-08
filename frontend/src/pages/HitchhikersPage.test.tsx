@@ -11,7 +11,11 @@ import HitchhikersPage from "./HitchhikersPage";
 
 const workspace = vi.hoisted(() => ({ activeRole: "STUDENT" }));
 
-vi.mock("../api/people", () => ({ countPeople: vi.fn(), searchPeople: vi.fn() }));
+vi.mock("../api/people", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/people")>()),
+  countPeople: vi.fn(),
+  searchPeople: vi.fn(),
+}));
 vi.mock("../api/projects", () => ({ listProjects: vi.fn() }));
 vi.mock("../store/RoleContext", () => ({ useRole: () => workspace }));
 
@@ -438,6 +442,45 @@ describe("HitchhikersPage people search", () => {
     renderPage("/hitchhikers?q=zz&role=sc_member");
 
     expect(await screen.findByRole("heading", { name: "Nobody found" })).toBeTruthy();
+  });
+
+  // Only Hitchhikers are eligible for projects, so the Student Council and a project never match.
+  it("offers no project for the Student Council and drops the chosen one", async () => {
+    renderWithUrl("/hitchhikers?project=born2beroot");
+    await findCard("Psimcak");
+
+    expect(searchedWith()?.project).toBe("born2beroot");
+
+    fireEvent.change(who(), { target: { value: "sc_member" } });
+
+    await waitFor(() => expect(screen.getByTestId("url").textContent).toBe("?role=sc_member"));
+    expect(searchedWith()).toMatchObject({ role: "sc_member", project: undefined });
+    expect(screen.queryByRole("combobox", { name: /Project/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /born2beroot/ })).toBeNull();
+
+    fireEvent.change(who(), { target: { value: "all" } });
+
+    expect(await screen.findByRole("combobox", { name: /Project/ })).toBeTruthy();
+  });
+
+  it("ignores a project in a shared link for the Student Council", async () => {
+    renderWithUrl("/hitchhikers?role=sc_member&project=born2beroot");
+    await findCard("Psimcak");
+
+    expect(searchedWith()).toMatchObject({ role: "sc_member", project: undefined });
+  });
+
+  it("goes back to the Hitchhikers on Clear filters after a top bar search", async () => {
+    vi.mocked(searchPeople).mockResolvedValue(resultPage([]));
+    renderWithUrl("/hitchhikers?q=zz&role=all");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Clear filters" }));
+
+    await waitFor(() => expect(screen.getByTestId("url").textContent).toBe(""));
+    expect(who().value).toBe("tutor");
+    await waitFor(() =>
+      expect(searchedWith()).toMatchObject({ role: "tutor", q: undefined, project: undefined }),
+    );
   });
 });
 

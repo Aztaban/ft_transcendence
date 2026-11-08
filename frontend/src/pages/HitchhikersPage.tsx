@@ -7,7 +7,12 @@ import profileIcon from "../assets/figma/profile.svg";
 import requestIcon from "../assets/figma/request.svg";
 import searchIcon from "../assets/figma/search.svg";
 import { ApiError } from "../api/client";
-import { countPeople, searchPeople, type PeopleOrdering } from "../api/people";
+import {
+  countPeople,
+  PEOPLE_QUERY_MAX_LENGTH,
+  searchPeople,
+  type PeopleOrdering,
+} from "../api/people";
 import { listProjects } from "../api/projects";
 import usePageTitle from "../components/layout/usePageTitle";
 import PersonAvatar from "../features/people/PersonAvatar";
@@ -27,7 +32,6 @@ interface Overview {
 
 // api-plan §10.8: `q` is 2–64 characters.
 const MIN_QUERY_LENGTH = 2;
-const MAX_QUERY_LENGTH = 64;
 // Waits for a pause in typing, so a search is not sent for every letter (60 a minute, §5.9).
 const SEARCH_DELAY_MS = 300;
 
@@ -73,11 +77,13 @@ function HitchhikersPage() {
   const { activeRole } = useRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
-  const project = searchParams.get("project") ?? "";
+  const who: Who = isWho(searchParams.get("role")) ? (searchParams.get("role") as Who) : "tutor";
+  // Only Hitchhikers are eligible for projects (§10.8): with the Student Council a project could
+  // never match, so it is not offered and a shared link's `project` is ignored.
+  const project = who === "sc_member" ? "" : (searchParams.get("project") ?? "");
   const ordering: PeopleOrdering =
     searchParams.get("ordering") === "-display_name" ? "-display_name" : "display_name";
   const searchTerm = query.length >= MIN_QUERY_LENGTH ? query : undefined;
-  const who: Who = isWho(searchParams.get("role")) ? (searchParams.get("role") as Who) : "tutor";
   const isHitchhikers = who === "tutor";
 
   const [text, setText] = useState(query);
@@ -214,9 +220,10 @@ function HitchhikersPage() {
     return () => window.clearTimeout(timeout);
   }, [text, query, project, ordering]);
 
+  // Back to the page's heading: the Hitchhikers, with no name or project.
   function clearFilters() {
     setText("");
-    applyFilters({ q: "", project: "" });
+    applyFilters({ q: "", project: "", role: "" });
   }
 
   function retry() {
@@ -303,7 +310,7 @@ function HitchhikersPage() {
           <input
             type="search"
             value={text}
-            maxLength={MAX_QUERY_LENGTH}
+            maxLength={PEOPLE_QUERY_MAX_LENGTH}
             placeholder={t("hitchhikers.searchPlaceholder")}
             aria-label={t(
               isHitchhikers ? "hitchhikers.searchAria" : "hitchhikers.searchPeopleAria",
@@ -317,9 +324,15 @@ function HitchhikersPage() {
           <span>{t("hitchhikers.who")}</span>
           <select
             value={who}
-            onChange={(event) =>
-              applyFilters({ role: event.target.value === "tutor" ? "" : event.target.value })
-            }
+            onChange={(event) => {
+              const value = event.target.value;
+
+              applyFilters({
+                role: value === "tutor" ? "" : value,
+                // The Student Council is never eligible for a project.
+                ...(value === "sc_member" ? { project: "" } : {}),
+              });
+            }}
           >
             {whoOptions.map((item) => (
               <option key={item.value} value={item.value}>
@@ -329,20 +342,22 @@ function HitchhikersPage() {
           </select>
         </label>
 
-        <label className="hitchhikers__select">
-          <span>{t("hitchhikers.project")}</span>
-          <select
-            value={project}
-            onChange={(event) => applyFilters({ project: event.target.value })}
-          >
-            <option value="">{t("hitchhikers.allProjects")}</option>
-            {(projects ?? []).map((item) => (
-              <option key={item.id} value={item.slug}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {who !== "sc_member" && (
+          <label className="hitchhikers__select">
+            <span>{t("hitchhikers.project")}</span>
+            <select
+              value={project}
+              onChange={(event) => applyFilters({ project: event.target.value })}
+            >
+              <option value="">{t("hitchhikers.allProjects")}</option>
+              {(projects ?? []).map((item) => (
+                <option key={item.id} value={item.slug}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label className="hitchhikers__select">
           <span>{t("hitchhikers.sort")}</span>
