@@ -434,6 +434,12 @@ def test_all_scope(other, evaluation, expected, role):
         ({"ordering": "note"}, "ordering", '"note" is not a valid choice.'),
         ({"result": "passed,wrong"}, "result", '"wrong" is not a valid choice.'),
         ({"project": "missing"}, "project", "Unknown project slug."),
+        ({"scope": ""}, "scope", '"" is not a valid choice.'),
+        ({"status": ""}, "status", "This field may not be blank."),
+        ({"history": ""}, "history", '"" is not a valid choice.'),
+        ({"ordering": ""}, "ordering", '"" is not a valid choice.'),
+        ({"result": ""}, "result", "This field may not be blank."),
+        ({"project": ""}, "project", "This field may not be blank."),
     ],
 )
 def test_filter_validation(client, params, field, message):
@@ -456,7 +462,6 @@ def test_filter_validation(client, params, field, message):
         ({"status": "pending,confirmed"}, True),
         ({"status": "expired"}, False),
         ({"project": "libft"}, True),
-        ({"project": ""}, True),
     ],
 )
 def test_filters(client, evaluation, expected, params, include):

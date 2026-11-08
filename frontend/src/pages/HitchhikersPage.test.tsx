@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
@@ -32,7 +32,7 @@ const psimcak: PersonResult = {
 const lenka: PersonResult = {
   id: 9,
   display_name: "Lenka Husarova",
-  avatar_url: "/api/v1/files/3/download/",
+  avatar_url: "/avatar.png",
   roles: [
     { id: 1, name: "student" },
     { id: 3, name: "head_tutor" },
@@ -109,7 +109,7 @@ describe("HitchhikersPage", () => {
 
     const lenkaCard = await findCard("Lenka Husarova");
 
-    expect(lenkaCard.querySelector("img")?.getAttribute("src")).toBe("/api/v1/files/3/download/");
+    expect(lenkaCard.querySelector("img")?.getAttribute("src")).toBe("/avatar.png");
     expect(
       within(within(lenkaCard).getByRole("list", { name: "Roles" }))
         .getAllByRole("listitem")
@@ -325,6 +325,170 @@ describe("HitchhikersPage", () => {
     expect(vi.mocked(searchPeople).mock.calls.map(([params]) => params?.page)).toEqual([1, 2, 2]);
     expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+// Search interface (#361): what the user sees and keeps while searching (api-plan §10.8).
+describe("HitchhikersPage search interface", () => {
+  function LocationProbe() {
+    const location = useLocation();
+
+    return <output data-testid="location">{location.search}</output>;
+  }
+
+  function renderWithLocation(path = "/hitchhikers") {
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route
+            path="/hitchhikers"
+            element={
+              <>
+                <HitchhikersPage />
+                <LocationProbe />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  function searchBox() {
+    return screen.getByRole("searchbox", { name: "Search Hitchhikers by name" });
+  }
+
+  function status() {
+    return document.getElementById("hitchhikers-search-hint")?.textContent;
+  }
+
+  it("ignores an older answer that arrives after a newer search", async () => {
+    let answerOld: (value: ReturnType<typeof resultPage>) => void = () => {};
+
+    vi.mocked(searchPeople).mockImplementation(async ({ q } = {}) => {
+      if (q === "le") {
+        return new Promise((resolve) => {
+          answerOld = resolve;
+        });
+      }
+
+      return q === "len" ? resultPage([lenka]) : resultPage([psimcak, lenka]);
+    });
+    renderPage();
+    await findCard("Psimcak");
+
+    fireEvent.change(searchBox(), { target: { value: "le" } });
+    await waitFor(() => expect(searchedWith()?.q).toBe("le"));
+    fireEvent.change(searchBox(), { target: { value: "len" } });
+    await waitFor(() => expect(searchedWith()?.q).toBe("len"));
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Psimcak" })).toBeNull());
+
+    await act(async () => answerOld(resultPage([psimcak, mjusta])));
+
+    expect(screen.getByRole("heading", { name: "Lenka Husarova" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Psimcak" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Mjusta" })).toBeNull();
+  });
+
+  it("keeps the results while a new search runs and announces the outcome", async () => {
+    let answer: (value: ReturnType<typeof resultPage>) => void = () => {};
+
+    renderPage();
+    await findCard("Psimcak");
+
+    expect(status()).toBe("2 Hitchhikers");
+
+    vi.mocked(searchPeople).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    fireEvent.change(searchBox(), { target: { value: "lenka" } });
+
+    await waitFor(() => expect(status()).toBe("Searching…"));
+    expect(screen.getByRole("heading", { name: "Psimcak" })).toBeTruthy();
+    expect(screen.getByRole("list", { busy: true })).toBeTruthy();
+
+    await act(async () => answer(resultPage([lenka])));
+
+    expect(status()).toBe("1 Hitchhiker");
+    expect(screen.queryByRole("heading", { name: "Psimcak" })).toBeNull();
+  });
+
+  it("starts again from the first page when a filter changes after Show more", async () => {
+    vi.mocked(searchPeople)
+      .mockResolvedValueOnce(resultPage([psimcak, lenka], 3, "/api/v1/search/people/?page=2"))
+      .mockResolvedValueOnce(resultPage([mjusta], 3))
+      .mockResolvedValue(resultPage([psimcak]));
+    renderPage();
+    await findCard("Psimcak");
+    fireEvent.click(screen.getByRole("button", { name: "Show more (1 left)" }));
+    await findCard("Mjusta");
+
+    fireEvent.change(screen.getByRole("combobox", { name: /Project/ }), {
+      target: { value: "born2beroot" },
+    });
+
+    await waitFor(() => expect(searchedWith()).toMatchObject({ project: "born2beroot", page: 1 }));
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Mjusta" })).toBeNull());
+  });
+
+  it("shows the server's message when the search is not valid", async () => {
+    vi.mocked(searchPeople).mockRejectedValue(
+      new ApiError(400, "Invalid input.", "validation_error", {
+        q: ["Ensure this field has no more than 100 characters."],
+      }),
+    );
+    renderPage("/hitchhikers?q=ab");
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "Ensure this field has no more than 100 characters.",
+    );
+  });
+
+  it("still searches when the project list cannot be loaded", async () => {
+    vi.mocked(listProjects).mockRejectedValue(new Error("network"));
+    renderPage();
+
+    expect(await findCard("Psimcak")).toBeTruthy();
+    expect(searchedWith()).toEqual({
+      role: "tutor",
+      q: undefined,
+      project: undefined,
+      ordering: "display_name",
+      page: 1,
+    });
+  });
+
+  it("sorts A to Z when the URL has an unknown ordering", async () => {
+    renderPage("/hitchhikers?ordering=email");
+    await findCard("Psimcak");
+
+    expect(searchedWith()?.ordering).toBe("display_name");
+    expect((screen.getByRole("combobox", { name: /Sort/ }) as HTMLSelectElement).value).toBe(
+      "display_name",
+    );
+  });
+
+  it("puts the typed name and the sort in the URL, so a search can be shared", async () => {
+    renderWithLocation();
+    await findCard("Psimcak");
+
+    fireEvent.change(searchBox(), { target: { value: "  lenka " } });
+    await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("?q=lenka"));
+
+    fireEvent.change(screen.getByRole("combobox", { name: /Sort/ }), {
+      target: { value: "-display_name" },
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("location").textContent).toBe("?q=lenka&ordering=-display_name"),
+    );
+
+    fireEvent.change(searchBox(), { target: { value: "" } });
+    await waitFor(() =>
+      expect(screen.getByTestId("location").textContent).toBe("?ordering=-display_name"),
+    );
   });
 });
 

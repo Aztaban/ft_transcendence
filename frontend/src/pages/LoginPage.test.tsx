@@ -22,8 +22,11 @@ function mockFetch() {
   return vi.spyOn(globalThis, "fetch");
 }
 
-function renderLoginPage(initialEntry: string | { pathname: string; state: unknown } = "/login") {
-  return render(
+// Waits for the form: the page shows nothing until the session check has answered (#671).
+async function renderLoginPage(
+  initialEntry: string | { pathname: string; state: unknown } = "/login",
+) {
+  const view = render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <AuthProvider>
         <Routes>
@@ -34,6 +37,10 @@ function renderLoginPage(initialEntry: string | { pathname: string; state: unkno
       </AuthProvider>
     </MemoryRouter>,
   );
+
+  await screen.findByRole("heading", { level: 1 });
+
+  return view;
 }
 
 function mockAnonymousSession(fetchMock: ReturnType<typeof mockFetch>) {
@@ -84,7 +91,7 @@ describe("LoginPage", () => {
       ),
     );
 
-    renderLoginPage();
+    await renderLoginPage();
 
     fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "login@example.com" },
@@ -130,7 +137,7 @@ describe("LoginPage", () => {
       ),
     );
 
-    renderLoginPage();
+    await renderLoginPage();
 
     fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "login@example.com" },
@@ -147,10 +154,10 @@ describe("LoginPage", () => {
     expect(alert.textContent).toBe("Invalid email or password.");
   });
 
-  test("links to the backend 42 OAuth redirect", () => {
+  test("links to the backend 42 OAuth redirect", async () => {
     mockAnonymousSession(mockFetch());
 
-    renderLoginPage();
+    await renderLoginPage();
 
     const link = screen.getByRole("link", { name: "CONTINUE WITH 42" });
 
@@ -175,7 +182,7 @@ describe("LoginPage", () => {
   ])("shows the message for the %s OAuth error", async (code, message) => {
     mockAnonymousSession(mockFetch());
 
-    renderLoginPage(`/login?oauth=${code}`);
+    await renderLoginPage(`/login?oauth=${code}`);
 
     const alert = await screen.findByRole("alert");
 
@@ -185,7 +192,7 @@ describe("LoginPage", () => {
   test("shows a generic error for an unknown 42 OAuth error code", async () => {
     mockAnonymousSession(mockFetch());
 
-    renderLoginPage("/login?oauth=something_unexpected");
+    await renderLoginPage("/login?oauth=something_unexpected");
 
     const alert = await screen.findByRole("alert");
 
@@ -197,7 +204,7 @@ describe("LoginPage", () => {
     async (code) => {
       mockAnonymousSession(mockFetch());
 
-      renderLoginPage(`/login?oauth=${code}`);
+      await renderLoginPage(`/login?oauth=${code}`);
 
       expect((await screen.findByRole("alert")).textContent).toBe(
         "42 login failed. Please try again.",
@@ -235,7 +242,7 @@ describe("LoginPage", () => {
   test("welcomes a newly registered user and fills in their email", async () => {
     mockAnonymousSession(mockFetch());
 
-    renderLoginPage({ pathname: "/login", state: { registeredEmail: "diana@test.com" } });
+    await renderLoginPage({ pathname: "/login", state: { registeredEmail: "diana@test.com" } });
 
     expect((await screen.findByRole("status")).textContent).toBe(
       "Account created. You can log in now.",
@@ -246,7 +253,7 @@ describe("LoginPage", () => {
   test("shows no welcome message when not coming from the registration", async () => {
     mockAnonymousSession(mockFetch());
 
-    renderLoginPage();
+    await renderLoginPage();
 
     await screen.findByRole("button", { name: "LOGIN" });
 
@@ -259,7 +266,7 @@ describe("LoginPage in another language", () => {
   test("shows the form and a 42 login error in Czech", async () => {
     mockAnonymousSession(mockFetch());
     await i18n.changeLanguage("cs");
-    renderLoginPage("/login?oauth=oauth_access_denied");
+    await renderLoginPage("/login?oauth=oauth_access_denied");
 
     expect(screen.getByRole("heading", { level: 1, name: "Přihlášení" })).toBeTruthy();
     expect(document.title).toBe("Přihlášení · 42 Evals");
@@ -283,7 +290,7 @@ describe("LoginPage in another language", () => {
 describe("LoginPage link to Register", () => {
   test("lets a visitor without an account go to the Register page", async () => {
     mockAnonymousSession(mockFetch());
-    renderLoginPage();
+    await renderLoginPage();
 
     expect(screen.getByText("Don't have an account?")).toBeTruthy();
 

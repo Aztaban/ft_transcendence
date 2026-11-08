@@ -100,8 +100,8 @@ async def connected_clients(clients):
 def notify(recipient):
     return create_notification(
         recipient_id=recipient.pk,
-        notification_type="resource.deleted",
-        payload={"title": "Guide"},
+        notification_type="account.updated",
+        payload={"fields": ["email"]},
     ).pk
 
 
@@ -164,8 +164,8 @@ def test_badge_refresh_reflects_read_and_delete_actions_on_every_session(partici
         if action == "read":
             assert response.json() == {
                 "id": notification_id,
-                "type": "resource.deleted",
-                "payload": {"title": "Guide"},
+                "type": "account.updated",
+                "payload": {"fields": ["email"]},
                 "target_url": "",
                 "read_at": "2026-10-22T12:00:00Z",
                 "created_at": "2026-10-22T12:00:00Z",
@@ -220,8 +220,8 @@ def test_reconnect_recovers_missed_notification_and_count_over_rest(participants
                     "results": [
                         {
                             "id": notification_id,
-                            "type": "resource.deleted",
-                            "payload": {"title": "Guide"},
+                            "type": "account.updated",
+                            "payload": {"fields": ["email"]},
                             "target_url": "",
                             "read_at": None,
                             "created_at": "2026-10-22T12:00:00Z",

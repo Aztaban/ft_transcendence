@@ -86,7 +86,8 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
         },
     )
     def get(self, request):
-        query = EvaluationRequestQuerySerializer(data=request.query_params)
+        # QueryDict's HTML-input handling would treat an empty filter as omitted (§5.7).
+        query = EvaluationRequestQuerySerializer(data=dict(request.query_params.items()))
         query.is_valid(raise_exception=True)
         filters = query.validated_data
         queryset = self.get_queryset()

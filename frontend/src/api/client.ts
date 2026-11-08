@@ -109,9 +109,12 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     const errorBody = body as ApiErrorPayload | undefined;
     const backendError = errorBody?.error;
 
+    // The backend's message is already in the user's language (§5.5). An answer without it, such
+    // as nginx's HTML 502 while the backend restarts, gets a translated sentence too, never an
+    // English developer message (#317).
     throw new ApiError(
       response.status,
-      backendError?.message ?? `API request failed: ${response.status} ${response.statusText}`,
+      backendError?.message ?? i18n.t("common.serverUnavailable"),
       backendError?.code,
       backendError?.fields,
     );

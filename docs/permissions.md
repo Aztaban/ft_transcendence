@@ -20,7 +20,7 @@ Who may call each endpoint, by role. It is a view of the contract: the rules com
 
 | Endpoint | Student | Hitchhiker | Head Tutor | SC Member | Admin |
 |---|---|---|---|---|---|
-| `GET`, `PATCH /users/me/`; `PUT`, `DELETE /users/me/avatar/` | own | own | own | own | own |
+| `GET`, `PATCH /users/me/` | own | own | own | own | own |
 | `GET /users/{id}/` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `POST /users/{id}/roles/` | — | — | `tutor` | `sc_member` | `tutor`, `head_tutor`, `sc_member` |
 | `DELETE /users/{id}/roles/{role_id}/` | — | — | — | — | `tutor`, `head_tutor`, `sc_member` |
@@ -56,7 +56,7 @@ Who may call each endpoint, by role. It is a view of the contract: the rules com
 | `POST …/release/` | — | own pick | own pick, or override | — | override |
 | `POST …/cancel/` | own | own | own, or override | own | own, or override |
 
-An override needs a `reason` and writes an audit entry (§5.8). Eligible Hitchhikers never see who asked while a request is `pending` (R15, §8.7). Evaluation results are entered in the Django admin (`/admin/`) by team members, not through the API (§7.1).
+An override needs a `reason` and writes an audit entry (§5.8). Eligible Hitchhikers never see who asked while a request is `pending` (R15, §8.7), and the student never sees who picked until they confirm, nor on a cancelled request (R18, §8.7). Evaluation results are entered in the Django admin (`/admin/`) by team members, not through the API (§7.1).
 
 ## Notifications (§10.5)
 
@@ -74,17 +74,6 @@ An override needs a `reason` and writes an audit entry (§5.8). Eligible Hitchhi
 | `POST /sc-messages/{id}/reveal-sender/` | — | — | — | — | ✓ |
 
 The sender never gets their message back and cannot list what they sent.
-
-## Files (§10.7)
-
-| Endpoint | Student | Hitchhiker | Head Tutor | SC Member | Admin |
-|---|---|---|---|---|---|
-| `POST /files/` | — | ✓ | ✓ | — | ✓ |
-| `GET /files/`, `GET /files/{id}/`, `…/download/`: visibility `authenticated` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| The same: visibility `tutors` | — | ✓ | ✓ | — | ✓ |
-| `PATCH`, `DELETE /files/{id}/` | own | own | all | own | all |
-
-Avatars are always `authenticated` and change only through `/users/me/avatar/`.
 
 ## Search and administration (§10.8, §10.9)
 

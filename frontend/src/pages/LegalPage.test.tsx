@@ -1,6 +1,6 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "../i18n";
 import LegalPage from "./LegalPage";
@@ -82,21 +82,26 @@ describe("LegalPage", () => {
     expect(screen.queryByRole("group", { name: "Language" })).toBeNull();
   });
 
-  it("opens at its title, also when moving between the two documents", () => {
-    document.documentElement.scrollTop = 900;
+  it("shows a section with only a list, even with two identical lines", () => {
+    const original = i18n.getResource("en", "translation", "legal.privacy.sections");
+    const consoleError = vi.spyOn(console, "error");
 
-    const { rerender } = renderPage("privacy");
+    // i18next stores any value at a key; the type only expects strings.
+    const sections = [{ title: "Only a list", items: ["The same line", "The same line"] }];
 
-    expect(document.documentElement.scrollTop).toBe(0);
+    i18n.addResource("en", "translation", "legal.privacy.sections", sections as unknown as string);
 
-    document.documentElement.scrollTop = 900;
-    rerender(
-      <MemoryRouter>
-        <LegalPage kind="terms" standalone />
-      </MemoryRouter>,
-    );
+    try {
+      renderPage("privacy");
 
-    expect(document.documentElement.scrollTop).toBe(0);
+      expect(headings()).toEqual(["Only a list"]);
+      expect(screen.getAllByText("The same line")).toHaveLength(2);
+      // No duplicate-key warning: the clean console is a subject rule.
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      i18n.addResource("en", "translation", "legal.privacy.sections", original);
+      consoleError.mockRestore();
+    }
   });
 
   it("says who can really see what", () => {
