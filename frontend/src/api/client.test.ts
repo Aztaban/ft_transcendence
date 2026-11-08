@@ -147,3 +147,43 @@ describe("apiRequest CSRF", () => {
     setUnauthorizedHandler(null);
   });
 });
+
+describe("apiRequest errors", () => {
+  test("keeps the backend's message and code, which come in the user's language", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ error: { code: "not_found", message: "Nenalezeno.", fields: {} } }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await expect(apiRequest("/api/v1/things/9/")).rejects.toMatchObject({
+      status: 404,
+      code: "not_found",
+      message: "Nenalezeno.",
+    });
+  });
+
+  test("translates the message of an answer that is not the API's, such as a 502 page", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response("<html>502 Bad Gateway</html>", {
+          status: 502,
+          statusText: "Bad Gateway",
+          headers: { "Content-Type": "text/html" },
+        }),
+    );
+
+    await expect(apiRequest("/api/v1/things/")).rejects.toMatchObject({
+      status: 502,
+      code: undefined,
+      message: "The server did not answer. Please try again in a moment.",
+    });
+
+    await i18n.changeLanguage("cs");
+
+    await expect(apiRequest("/api/v1/things/")).rejects.toMatchObject({
+      message: "Server neodpověděl. Zkuste to prosím za chvíli znovu.",
+    });
+  });
+});

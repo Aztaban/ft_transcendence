@@ -137,7 +137,13 @@ def test_expiry_stores_exact_facts_and_delivers_after_commit(
     with django_capture_on_commit_callbacks(execute=True):
         assert expire_evaluation_requests() == 1
         send.assert_not_awaited()
-        expected = [
+        # Only the student is notified. The Hitchhiker of an expired proposal gets the event
+        # below but no notification, because expiry hides the request from them (R17).
+        assert list(
+            Notification.objects.order_by("recipient_id").values(
+                "recipient_id", "type", "payload", "target_url", "read_at"
+            )
+        ) == [
             {
                 "recipient_id": 7,
                 "type": "evaluation.expired",
@@ -150,49 +156,23 @@ def test_expiry_stores_exact_facts_and_delivers_after_commit(
                 "read_at": None,
             }
         ]
-        if previous_status == "awaiting_confirmation":
-            expected.append(
-                {
-                    "recipient_id": 42,
-                    "type": "evaluation.expired",
-                    "payload": {
-                        "request_id": 17,
-                        "project": {"id": 4, "slug": "libft", "name": "Libft"},
-                        "previous_status": "awaiting_confirmation",
-                    },
-                    "target_url": "/evaluations/17",
-                    "read_at": None,
-                }
-            )
-        assert (
-            list(
-                Notification.objects.order_by("recipient_id").values(
-                    "recipient_id", "type", "payload", "target_url", "read_at"
-                )
-            )
-            == expected
-        )
     event = {
         "type": "user.event",
         "event": "evaluation.expired",
         "data": {"id": 17, "status": "expired"},
     }
-    expected_events = [call("user_7", event)]
-    expected_events.append(call("user_43" if previous_status == "pending" else "user_42", event))
-    expected_events.extend(
-        [
-            call(
-                f"user_{notification.recipient_id}",
-                {
-                    "type": "user.event",
-                    "event": "notification.created",
-                    "data": {"id": notification.pk},
-                },
-            )
-            for notification in Notification.objects.order_by("recipient_id")
-        ]
-    )
-    assert send.await_args_list == expected_events
+    assert send.await_args_list == [
+        call("user_7", event),
+        call("user_43" if previous_status == "pending" else "user_42", event),
+        call(
+            "user_7",
+            {
+                "type": "user.event",
+                "event": "notification.created",
+                "data": {"id": Notification.objects.get().pk},
+            },
+        ),
+    ]
     evaluation.refresh_from_db()
     assert evaluation.status == "expired"
     assert evaluation.expired_at == NOW
@@ -204,7 +184,7 @@ def test_expiry_stores_exact_facts_and_delivers_after_commit(
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         assert expire_evaluation_requests() == 0
     assert callbacks == []
-    assert Notification.objects.count() == (1 if previous_status == "pending" else 2)
+    assert Notification.objects.count() == 1
     evaluation.refresh_from_db()
     assert evaluation.expired_at == NOW
 
@@ -310,10 +290,7 @@ def test_competing_jobs_expire_and_notify_only_once(evaluation_factory, monkeypa
     assert EvaluationRequest.objects.get(pk=17).status == "expired"
     assert list(
         Notification.objects.order_by("recipient_id").values_list("recipient_id", "type")
-    ) == [
-        (7, "evaluation.expired"),
-        (42, "evaluation.expired"),
-    ]
+    ) == [(7, "evaluation.expired")]
 
 
 def test_expiry_task_is_discoverable_and_scheduled_every_five_minutes(settings):

@@ -17,6 +17,8 @@ describe("CouncilPage", () => {
     );
 
     expect(document.title).toBe("Student Council · 42 Evals");
+    // The side panels belong to the page, not a landmark next to <main> (#319).
+    expect(screen.queryByRole("complementary")).toBeNull();
 
     expect(screen.getByRole("heading", { name: "Student Council" })).toBeTruthy();
     expect(screen.getByText(/Send us an anonymous message\./)).toBeTruthy();

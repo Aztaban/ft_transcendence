@@ -20,7 +20,9 @@ export function notificationText(notification: Notification): string {
   const { role, starts_at, ends_at } = notification.payload;
   const field = contextField[notification.type];
   const value = field ? notification.payload[field] : undefined;
-  const context = typeof value === "string" ? value : undefined;
+  // The student is not told that the Hitchhiker cancelled: `cancelled_by` is null then (R18).
+  const hidden = notification.type === "evaluation.cancelled" && !notification.payload.cancelled_by;
+  const context = hidden ? "hidden" : typeof value === "string" ? value : undefined;
   const slot =
     typeof starts_at === "string" && typeof ends_at === "string"
       ? formatSlot(starts_at, ends_at)

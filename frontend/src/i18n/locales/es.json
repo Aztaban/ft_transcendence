@@ -69,7 +69,8 @@
     "duration": "Duración",
     "requestedAgo": "Solicitado {{time}}",
     "noNote": "El estudiante no ha dejado ninguna nota.",
-    "tryAgain": "Intentar de nuevo"
+    "tryAgain": "Intentar de nuevo",
+    "serverUnavailable": "El servidor no respondió. Inténtalo de nuevo en un momento."
   },
   "time": {
     "justNow": "ahora mismo",
@@ -429,7 +430,26 @@
     "historyAboutTitle": "Sobre el historial",
     "historyAboutText": "Los mensajes leídos también se quedan aquí. Marcar uno como leído o no leído lo cambia para todos los miembros del consejo.",
     "open": "Abrir",
-    "openAria": "Abrir el mensaje n.º {{id}}"
+    "openAria": "Abrir el mensaje n.º {{id}}",
+    "moderation": {
+      "title": "Moderación",
+      "hint": "Solo para administradores. Cada acción se guarda en el registro de auditoría con tu motivo.",
+      "revealButton": "Mostrar remitente",
+      "deleteButton": "Eliminar mensaje",
+      "revealTitle": "¿Mostrar quién envió el mensaje n.º {{id}}?",
+      "revealText": "Solo para investigar un abuso. Tu nombre y el motivo se guardan en el registro de auditoría, y el consejo sigue sin ver al remitente.",
+      "revealConfirm": "Mostrar remitente",
+      "deleteTitle": "¿Eliminar el mensaje n.º {{id}}?",
+      "deleteText": "El mensaje desaparece para todos los miembros del consejo y no se puede recuperar. Tu nombre y el motivo se guardan en el registro de auditoría.",
+      "deleteConfirm": "Eliminar mensaje",
+      "reason": "Motivo",
+      "reasonHint_one": "Al menos {{count}} carácter",
+      "reasonHint_many": "Al menos {{count}} caracteres",
+      "reasonHint_other": "Al menos {{count}} caracteres",
+      "sender": "Remitente",
+      "senderDeleted": "La cuenta del remitente fue eliminada.",
+      "deleted": "El mensaje se ha eliminado. El motivo queda guardado en el registro de auditoría."
+    }
   },
   "roles": {
     "student": "Estudiante",
@@ -450,11 +470,12 @@
   "notifications": {
     "evaluation": {
       "created": "Nueva solicitud de evaluación para {{project.name}}",
-      "slot_picked": "{{tutor.display_name}} eligió un horario para {{project.name}}: {{slot}}. Confírmalo, por favor",
+      "slot_picked": "Un Hitchhiker eligió un horario para {{project.name}}: {{slot}}. Confírmalo, por favor",
       "confirmed": "{{student.display_name}} confirmó la evaluación de {{project.name}}: {{slot}}",
       "declined": "{{student.display_name}} rechazó tu horario para {{project.name}}",
-      "released": "{{tutor.display_name}} liberó tu solicitud de evaluación de {{project.name}}",
+      "released": "Se liberó el horario de {{project.name}}",
       "cancelled": "{{cancelled_by.display_name}} canceló la evaluación de {{project.name}}",
+      "cancelled_hidden": "Se canceló la evaluación de {{project.name}}",
       "expired_pending": "Tu solicitud de evaluación de {{project.name}} caducó: nadie la eligió",
       "expired_awaiting_confirmation": "La evaluación de {{project.name}} caducó antes de confirmar el horario",
       "result_recorded_passed": "Resultado de {{project.name}}: aprobado",
@@ -475,11 +496,6 @@
     },
     "sc_message": {
       "created": "Nuevo mensaje anónimo para el Consejo estudiantil"
-    },
-    "resource": {
-      "created": "{{owner.display_name}} compartió «{{title}}»",
-      "updated": "Tu recurso «{{title}}» fue editado",
-      "deleted": "Tu recurso «{{title}}» fue eliminado"
     }
   },
   "home": {
@@ -524,7 +540,7 @@
   "dashboard": {
     "openRequests": "Solicitudes abiertas",
     "studentOpenEmpty": "Tus solicitudes de evaluación activas aparecerán aquí.",
-    "proposed": "{{name}} propuso <time>{{slot}}</time>",
+    "proposed": "Un Hitchhiker propuso <time>{{slot}}</time>",
     "evaluationRequest": "Solicitud de evaluación",
     "pending": "Pendiente",
     "reviewProposal": "Ver propuesta",
@@ -691,6 +707,7 @@
     "or": "o",
     "continueWith42": "CONTINUAR CON 42",
     "registered": "Cuenta creada. Ya puedes iniciar sesión.",
+    "missingFields": "Introduce tu correo y tu contraseña.",
     "invalidCredentials": "Correo o contraseña incorrectos.",
     "loginError": "No se pudo iniciar sesión. Inténtalo de nuevo.",
     "register": "REGISTRARSE",
@@ -724,7 +741,7 @@
     "passwordNumeric": "La contraseña no puede contener solo números."
   },
   "legal": {
-    "copyright": "© transcendence 2026",
+    "copyright": "© transcendence {{year}}",
     "footerLabel": "Información legal",
     "lastUpdated": "Última actualización: {{date}}",
     "back": "Volver a la aplicación",

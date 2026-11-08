@@ -106,16 +106,21 @@ def _persist_42_identity(user, account_information):
 
 def resolve_42_user(account_information):
     """Return (user, None) or (None, OAuth error code), without changing a session."""
-    user = User.objects.filter(intra_id=account_information["intra_id"]).first()
-    if user is not None:
-        if not user.is_active:
-            return None, "oauth_account_suspended"
+    with transaction.atomic():
+        user = (
+            User.objects.select_for_update()
+            .filter(intra_id=account_information["intra_id"])
+            .first()
+        )
+        if user is not None:
+            if not user.is_active:
+                return None, "oauth_account_suspended"
 
-        user = _persist_42_identity(user, account_information)
-        if user is None:
-            return None, "oauth_identity_conflict"
+            user = _persist_42_identity(user, account_information)
+            if user is None:
+                return None, "oauth_identity_conflict"
 
-        return user, None
+            return user, None
 
     normalized_email = User.objects.normalize_email(account_information["email"])
     if User.objects.filter(email=normalized_email).exists():
