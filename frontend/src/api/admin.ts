@@ -61,3 +61,37 @@ export function updateAdminUser(id: number, payload: UpdateAdminUserPayload): Pr
     body: JSON.stringify(payload),
   });
 }
+
+// api-plan §10.2: suspend, reactivate and delete need a `reason` of 1–500 characters (trimmed),
+// kept in the audit log. A blank one is 400 `validation_error` with `fields.reason`.
+export const REASON_MAX_LENGTH = 500;
+
+function reasonRequest(method: "POST" | "DELETE", reason: string): RequestInit {
+  return {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  };
+}
+
+// POST /api/v1/admin/users/{id}/suspend/ (api-plan §10.2): ends the user's sessions and returns
+// the AdminUser. 409 `invalid_user_status` unless the account is active, 409 `cannot_modify_self`.
+export function suspendAdminUser(id: number, reason: string): Promise<AdminUser> {
+  return apiRequest<AdminUser>(`/api/v1/admin/users/${id}/suspend/`, reasonRequest("POST", reason));
+}
+
+// POST /api/v1/admin/users/{id}/reactivate/ (api-plan §10.2): undoes a suspension and returns the
+// AdminUser. 409 `invalid_user_status` unless the account is suspended, 409 `cannot_modify_self`.
+export function reactivateAdminUser(id: number, reason: string): Promise<AdminUser> {
+  return apiRequest<AdminUser>(
+    `/api/v1/admin/users/${id}/reactivate/`,
+    reasonRequest("POST", reason),
+  );
+}
+
+// DELETE /api/v1/admin/users/{id}/ (api-plan §10.2): anonymizes the account for good (schema
+// §2.4), 204 with no body. 409 `invalid_user_status` if it is already deleted, 409
+// `cannot_modify_self`.
+export function deleteAdminUser(id: number, reason: string): Promise<void> {
+  return apiRequest<void>(`/api/v1/admin/users/${id}/`, reasonRequest("DELETE", reason));
+}

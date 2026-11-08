@@ -2,12 +2,25 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getAdminUser, updateAdminUser } from "../api/admin";
+import {
+  deleteAdminUser,
+  getAdminUser,
+  reactivateAdminUser,
+  suspendAdminUser,
+  updateAdminUser,
+} from "../api/admin";
 import { ApiError } from "../api/client";
 import type { AdminUser } from "../types/adminUser";
 import AdminUserDetailPage from "./AdminUserDetailPage";
 
-vi.mock("../api/admin", () => ({ getAdminUser: vi.fn(), updateAdminUser: vi.fn() }));
+vi.mock("../api/admin", () => ({
+  REASON_MAX_LENGTH: 500,
+  getAdminUser: vi.fn(),
+  updateAdminUser: vi.fn(),
+  suspendAdminUser: vi.fn(),
+  reactivateAdminUser: vi.fn(),
+  deleteAdminUser: vi.fn(),
+}));
 
 // The logged-in Admin; a test sets `id` to the edited user's to edit their own account.
 const me = vi.hoisted(() => ({ id: 99, refresh: vi.fn() }));
@@ -236,5 +249,169 @@ describe("AdminUserDetailPage", () => {
     expect((await screen.findByRole("alert")).textContent).toBe(
       "We couldn't load this user. Please try again later.",
     );
+  });
+});
+
+describe("AdminUserDetailPage account actions", () => {
+  function dialog() {
+    return screen.getByRole("dialog");
+  }
+
+  function typeReason(reason: string) {
+    fireEvent.change(within(dialog()).getByLabelText("Reason"), { target: { value: reason } });
+  }
+
+  it("suspends an active account with a reason", async () => {
+    vi.mocked(suspendAdminUser).mockResolvedValue(adminUser({ status: "suspended" }));
+    renderAt();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Suspend account" }));
+
+    expect(screen.getByRole("dialog", { name: "Suspend Anna?" })).toBeTruthy();
+
+    const confirm = within(dialog()).getByRole("button", { name: "Suspend" }) as HTMLButtonElement;
+
+    expect(confirm.disabled).toBe(true);
+    typeReason("   ");
+    expect(confirm.disabled).toBe(true);
+    typeReason("  Spam in the council inbox  ");
+    fireEvent.click(confirm);
+
+    const result = await screen.findByText("The account was suspended.");
+
+    expect(suspendAdminUser).toHaveBeenCalledWith(1, "Spam in the council inbox");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(result);
+    expect(screen.getByText("Suspended")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reactivate account" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Suspend account" })).toBeNull();
+  });
+
+  it("reactivates a suspended account", async () => {
+    vi.mocked(getAdminUser).mockResolvedValue(adminUser({ status: "suspended" }));
+    vi.mocked(reactivateAdminUser).mockResolvedValue(adminUser());
+    renderAt();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Reactivate account" }));
+    typeReason("Appeal accepted");
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Reactivate" }));
+
+    expect(await screen.findByText("The account was reactivated.")).toBeTruthy();
+    expect(reactivateAdminUser).toHaveBeenCalledWith(1, "Appeal accepted");
+    expect(screen.getByRole("button", { name: "Suspend account" })).toBeTruthy();
+  });
+
+  it("deletes the account after the confirmation and shows it as deleted", async () => {
+    vi.mocked(deleteAdminUser).mockResolvedValue(undefined);
+    renderAt();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Delete account" }));
+
+    expect(screen.getByRole("dialog", { name: "Delete Anna?" }).textContent).toContain(
+      "This cannot be undone.",
+    );
+
+    vi.mocked(getAdminUser).mockResolvedValue(
+      adminUser({
+        display_name: "Deleted user",
+        email: "deleted-1@deleted.invalid",
+        status: "deleted",
+        roles: [],
+      }),
+    );
+    typeReason("Left 42");
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Delete for good" }));
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Deleted user" })).toBeTruthy();
+    expect(deleteAdminUser).toHaveBeenCalledWith(1, "Left 42");
+    expect(screen.getByText("The account was deleted.")).toBeTruthy();
+    expect(
+      screen.getByText("This account was deleted. Deleted accounts cannot be edited."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Delete account" })).toBeNull();
+    expect(getAdminUser).toHaveBeenCalledTimes(2);
+  });
+
+  it("closes the popup without a request on Cancel", async () => {
+    renderAt();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Delete account" }));
+    typeReason("Left 42");
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(deleteAdminUser).not.toHaveBeenCalled();
+  });
+
+  it("keeps the popup open while the request runs", async () => {
+    vi.mocked(suspendAdminUser).mockReturnValue(new Promise(() => {}));
+    renderAt();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Suspend account" }));
+    typeReason("Spam");
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Suspend" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(within(dialog()).getByRole("button", { name: "Suspending…" })).toBeTruthy();
+    expect(
+      (within(dialog()).getByRole("button", { name: "Cancel" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+
+  it("shows the backend's reason message inside the popup", async () => {
+    vi.mocked(suspendAdminUser).mockRejectedValue(
+      new ApiError(400, "Please correct the highlighted fields.", "validation_error", {
+        reason: ["Ensure this field has no more than 500 characters."],
+      }),
+    );
+    renderAt();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Suspend account" }));
+    typeReason("Spam");
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Suspend" }));
+
+    expect((await within(dialog()).findByRole("alert")).textContent).toBe(
+      "Ensure this field has no more than 500 characters.",
+    );
+  });
+
+  it("shows the account as it is now when its status changed meanwhile", async () => {
+    vi.mocked(suspendAdminUser).mockRejectedValue(
+      new ApiError(409, "The account is not active.", "invalid_user_status"),
+    );
+    renderAt();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Suspend account" }));
+    vi.mocked(getAdminUser).mockResolvedValue(adminUser({ status: "suspended" }));
+    typeReason("Spam");
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Suspend" }));
+
+    expect(await screen.findByRole("button", { name: "Reactivate account" })).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("alert").textContent).toBe(
+      "The account changed in the meantime, so nothing was done. It is shown as it is now.",
+    );
+  });
+
+  it("keeps what is typed in the edit form after a suspension", async () => {
+    vi.mocked(suspendAdminUser).mockResolvedValue(adminUser({ status: "suspended" }));
+    renderAt();
+
+    fireEvent.change(await screen.findByLabelText("Display name"), { target: { value: "Draft" } });
+    fireEvent.click(screen.getByRole("button", { name: "Suspend account" }));
+    typeReason("Spam");
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Suspend" }));
+
+    await screen.findByText("The account was suspended.");
+    expect(input("Display name").value).toBe("Draft");
+  });
+
+  it("offers no actions on the Admin's own account", async () => {
+    me.id = 1;
+    renderAt();
+
+    expect(await screen.findByText("You cannot suspend or delete your own account.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Suspend account" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete account" })).toBeNull();
   });
 });

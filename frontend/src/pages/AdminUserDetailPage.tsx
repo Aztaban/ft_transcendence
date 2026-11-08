@@ -1,10 +1,18 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 
-import { getAdminUser, updateAdminUser, type UpdateAdminUserPayload } from "../api/admin";
+import {
+  deleteAdminUser,
+  getAdminUser,
+  reactivateAdminUser,
+  suspendAdminUser,
+  updateAdminUser,
+  type UpdateAdminUserPayload,
+} from "../api/admin";
 import { ApiError } from "../api/client";
 import usePageTitle from "../components/layout/usePageTitle";
+import AccountActionDialog, { type AccountAction } from "../features/admin/AccountActionDialog";
 import UserStatusBadge, { rolesText } from "../features/admin/UserStatusBadge";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { AdminUser } from "../types/adminUser";
@@ -24,8 +32,9 @@ const languages: readonly Language[] = ["en", "cs", "es"];
 const USER_ID_PATTERN = /^[1-9]\d*$/;
 
 // Administration user detail (#678): one AdminUser from GET /admin/users/{id}/ (api-plan §10.2),
-// and a form that changes the display name, email and language with PATCH. Deleted accounts are
-// shown but cannot be edited. App.tsx gives each id its own instance, so nothing typed for one
+// a form that changes the display name, email and language with PATCH, and the buttons that
+// suspend, reactivate or delete the account, each confirmed with a reason. Deleted accounts are
+// shown but cannot be changed. App.tsx gives each id its own instance, so nothing typed for one
 // user carries over to the next.
 function AdminUserDetailPage() {
   const { t } = useTranslation();
@@ -43,6 +52,12 @@ function AdminUserDetailPage() {
   const [formError, setFormError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  // The account action whose popup is open, and what the last one did.
+  const [action, setAction] = useState<AccountAction | null>(null);
+  const [isActing, setIsActing] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [actionDone, setActionDone] = useState<AccountAction | null>(null);
+  const actionDoneRef = useRef<HTMLParagraphElement>(null);
 
   usePageTitle(user?.display_name ?? t("adminUser.title"));
 
@@ -78,6 +93,14 @@ function AdminUserDetailPage() {
       active = false;
     };
   }, [userId, reloadKey]);
+
+  // The button that opened the popup is gone after the action (Suspend becomes Reactivate, a
+  // deleted account has no buttons), so the focus moves to the result instead of the page top.
+  useEffect(() => {
+    if (actionDone) {
+      actionDoneRef.current?.focus();
+    }
+  }, [actionDone]);
 
   // Only what differs from the saved account is sent (a partial PATCH), trimmed like the backend.
   function changes(current: AdminUser): UpdateAdminUserPayload {
@@ -181,6 +204,66 @@ function AdminUserDetailPage() {
     }
   }
 
+  function openAction(next: AccountAction) {
+    setAction(next);
+    setActionError("");
+    setActionDone(null);
+  }
+
+  // The popup stays open while its request runs.
+  function closeAction() {
+    if (!isActing) {
+      setAction(null);
+      setActionError("");
+    }
+  }
+
+  async function confirmAction(reason: string) {
+    if (!user || !action) {
+      return;
+    }
+
+    setActionError("");
+    setIsActing(true);
+
+    try {
+      if (action === "delete") {
+        // 204 with no body: load the anonymized account (schema §2.4) to show it.
+        await deleteAdminUser(user.id, reason);
+        setReloadKey((key) => key + 1);
+      } else {
+        const updated =
+          action === "suspend"
+            ? await suspendAdminUser(user.id, reason)
+            : await reactivateAdminUser(user.id, reason);
+
+        // Only the account changes: what is typed in the edit form stays.
+        setUser(updated);
+      }
+
+      setAction(null);
+      setActionDone(action);
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "invalid_user_status") {
+        // Another Admin changed the status first: show the account as it is now.
+        setAction(null);
+        setFormError(t("adminUser.actions.statusChanged"));
+        setReloadKey((key) => key + 1);
+      } else if (error instanceof ApiError && error.status === 404) {
+        setAction(null);
+        setLoadState("not-found");
+      } else if (error instanceof ApiError && error.code === "cannot_modify_self") {
+        setActionError(t("adminUser.actions.cannotModifySelf"));
+      } else if (error instanceof ApiError && error.code === "validation_error") {
+        setActionError(error.fields?.reason?.[0] ?? error.message);
+      } else {
+        setActionError(t("adminUser.actions.error"));
+      }
+    } finally {
+      setIsActing(false);
+    }
+  }
+
   // Typing again hides "Changes saved." and the error of that field.
   function edited(field: keyof UpdateAdminUserPayload) {
     setIsSaved(false);
@@ -192,6 +275,8 @@ function AdminUserDetailPage() {
   }
 
   const hasChanges = user !== null && Object.keys(changes(user)).length > 0;
+  // The backend refuses an Admin's own account (409 `cannot_modify_self`), so no buttons for it.
+  const isOwnAccount = user !== null && me?.id === user.id;
 
   return (
     <section className="admin-users admin-user">
@@ -218,6 +303,12 @@ function AdminUserDetailPage() {
             <h1>{user.display_name}</h1>
             <UserStatusBadge status={user.status} />
           </header>
+
+          {actionDone && (
+            <p className="admin-user__result" role="status" tabIndex={-1} ref={actionDoneRef}>
+              {t(`adminUser.actions.${actionDone}Done`)}
+            </p>
+          )}
 
           <dl className="admin-user__details">
             <div>
@@ -352,6 +443,46 @@ function AdminUserDetailPage() {
                 )}
               </div>
             </form>
+          )}
+
+          {user.status !== "deleted" && (
+            <section className="admin-user__account" aria-labelledby="admin-user-actions-title">
+              <h2 id="admin-user-actions-title">{t("adminUser.actions.title")}</h2>
+
+              {isOwnAccount ? (
+                <p className="admin-user__note">{t("adminUser.actions.ownAccount")}</p>
+              ) : (
+                <div className="admin-user__account-buttons">
+                  {user.status === "active" ? (
+                    <button type="button" onClick={() => openAction("suspend")}>
+                      {t("adminUser.actions.suspend")}
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => openAction("reactivate")}>
+                      {t("adminUser.actions.reactivate")}
+                    </button>
+                  )}
+                  <button
+                    className="admin-user__delete"
+                    type="button"
+                    onClick={() => openAction("delete")}
+                  >
+                    {t("adminUser.actions.delete")}
+                  </button>
+                </div>
+              )}
+            </section>
+          )}
+
+          {action && (
+            <AccountActionDialog
+              action={action}
+              name={user.display_name}
+              isSubmitting={isActing}
+              error={actionError}
+              onConfirm={confirmAction}
+              onClose={closeAction}
+            />
           )}
         </>
       )}
