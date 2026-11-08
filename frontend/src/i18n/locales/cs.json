@@ -17,13 +17,15 @@
     "studentCouncil": "Studentská rada",
     "messages": "Zprávy",
     "eligibility": "Oprávnění",
+    "users": "Uživatelé",
     "skipToContent": "Přeskočit na obsah"
   },
   "workspace": {
     "select": "Vybrat roli",
     "STUDENT": "STUDENT",
     "HITCHHIKER": "HITCHHIKER",
-    "COUNCIL": "RADA"
+    "COUNCIL": "RADA",
+    "ADMIN": "ADMINISTRACE"
   },
   "sidebar": {
     "logout": "Odhlásit se",

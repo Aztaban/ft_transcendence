@@ -17,13 +17,15 @@
     "studentCouncil": "Student Council",
     "messages": "Messages",
     "eligibility": "Eligibility",
+    "users": "Users",
     "skipToContent": "Skip to content"
   },
   "workspace": {
     "select": "Select role",
     "STUDENT": "STUDENT",
     "HITCHHIKER": "HITCHHIKER",
-    "COUNCIL": "COUNCIL"
+    "COUNCIL": "COUNCIL",
+    "ADMIN": "ADMINISTRATION"
   },
   "sidebar": {
     "logout": "Logout",

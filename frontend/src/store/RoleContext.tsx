@@ -3,20 +3,22 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { useOptionalAuth } from "./AuthContext";
 import { useCurrentUser } from "./CurrentUserContext";
 
-export const roles = ["STUDENT", "HITCHHIKER", "COUNCIL"] as const;
+export const roles = ["STUDENT", "HITCHHIKER", "COUNCIL", "ADMIN"] as const;
 
 export type AppRole = (typeof roles)[number];
 
 // The workspaces the user's real roles open (wire names, api-plan §5.8): every user has the
 // student workspace, `tutor` / `head_tutor` open the Hitchhiker one, `sc_member` the Student
-// Council one. The backend still checks the real roles on every request.
+// Council one and `admin` the Administration one (docs/permissions.md). The backend still checks
+// the real roles on every request.
 export function workspacesFor(userRoles: readonly string[]): AppRole[] {
   return roles.filter(
     (role) =>
       role === "STUDENT" ||
       (role === "HITCHHIKER" &&
         (userRoles.includes("tutor") || userRoles.includes("head_tutor"))) ||
-      (role === "COUNCIL" && userRoles.includes("sc_member")),
+      (role === "COUNCIL" && userRoles.includes("sc_member")) ||
+      (role === "ADMIN" && userRoles.includes("admin")),
   );
 }
 

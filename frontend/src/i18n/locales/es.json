@@ -17,13 +17,15 @@
     "studentCouncil": "Consejo estudiantil",
     "messages": "Mensajes",
     "eligibility": "Elegibilidad",
+    "users": "Usuarios",
     "skipToContent": "Saltar al contenido"
   },
   "workspace": {
     "select": "Elegir rol",
     "STUDENT": "ESTUDIANTE",
     "HITCHHIKER": "HITCHHIKER",
-    "COUNCIL": "CONSEJO"
+    "COUNCIL": "CONSEJO",
+    "ADMIN": "ADMINISTRACIÓN"
   },
   "sidebar": {
     "logout": "Cerrar sesión",

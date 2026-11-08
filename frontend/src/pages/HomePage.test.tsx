@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { useEffect } from "react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeRequest } from "../features/student/testUtils";
@@ -77,6 +77,23 @@ function renderHomeAs(role: AppRole) {
 }
 
 describe("HomePage", () => {
+  it("sends the Administration workspace to Users", async () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <RoleProvider>
+          <SwitchRole role="ADMIN" />
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/manage/users" element={<p>Users page</p>} />
+          </Routes>
+        </RoleProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Users page")).toBeTruthy();
+    expect(screen.queryByText("Need an evaluation?")).toBeNull();
+  });
+
   it("shows the student call to action for students", () => {
     renderHomeAs("STUDENT");
 
