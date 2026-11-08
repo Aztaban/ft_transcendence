@@ -6,6 +6,7 @@ import BaseLayout from "./components/layout/BaseLayout";
 import { LEGAL_PAGES, legalDocumentAt } from "./components/layout/legalPages";
 import PublicLayout from "./components/layout/PublicLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
+import AdminUsersPage from "./pages/AdminUsersPage";
 import CouncilHistoryPage from "./pages/CouncilHistoryPage";
 import CouncilInboxMessagePage from "./pages/CouncilInboxMessagePage";
 import CouncilInboxPage from "./pages/CouncilInboxPage";
@@ -209,6 +210,15 @@ function AuthenticatedApp() {
               fallback={<UnauthorizedPage />}
             >
               <CouncilHistoryPage />
+            </RoleGuard>
+          }
+        />
+        {/* Admin pages use /manage/: Nginx sends /admin/ to the Django admin. */}
+        <Route
+          path="/manage/users"
+          element={
+            <RoleGuard allowedRoles={routePermissions.adminUsers} fallback={<UnauthorizedPage />}>
+              <AdminUsersPage />
             </RoleGuard>
           }
         />

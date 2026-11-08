@@ -434,6 +434,36 @@
     "open": "Abrir",
     "openAria": "Abrir el mensaje n.º {{id}}"
   },
+  "adminUsers": {
+    "title": "Usuarios",
+    "subtitle": "Todas las cuentas, con sus roles y su estado.",
+    "search": "Buscar",
+    "searchPlaceholder": "Correo, nombre o login de 42",
+    "searchButton": "Buscar",
+    "role": "Rol",
+    "allRoles": "Todos los roles",
+    "status": "Estado",
+    "allStatuses": "Todos los estados",
+    "statuses": {
+      "active": "Activa",
+      "suspended": "Suspendida",
+      "deleted": "Eliminada"
+    },
+    "columns": {
+      "name": "Nombre",
+      "email": "Correo",
+      "roles": "Roles",
+      "status": "Estado",
+      "lastLogin": "Último acceso"
+    },
+    "never": "Nunca",
+    "loading": "Cargando usuarios…",
+    "error": "No pudimos cargar los usuarios. Inténtalo de nuevo más tarde.",
+    "emptyTitle": "Aún no hay usuarios",
+    "emptyFilteredTitle": "Ningún usuario coincide con estos filtros",
+    "pagesAria": "Páginas de usuarios",
+    "page": "Página {{page}} de {{count}}"
+  },
   "roles": {
     "student": "Estudiante",
     "tutor": "Hitchhiker",

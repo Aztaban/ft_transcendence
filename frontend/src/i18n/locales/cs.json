@@ -439,6 +439,36 @@
     "open": "Otevřít",
     "openAria": "Otevřít zprávu č. {{id}}"
   },
+  "adminUsers": {
+    "title": "Uživatelé",
+    "subtitle": "Všechny účty s jejich rolemi a stavem.",
+    "search": "Hledat",
+    "searchPlaceholder": "E-mail, jméno nebo login 42",
+    "searchButton": "Hledat",
+    "role": "Role",
+    "allRoles": "Všechny role",
+    "status": "Stav",
+    "allStatuses": "Všechny stavy",
+    "statuses": {
+      "active": "Aktivní",
+      "suspended": "Pozastavený",
+      "deleted": "Smazaný"
+    },
+    "columns": {
+      "name": "Jméno",
+      "email": "E-mail",
+      "roles": "Role",
+      "status": "Stav",
+      "lastLogin": "Poslední přihlášení"
+    },
+    "never": "Nikdy",
+    "loading": "Načítám uživatele…",
+    "error": "Uživatele se nepodařilo načíst. Zkuste to prosím později.",
+    "emptyTitle": "Zatím žádní uživatelé",
+    "emptyFilteredTitle": "Těmto filtrům neodpovídá žádný uživatel",
+    "pagesAria": "Stránky uživatelů",
+    "page": "Strana {{page}} z {{count}}"
+  },
   "roles": {
     "student": "Student",
     "tutor": "Hitchhiker",

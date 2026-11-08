@@ -431,6 +431,36 @@
     "open": "Open",
     "openAria": "Open message #{{id}}"
   },
+  "adminUsers": {
+    "title": "Users",
+    "subtitle": "Every account, with its roles and status.",
+    "search": "Search",
+    "searchPlaceholder": "Email, name or 42 login",
+    "searchButton": "Search",
+    "role": "Role",
+    "allRoles": "All roles",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "statuses": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "deleted": "Deleted"
+    },
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "roles": "Roles",
+      "status": "Status",
+      "lastLogin": "Last login"
+    },
+    "never": "Never",
+    "loading": "Loading users…",
+    "error": "We couldn't load the users. Please try again later.",
+    "emptyTitle": "No users yet",
+    "emptyFilteredTitle": "No users match these filters",
+    "pagesAria": "User pages",
+    "page": "Page {{page}} of {{count}}"
+  },
   "roles": {
     "student": "Student",
     "tutor": "Hitchhiker",
