@@ -22,9 +22,6 @@ def test_notification_types_match_the_complete_contract():
         "role.changed",
         "account.updated",
         "sc_message.created",
-        "resource.created",
-        "resource.updated",
-        "resource.deleted",
     }
 
 

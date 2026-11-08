@@ -67,7 +67,8 @@ describe("OpenRequests", () => {
 
     const awaitingCard = screen.getByText("webserv").closest("article");
 
-    expect(screen.getByText("Hitchhiker proposed")).toBeTruthy();
+    // The API hides who proposed it until the student confirms (R18).
+    expect(screen.getByText("A Hitchhiker proposed")).toBeTruthy();
     expect(awaitingCard?.querySelector("time")?.getAttribute("datetime")).toBe(
       "2026-10-12T15:00:00Z",
     );

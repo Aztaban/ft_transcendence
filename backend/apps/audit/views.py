@@ -64,7 +64,8 @@ class AuditLogListView(ListAPIView):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return AuditLog.objects.none()
-        query = AuditLogQuerySerializer(data=self.request.query_params)
+        # QueryDict's HTML-input handling would treat an empty filter as omitted (§5.7).
+        query = AuditLogQuerySerializer(data=dict(self.request.query_params.items()))
         query.is_valid(raise_exception=True)
         filters = query.validated_data
         queryset = AuditLog.objects.select_related("actor")

@@ -70,7 +70,8 @@
     "duration": "Délka",
     "requestedAgo": "Žádost odeslána {{time}}",
     "noNote": "Student nepřidal žádnou poznámku.",
-    "tryAgain": "Zkusit znovu"
+    "tryAgain": "Zkusit znovu",
+    "serverUnavailable": "Server neodpověděl. Zkuste to prosím za chvíli znovu."
   },
   "time": {
     "justNow": "právě teď",
@@ -434,7 +435,27 @@
     "historyAboutTitle": "O historii",
     "historyAboutText": "Přečtené zprávy tu zůstávají také. Označení jako přečtené nebo nepřečtené platí pro všechny členy rady.",
     "open": "Otevřít",
-    "openAria": "Otevřít zprávu č. {{id}}"
+    "openAria": "Otevřít zprávu č. {{id}}",
+    "moderation": {
+      "title": "Moderace",
+      "hint": "Jen pro administrátory. Každá akce se uloží do auditního záznamu i s vaším důvodem.",
+      "revealButton": "Zobrazit odesílatele",
+      "deleteButton": "Smazat zprávu",
+      "revealTitle": "Zobrazit, kdo poslal zprávu č. {{id}}?",
+      "revealText": "Jen kvůli vyšetření zneužití. Vaše jméno a důvod se uloží do auditního záznamu a radě zůstane odesílatel skrytý.",
+      "revealConfirm": "Zobrazit odesílatele",
+      "deleteTitle": "Smazat zprávu č. {{id}}?",
+      "deleteText": "Zpráva zmizí všem členům rady a nepůjde obnovit. Vaše jméno a důvod se uloží do auditního záznamu.",
+      "deleteConfirm": "Smazat zprávu",
+      "reason": "Důvod",
+      "reasonHint_one": "Alespoň {{count}} znak",
+      "reasonHint_few": "Alespoň {{count}} znaky",
+      "reasonHint_many": "Alespoň {{count}} znaku",
+      "reasonHint_other": "Alespoň {{count}} znaků",
+      "sender": "Odesílatel",
+      "senderDeleted": "Účet odesílatele byl smazán.",
+      "deleted": "Zpráva byla smazána. Důvod je uložen v auditním záznamu."
+    }
   },
   "roles": {
     "student": "Student",
@@ -455,11 +476,12 @@
   "notifications": {
     "evaluation": {
       "created": "Nová žádost o evaluaci projektu {{project.name}}",
-      "slot_picked": "Pro {{project.name}} je vybraný termín {{slot}} ({{tutor.display_name}}). Potvrďte ho prosím",
+      "slot_picked": "Pro {{project.name}} je vybraný termín {{slot}}. Potvrďte ho prosím",
       "confirmed": "Evaluace projektu {{project.name}} je potvrzená: {{slot}} ({{student.display_name}})",
       "declined": "Váš termín pro evaluaci {{project.name}} byl odmítnut ({{student.display_name}})",
-      "released": "Vaše žádost o evaluaci {{project.name}} byla uvolněna ({{tutor.display_name}}), čeká na nového Hitchhikera",
+      "released": "Termín evaluace {{project.name}} byl uvolněn",
       "cancelled": "Evaluace projektu {{project.name}} byla zrušena ({{cancelled_by.display_name}})",
+      "cancelled_hidden": "Evaluace projektu {{project.name}} byla zrušena",
       "expired_pending": "Vaše žádost o evaluaci projektu {{project.name}} vypršela: nikdo si ji nevybral",
       "expired_awaiting_confirmation": "Evaluace projektu {{project.name}} vypršela před potvrzením termínu",
       "result_recorded_passed": "Výsledek evaluace projektu {{project.name}}: úspěch",
@@ -480,11 +502,6 @@
     },
     "sc_message": {
       "created": "Nová anonymní zpráva pro Studentskou radu"
-    },
-    "resource": {
-      "created": "{{owner.display_name}} sdílí dokument „{{title}}“",
-      "updated": "Váš dokument „{{title}}“ byl upraven",
-      "deleted": "Váš dokument „{{title}}“ byl smazán"
     }
   },
   "home": {
@@ -529,7 +546,7 @@
   "dashboard": {
     "openRequests": "Otevřené žádosti",
     "studentOpenEmpty": "Vaše aktivní žádosti o hodnocení se objeví tady.",
-    "proposed": "{{name}} navrhl(a) <time>{{slot}}</time>",
+    "proposed": "Hitchhiker navrhl(a) <time>{{slot}}</time>",
     "evaluationRequest": "Žádost o hodnocení",
     "pending": "Čeká",
     "reviewProposal": "Zobrazit návrh",
@@ -711,6 +728,7 @@
     "or": "nebo",
     "continueWith42": "POKRAČOVAT PŘES 42",
     "registered": "Účet je vytvořený. Teď se můžete přihlásit.",
+    "missingFields": "Zadejte e-mail a heslo.",
     "invalidCredentials": "Nesprávný e-mail nebo heslo.",
     "loginError": "Přihlášení se nepovedlo. Zkuste to prosím znovu.",
     "register": "ZAREGISTROVAT SE",
@@ -744,7 +762,7 @@
     "passwordNumeric": "Heslo nemůže obsahovat jen číslice."
   },
   "legal": {
-    "copyright": "© transcendence 2026",
+    "copyright": "© transcendence {{year}}",
     "footerLabel": "Právní informace",
     "lastUpdated": "Poslední aktualizace: {{date}}",
     "back": "Zpět do aplikace",

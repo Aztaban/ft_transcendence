@@ -412,7 +412,7 @@ function EvaluationPage() {
                   </dt>
                   <dd>
                     {isOwnRequest
-                      ? request.picked_by?.display_name
+                      ? (request.picked_by?.display_name ?? "—")
                       : (request.student?.display_name ?? "—")}
                   </dd>
                 </div>

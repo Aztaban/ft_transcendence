@@ -282,7 +282,7 @@ function HitchhikersPage() {
         ))}
       </ul>
 
-      <aside className="hitchhikers__how" aria-label={t("common.howItWorks")}>
+      <div role="note" className="hitchhikers__how" aria-label={t("common.howItWorks")}>
         <span className="hitchhikers__how-icon" aria-hidden="true">
           i
         </span>
@@ -295,7 +295,7 @@ function HitchhikersPage() {
             {t("hitchhikers.createRequest")} <span aria-hidden="true">→</span>
           </Link>
         )}
-      </aside>
+      </div>
 
       <div className="hitchhikers__filters">
         <label className="hitchhikers__search">
