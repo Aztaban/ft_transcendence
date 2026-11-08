@@ -37,10 +37,11 @@ const created: Notification = {
   created_at: "2026-10-24T09:00:00Z",
 };
 
-const deleted: Notification = {
+// No target_url: nothing to open, so it is not a link.
+const noTarget: Notification = {
   id: 11,
-  type: "resource.deleted",
-  payload: { title: "Libft tips" },
+  type: "account.updated",
+  payload: { fields: ["email"] },
   target_url: "",
   read_at: "2026-10-23T10:00:00Z",
   created_at: "2026-10-23T09:00:00Z",
@@ -116,7 +117,7 @@ describe("NotificationPanel", () => {
   });
 
   it("lists the sentences, marks the unread ones and links to their page", async () => {
-    vi.mocked(listNotifications).mockResolvedValue(page([created, deleted]));
+    vi.mocked(listNotifications).mockResolvedValue(page([created, noTarget]));
 
     renderPanel();
 
@@ -133,12 +134,12 @@ describe("NotificationPanel", () => {
 
     expect(within(items[1]).queryByRole("link")).toBeNull();
     expect(within(items[1]).queryByText("Unread")).toBeNull();
-    expect(within(items[1]).getByText('Your resource "Libft tips" was deleted')).toBeTruthy();
+    expect(within(items[1]).getByText("An administrator updated your account")).toBeTruthy();
   });
 
   it("opens the notification's page and closes", async () => {
     vi.mocked(listNotifications).mockResolvedValue(
-      page([{ ...created, read_at: deleted.read_at }]),
+      page([{ ...created, read_at: noTarget.read_at }]),
     );
     const onClose = renderPanel();
 
@@ -150,11 +151,11 @@ describe("NotificationPanel", () => {
 
   it("re-fetches the list on notification.created", async () => {
     vi.mocked(listNotifications)
-      .mockResolvedValueOnce(page([deleted]))
-      .mockResolvedValueOnce(page([created, deleted]));
+      .mockResolvedValueOnce(page([noTarget]))
+      .mockResolvedValueOnce(page([created, noTarget]));
 
     renderPanel();
-    await screen.findByText('Your resource "Libft tips" was deleted');
+    await screen.findByText("An administrator updated your account");
 
     act(() => FakeSocket.latest().serverSend({ event: "notification.created", data: { id: 12 } }));
 
@@ -194,14 +195,14 @@ describe("NotificationPanel", () => {
   });
 
   it("marks an unread notification without a page as read on a click", async () => {
-    const unreadDeleted: Notification = { ...deleted, read_at: null };
+    const unreadNoTarget: Notification = { ...noTarget, read_at: null };
 
-    vi.mocked(listNotifications).mockResolvedValue(page([unreadDeleted]));
-    vi.mocked(markNotificationRead).mockResolvedValue(deleted);
+    vi.mocked(listNotifications).mockResolvedValue(page([unreadNoTarget]));
+    vi.mocked(markNotificationRead).mockResolvedValue(noTarget);
     renderPanel();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: /Your resource "Libft tips" was deleted/ }),
+      await screen.findByRole("button", { name: /An administrator updated your account/ }),
     );
 
     await waitFor(() =>
@@ -209,12 +210,14 @@ describe("NotificationPanel", () => {
     );
     expect(markNotificationRead).toHaveBeenCalledWith(11);
     expect(count.refresh).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("button", { name: /Libft tips/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /An administrator updated your account/ }),
+    ).toBeNull();
   });
 
   it("sends nothing for a notification that is already read", async () => {
     vi.mocked(listNotifications).mockResolvedValue(
-      page([{ ...created, read_at: deleted.read_at }]),
+      page([{ ...created, read_at: noTarget.read_at }]),
     );
     renderPanel();
 
@@ -225,14 +228,14 @@ describe("NotificationPanel", () => {
   });
 
   it("keeps a notification unread when marking it fails", async () => {
-    const unreadDeleted: Notification = { ...deleted, read_at: null };
+    const unreadNoTarget: Notification = { ...noTarget, read_at: null };
 
-    vi.mocked(listNotifications).mockResolvedValue(page([unreadDeleted]));
+    vi.mocked(listNotifications).mockResolvedValue(page([unreadNoTarget]));
     vi.mocked(markNotificationRead).mockRejectedValue(new Error("network"));
     renderPanel();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: /Your resource "Libft tips" was deleted/ }),
+      await screen.findByRole("button", { name: /An administrator updated your account/ }),
     );
 
     await waitFor(() => expect(markNotificationRead).toHaveBeenCalledTimes(1));
@@ -243,10 +246,10 @@ describe("NotificationPanel", () => {
   });
 
   it("offers Mark all as read only when something is unread", async () => {
-    vi.mocked(listNotifications).mockResolvedValue(page([deleted]));
+    vi.mocked(listNotifications).mockResolvedValue(page([noTarget]));
 
     renderPanel();
-    await screen.findByText('Your resource "Libft tips" was deleted');
+    await screen.findByText("An administrator updated your account");
 
     expect(screen.queryByRole("button", { name: "Mark all as read" })).toBeNull();
   });
@@ -255,11 +258,11 @@ describe("NotificationPanel", () => {
   it("offers Mark all as read when only notifications outside the list are unread", async () => {
     count.unreadCount = 3;
     vi.mocked(listNotifications).mockResolvedValue(
-      page([{ ...created, read_at: "2026-10-24T10:00:00Z" }, deleted]),
+      page([{ ...created, read_at: "2026-10-24T10:00:00Z" }, noTarget]),
     );
 
     renderPanel();
-    await screen.findByText('Your resource "Libft tips" was deleted');
+    await screen.findByText("An administrator updated your account");
 
     expect(screen.getByRole("button", { name: "Mark all as read" })).toBeTruthy();
     expect(screen.queryByText("Unread")).toBeNull();
@@ -271,7 +274,7 @@ describe("NotificationPanel", () => {
     count.refresh.mockImplementation(() => {
       count.unreadCount = 0;
     });
-    vi.mocked(listNotifications).mockResolvedValue(page([deleted]));
+    vi.mocked(listNotifications).mockResolvedValue(page([noTarget]));
     vi.mocked(markAllNotificationsRead).mockResolvedValue(undefined);
     renderPanel();
 
@@ -288,8 +291,8 @@ describe("NotificationPanel", () => {
     let finish = () => {};
 
     vi.mocked(listNotifications)
-      .mockResolvedValueOnce(page([created, deleted]))
-      .mockResolvedValueOnce(page([{ ...created, read_at: "2026-10-24T10:00:00Z" }, deleted]));
+      .mockResolvedValueOnce(page([created, noTarget]))
+      .mockResolvedValueOnce(page([{ ...created, read_at: "2026-10-24T10:00:00Z" }, noTarget]));
     vi.mocked(markAllNotificationsRead).mockReturnValue(
       new Promise<void>((resolve) => {
         finish = resolve;

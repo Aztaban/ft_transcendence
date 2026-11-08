@@ -139,11 +139,13 @@ def test_language_and_status_choices_are_validated(user_model):
     assert "status" in exc.value.message_dict
 
 
-def test_suspension_blocks_default_django_authentication(user_model):
+@pytest.mark.parametrize("inactive_status", ["suspended", "deleted"])
+def test_inactive_status_blocks_default_django_authentication(user_model, inactive_status):
     user = user_model.objects.create_user("one@example.com", "correct-password", display_name="One")
     assert authenticate(email="one@example.com", password="correct-password") == user
 
-    user.status = user_model.Status.SUSPENDED
+    user.status = inactive_status
+    user.full_clean()
     user.save(update_fields=["status"])
     user.refresh_from_db()
 

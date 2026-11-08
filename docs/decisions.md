@@ -30,9 +30,9 @@ The important part: **the database is the truth, the connection is only speed.**
 
 We store *what happened* plus the details, not a finished English sentence. The text is written on screen at the moment it's displayed.
 
-### 7. Files: bytes on disk, facts in the database
+### 7. No file uploads
 
-The file goes into a folder; a database row remembers who owns it and who may see it. Downloads go through Django so it can check permission first.
+Avatars and tutor resources were planned and then dropped (R19 in the API plan). Nothing is uploaded or stored as a file, and profiles show the person's initials.
 
 ### 8. Background jobs (Celery)
 

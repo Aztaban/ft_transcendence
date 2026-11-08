@@ -1,7 +1,7 @@
 import type { EvaluationRequest, EvaluationRequestStatus } from "../../types/evaluation";
 
-// Builds an EvaluationRequest (api-plan §8.7) that follows the schema rules:
-// picked_by and the slot times are set only for picked requests.
+// Builds an EvaluationRequest (api-plan §8.7) as the student receives it: the slot times are set
+// for picked requests, and picked_by only once the student has confirmed (R18).
 export function makeRequest(
   id: number,
   projectName: string,
@@ -15,7 +15,8 @@ export function makeRequest(
     project: { id, slug: projectName, name: projectName },
     note: "",
     status,
-    picked_by: isPicked ? { id: 2, display_name: "Hitchhiker", avatar_url: null } : null,
+    picked_by:
+      status === "confirmed" ? { id: 2, display_name: "Hitchhiker", avatar_url: null } : null,
     starts_at: isPicked ? "2026-10-12T15:00:00Z" : null,
     ends_at: isPicked ? "2026-10-12T15:45:00Z" : null,
     cancelled_by: null,

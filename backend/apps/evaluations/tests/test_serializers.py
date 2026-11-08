@@ -39,7 +39,7 @@ def test_project_detail_has_exact_nested_user_fields():
     project = Project(id=4, slug="push_swap", name="push_swap")
     project.eligible_tutors = [
         get_user_model()(id=42, display_name="Alice", email="private@example.com"),
-        {"id": 43, "display_name": "Bob", "avatar_url": "/api/v1/files/9/download/"},
+        {"id": 43, "display_name": "Bob", "avatar_url": None},
     ]
 
     assert ProjectSerializer(project).data == {
@@ -48,6 +48,6 @@ def test_project_detail_has_exact_nested_user_fields():
         "name": "push_swap",
         "eligible_tutors": [
             {"id": 42, "display_name": "Alice", "avatar_url": None},
-            {"id": 43, "display_name": "Bob", "avatar_url": "/api/v1/files/9/download/"},
+            {"id": 43, "display_name": "Bob", "avatar_url": None},
         ],
     }
