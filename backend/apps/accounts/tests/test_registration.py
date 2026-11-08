@@ -273,6 +273,76 @@ def test_register_rejects_passwords_that_fail_configured_validators(password):
     assert get_user_model().objects.count() == 0
 
 
+@pytest.mark.parametrize("password", ["NebulaCascade!834", "NebulaCascade!835"])
+@pytest.mark.parametrize(
+    "language,message,password_error",
+    [
+        (
+            "en",
+            "Please correct the registration fields.",
+            "The password is too similar to the display name.",
+        ),
+        (
+            "cs",
+            "Opravte prosím pole registrace.",
+            "Heslo je příliš podobné obsahu pole zobrazované jméno.",
+        ),
+        (
+            "es",
+            "Corrija los campos del registro.",
+            "La contraseña es demasiado similar a la de nombre para mostrar.",
+        ),
+    ],
+)
+def test_register_rejects_passwords_similar_to_display_name(
+    password, language, message, password_error
+):
+    client = APIClient(enforce_csrf_checks=True)
+    client.get(reverse("api:session"), HTTP_HOST="localhost")
+
+    response = client.post(
+        reverse("api:register"),
+        registration_payload(display_name="NebulaCascade!834", password=password),
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_ACCEPT_LANGUAGE=language,
+        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": message,
+            "fields": {"password": [password_error]},
+        }
+    }
+    assert get_user_model().objects.count() == 0
+
+
+def test_register_still_rejects_passwords_similar_to_email():
+    response = APIClient().post(
+        reverse("api:register"),
+        registration_payload(
+            email="NebulaCascade834@example.com",
+            password="NebulaCascade834",
+        ),
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_ACCEPT_LANGUAGE="en",
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the registration fields.",
+            "fields": {"password": ["The password is too similar to the email."]},
+        }
+    }
+    assert get_user_model().objects.count() == 0
+
+
 def test_register_rejects_existing_email_case_insensitively():
     user_model = get_user_model()
     existing_user = user_model.objects.create_user(

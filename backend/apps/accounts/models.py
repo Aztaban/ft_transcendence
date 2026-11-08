@@ -47,6 +47,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     )
 
     display_name = models.CharField(
+        verbose_name=_("display name"),
         max_length=64,
     )
 

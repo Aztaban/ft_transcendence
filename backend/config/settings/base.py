@@ -103,6 +103,7 @@ CSRF_COOKIE_SAMESITE = "Lax"
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "OPTIONS": {"user_attributes": ("email", "display_name")},
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
