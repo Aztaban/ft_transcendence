@@ -260,6 +260,12 @@
   font-weight: 500;
 }
 
+/* Same amber as the Pending tab: 4.5:1. */
+.eligibility-review__status--pending {
+  background: #fff4dc;
+  color: #9a6512;
+}
+
 .eligibility-review__status--approved {
   background: #e7f6ec;
   color: #1c7c3c;

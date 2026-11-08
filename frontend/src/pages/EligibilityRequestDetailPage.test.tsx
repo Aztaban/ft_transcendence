@@ -130,7 +130,10 @@ describe("EligibilityRequestDetailPage", () => {
   });
 
   it("lets a Head Tutor approve a pending request with a note", async () => {
-    vi.mocked(getEligibilityRequest).mockResolvedValue(eligibilityRequest());
+    // The reload after the decision gets the decided request, as the server would answer.
+    vi.mocked(getEligibilityRequest)
+      .mockResolvedValueOnce(eligibilityRequest())
+      .mockResolvedValue(approved);
     vi.mocked(reviewEligibilityRequest).mockResolvedValue(approved);
 
     renderPage();
@@ -324,6 +327,36 @@ describe("EligibilityRequestDetailPage", () => {
   });
 
   // Another Head Tutor's decision sends this one no event (§9.3), so the tab being shown does.
+  it("keeps the decision when an older background reload answers after it", async () => {
+    let answerOld: (value: EligibilityRequest) => void = () => {};
+
+    vi.mocked(getEligibilityRequest)
+      .mockResolvedValueOnce(eligibilityRequest())
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          answerOld = resolve;
+        }),
+      )
+      .mockResolvedValue(approved);
+    vi.mocked(reviewEligibilityRequest).mockResolvedValue(approved);
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Approve Bob's request" }));
+
+    // The tab is shown again while the dialog is open: a reload starts and is still on its way.
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }));
+    expect((await screen.findByRole("status")).textContent).toBe("Bob's request was approved.");
+
+    // The older reload answers last, with the request as it was before the decision.
+    await act(async () => answerOld(eligibilityRequest()));
+
+    expect(within(card()).getByText("Approved")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("Bob's request was approved.");
+    expect(screen.queryByRole("button", { name: "Approve Bob's request" })).toBeNull();
+  });
+
   it("loads the request again when the tab is shown", async () => {
     vi.mocked(getEligibilityRequest)
       .mockResolvedValueOnce(eligibilityRequest())

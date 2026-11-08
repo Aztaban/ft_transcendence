@@ -148,6 +148,10 @@ function EligibilityRequestDetailPage() {
       );
 
       setRequest(result);
+      // A background reload that started before the decision (tab shown, reconnect) could answer
+      // after it and put the old `pending` request back: starting a new one makes the effect
+      // ignore the older answer.
+      refreshInBackground();
       setOpenDecision(null);
       setPageError(null);
       setDecided(decision);
