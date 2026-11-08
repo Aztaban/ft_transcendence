@@ -171,7 +171,7 @@
   place-items: center;
   border: 1px solid var(--color-accent);
   border-radius: 50%;
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
   content: counter(step);
   font-size: 0.8rem;
   font-weight: 600;
@@ -215,7 +215,7 @@
   place-items: center;
   border-radius: 50%;
   background: #e6f8f8;
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
   content: "✓";
   font-size: 0.75rem;
   font-weight: 700;
@@ -371,7 +371,7 @@
 }
 
 .council-message__box textarea::placeholder {
-  color: #9aa1a1;
+  color: #6f7575;
 }
 
 .council-message__footer {
@@ -438,7 +438,7 @@
   place-items: center;
   border-radius: 50%;
   background: #f5a524;
-  color: #ffffff;
+  color: #1f1f1f;
   font-size: 0.85rem;
   font-style: italic;
   font-weight: 700;
@@ -654,7 +654,7 @@ a.council-tabs__tab:hover {
   padding: 3px 12px;
   border-radius: 999px;
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: 0.85rem;
   font-weight: 600;
   vertical-align: middle;
@@ -775,7 +775,7 @@ a.council-tabs__tab:hover {
   padding: 2px 9px;
   border-radius: 999px;
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -801,7 +801,7 @@ a.council-tabs__tab:hover {
   width: 30px;
   height: 30px;
   fill: none;
-  stroke: var(--color-accent-dark);
+  stroke: var(--color-accent-text);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2;
@@ -895,7 +895,7 @@ a.council-tabs__tab:hover {
   place-items: center;
   border-radius: 50%;
   background: #e6f8f8;
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
   font-size: 1.6rem;
   font-weight: 700;
   animation: council-float 2.6s ease-in-out infinite;
@@ -1039,7 +1039,7 @@ a.council-tabs__tab:hover {
   width: 18px;
   height: 18px;
   fill: none;
-  stroke: var(--color-accent-dark);
+  stroke: var(--color-accent-text);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2;
@@ -1104,7 +1104,7 @@ a.council-tabs__tab:hover {
 }
 
 .council-saved {
-  color: #16a34a;
+  color: #15803d;
   font-size: 0.9rem;
   font-weight: 600;
   animation: council-pop-in 0.3s ease;
@@ -1152,7 +1152,7 @@ a.council-tabs__tab:hover {
 }
 
 .marked-read__title strong {
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
 }
 
 .marked-read__image {
