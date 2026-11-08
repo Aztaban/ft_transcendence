@@ -8,6 +8,7 @@ import { AuthProvider } from "../store/AuthContext";
 import { CurrentUserProvider } from "../store/CurrentUserContext";
 import { NotificationCountProvider } from "../store/NotificationCountContext";
 import { RoleProvider } from "../store/RoleContext";
+import type { ListEvaluationRequestsParams } from "../api/evaluationRequests";
 import type { EvaluationRequest } from "../types/evaluation";
 import { accessibilityViolations } from "./axe";
 
@@ -72,6 +73,17 @@ const person = {
   eligible_projects: [project],
 };
 
+const eligibilityRequest = {
+  id: 9,
+  requester: { id: 2, display_name: "Lenka", avatar_url: null },
+  projects: [project],
+  status: "pending" as const,
+  reviewed_by: null,
+  reviewed_at: null,
+  review_note: "",
+  created_at: "2026-10-29T09:00:00Z",
+};
+
 const message = {
   id: 3,
   body: "The fridge on the second floor is broken again.",
@@ -81,24 +93,52 @@ const message = {
   created_at: "2026-10-30T09:00:00Z",
 };
 
-vi.mock("../api/auth", () => ({
+// Each API module keeps its real exports (constants, types) and only the calls the pages make are
+// replaced, so a new export in a module never breaks this file.
+vi.mock("../api/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/auth")>()),
   getSession: vi.fn(),
   loginUser: vi.fn(),
   logoutUser: vi.fn(),
   registerUser: vi.fn(),
 }));
-vi.mock("../api/users", () => ({
+vi.mock("../api/users", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/users")>()),
   getCurrentUser: vi.fn(async () => user),
   updateCurrentUser: vi.fn(),
   getPublicUser: vi.fn(async () => person),
   assignRole: vi.fn(),
   revokeRole: vi.fn(),
 }));
-vi.mock("../api/evaluationRequests", () => ({
-  listEvaluationRequests: vi.fn(async () =>
-    page([evaluation(5), evaluation(6, { status: "pending", picked_by: null, starts_at: null })]),
+vi.mock("../api/evaluationRequests", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/evaluationRequests")>()),
+  // Each list answers for its own filter, so no page shows the same request twice.
+  listEvaluationRequests: vi.fn(async (params?: ListEvaluationRequestsParams) => {
+    if (params?.history) {
+      return page([
+        evaluation(7, {
+          result: "passed",
+          is_history: true,
+          completed_at: "2026-10-20T10:00:00Z",
+          starts_at: "2026-10-20T09:00:00Z",
+          ends_at: "2026-10-20T09:45:00Z",
+        }),
+      ]);
+    }
+
+    if (params?.scope === "open" || params?.status?.includes("pending")) {
+      return page([
+        evaluation(6, { status: "pending", picked_by: null, starts_at: null, ends_at: null }),
+      ]);
+    }
+
+    return page([evaluation(5)]);
+  }),
+  getEvaluationRequest: vi.fn(async (id: number) =>
+    id === 6
+      ? evaluation(6, { status: "pending", picked_by: null, starts_at: null, ends_at: null })
+      : evaluation(id),
   ),
-  getEvaluationRequest: vi.fn(async () => evaluation(5)),
   pickSlot: vi.fn(),
   confirmEvaluationRequest: vi.fn(),
   declineEvaluationRequest: vi.fn(),
@@ -106,42 +146,32 @@ vi.mock("../api/evaluationRequests", () => ({
   cancelEvaluationRequest: vi.fn(),
   releaseEvaluationRequest: vi.fn(),
 }));
-vi.mock("../api/projects", () => ({
+vi.mock("../api/projects", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/projects")>()),
   listProjects: vi.fn(async () => [project, { id: 7, slug: "minishell", name: "minishell" }]),
   getProject: vi.fn(async () => ({ ...project, eligible_tutors: [] })),
 }));
-vi.mock("../api/eligibility", () => ({
+vi.mock("../api/eligibility", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/eligibility")>()),
   createEligibilityRequest: vi.fn(),
   getTutorEligibility: vi.fn(async () => [project]),
-  listEligibilityRequests: vi.fn(async () =>
-    page([
-      {
-        id: 9,
-        requester: { id: 2, display_name: "Lenka", avatar_url: null },
-        projects: [project],
-        status: "pending",
-        reviewed_by: null,
-        reviewed_at: null,
-        review_note: "",
-        created_at: "2026-10-29T09:00:00Z",
-      },
-    ]),
-  ),
+  listEligibilityRequests: vi.fn(async () => page([eligibilityRequest])),
   reviewEligibilityRequest: vi.fn(),
 }));
-vi.mock("../api/notifications", () => ({
+vi.mock("../api/notifications", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/notifications")>()),
   getUnreadCount: vi.fn(async () => ({ count: 2 })),
   listNotifications: vi.fn(async () => page([])),
   markNotificationRead: vi.fn(),
   markAllNotificationsRead: vi.fn(),
 }));
-vi.mock("../api/people", () => ({
+vi.mock("../api/people", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/people")>()),
   searchPeople: vi.fn(async () => page([person])),
   countPeople: vi.fn(async () => 1),
 }));
-vi.mock("../api/scMessages", () => ({
-  SC_MESSAGE_MAX_LENGTH: 5000,
-  SC_NOTE_MAX_LENGTH: 5000,
+vi.mock("../api/scMessages", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/scMessages")>()),
   sendSCMessage: vi.fn(),
   listSCMessages: vi.fn(async () => page([message])),
   getSCMessage: vi.fn(async () => message),
@@ -177,49 +207,63 @@ function renderAt(path: string) {
   );
 }
 
-// The page is shown with its data: a main heading, and no loading placeholder left.
-async function loaded() {
-  await screen.findByRole("heading", { level: 1 }, { timeout: 3000 });
+// The page itself is shown with its data: its own main heading (not an error, 404 or Unauthorized
+// page, which would pass a scan too), no loading placeholder left and no error shown.
+async function loaded(heading: string | RegExp) {
+  await screen.findByRole("heading", { level: 1, name: heading }, { timeout: 3000 });
   await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull(), {
     timeout: 3000,
   });
+  // A failed load keeps the page's heading but shows an error: that is not the page to scan.
+  expect(screen.queryByRole("alert")).toBeNull();
 }
 
 describe("accessibility of every page (axe-core, WCAG 2.1 AA)", () => {
   it.each([
-    ["/", "STUDENT"],
-    ["/", "HITCHHIKER"],
-    ["/", "COUNCIL"],
-    ["/requests", "STUDENT"],
-    ["/requests", "HITCHHIKER"],
-    ["/pending", "STUDENT"],
-    ["/history", "STUDENT"],
-    ["/evaluations/5", "STUDENT"],
-    ["/profile", "STUDENT"],
-    ["/hitchhikers", "STUDENT"],
-    ["/people/2", "STUDENT"],
-    ["/projects/push_swap", "STUDENT"],
-    ["/council", "STUDENT"],
-    ["/council/send", "STUDENT"],
-    ["/council/inbox", "COUNCIL"],
-    ["/council/inbox/3", "COUNCIL"],
-    ["/council/history", "COUNCIL"],
-    ["/eligibility-requests/new", "HITCHHIKER"],
-    ["/eligibility-requests", "HITCHHIKER"],
-    ["/privacy", "STUDENT"],
-    ["/does-not-exist", "STUDENT"],
-  ])("%s in the %s workspace", async (path, workspace) => {
+    ["/", "STUDENT", "Welcome Back"],
+    ["/", "HITCHHIKER", "Welcome Back"],
+    ["/", "COUNCIL", "Welcome Back"],
+    ["/requests", "STUDENT", "Create New Request"],
+    ["/requests", "HITCHHIKER", "Requests"],
+    ["/pending", "STUDENT", "Pending Evaluations"],
+    ["/history", "STUDENT", "History"],
+    ["/evaluations/5", "STUDENT", "Your evaluation is scheduled"],
+    ["/profile", "STUDENT", "dkolarov"],
+    ["/hitchhikers", "STUDENT", "Hitchhikers"],
+    ["/people/2", "STUDENT", "Lenka"],
+    ["/projects/push_swap", "STUDENT", "push_swap"],
+    ["/council", "STUDENT", "Student Council"],
+    ["/council/send", "STUDENT", "Anonymous Message"],
+    ["/council/inbox", "COUNCIL", /^Messages/],
+    ["/council/inbox/3", "COUNCIL", "Message #3"],
+    ["/council/history", "COUNCIL", /^Message history/],
+    ["/eligibility-requests/new", "HITCHHIKER", "Projects you can evaluate"],
+    ["/eligibility-requests", "HITCHHIKER", "Eligibility requests"],
+    ["/privacy", "STUDENT", "Privacy Policy"],
+    ["/terms", "STUDENT", "Terms of Service"],
+    ["/requests/6", "HITCHHIKER", "Choose a slot for push_swap"],
+    ["/does-not-exist", "STUDENT", "404"],
+  ])("%s in the %s workspace", async (path, workspace, heading) => {
     sessionStorage.setItem("active-role", workspace);
     renderAt(path);
-    await loaded();
+    // Until /users/me/ answers every workspace is offered: wait for it (the top bar shows the
+    // name), so a page the roles do not allow shows Unauthorized before the check.
+    await waitFor(
+      () => expect(document.querySelector(".topbar__username")?.textContent).toBe("dkolarov"),
+      { timeout: 3000 },
+    );
+    await loaded(heading);
 
     expect(await accessibilityViolations()).toEqual([]);
   });
 
-  it.each(["/login", "/register"])("%s when logged out", async (path) => {
+  it.each([
+    ["/login", "Log in"],
+    ["/register", "Create an account"],
+  ])("%s when logged out", async (path, heading) => {
     vi.mocked(getSession).mockResolvedValue({ authenticated: false, user: null });
     renderAt(path);
-    await loaded();
+    await loaded(heading);
 
     expect(await accessibilityViolations()).toEqual([]);
   });
