@@ -66,7 +66,7 @@ function getButton(name: RegExp | string) {
 }
 
 describe("EvaluationPage", () => {
-  it("shows the proposed slot with the Hitchhiker and the tip", async () => {
+  it("shows the proposed slot and the tip, without the Hitchhiker (R18)", async () => {
     vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
 
     renderPage();
@@ -75,7 +75,7 @@ describe("EvaluationPage", () => {
       await screen.findByRole("heading", { name: "A HITCHHIKER has taken your request" }),
     ).toBeTruthy();
     expect(screen.getByRole("heading", { name: "push_swap" })).toBeTruthy();
-    expect(screen.getByText("Hitchhiker", { selector: "dd" })).toBeTruthy();
+    expect(screen.getByText("—", { selector: "dd" })).toBeTruthy();
     expect(screen.getByText("45 min")).toBeTruthy();
     expect(screen.getByText("Needs your answer")).toBeTruthy();
     expect(screen.getByText("Please be on time and prepared. Good luck!")).toBeTruthy();
@@ -244,6 +244,14 @@ describe("EvaluationPage link to the slot picking", () => {
 
   beforeEach(() => {
     vi.mocked(getTutorEligibility).mockResolvedValue([minishell, pushSwap]);
+  });
+
+  it("names the Hitchhiker once the student has confirmed", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "confirmed"));
+
+    renderPage();
+
+    expect(await screen.findByText("Hitchhiker", { selector: "dd" })).toBeTruthy();
   });
 
   it("offers a Hitchhiker who is not the student to pick a slot for a pending request", async () => {
@@ -515,6 +523,12 @@ describe("EvaluationPage cancel (#595)", () => {
 });
 
 describe("EvaluationPage for the picking Hitchhiker", () => {
+  // Everyone but the student sees who picked (R18).
+  const awaitingForPicker = {
+    ...awaiting,
+    picked_by: { id: 2, display_name: "Hitchhiker", avatar_url: null },
+  };
+
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
   // §10.4: confirm, decline and cancel are for the own student only.
@@ -535,7 +549,7 @@ describe("EvaluationPage for the picking Hitchhiker", () => {
 
   it("speaks to the Hitchhiker, not the student", async () => {
     viewer.id = 2;
-    vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
+    vi.mocked(getEvaluationRequest).mockResolvedValue(awaitingForPicker);
     renderPage();
 
     expect(await screen.findByText("Waiting for the student")).toBeTruthy();

@@ -1,11 +1,26 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getCurrentUser, updateCurrentUser } from "../api/users";
+import { ApiError } from "../api/client";
 import type { UserProfile } from "../types/user";
 import ProfilePage from "./ProfilePage";
 
-vi.mock("../api/users", () => ({ getCurrentUser: vi.fn(), updateCurrentUser: vi.fn() }));
+// The page reads the shared user and saves through it (#776); the context is faked here.
+const current = vi.hoisted(() => ({
+  user: null as UserProfile | null,
+  loadFailed: false,
+  update: vi.fn(),
+}));
+
+vi.mock("../store/CurrentUserContext", () => ({
+  useCurrentUser: () => ({
+    user: current.user,
+    roles: current.user ? current.user.roles.map((role) => role.name) : [],
+    isLoaded: current.user !== null,
+    loadFailed: current.loadFailed,
+    update: current.update,
+  }),
+}));
 
 const lenka: UserProfile = {
   id: 7,
@@ -21,8 +36,9 @@ const lenka: UserProfile = {
 };
 
 beforeEach(() => {
-  vi.mocked(getCurrentUser).mockResolvedValue(lenka);
-  vi.mocked(updateCurrentUser).mockResolvedValue(undefined);
+  current.user = lenka;
+  current.loadFailed = false;
+  current.update.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -53,11 +69,11 @@ describe("ProfilePage", () => {
   });
 
   it("shows the user's avatar when there is one", async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue({ ...lenka, avatar_url: "/api/v1/files/31/" });
+    current.user = { ...lenka, avatar_url: "/avatar.png" };
     const { container } = await renderPage();
 
     expect(container.querySelector("img.profile-card__avatar")?.getAttribute("src")).toBe(
-      "/api/v1/files/31/",
+      "/avatar.png",
     );
   });
 
@@ -80,7 +96,7 @@ describe("ProfilePage", () => {
   });
 
   it("shows the 42 login for an account made through 42", async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue({ ...lenka, intra_login: "lhusarov" });
+    current.user = { ...lenka, intra_login: "lhusarov" };
     await renderPage();
 
     expect(screen.getByText("42 account · lhusarov")).toBeTruthy();
@@ -94,7 +110,32 @@ describe("ProfilePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(await screen.findByText("Profile updated.")).toBeTruthy();
-    expect(updateCurrentUser).toHaveBeenCalledWith({ display_name: "Lenka H." });
+    expect(current.update).toHaveBeenCalledWith({ display_name: "Lenka H." });
+  });
+
+  it("shows the name the shared user has, so a save reaches the top bar too", async () => {
+    const { rerender } = await renderPage();
+
+    // What the context delivers after `update` has re-fetched /users/me/.
+    current.user = { ...lenka, display_name: "Lenka H." };
+    rerender(<ProfilePage />);
+
+    expect(screen.getByRole("heading", { name: "Lenka H.", level: 1 })).toBeTruthy();
+  });
+
+  it("shows the save error from the API next to the form", async () => {
+    current.update.mockRejectedValue(
+      new ApiError(400, "Please correct the fields.", "validation_error", {
+        display_name: ["Display name is too long."],
+      }),
+    );
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit profile" }));
+    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Lenka H." } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe("Display name is too long.");
   });
 
   it("does not save an empty display name", async () => {
@@ -105,7 +146,7 @@ describe("ProfilePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(screen.getByRole("alert").textContent).toBe("Display name is required.");
-    expect(updateCurrentUser).not.toHaveBeenCalled();
+    expect(current.update).not.toHaveBeenCalled();
   });
 
   it("saves the chosen language", async () => {
@@ -120,11 +161,45 @@ describe("ProfilePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
 
     expect(await screen.findByText("Settings updated.")).toBeTruthy();
-    expect(updateCurrentUser).toHaveBeenCalledWith({ language: "cs" });
+    expect(current.update).toHaveBeenCalledWith({ language: "cs" });
+  });
+
+  it("follows a language saved from the top bar, dropping an unsaved pick", async () => {
+    const { rerender } = await renderPage();
+    const languages = screen.getByRole("group", { name: "Language" });
+
+    fireEvent.click(within(languages).getByRole("radio", { name: /Czech/ }));
+
+    current.user = { ...lenka, language: "es" };
+    rerender(<ProfilePage />);
+
+    expect(
+      (within(languages).getByRole("radio", { name: /Spanish/ }) as HTMLInputElement).checked,
+    ).toBe(true);
+    expect(texts("Account details", ".profile-tile__value")[1]).toBe("Spanish");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(current.update).toHaveBeenCalledWith({ language: "es" });
+  });
+
+  it("shows the save error when the profile was saved but could not be re-fetched", async () => {
+    current.update.mockRejectedValue(
+      new Error("The profile was saved but could not be re-fetched."),
+    );
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit profile" }));
+    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Lenka H." } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe("Unable to save profile changes.");
+    expect(screen.queryByText("Profile updated.")).toBeNull();
   });
 
   it("says when the profile cannot be loaded", async () => {
-    vi.mocked(getCurrentUser).mockRejectedValue(new Error("network"));
+    current.user = null;
+    current.loadFailed = true;
     render(<ProfilePage />);
 
     expect((await screen.findByRole("alert")).textContent).toBe(

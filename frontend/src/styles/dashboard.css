@@ -186,7 +186,7 @@
 }
 
 .dashboard-requests:focus-visible {
-  outline: 2px solid var(--color-accent-dark);
+  outline: 2px solid var(--color-accent-text);
   outline-offset: 2px;
 }
 
@@ -308,7 +308,7 @@
 }
 
 .dashboard-request__review:focus-visible {
-  outline: 2px solid var(--color-accent-dark);
+  outline: 2px solid var(--color-accent-text);
   outline-offset: 2px;
 }
 
@@ -410,7 +410,7 @@
 }
 
 .dashboard-cta__button:focus-visible {
-  outline: 2px solid var(--color-accent-dark);
+  outline: 2px solid var(--color-accent-text);
   outline-offset: 3px;
 }
 

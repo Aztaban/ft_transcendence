@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate } from "react-router";
+import { Navigate, useLocation, useNavigate } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
 import { registerUser } from "../api/auth";
@@ -17,11 +17,14 @@ import {
   type RegistrationFieldErrors,
   type RegistrationValues,
 } from "../utils/validation";
+import { useOptionalAuth } from "../store/AuthContext";
 import type { ReturnPage } from "../utils/loginReturn";
 import "../styles/registration.css";
 
 function RegisterPage() {
   const { t, i18n } = useTranslation();
+  // Optional: the page also works without the session provider, e.g. in component tests.
+  const auth = useOptionalAuth();
 
   usePageTitle(t("pageTitle.register"));
   const navigate = useNavigate();
@@ -97,6 +100,21 @@ function RegisterPage() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  // Someone who already has a session goes to the page the login gate sent them from, or Home
+  // (#328, #671), with nothing shown while the session check runs.
+  if (auth?.isLoading) {
+    return null;
+  }
+
+  if (auth?.isAuthenticated) {
+    return (
+      <Navigate
+        to={from ? `${from.pathname}${from.search ?? ""}${from.hash ?? ""}` : "/"}
+        replace
+      />
+    );
   }
 
   return (

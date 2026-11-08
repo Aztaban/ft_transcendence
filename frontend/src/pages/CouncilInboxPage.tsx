@@ -142,7 +142,7 @@ function CouncilInboxPage() {
           )}
         </div>
 
-        <aside className="council-aside">
+        <div className="council-aside">
           <section className="council-panel">
             <h2>{t("council.inboxHowTitle")}</h2>
             <ol className="council-steps">
@@ -159,7 +159,7 @@ function CouncilInboxPage() {
             <h2>{t("council.tip")}</h2>
             <p>{t("council.inboxTip")}</p>
           </section>
-        </aside>
+        </div>
       </div>
     </section>
   );

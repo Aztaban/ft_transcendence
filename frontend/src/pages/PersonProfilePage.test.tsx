@@ -162,12 +162,12 @@ describe("PersonProfilePage", () => {
   });
 
   it("shows the avatar picture when there is one", async () => {
-    vi.mocked(getPublicUser).mockResolvedValue({ ...lenka, avatar_url: "/api/v1/files/3/" });
+    vi.mocked(getPublicUser).mockResolvedValue({ ...lenka, avatar_url: "/avatar.png" });
     const { container } = renderPage();
     await findProfile();
 
     expect(container.querySelector("img.person-profile__avatar")?.getAttribute("src")).toBe(
-      "/api/v1/files/3/",
+      "/avatar.png",
     );
     expect(screen.queryByText("LH")).toBeNull();
   });

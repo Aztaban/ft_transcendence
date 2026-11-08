@@ -14,12 +14,19 @@ from apps.evaluations.models import EvaluationRequest, Project
 from apps.evaluations.permissions import OVERRIDE_ROLES
 from apps.evaluations.references import ProjectRefSerializer
 
+# The student learns who picked only by confirming. A cancelled request does not say whether
+# it was ever confirmed, so it is hidden too (R18, api-plan 8.7).
+HITCHHIKER_HIDDEN_STATUSES = (
+    EvaluationRequest.Status.AWAITING_CONFIRMATION,
+    EvaluationRequest.Status.CANCELLED,
+)
+
 
 class EvaluationRequestSerializer(serializers.ModelSerializer):
     student = serializers.SerializerMethodField()
     project = ProjectRefSerializer(read_only=True)
-    picked_by = UserRefSerializer(read_only=True, allow_null=True)
-    cancelled_by = UserRefSerializer(read_only=True, allow_null=True)
+    picked_by = serializers.SerializerMethodField()
+    cancelled_by = serializers.SerializerMethodField()
     is_history = serializers.SerializerMethodField()
 
     @extend_schema_field(UserRefSerializer(allow_null=True))
@@ -35,6 +42,28 @@ class EvaluationRequestSerializer(serializers.ModelSerializer):
         if viewer_id in (instance.student_id, instance.picked_by_id) or self._sees_all_students():
             return UserRefSerializer(instance.student).data
         return None
+
+    @extend_schema_field(UserRefSerializer(allow_null=True))
+    def get_picked_by(self, instance):
+        """Hidden from the request's student, whatever other roles they hold (R18)."""
+        if instance.picked_by is None or (
+            instance.status in HITCHHIKER_HIDDEN_STATUSES and self._viewer_is_student(instance)
+        ):
+            return None
+        return UserRefSerializer(instance.picked_by).data
+
+    @extend_schema_field(UserRefSerializer(allow_null=True))
+    def get_cancelled_by(self, instance):
+        """A Head Tutor who picked and then cancels by override is still the Hitchhiker (R18)."""
+        if instance.cancelled_by is None or (
+            instance.cancelled_by_id == instance.picked_by_id and self._viewer_is_student(instance)
+        ):
+            return None
+        return UserRefSerializer(instance.cancelled_by).data
+
+    def _viewer_is_student(self, instance):
+        request = self.context.get("request")
+        return request is None or request.user.pk == instance.student_id
 
     def _sees_all_students(self):
         if "sees_all_students" not in self.context:

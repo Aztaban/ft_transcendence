@@ -233,8 +233,11 @@ def test_http_action_delivers_only_to_affected_authenticated_connections(
         "project": {"id": 4, "slug": "libft", "name": "Libft"},
         "note": "Private student note",
         "status": expected_event["data"]["status"],
+        # The student who cancels no longer sees the Hitchhiker (R18).
         "picked_by": (
-            {"id": 42, "display_name": "Picker", "avatar_url": None} if response_picked else None
+            {"id": 42, "display_name": "Picker", "avatar_url": None}
+            if response_picked and action != "cancel"
+            else None
         ),
         "starts_at": "2026-10-12T15:00:00Z" if response_picked else None,
         "ends_at": "2026-10-12T15:45:00Z" if response_picked else None,
@@ -354,7 +357,8 @@ def test_expiry_job_delivers_events_to_participants_and_affected_queues(
             for _, communicator in sockets:
                 assert await communicator.connect() == (True, None)
             notification_ids = await database_sync_to_async(expire)()
-            assert set(notification_ids) == ({7, 42} if picked else {7})
+            # Only the student is notified; the picker still gets the event below (R17).
+            assert set(notification_ids) == {7}
             for user_id, communicator in sockets:
                 if user_id in ({7, 42} if picked else {7, 42, 43}):
                     assert await communicator.receive_json_from(timeout=3) == {

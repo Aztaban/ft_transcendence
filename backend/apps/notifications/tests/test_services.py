@@ -70,12 +70,12 @@ def test_creation_supports_notifications_without_a_target(
     with django_capture_on_commit_callbacks(execute=True):
         notification = create_notification(
             recipient_id=recipient.pk,
-            notification_type="resource.deleted",
-            payload={"title": "Guide"},
+            notification_type="account.updated",
+            payload={"fields": ["email"]},
         )
     notification.refresh_from_db()
     assert notification.target_url == ""
-    assert notification.payload == {"title": "Guide"}
+    assert notification.payload == {"fields": ["email"]}
 
 
 @pytest.mark.parametrize(
@@ -93,8 +93,8 @@ def test_invalid_input_creates_no_row_or_event(
 ):
     arguments = {
         "recipient_id": recipient.pk,
-        "notification_type": "resource.deleted",
-        "payload": {"title": "Guide"},
+        "notification_type": "account.updated",
+        "payload": {"fields": ["email"]},
     }
     arguments.update(overrides)
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
@@ -133,8 +133,8 @@ def test_delivery_waits_for_outermost_commit(recipient, send):
         with transaction.atomic():
             notification = create_notification(
                 recipient_id=recipient.pk,
-                notification_type="resource.deleted",
-                payload={"title": "Guide"},
+                notification_type="account.updated",
+                payload={"fields": ["email"]},
             )
         send.assert_not_awaited()
     assert Notification.objects.filter(pk=notification.pk).exists()
@@ -149,8 +149,8 @@ def test_delivery_failure_preserves_committed_notification(recipient, send, capl
     send.side_effect = ConnectionError("Redis unavailable")
     notification = create_notification(
         recipient_id=recipient.pk,
-        notification_type="resource.deleted",
-        payload={"title": "Guide"},
+        notification_type="account.updated",
+        payload={"fields": ["email"]},
     )
     assert Notification.objects.filter(pk=notification.pk).exists()
     assert "Redis unavailable" in caplog.text
