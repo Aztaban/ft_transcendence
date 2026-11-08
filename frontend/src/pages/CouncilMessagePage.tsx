@@ -127,7 +127,7 @@ function CouncilMessagePage() {
             </p>
           )}
 
-          <aside className="council-notice">
+          <div role="note" className="council-notice">
             <span className="council-notice__icon" aria-hidden="true">
               i
             </span>
@@ -136,7 +136,7 @@ function CouncilMessagePage() {
               <br />
               {t("council.ignored")}
             </p>
-          </aside>
+          </div>
 
           <div className="council-actions">
             <button
@@ -162,7 +162,7 @@ function CouncilMessagePage() {
           </div>
         </div>
 
-        <aside className="council-aside">
+        <div className="council-aside">
           <section className="council-panel">
             <h2>{t("council.privacyTitle")}</h2>
             <ul className="council-checks">
@@ -176,7 +176,7 @@ function CouncilMessagePage() {
             <h2>{t("council.tip")}</h2>
             <p>{t("council.tipLimit")}</p>
           </section>
-        </aside>
+        </div>
       </div>
 
       {isSent && <MessageSentDialog onClose={() => navigate("/council")} />}

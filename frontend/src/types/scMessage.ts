@@ -19,3 +19,15 @@ export interface SCMessageReceipt {
   id: number;
   created_at: string;
 }
+
+// Who sent a council message, from POST …/reveal-sender/ (Admins only, §10.6).
+export interface SCSender {
+  id: number;
+  display_name: string;
+  email: string;
+}
+
+// `sender` is null when the sender's account was deleted.
+export interface SCSenderReveal {
+  sender: SCSender | null;
+}

@@ -81,7 +81,7 @@
 
 .legal-page__brand:focus-visible,
 .legal-page__back:focus-visible {
-  outline: 2px solid var(--color-accent-dark);
+  outline: 2px solid var(--color-accent-text);
   outline-offset: 3px;
 }
 

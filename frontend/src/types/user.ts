@@ -18,7 +18,7 @@ export interface UserProfile {
   id: number;
   email: string;
   display_name: string;
-  // Relative URL of the avatar download; null means the default avatar.
+  // Always null: avatars are not built (R19), so the initials are shown.
   avatar_url: string | null;
   language: Language;
   // Sorted by name; every account has at least `student`.

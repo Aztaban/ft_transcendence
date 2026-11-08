@@ -37,7 +37,6 @@ Once a model is merged to `main`, its migration is the source of truth for exact
 | display_name | varchar(64) | no | Shown in the UI. Not unique. |
 | intra_id | BIGINT UNSIGNED UNIQUE | yes | 42 user id. Set on first 42 OAuth login; used to recognize returning 42 users. |
 | intra_login | varchar(64) UNIQUE | yes | 42 login. Private: never returned by public endpoints. |
-| avatar_file_id | FK file.id | yes | `ON DELETE SET NULL`. NULL means the default avatar. |
 | language | varchar(2) | no | `en`, `cs`, `es`. Set at creation from the request's language (api-plan §10.1), else `en`. |
 | status | varchar(16) | no | `active`, `suspended`, `deleted`. Default `active`. Only `active` users can log in. |
 | is_staff | bool | no | Access to the Django admin site (`/admin/`). Team members only. Unrelated to the `admin` role. |
@@ -46,7 +45,7 @@ Once a model is merged to `main`, its migration is the source of truth for exact
 
 `is_active` is a Python property (`status == "active"`), not a column, so Django authentication refuses suspended and deleted users.
 
-There is no `bio` column. Profiles show display name, avatar and roles only.
+There is no `bio` column. Profiles show display name, initials and roles only.
 
 ### 2.2 role
 
@@ -80,13 +79,12 @@ Role rules (enforced in code, described in api-plan §5.8):
 Users are never removed with `DELETE FROM user`, because their rows are referenced by other people's evaluation history. Deleting an account (api-plan §10.2) anonymizes it in one transaction:
 
 - `status` = `deleted`, `email` = `deleted-<id>@deleted.invalid`, `display_name` = `Deleted user`
-- `intra_id`, `intra_login`, `avatar_file_id` = NULL; the avatar `file` row and its bytes are deleted
+- `intra_id`, `intra_login` = NULL
 - password set unusable; all `user_roles` rows deleted; all sessions of the user ended
-- the user's evaluation requests that have not started (`pending`, `awaiting_confirmation`, or `confirmed` with `starts_at` in the future) are cancelled, with `cancelled_by` = the admin who deleted the account; slots they picked as a Hitchhiker that have not started are released (back to `pending`). Started evaluations are left as they are. The other party gets the notifications and events of an override cancel or release (api-plan §10.2)
+- the user's evaluation requests that have not started (`pending`, or `awaiting_confirmation` or `confirmed` with `starts_at` in the future) are cancelled, with `cancelled_by` = the admin who deleted the account; slots they picked as a Hitchhiker that have not started are released (back to `pending`). The other party gets the notifications and events of an override cancel or release (api-plan §10.2). Started evaluations, those whose `starts_at` has passed, are left as they are whatever their status; an `awaiting_confirmation` one then expires (§4.3)
 - their pending eligibility request, if any, is declined (`reviewed_by` = the admin); their `tutor_eligibility` rows are deleted
 - `sender_id` is set to NULL on the messages they sent to the Student Council
 - their notifications are deleted
-- tutor resources they uploaded are kept, and show the anonymized owner
 
 ---
 
@@ -192,7 +190,7 @@ Check constraints (`Meta.constraints`, one `CheckConstraint` each):
 
 A student may have at most one active request per project (api-plan §7.1). MySQL cannot express this as an index, so the create endpoint enforces it in code: it locks the student's `user` row with `select_for_update()` and checks for an active request inside the same transaction.
 
-Decline, release and expire clear the pick: `picked_by_id`, `starts_at` and `ends_at` are reset to NULL, because the request goes back to the queue or ends unpicked. Cancel keeps the pick, so a cancelled evaluation stays in the history of both the student and the Hitchhiker (`scope=picked`).
+Decline, release and expire clear the pick: `picked_by_id`, `starts_at` and `ends_at` are reset to NULL, because the request goes back to the queue or ends unpicked. Cancel keeps the pick, so a cancelled evaluation stays in the history of both the student and the Hitchhiker (the API hides `picked_by` from the student, api-plan R18) (`scope=picked`).
 
 Indexes:
 
@@ -319,27 +317,9 @@ The ballot and vote are inserted in the same transaction as two independent rows
 
 ---
 
-## 7. Files — YES
+## 7. Files — NO
 
-### 7.1 file
-
-| Column | Type | Null | Notes |
-| --- | --- | --- | --- |
-| id | BIGINT | no | |
-| owner_id | FK user.id | no | Uploader. |
-| kind | varchar(32) | no | `avatar`, `tutor_resource`. |
-| visibility | varchar(16) | no | `authenticated` (any logged-in user) or `tutors` (`tutor`, `head_tutor`, `admin`). Avatars are always `authenticated`. |
-| project_id | FK project.id | yes | `ON DELETE SET NULL`. Optional project a tutor resource belongs to. Always NULL for avatars. |
-| title | varchar(200) | no | Display title. Defaults to the original name. |
-| description | varchar(1000) | no | Default empty string. |
-| original_name | varchar(255) | no | Filename as uploaded, shown to users. |
-| storage_name | varchar(64) UNIQUE | no | Random `uuid4().hex` plus extension. The only name used on disk. |
-| content_type | varchar(100) | no | Detected from the file contents, not trusted from the upload. |
-| size_bytes | BIGINT UNSIGNED | no | |
-
-Bytes live in the `media` Docker volume under `MEDIA_ROOT/<kind>/<storage_name>`. Nginx never serves that folder; every download goes through Django, which checks permission first.
-
-Deleting a `file` row deletes its bytes (`transaction.on_commit`). Replacing an avatar deletes the previous avatar file; the replacement locks the user's row so two simultaneous uploads cannot leave an orphaned file.
+Out of scope (api-plan R19): there is no `file` table. This section number stays free so the ones after it do not move.
 
 ---
 
@@ -354,7 +334,7 @@ Append-only record of sensitive actions. Rows are never updated or deleted by th
 | id | BIGINT | no | |
 | actor_id | FK user.id | yes | `ON DELETE SET NULL`. The user who performed the action. |
 | action | varchar(64) | no | One of the actions in api-plan §10.9. |
-| target_type | varchar(32) | no | `user`, `evaluation_request`, `tutor_eligibility_request`, `tutor_eligibility`, `sc_message`, `file`. |
+| target_type | varchar(32) | no | `user`, `evaluation_request`, `tutor_eligibility_request`, `tutor_eligibility`, `sc_message`. |
 | target_id | BIGINT | no | Id of the target row. Not an FK, so the log survives deletion of the target. |
 | reason | varchar(500) | no | Required for overrides, suspend, reactivate, account deletion, council message deletion and sender reveals; optional for eligibility revocation; empty otherwise (api-plan §10). |
 | metadata | json | no | Before/after values or other context. Never contains passwords or message bodies. |
@@ -385,6 +365,5 @@ user ──< evaluation_request (student) >── project
 user ──< evaluation_request (picked_by)
 user ──< notification
 user ──< sc_message (sender, hidden)
-user ──< file (owner);  user ── avatar ──> file
 user ──< audit_log (actor)
 ```

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import type { ProjectRef } from "../../types/project";
-import { projectContent } from "./projectContent";
+import { projectContent, projectTexts } from "./projectContent";
 import TopicsChart from "./TopicsChart";
 import "../../styles/project-details.css";
 
@@ -19,17 +19,20 @@ export function projectInitials(name: string) {
 
 // The project's topics, info and what will be tested (Figma
 // "Upcoming Evaluation Details"). Shared by /projects/{slug} (#168) and the scheduled
-// evaluation preview. Topics, tested items, duration and subject come from projectContent.ts.
+// evaluation preview. Duration and subject come from projectContent.ts, the topics and tested
+// items from the locale files, in the current language.
 function ProjectOverview({ project }: ProjectOverviewProps) {
   const { t } = useTranslation();
   const content = projectContent[project.slug];
+  // Read on every render, so a language switch shows the texts in the new language.
+  const texts = projectTexts(project.slug);
   const id = (part: string) => `project-${project.slug}-${part}`;
 
   return (
     <div className="project-details__overview">
       <section className="project-details__card project-details__card--chart">
-        {content ? (
-          <TopicsChart projectName={project.name} topics={content.topics} />
+        {texts ? (
+          <TopicsChart projectName={project.name} topics={texts.topics} />
         ) : (
           <p className="project-details__empty">{t("project.noTopics")}</p>
         )}
@@ -71,9 +74,9 @@ function ProjectOverview({ project }: ProjectOverviewProps) {
           aria-labelledby={id("tested")}
         >
           <h2 id={id("tested")}>{t("project.tested")}</h2>
-          {content ? (
+          {texts ? (
             <ul className="project-details__tested">
-              {content.tested.map((item) => (
+              {texts.tested.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>

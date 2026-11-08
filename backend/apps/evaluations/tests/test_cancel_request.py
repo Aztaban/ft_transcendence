@@ -91,7 +91,8 @@ def expected():
         "project": {"id": 4, "slug": "libft", "name": "Libft"},
         "note": "Parsing.",
         "status": "cancelled",
-        "picked_by": {"id": 42, "display_name": "Bob", "avatar_url": None},
+        # The student's view: the Hitchhiker stays hidden on a cancelled request (R18).
+        "picked_by": None,
         "starts_at": "2026-10-12T15:00:00Z",
         "ends_at": "2026-10-12T15:45:00Z",
         "cancelled_by": {"id": 7, "display_name": "Alice", "avatar_url": None},
@@ -189,7 +190,12 @@ def test_cancel_each_active_state_with_real_session(
     tutor_client = APIClient()
     tutor_client.force_authenticate(tutor)
     list_url = reverse("api:evaluation-request-list")
-    for viewer, scope in ((client, "mine"), (tutor_client, "picked")):
+    # The Hitchhiker keeps seeing their own name in the history.
+    picker_view = {
+        **expected,
+        "picked_by": {"id": 42, "display_name": "Bob", "avatar_url": None},
+    }
+    for viewer, scope, row in ((client, "mine", expected), (tutor_client, "picked", picker_view)):
         response = viewer.get(list_url, {"scope": scope, "history": "false"}, HTTP_HOST="localhost")
         assert response.status_code == 200
         assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
@@ -202,7 +208,7 @@ def test_cancel_each_active_state_with_real_session(
                 "count": 1,
                 "next": None,
                 "previous": None,
-                "results": [expected],
+                "results": [row],
             }
 
 
@@ -350,6 +356,7 @@ def test_cancelled_pick_no_longer_reserves_participants_time(student, tutor, eva
         "id": 18,
         "note": "New evaluation.",
         "status": "awaiting_confirmation",
+        "picked_by": {"id": 42, "display_name": "Bob", "avatar_url": None},
         "cancelled_by": None,
         "cancelled_at": None,
         "is_history": False,
@@ -458,6 +465,8 @@ def test_other_users_cannot_cancel_across_active_states_with_real_session(
     expected.update(status=state, cancelled_by=None, cancelled_at=None, is_history=False)
     if state == "pending":
         expected.update(picked_by=None, starts_at=None, ends_at=None)
+    if state == "confirmed":
+        expected.update(picked_by={"id": 42, "display_name": "Bob", "avatar_url": None})
     owner_client = session_client(student)
     response = owner_client.get(
         reverse("api:evaluation-request-detail", kwargs={"pk": 17}), HTTP_HOST="localhost"

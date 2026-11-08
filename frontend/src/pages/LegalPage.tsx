@@ -1,19 +1,18 @@
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import logo42 from "../assets/figma/42.svg";
 import LanguageSwitcher from "../components/layout/LanguageSwitcher";
+import type { LegalDocument } from "../components/layout/legalPages";
 import usePageTitle from "../components/layout/usePageTitle";
 import { dateLocale } from "../i18n";
 import "../styles/registration.css";
 import "../styles/legal.css";
 
-export type LegalDocument = "privacy" | "terms";
-
+// A section has a title and paragraphs, a list, or both.
 interface LegalSection {
   title: string;
-  text: string[];
+  text?: string[];
   items?: string[];
 }
 
@@ -35,16 +34,13 @@ interface LegalPageProps {
 function LegalPage({ kind, standalone = false }: LegalPageProps) {
   const { t } = useTranslation();
   usePageTitle(t(`legal.${kind}.title`));
-  const sections = t(`legal.${kind}.sections`, { returnObjects: true }) as LegalSection[];
+  // A locale file without sections shows the title and intro instead of a blank page.
+  const loaded = t(`legal.${kind}.sections`, { returnObjects: true });
+  const sections: LegalSection[] = Array.isArray(loaded) ? loaded : [];
   const lastUpdated = new Intl.DateTimeFormat(dateLocale(), {
     dateStyle: "long",
     timeZone: "UTC",
   }).format(new Date(LAST_UPDATED[kind]));
-
-  // A footer link is at the bottom of the page it leaves: this one opens at its title.
-  useEffect(() => {
-    document.documentElement.scrollTop = 0;
-  }, [kind]);
 
   const article = (
     <article className="legal-page__article">
@@ -59,16 +55,18 @@ function LegalPage({ kind, standalone = false }: LegalPageProps) {
       <p className="legal-page__updated">{t("legal.lastUpdated", { date: lastUpdated })}</p>
       <p className="legal-page__intro">{t(`legal.${kind}.intro`)}</p>
 
-      {sections.map((section) => (
-        <section key={section.title}>
+      {/* The texts are static, so the index is a stable key, and two identical lines in a
+          translation cannot cause a duplicate-key warning. */}
+      {sections.map((section, sectionIndex) => (
+        <section key={sectionIndex}>
           <h2>{section.title}</h2>
-          {section.text.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
+          {section.text?.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
           ))}
           {section.items && (
             <ul>
-              {section.items.map((item) => (
-                <li key={item}>{item}</li>
+              {section.items.map((item, index) => (
+                <li key={index}>{item}</li>
               ))}
             </ul>
           )}

@@ -40,7 +40,7 @@ function CouncilPage() {
           </div>
         </article>
 
-        <aside className="council-aside">
+        <div className="council-aside">
           <section className="council-panel">
             <h2>{t("council.howItWorks")}</h2>
             <ol className="council-steps">
@@ -57,7 +57,7 @@ function CouncilPage() {
             <h2>{t("council.tip")}</h2>
             <p>{t("council.tipText")}</p>
           </section>
-        </aside>
+        </div>
       </div>
     </section>
   );

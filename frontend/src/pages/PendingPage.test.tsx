@@ -78,6 +78,9 @@ describe("PendingPage", () => {
     renderPage();
 
     expect(await screen.findByText("Nothing scheduled yet")).toBeTruthy();
+    // The notice is a note inside the page, not a landmark of its own (#319).
+    expect(screen.getByRole("note").textContent).toContain("You can cancel");
+    expect(screen.queryByRole("complementary")).toBeNull();
     expect(listEvaluationRequests).toHaveBeenCalledWith({
       scope: "mine",
       status: ["confirmed"],
