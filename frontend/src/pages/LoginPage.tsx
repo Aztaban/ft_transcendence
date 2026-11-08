@@ -10,6 +10,7 @@ import LanguageSwitcher from "../components/layout/LanguageSwitcher";
 import { Button, Input } from "../components/ui";
 import { useAuth } from "../store/AuthContext";
 import { rememberReturnPath, takeReturnPath, type ReturnPage } from "../utils/loginReturn";
+import { EMAIL_PATTERN } from "../utils/validation";
 import "../styles/registration.css";
 
 const OAUTH_42_REDIRECT_URL = "/api/v1/auth/42/redirect/";
@@ -85,6 +86,20 @@ function LoginPage() {
     setErrorKey("");
     setServerError("");
     setShowRegistered(false);
+
+    // Checked here, not by the browser: its own bubble looks different in every browser and is in
+    // the browser's language, not the app's (#683).
+    if (!email.trim() || !password) {
+      setErrorKey("auth.missingFields");
+      return;
+    }
+
+    // Without the browser's check a malformed email would reach the API and come back as a 400.
+    if (!EMAIL_PATTERN.test(email.trim())) {
+      setErrorKey("validation.emailInvalid");
+      return;
+    }
+
     setIsSubmitting(true);
 
     // The gate's page wins over one kept for an earlier 42 login (#328). Without the gate's page,
@@ -137,7 +152,7 @@ function LoginPage() {
 
         <h1 className="registration-page__title">{t("pageTitle.login")}</h1>
 
-        <form className="registration-form" onSubmit={handleSubmit}>
+        <form className="registration-form" onSubmit={handleSubmit} noValidate>
           <Input
             id="login-email"
             name="email"
