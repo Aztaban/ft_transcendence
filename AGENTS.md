@@ -4,7 +4,7 @@ Instructions for AI coding agents working in this repository (Codex, Claude Code
 
 ## The project
 
-42 Prague Evaluations, built for the 42 `ft_transcendence` subject. Students request an evaluation for a project, eligible Hitchhikers (tutors) pick a time slot, and the student confirms it. Around that: notifications, a Student Council inbox, tutor resources and people search.
+42 Prague Evaluations, built for the 42 `ft_transcendence` subject. Students request an evaluation for a project, eligible Hitchhikers (tutors) pick a time slot, and the student confirms it. Around that: notifications, a Student Council inbox and people search.
 
 Stack: Django 5.1 + Django REST Framework + drf-spectacular + Celery (Python 3.12), MySQL 8.4, Redis, React 18 + TypeScript + Vite + react-router 7, Nginx with TLS, Docker Compose.
 
@@ -86,7 +86,7 @@ Python is formatted by black and isort, line length 100: fix with `black . && is
 - Wrap user-facing strings in `gettext`; responses are translated into the user's language (§5.5).
 When adding or changing a user-facing string, update backend/locale/*/LC_MESSAGES/django.po and compile the corresponding django.mo files in the same change.
 - Every model change comes with its migration, created with `python manage.py makemigrations` and committed.
-- Limits such as slot lengths, expiry times and upload sizes are settings, not literals scattered through the code.
+- Limits such as slot lengths and expiry times are settings, not literals scattered through the code.
 
 ## Frontend rules
 

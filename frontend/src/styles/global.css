@@ -37,6 +37,6 @@ a {
 }
 
 ::selection {
-  color: #ffffff;
+  color: var(--color-on-accent);
   background: var(--color-accent);
 }

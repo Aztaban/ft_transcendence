@@ -37,7 +37,7 @@
 
 .language-switcher__option[aria-pressed="true"] {
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 @media (max-width: 680px) {

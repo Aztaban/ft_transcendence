@@ -16,7 +16,7 @@
 }
 
 .pick-slot__back:hover {
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
 }
 
 .pick-slot__header {
@@ -138,7 +138,7 @@
 .slot-picker__option[aria-pressed="true"] {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .slot-picker__option:disabled {
@@ -185,7 +185,7 @@
   place-items: center;
   border: 2px solid var(--color-accent);
   border-radius: 50%;
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
   font-weight: 700;
 }
 

@@ -164,3 +164,60 @@ describe("Login and Register links", () => {
     );
   });
 });
+
+describe("Login and Register with a session (#671)", () => {
+  it.each(["/login", "/register"])(
+    "send a logged-in user from %s to the home page, without showing the form",
+    async (path) => {
+      vi.mocked(getSession).mockResolvedValue({ authenticated: true, user });
+      render(
+        <MemoryRouter initialEntries={["/earlier", path]} initialIndex={1}>
+          <AuthProvider>
+            <Where />
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="*" element={null} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>,
+      );
+
+      // Nothing while the session check runs, so the form never flashes.
+      expect(screen.queryByLabelText("Email")).toBeNull();
+
+      await waitFor(() => expect(whereNow()).toBe("/"));
+      expect(screen.queryByLabelText("Email")).toBeNull();
+
+      // The form was replaced in the history: Back goes to the page before it.
+      fireEvent.click(screen.getByRole("button", { name: "Browser back" }));
+
+      await waitFor(() => expect(whereNow()).toBe("/earlier"));
+    },
+  );
+
+  it.each(["/login", "/register"])(
+    "send a logged-in user from %s to the page the login gate kept",
+    async (path) => {
+      vi.mocked(getSession).mockResolvedValue({ authenticated: true, user });
+      render(
+        <MemoryRouter
+          initialEntries={[
+            { pathname: path, state: { from: { pathname: "/history", search: "?page=2" } } },
+          ]}
+        >
+          <AuthProvider>
+            <Where />
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="*" element={null} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>,
+      );
+
+      await waitFor(() => expect(whereNow()).toBe("/history?page=2"));
+    },
+  );
+});

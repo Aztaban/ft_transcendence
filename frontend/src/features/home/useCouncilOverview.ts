@@ -5,6 +5,7 @@ import { listSCMessages } from "../../api/scMessages";
 import useRefreshWhenVisible from "../../hooks/useRefreshWhenVisible";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import type { SCMessage } from "../../types/scMessage";
+import { canReadCouncilMessages } from "../../utils/permissions";
 import { useLiveRefresh } from "../../websocket/LiveProvider";
 
 // The numbers and newest unread messages of the Council's Home: GET /sc-messages/ (api-plan
@@ -15,7 +16,7 @@ import { useLiveRefresh } from "../../websocket/LiveProvider";
 // asking without it would be a 403 in the console.
 export function useCouncilOverview() {
   const { roles, isLoaded } = useCurrentUser();
-  const isMember = isLoaded && roles.includes("sc_member");
+  const isMember = isLoaded && canReadCouncilMessages(roles);
   const [unread, setUnread] = useState<SCMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);

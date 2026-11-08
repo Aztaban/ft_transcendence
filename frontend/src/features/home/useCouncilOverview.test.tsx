@@ -41,6 +41,15 @@ afterEach(() => {
 });
 
 describe("useCouncilOverview", () => {
+  it("loads the messages for an Admin, who may read them too", async () => {
+    currentUser.roles = ["student", "admin"];
+
+    const { result } = renderHook(() => useCouncilOverview());
+
+    await waitFor(() => expect(result.current.unreadCount).toBe(1));
+    expect(listSCMessages).toHaveBeenCalled();
+  });
+
   it("reads the real totals", async () => {
     const { result } = renderHook(() => useCouncilOverview());
 

@@ -2,10 +2,13 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, call
 
 import pytest
 from django.db import close_old_connections, connection
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.fields import DateTimeField
 from rest_framework.test import APIClient
@@ -13,6 +16,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import Role
 from apps.audit.models import AuditLog
 from apps.council.models import SCMessage
+from apps.notifications.models import Notification
 
 pytestmark = pytest.mark.django_db
 
@@ -35,6 +39,15 @@ def api_client():
     return APIClient()
 
 
+@pytest.fixture
+def group_send(monkeypatch):
+    sender = AsyncMock()
+    monkeypatch.setattr(
+        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
+    )
+    return sender
+
+
 def message_from(sender, body="The fridge is broken."):
     return SCMessage.objects.create(sender=sender, body=body)
 
@@ -52,6 +65,24 @@ def audit_rows():
         AuditLog.objects.order_by("id").values(
             "actor_id", "action", "target_type", "target_id", "reason", "metadata"
         )
+    )
+
+
+def notification_rows():
+    return list(
+        Notification.objects.order_by("pk").values(
+            "id", "recipient_id", "type", "payload", "target_url", "read_at"
+        )
+    )
+
+
+def sc_notification(recipient, message, *, read_at=None):
+    return Notification.objects.create(
+        recipient=recipient,
+        type=Notification.Type.SC_MESSAGE_CREATED,
+        payload={"message_id": message.pk},
+        target_url=f"/council/inbox/{message.pk}",
+        read_at=read_at,
     )
 
 
@@ -338,6 +369,163 @@ def test_moderation_through_a_session_needs_csrf(make_user):
         "sc_message.sender_revealed",
         "sc_message.deleted",
     ]
+
+
+def test_delete_through_a_session_removes_its_notifications(
+    make_user, group_send, django_capture_on_commit_callbacks
+):
+    alice = make_user("alice@example.com", "Alice")
+    admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
+    first = make_user("ada@example.com", "Ada", (Role.Name.SC_MEMBER,))
+    second = make_user("bea@example.com", "Bea", (Role.Name.SC_MEMBER,))
+    make_user("cara@example.com", "Cara", (Role.Name.SC_MEMBER,))
+    message = message_from(alice)
+    other = message_from(alice, "The printer is jammed.")
+    sc_notification(first, message)
+    sc_notification(second, message, read_at=timezone.now())
+    sc_notification(first, other)
+    Notification.objects.create(
+        recipient=second,
+        type=Notification.Type.ROLE_CHANGED,
+        payload={"role": "sc_member", "action": "assigned"},
+        target_url="/profile",
+    )
+    browser = APIClient(enforce_csrf_checks=True)
+    browser.get(reverse("api:session"), HTTP_HOST="localhost")
+    login = browser.post(
+        reverse("api:login"),
+        {"email": admin.email, "password": PASSWORD},
+        format="json",
+        HTTP_HOST="localhost",
+        HTTP_X_CSRFTOKEN=browser.cookies["csrftoken"].value,
+    )
+    assert login.status_code == status.HTTP_200_OK
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = browser.delete(
+            reverse(DETAIL, args=[message.id]),
+            {"reason": "Abusive content."},
+            format="json",
+            HTTP_HOST="localhost",
+            HTTP_X_CSRFTOKEN=browser.cookies["csrftoken"].value,
+        )
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        group_send.assert_not_awaited()
+
+    assert response.content == b""
+    assert not SCMessage.objects.filter(pk=message.id).exists()
+    assert list(
+        Notification.objects.order_by("pk").values(
+            "recipient_id", "type", "payload", "target_url", "read_at"
+        )
+    ) == [
+        {
+            "recipient_id": first.id,
+            "type": "sc_message.created",
+            "payload": {"message_id": other.id},
+            "target_url": f"/council/inbox/{other.id}",
+            "read_at": None,
+        },
+        {
+            "recipient_id": second.id,
+            "type": "role.changed",
+            "payload": {"role": "sc_member", "action": "assigned"},
+            "target_url": "/profile",
+            "read_at": None,
+        },
+    ]
+    assert len(callbacks) == 1
+    assert group_send.await_count == 2
+    group_send.assert_has_awaits(
+        [
+            call(
+                f"user_{user_id}",
+                {"type": "user.event", "event": "notification.updated", "data": {}},
+            )
+            for user_id in sorted((first.id, second.id))
+        ]
+    )
+
+
+def test_a_bad_reason_keeps_the_message_notifications(
+    api_client, make_user, group_send, django_capture_on_commit_callbacks
+):
+    alice = make_user("alice@example.com", "Alice")
+    admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
+    member = make_user("ada@example.com", "Ada", (Role.Name.SC_MEMBER,))
+    message = message_from(alice)
+    sc_notification(member, message, read_at=timezone.now())
+    before = notification_rows()
+    api_client.force_authenticate(user=admin)
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = delete(api_client, message.id, "")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": INVALID,
+            "fields": {"reason": ["This field may not be blank."]},
+        }
+    }
+    assert SCMessage.objects.filter(pk=message.id).exists()
+    assert notification_rows() == before
+    assert audit_rows() == []
+    assert callbacks == []
+    group_send.assert_not_awaited()
+
+
+def test_a_missing_message_keeps_the_notifications(
+    api_client, make_user, group_send, django_capture_on_commit_callbacks
+):
+    alice = make_user("alice@example.com", "Alice")
+    admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
+    member = make_user("ada@example.com", "Ada", (Role.Name.SC_MEMBER,))
+    message = message_from(alice)
+    sc_notification(member, message)
+    before = notification_rows()
+    api_client.force_authenticate(user=admin)
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = delete(api_client, message.id + 1)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == NOT_FOUND
+    assert SCMessage.objects.filter(pk=message.id).exists()
+    assert notification_rows() == before
+    assert audit_rows() == []
+    assert callbacks == []
+    group_send.assert_not_awaited()
+
+
+def test_a_rolled_back_delete_keeps_the_notifications(
+    api_client, make_user, group_send, django_capture_on_commit_callbacks, monkeypatch
+):
+    alice = make_user("alice@example.com", "Alice")
+    admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
+    member = make_user("ada@example.com", "Ada", (Role.Name.SC_MEMBER,))
+    message = message_from(alice)
+    sc_notification(member, message)
+    before = notification_rows()
+    api_client.force_authenticate(user=admin)
+
+    def fail_delete(self, *args, **kwargs):
+        raise RuntimeError("storage failed")
+
+    monkeypatch.setattr(SCMessage, "delete", fail_delete)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = delete(api_client, message.id)
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json() == {
+        "error": {"code": "server_error", "message": "Something went wrong. Please try again."}
+    }
+    assert SCMessage.objects.filter(pk=message.id).exists()
+    assert notification_rows() == before
+    assert audit_rows() == []
+    assert callbacks == []
+    group_send.assert_not_awaited()
 
 
 @pytest.mark.django_db(transaction=True)

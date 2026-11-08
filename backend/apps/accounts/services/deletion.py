@@ -118,8 +118,7 @@ def delete_account(*, actor, user_id, reason):
                 UserRole.objects.filter(user_id=user_id).delete()
                 SCMessage.objects.filter(sender_id=user_id).update(sender=None)
                 Notification.objects.filter(recipient_id=user_id).delete()
-                # Avatars are null stubs in this implementation. The user row
-                # survives, so resource/history owner references remain intact.
+                # The user row survives, so history references remain intact.
                 record_audit(
                     actor=actor,
                     action=AuditLog.Action.USER_DELETED,

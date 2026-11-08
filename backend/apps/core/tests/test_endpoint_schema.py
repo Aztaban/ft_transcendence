@@ -49,6 +49,14 @@ def test_evaluation_exceptions_schema(schema):
     assert set(page["required"]) == {"count", "next", "previous", "results"}
     entry = _component(schema, page["properties"]["results"]["items"]["$ref"])
     base = schema["components"]["schemas"]["EvaluationRequest"]
+    # Hidden per viewer (R15, R18): all three stay a nullable UserRef in the schema.
+    nullable_ref = {
+        "allOf": [{"$ref": "#/components/schemas/UserRef"}],
+        "readOnly": True,
+        "nullable": True,
+    }
+    for field in ("student", "picked_by", "cancelled_by"):
+        assert base["properties"][field] == nullable_ref
     assert set(entry["properties"]) == {*base["properties"], "problem"}
     assert set(entry["required"]) == {*base["required"], "problem"}
     assert (
@@ -493,8 +501,6 @@ def test_pagination_keys_are_required_even_when_links_are_null(schema, path):
                 "evaluation.cancelled_by_override",
                 "sc_message.sender_revealed",
                 "sc_message.deleted",
-                "file.updated_by_moderator",
-                "file.deleted_by_moderator",
             ],
         ),
         (
@@ -506,7 +512,6 @@ def test_pagination_keys_are_required_even_when_links_are_null(schema, path):
                 "tutor_eligibility_request",
                 "tutor_eligibility",
                 "sc_message",
-                "file",
             ],
         ),
     ],
@@ -593,8 +598,6 @@ def test_audit_log_schema_matches_the_admin_entry(schema):
         "evaluation.cancelled_by_override",
         "sc_message.sender_revealed",
         "sc_message.deleted",
-        "file.updated_by_moderator",
-        "file.deleted_by_moderator",
     ]
     assert schema["components"]["schemas"]["TargetTypeEnum"]["enum"] == [
         "user",
@@ -602,7 +605,6 @@ def test_audit_log_schema_matches_the_admin_entry(schema):
         "tutor_eligibility_request",
         "tutor_eligibility",
         "sc_message",
-        "file",
     ]
     assert entry["properties"]["metadata"] == {
         "type": "object",

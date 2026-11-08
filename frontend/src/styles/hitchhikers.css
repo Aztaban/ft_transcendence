@@ -117,7 +117,7 @@
   justify-content: center;
   border-radius: 50%;
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-family: Georgia, serif;
   font-style: italic;
   font-weight: 700;
@@ -145,7 +145,7 @@
   padding: 9px 18px;
   border-radius: 999px;
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-weight: 500;
   text-decoration: none;
   white-space: nowrap;
@@ -156,7 +156,7 @@
 }
 
 .hitchhikers__how-link:hover {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
   box-shadow: 0 6px 14px rgba(0, 186, 188, 0.3);
   transform: translateY(-1px);
 }
@@ -212,6 +212,12 @@
   width: 20px;
   height: 20px;
   opacity: 0.6;
+}
+
+/* Chrome and Edge add their own clear button to a search field, Firefox does not: the name chip
+   clears the search in every browser (#683). */
+.hitchhikers__search input::-webkit-search-cancel-button {
+  display: none;
 }
 
 .hitchhikers__search input {
@@ -296,7 +302,7 @@
 
 .hitchhikers__chip:hover {
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .hitchhikers__status {
@@ -509,7 +515,7 @@
 }
 
 .hitchhiker-card__projects li span {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-weight: 700;
   animation: hitchhikers-check-in 0.4s ease both;
   animation-delay: calc(var(--index, 0) * 60ms + 0.2s);
@@ -602,7 +608,7 @@
 .hitchhikers__empty button:hover,
 .hitchhikers__more:hover:not(:disabled) {
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   transform: translateY(-1px);
 }
 

@@ -69,7 +69,8 @@
     "duration": "Duración",
     "requestedAgo": "Solicitado {{time}}",
     "noNote": "El estudiante no ha dejado ninguna nota.",
-    "tryAgain": "Intentar de nuevo"
+    "tryAgain": "Intentar de nuevo",
+    "serverUnavailable": "El servidor no respondió. Inténtalo de nuevo en un momento."
   },
   "time": {
     "justNow": "ahora mismo",
@@ -325,6 +326,173 @@
     "notAdded": "Todavía no se ha añadido.",
     "topics": "Temas del proyecto"
   },
+  "projectContent": {
+    "push_swap": {
+      "topics": [
+        "Algoritmos",
+        "Parsing",
+        "Pilas",
+        "Operaciones",
+        "Optimización de movimientos",
+        "Gestión de errores",
+        "Gestión de memoria",
+        "Calidad del código"
+      ],
+      "tested": [
+        "Elección del algoritmo",
+        "Comprensión del código",
+        "Gestión de errores",
+        "Restricciones del proyecto"
+      ]
+    },
+    "born2beroot": {
+      "topics": [
+        "Virtualización",
+        "Particiones y LVM",
+        "Usuarios y grupos",
+        "Política de contraseñas",
+        "SSH",
+        "Cortafuegos",
+        "Sudo",
+        "Script de monitorización"
+      ],
+      "tested": [
+        "Configuración de la máquina virtual",
+        "Configuración de seguridad",
+        "Script de monitorización",
+        "Comprensión del sistema"
+      ]
+    },
+    "minishell": {
+      "topics": [
+        "Parsing",
+        "Comillas y expansión",
+        "Pipes",
+        "Redirecciones",
+        "Builtins",
+        "Señales",
+        "Entorno",
+        "Gestión de memoria"
+      ],
+      "tested": [
+        "Ejecución de comandos",
+        "Casos límite",
+        "Gestión de errores",
+        "Comprensión del código"
+      ]
+    },
+    "cpp09": {
+      "topics": [
+        "Contenedores STL",
+        "Algoritmos",
+        "Parsing de la entrada",
+        "Excepciones",
+        "Ordenación",
+        "Complejidad"
+      ],
+      "tested": [
+        "Elección de contenedores",
+        "Corrección del algoritmo",
+        "Gestión de errores",
+        "Comprensión del código"
+      ]
+    },
+    "codexion": {
+      "topics": [
+        "Hilos",
+        "Mutex",
+        "Variables de condición",
+        "Prevención de interbloqueos",
+        "Planificación (FIFO / EDF)",
+        "Cola de prioridad",
+        "Monitor de burnout",
+        "Gestión de memoria"
+      ],
+      "tested": [
+        "Sin interbloqueos ni inanición",
+        "Burnout registrado en menos de 10 ms",
+        "Enfriamiento del dongle y planificación justa",
+        "Logs limpios, sin carreras de datos ni fugas",
+        "Comprensión del código"
+      ]
+    },
+    "fly-in": {
+      "topics": [
+        "Parsing",
+        "Modelado de grafos",
+        "Búsqueda de rutas",
+        "Capacidad de zonas y enlaces",
+        "Planificación de turnos",
+        "Costes de movimiento",
+        "Visualización",
+        "Seguridad de tipos"
+      ],
+      "tested": [
+        "Parser y mensajes de error",
+        "Número de turnos frente a los objetivos",
+        "Reglas de capacidad respetadas",
+        "Explicación del algoritmo",
+        "Comprensión del código"
+      ]
+    },
+    "rag-against-the-machine": {
+      "topics": [
+        "Fragmentación",
+        "Indexación",
+        "BM25 / TF-IDF",
+        "Recuperación",
+        "Generación de respuestas",
+        "Recall@k",
+        "CLI (Fire)",
+        "Modelos de datos (pydantic)"
+      ],
+      "tested": [
+        "Recall@5: 80 % documentación, 50 % código",
+        "Velocidad de indexación y búsqueda",
+        "Respuestas fundamentadas",
+        "Casos límite de la CLI",
+        "Comprensión del código"
+      ]
+    },
+    "agent-smith": {
+      "topics": [
+        "Bucle del agente",
+        "Extracción de código",
+        "Seguridad del sandbox",
+        "Herramientas MCP",
+        "Proveedores de LLM",
+        "Diseño de prompts",
+        "Seguimiento del uso",
+        "Benchmarking"
+      ],
+      "tested": [
+        "Herramientas obligatorias",
+        "Bucle de razonamiento del agente",
+        "Aislamiento del sandbox",
+        "Informe del benchmark",
+        "Cambio en directo del agente"
+      ]
+    },
+    "the-answer-protocol": {
+      "topics": [
+        "Servidor TCP",
+        "Cumplimiento del protocolo",
+        "Concurrencia",
+        "Objetos e inventario",
+        "Combate",
+        "Misiones",
+        "Clientes CLI y GUI",
+        "Registro del servidor"
+      ],
+      "tested": [
+        "Cada comando y evento del protocolo",
+        "Multijugador y desconexiones",
+        "Combate y misiones",
+        "Clientes intercambiables entre grupos",
+        "Aportación de cada miembro"
+      ]
+    }
+  },
   "council": {
     "title": "Consejo estudiantil",
     "subtitle": "Comparte una idea, un problema o tu opinión con las personas que te representan.",
@@ -429,7 +597,26 @@
     "historyAboutTitle": "Sobre el historial",
     "historyAboutText": "Los mensajes leídos también se quedan aquí. Marcar uno como leído o no leído lo cambia para todos los miembros del consejo.",
     "open": "Abrir",
-    "openAria": "Abrir el mensaje n.º {{id}}"
+    "openAria": "Abrir el mensaje n.º {{id}}",
+    "moderation": {
+      "title": "Moderación",
+      "hint": "Solo para administradores. Cada acción se guarda en el registro de auditoría con tu motivo.",
+      "revealButton": "Mostrar remitente",
+      "deleteButton": "Eliminar mensaje",
+      "revealTitle": "¿Mostrar quién envió el mensaje n.º {{id}}?",
+      "revealText": "Solo para investigar un abuso. Tu nombre y el motivo se guardan en el registro de auditoría, y el consejo sigue sin ver al remitente.",
+      "revealConfirm": "Mostrar remitente",
+      "deleteTitle": "¿Eliminar el mensaje n.º {{id}}?",
+      "deleteText": "El mensaje desaparece para todos los miembros del consejo y no se puede recuperar. Tu nombre y el motivo se guardan en el registro de auditoría.",
+      "deleteConfirm": "Eliminar mensaje",
+      "reason": "Motivo",
+      "reasonHint_one": "Al menos {{count}} carácter",
+      "reasonHint_many": "Al menos {{count}} caracteres",
+      "reasonHint_other": "Al menos {{count}} caracteres",
+      "sender": "Remitente",
+      "senderDeleted": "La cuenta del remitente fue eliminada.",
+      "deleted": "El mensaje se ha eliminado. El motivo queda guardado en el registro de auditoría."
+    }
   },
   "roles": {
     "student": "Estudiante",
@@ -450,11 +637,12 @@
   "notifications": {
     "evaluation": {
       "created": "Nueva solicitud de evaluación para {{project.name}}",
-      "slot_picked": "{{tutor.display_name}} eligió un horario para {{project.name}}: {{slot}}. Confírmalo, por favor",
+      "slot_picked": "Un Hitchhiker eligió un horario para {{project.name}}: {{slot}}. Confírmalo, por favor",
       "confirmed": "{{student.display_name}} confirmó la evaluación de {{project.name}}: {{slot}}",
       "declined": "{{student.display_name}} rechazó tu horario para {{project.name}}",
-      "released": "{{tutor.display_name}} liberó tu solicitud de evaluación de {{project.name}}",
+      "released": "Se liberó el horario de {{project.name}}",
       "cancelled": "{{cancelled_by.display_name}} canceló la evaluación de {{project.name}}",
+      "cancelled_hidden": "Se canceló la evaluación de {{project.name}}",
       "expired_pending": "Tu solicitud de evaluación de {{project.name}} caducó: nadie la eligió",
       "expired_awaiting_confirmation": "La evaluación de {{project.name}} caducó antes de confirmar el horario",
       "result_recorded_passed": "Resultado de {{project.name}}: aprobado",
@@ -475,11 +663,6 @@
     },
     "sc_message": {
       "created": "Nuevo mensaje anónimo para el Consejo estudiantil"
-    },
-    "resource": {
-      "created": "{{owner.display_name}} compartió «{{title}}»",
-      "updated": "Tu recurso «{{title}}» fue editado",
-      "deleted": "Tu recurso «{{title}}» fue eliminado"
     }
   },
   "home": {
@@ -524,7 +707,7 @@
   "dashboard": {
     "openRequests": "Solicitudes abiertas",
     "studentOpenEmpty": "Tus solicitudes de evaluación activas aparecerán aquí.",
-    "proposed": "{{name}} propuso <time>{{slot}}</time>",
+    "proposed": "Un Hitchhiker propuso <time>{{slot}}</time>",
     "evaluationRequest": "Solicitud de evaluación",
     "pending": "Pendiente",
     "reviewProposal": "Ver propuesta",
@@ -691,6 +874,7 @@
     "or": "o",
     "continueWith42": "CONTINUAR CON 42",
     "registered": "Cuenta creada. Ya puedes iniciar sesión.",
+    "missingFields": "Introduce tu correo y tu contraseña.",
     "invalidCredentials": "Correo o contraseña incorrectos.",
     "loginError": "No se pudo iniciar sesión. Inténtalo de nuevo.",
     "register": "REGISTRARSE",
@@ -724,7 +908,7 @@
     "passwordNumeric": "La contraseña no puede contener solo números."
   },
   "legal": {
-    "copyright": "© transcendence 2026",
+    "copyright": "© transcendence {{year}}",
     "footerLabel": "Información legal",
     "lastUpdated": "Última actualización: {{date}}",
     "back": "Volver a la aplicación",
