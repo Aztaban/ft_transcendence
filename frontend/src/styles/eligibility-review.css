@@ -695,7 +695,11 @@
   .eligibility-detail__card {
     padding: 22px 18px;
   }
+}
 
+/* The table becomes one card per request while the content area is narrow, including next to
+   the sidebar on a tablet, where the Decision column was cut off (#372). */
+@media (max-width: 1024px) {
   .eligibility-review__table thead {
     position: absolute;
     width: 1px;

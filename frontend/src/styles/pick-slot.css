@@ -44,12 +44,15 @@
 
 .pick-slot__main {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 16px;
 }
 
 .pick-slot__card,
 .pick-slot__panel {
+  /* The row of days scrolls inside the card instead of widening it (#372). */
+  min-width: 0;
   padding: 22px 24px;
   border: 1px solid var(--color-neutral-200);
   border-radius: 12px;

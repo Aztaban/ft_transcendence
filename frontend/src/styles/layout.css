@@ -403,6 +403,8 @@
   display: flex;
   height: 50px;
   flex: 1;
+  /* Shrinks below the field's natural width, so the bell and avatar stay on screen (#372). */
+  min-width: 0;
   align-items: center;
   gap: 14px;
   margin-right: 10px;
@@ -442,6 +444,7 @@
 
 .topbar__search input {
   width: 100%;
+  min-width: 0;
   height: 100%;
   padding: 0;
   border: 0;
@@ -852,6 +855,34 @@
 
   .app-shell__content {
     padding: 28px 20px;
+  }
+}
+
+/* Phones (#372): everything in the top bar fits at 320px. */
+@media (max-width: 480px) {
+  .topbar {
+    gap: 6px;
+    padding: 0 10px;
+  }
+
+  .topbar__search {
+    min-width: 40px;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .topbar__notifications {
+    margin-right: 6px;
+  }
+
+  .topbar__avatar {
+    width: 40px;
+    height: 40px;
+    border-width: 2px;
+  }
+
+  .topbar__user-menu {
+    margin-left: 2px;
   }
 }
 
