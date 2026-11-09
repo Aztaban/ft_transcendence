@@ -97,6 +97,15 @@ describe("ProjectMultiSelect", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("says when there are no projects to choose from", async () => {
+    vi.mocked(listProjects).mockResolvedValue([]);
+
+    renderInRouter(<ProjectMultiSelect value={[]} onChange={() => {}} />);
+
+    expect(await screen.findByText("No projects available")).toBeTruthy();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
   it("shows an error when the projects cannot be loaded", async () => {
     vi.mocked(listProjects).mockRejectedValue(new Error("network"));
 

@@ -292,6 +292,21 @@ describe("Sidebar role menu keyboard", () => {
     expect(document.activeElement?.textContent).toBe("STUDENT");
   });
 
+  // A listbox button opens with either arrow key (WAI-ARIA), other keys leave it closed.
+  test("opens with ArrowUp too, and not with other keys", () => {
+    currentUser.roles = ["student", "tutor", "sc_member"];
+    currentUser.isLoaded = true;
+    renderSidebar();
+    const button = screen.getByRole("button", { name: /STUDENT/ });
+
+    fireEvent.keyDown(button, { key: "a" });
+    expect(screen.queryByRole("listbox")).toBeNull();
+
+    fireEvent.keyDown(button, { key: "ArrowUp" });
+    expect(screen.getByRole("listbox")).toBeTruthy();
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+  });
+
   test("moves with the arrow keys, Home and End, and wraps around", () => {
     openWithKeyboard();
     const menu = screen.getByRole("listbox");

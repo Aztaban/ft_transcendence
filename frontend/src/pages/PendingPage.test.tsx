@@ -151,6 +151,10 @@ describe("PendingPage", () => {
     expect(cancelEvaluationRequest).toHaveBeenCalledWith(1);
     expect(await screen.findByText("Nothing scheduled yet")).toBeTruthy();
 
+    // A click inside the popup keeps it; one outside closes it.
+    fireEvent.click(screen.getByRole("dialog"));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
     fireEvent.click(screen.getByTestId("released-dialog-backdrop"));
 
     expect(screen.queryByRole("dialog")).toBeNull();
