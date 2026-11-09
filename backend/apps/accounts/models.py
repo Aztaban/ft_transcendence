@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from apps.core.models import TimeStampedModel
 
@@ -34,8 +35,9 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         SPANISH = "es", "Spanish"
 
     class Status(models.TextChoices):
-        ACTIVE = "active", "Active"
-        SUSPENDED = "suspended", "Suspended"
+        ACTIVE = "active", _("Active")
+        SUSPENDED = "suspended", _("Suspended")
+        DELETED = "deleted", _("Deleted")
 
     id = models.BigAutoField(primary_key=True)
 
@@ -45,6 +47,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     )
 
     display_name = models.CharField(
+        verbose_name=_("display name"),
         max_length=64,
     )
 

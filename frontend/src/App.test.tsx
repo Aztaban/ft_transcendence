@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -6,8 +6,8 @@ import { getSession, loginUser } from "./api/auth";
 import { getEligibilityRequest, listEligibilityRequests } from "./api/eligibility";
 import { listEvaluationRequests } from "./api/evaluationRequests";
 import { listProjects } from "./api/projects";
-import { getCurrentUser } from "./api/users";
 import App from "./App";
+import type { UserProfile } from "./types/user";
 import { AuthProvider } from "./store/AuthContext";
 import { RoleProvider } from "./store/RoleContext";
 
@@ -34,10 +34,18 @@ vi.mock("./api/users", () => ({
 
 // The user's real roles from /users/me/. By default nothing is loaded, as without a provider; a
 // test sets `roles` and `isLoaded` when a page depends on them.
-const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
+const currentUser = vi.hoisted(() => ({
+  user: null as UserProfile | null,
+  roles: [] as string[],
+  isLoaded: false,
+}));
 
 vi.mock("./store/CurrentUserContext", () => ({
-  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+  useCurrentUser: () => ({
+    ...currentUser,
+    loadFailed: false,
+    update: () => Promise.resolve(),
+  }),
 }));
 
 const user = { id: 1, email: "student@example.com", display_name: "Student" };
@@ -56,6 +64,7 @@ afterEach(() => {
   cleanup();
   vi.resetAllMocks();
   sessionStorage.clear();
+  currentUser.user = null;
   currentUser.roles = [];
   currentUser.isLoaded = false;
 });
@@ -103,7 +112,7 @@ describe("logged in", () => {
 
     const footer = within(await screen.findByRole("contentinfo"));
 
-    expect(footer.getByText("© transcendence 2026")).toBeDefined();
+    expect(footer.getByText(`© transcendence ${new Date().getFullYear()}`)).toBeDefined();
 
     expect(footer.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toBe(
       "/privacy",
@@ -179,7 +188,7 @@ describe("logged in", () => {
     sessionStorage.setItem("active-role", "COUNCIL");
     currentUser.roles = ["student", "tutor", "sc_member"];
     currentUser.isLoaded = true;
-    vi.mocked(getCurrentUser).mockResolvedValue({
+    currentUser.user = {
       ...user,
       display_name: "Bob",
       avatar_url: null,
@@ -190,7 +199,7 @@ describe("logged in", () => {
         { id: 3, name: "tutor" },
       ],
       intra_login: null,
-    });
+    };
 
     renderAt("/profile");
 
@@ -213,6 +222,27 @@ describe("logged out", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: title })).toBeDefined();
     expect(container.querySelector(".sidebar")).toBeNull();
+  });
+
+  // Matched like the logged-in routes, so the same link works with or without a session.
+  test.each(["/Privacy", "/terms/"])("opens %s like the logged-in route does", async (path) => {
+    renderAt(path);
+
+    expect(await screen.findByRole("heading", { level: 1 })).toBeDefined();
+    expect(screen.queryByLabelText("Email")).toBeNull();
+  });
+
+  test("opens the next page at its top, not where the last one was scrolled to", async () => {
+    renderAt("/privacy");
+    const footer = within(await screen.findByRole("contentinfo"));
+
+    document.documentElement.scrollTop = 900;
+    fireEvent.click(footer.getByRole("link", { name: "Terms of Service" }));
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Terms of Service" }),
+    ).toBeDefined();
+    expect(document.documentElement.scrollTop).toBe(0);
   });
 
   test.each(["/privacy", "/terms"])("links to both legal pages from %s", async (path) => {
@@ -263,7 +293,7 @@ describe("logged out", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
     fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
   });
 
   test("shows nothing while the session check runs", () => {
@@ -294,7 +324,7 @@ describe("42 login", () => {
     sessionStorage.setItem("login-return-to", "/history?status=cancelled");
     renderAt("/");
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
   });
 
@@ -310,8 +340,11 @@ describe("42 login", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
     fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
+    // The kept page was dropped at login, so nothing opens it once the app is shown.
+    await act(async () => {});
+    expect(screen.getByRole("heading", { level: 1, name: "History" })).toBeDefined();
   });
 
   test("uses the page kept for 42 when the 42 login failed and the form is used instead", async () => {
@@ -326,7 +359,7 @@ describe("42 login", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
     fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
   });
 });

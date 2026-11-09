@@ -1,4 +1,4 @@
-"""Student Council inbox endpoints (api-plan §10.6)."""
+"""Student Council inbox endpoints."""
 
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -8,11 +8,13 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
+from apps.accounts.models import Role, User
+from apps.accounts.services.locking import lock_users
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
@@ -21,7 +23,7 @@ from apps.core.schema import CSRF_HEADER, error_responses
 from apps.core.throttling import SCMessageSendRateThrottle
 
 from .models import SCMessage
-from .notifications import notify_sc_message_created
+from .notifications import delete_sc_message_created_notifications, notify_sc_message_created
 from .permissions import CanAccessCouncilMessage, CanModerateCouncilMessage, CanReadCouncilInbox
 from .serializers import (
     SCMessageCreatedSerializer,
@@ -40,11 +42,22 @@ def _create_sc_message(request):
     serializer = SCMessageCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     with transaction.atomic():
+        # Lock the sender and Council recipients in one order before inserting
+        # either the message or notifications that reference their user rows.
+        members = User.objects.filter(roles__name=Role.Name.SC_MEMBER)
+        council_ids = list(members.values_list("pk", flat=True).distinct())
+        lock_users(request.user.pk, *council_ids)
+        sender = User.objects.get(pk=request.user.pk)
+        if not sender.is_active:
+            raise NotAuthenticated()
         message = SCMessage.objects.create(
-            sender=request.user,
+            sender=sender,
             body=serializer.validated_data["body"],
         )
-        notify_sc_message_created(message)
+        council_ids = list(
+            members.filter(pk__in=council_ids).values_list("pk", flat=True).distinct()
+        )
+        notify_sc_message_created(message, recipient_ids=council_ids)
     return Response(SCMessageCreatedSerializer(message).data, status=status.HTTP_201_CREATED)
 
 
@@ -100,14 +113,27 @@ def _not_found():
     return error_response("not_found", _("Not found."), status.HTTP_404_NOT_FOUND)
 
 
-def _lock_message(pk):
-    return SCMessage.objects.select_for_update().select_related("sender").filter(pk=pk).first()
+def _lock_message(pk, actor_id):
+    # Account deletion locks users before anonymizing their messages. Include the
+    # audit actor in the same ordered set before taking the message lock.
+    sender_id = SCMessage.objects.filter(pk=pk).values_list("sender_id", flat=True).first()
+    lock_users(sender_id, actor_id)
+    return (
+        SCMessage.objects.select_for_update(of=("self",))
+        .select_related("sender")
+        .filter(pk=pk)
+        .first()
+    )
 
 
 def _delete_sc_message(request, pk):
-    """Remove one message. The audit row survives because target_id is not a foreign key."""
+    """Remove one message and its sc_message.created notifications (§10.6).
+
+    The audit row survives because target_id is not a foreign key. A validation
+    error, a missing message or a rolled-back delete leaves the notifications.
+    """
     with transaction.atomic():
-        message = _lock_message(pk)
+        message = _lock_message(pk, request.user.pk)
         if message is None:
             return _not_found()
         serializer = SCMessageDeleteSerializer(data=request.data)
@@ -119,6 +145,7 @@ def _delete_sc_message(request, pk):
             target_id=message.pk,
             reason=serializer.validated_data["reason"],
         )
+        delete_sc_message_created_notifications(message)
         message.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -126,7 +153,7 @@ def _delete_sc_message(request, pk):
 def _reveal_sender(request, pk):
     """Return the sender once, and always leave an audit row for that lookup (§10.6)."""
     with transaction.atomic():
-        message = _lock_message(pk)
+        message = _lock_message(pk, request.user.pk)
         if message is None:
             return _not_found()
         serializer = SCMessageRevealSerializer(data=request.data)

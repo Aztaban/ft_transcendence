@@ -10,7 +10,7 @@ User = get_user_model()
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    # avatar_url stub until Files API exists — always present for clients.
+    # Always null: avatars are not built (R19). Still present for clients (api-plan §8.2).
     avatar_url = serializers.SerializerMethodField()
     roles = RoleSerializer(many=True, read_only=True)
 

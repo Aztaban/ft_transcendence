@@ -55,6 +55,10 @@ describe("workspacesFor", () => {
     expect(workspacesFor(["student", "sc_member"])).toEqual(["STUDENT", "COUNCIL"]);
     expect(workspacesFor(["tutor", "sc_member"])).toEqual(["STUDENT", "HITCHHIKER", "COUNCIL"]);
   });
+
+  it("gives Admins the Student Council workspace, where they read and moderate messages", () => {
+    expect(workspacesFor(["student", "admin"])).toEqual(["STUDENT", "COUNCIL"]);
+  });
 });
 
 describe("RoleProvider", () => {

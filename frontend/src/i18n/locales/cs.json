@@ -70,7 +70,8 @@
     "duration": "Délka",
     "requestedAgo": "Žádost odeslána {{time}}",
     "noNote": "Student nepřidal žádnou poznámku.",
-    "tryAgain": "Zkusit znovu"
+    "tryAgain": "Zkusit znovu",
+    "serverUnavailable": "Server neodpověděl. Zkuste to prosím za chvíli znovu."
   },
   "time": {
     "justNow": "právě teď",
@@ -329,6 +330,158 @@
     "notAdded": "Zatím nepřidáno.",
     "topics": "Témata projektu"
   },
+  "projectContent": {
+    "push_swap": {
+      "topics": [
+        "Algoritmy",
+        "Parsování",
+        "Zásobníky",
+        "Operace",
+        "Optimalizace tahů",
+        "Ošetření chyb",
+        "Správa paměti",
+        "Kvalita kódu"
+      ],
+      "tested": ["Volba algoritmu", "Porozumění kódu", "Ošetření chyb", "Omezení projektu"]
+    },
+    "born2beroot": {
+      "topics": [
+        "Virtualizace",
+        "Oddíly a LVM",
+        "Uživatelé a skupiny",
+        "Pravidla hesel",
+        "SSH",
+        "Firewall",
+        "Sudo",
+        "Monitorovací skript"
+      ],
+      "tested": [
+        "Nastavení virtuálního stroje",
+        "Nastavení zabezpečení",
+        "Monitorovací skript",
+        "Porozumění systému"
+      ]
+    },
+    "minishell": {
+      "topics": [
+        "Parsování",
+        "Uvozovky a expanze",
+        "Roury",
+        "Přesměrování",
+        "Vestavěné příkazy",
+        "Signály",
+        "Prostředí",
+        "Správa paměti"
+      ],
+      "tested": ["Spouštění příkazů", "Okrajové případy", "Ošetření chyb", "Porozumění kódu"]
+    },
+    "cpp09": {
+      "topics": [
+        "Kontejnery STL",
+        "Algoritmy",
+        "Parsování vstupu",
+        "Výjimky",
+        "Řazení",
+        "Složitost"
+      ],
+      "tested": ["Volba kontejnerů", "Správnost algoritmu", "Ošetření chyb", "Porozumění kódu"]
+    },
+    "codexion": {
+      "topics": [
+        "Vlákna",
+        "Mutexy",
+        "Podmínkové proměnné",
+        "Prevence deadlocku",
+        "Plánování (FIFO / EDF)",
+        "Prioritní fronta",
+        "Hlídání vyhoření",
+        "Správa paměti"
+      ],
+      "tested": [
+        "Žádný deadlock ani hladovění",
+        "Vyhoření zaznamenané do 10 ms",
+        "Prodleva donglu a férové plánování",
+        "Čisté logy bez souběhů a úniků paměti",
+        "Porozumění kódu"
+      ]
+    },
+    "fly-in": {
+      "topics": [
+        "Parsování",
+        "Modelování grafu",
+        "Hledání cest",
+        "Kapacita zón a spojů",
+        "Plánování tahů",
+        "Cena pohybu",
+        "Vizualizace",
+        "Typová bezpečnost"
+      ],
+      "tested": [
+        "Parser a chybové hlášky",
+        "Počet tahů oproti cílům",
+        "Dodržení pravidel kapacity",
+        "Vysvětlení algoritmu",
+        "Porozumění kódu"
+      ]
+    },
+    "rag-against-the-machine": {
+      "topics": [
+        "Dělení textu",
+        "Indexování",
+        "BM25 / TF-IDF",
+        "Vyhledávání",
+        "Generování odpovědí",
+        "Recall@k",
+        "CLI (Fire)",
+        "Datové modely (pydantic)"
+      ],
+      "tested": [
+        "Recall@5: 80 % dokumentace, 50 % kódu",
+        "Rychlost indexování a vyhledávání",
+        "Podložené odpovědi",
+        "Okrajové případy CLI",
+        "Porozumění kódu"
+      ]
+    },
+    "agent-smith": {
+      "topics": [
+        "Smyčka agenta",
+        "Extrakce kódu",
+        "Bezpečnost sandboxu",
+        "Nástroje MCP",
+        "Poskytovatelé LLM",
+        "Návrh promptů",
+        "Sledování spotřeby",
+        "Benchmarky"
+      ],
+      "tested": [
+        "Povinné nástroje",
+        "Uvažovací smyčka agenta",
+        "Izolace sandboxu",
+        "Zpráva z benchmarku",
+        "Živá úprava agenta"
+      ]
+    },
+    "the-answer-protocol": {
+      "topics": [
+        "TCP server",
+        "Dodržení protokolu",
+        "Souběžnost",
+        "Předměty a inventář",
+        "Boj",
+        "Úkoly",
+        "Klienti CLI a GUI",
+        "Logování serveru"
+      ],
+      "tested": [
+        "Každý příkaz a událost protokolu",
+        "Hra více hráčů a odpojení",
+        "Boj a úkoly",
+        "Klienti zaměnitelní mezi skupinami",
+        "Přínos každého člena"
+      ]
+    }
+  },
   "council": {
     "title": "Studentská rada",
     "subtitle": "Podělte se o nápad, problém nebo zpětnou vazbu s lidmi, kteří vás zastupují.",
@@ -434,7 +587,27 @@
     "historyAboutTitle": "O historii",
     "historyAboutText": "Přečtené zprávy tu zůstávají také. Označení jako přečtené nebo nepřečtené platí pro všechny členy rady.",
     "open": "Otevřít",
-    "openAria": "Otevřít zprávu č. {{id}}"
+    "openAria": "Otevřít zprávu č. {{id}}",
+    "moderation": {
+      "title": "Moderace",
+      "hint": "Jen pro administrátory. Každá akce se uloží do auditního záznamu i s vaším důvodem.",
+      "revealButton": "Zobrazit odesílatele",
+      "deleteButton": "Smazat zprávu",
+      "revealTitle": "Zobrazit, kdo poslal zprávu č. {{id}}?",
+      "revealText": "Jen kvůli vyšetření zneužití. Vaše jméno a důvod se uloží do auditního záznamu a radě zůstane odesílatel skrytý.",
+      "revealConfirm": "Zobrazit odesílatele",
+      "deleteTitle": "Smazat zprávu č. {{id}}?",
+      "deleteText": "Zpráva zmizí všem členům rady a nepůjde obnovit. Vaše jméno a důvod se uloží do auditního záznamu.",
+      "deleteConfirm": "Smazat zprávu",
+      "reason": "Důvod",
+      "reasonHint_one": "Alespoň {{count}} znak",
+      "reasonHint_few": "Alespoň {{count}} znaky",
+      "reasonHint_many": "Alespoň {{count}} znaku",
+      "reasonHint_other": "Alespoň {{count}} znaků",
+      "sender": "Odesílatel",
+      "senderDeleted": "Účet odesílatele byl smazán.",
+      "deleted": "Zpráva byla smazána. Důvod je uložen v auditním záznamu."
+    }
   },
   "roles": {
     "student": "Student",
@@ -455,11 +628,12 @@
   "notifications": {
     "evaluation": {
       "created": "Nová žádost o evaluaci projektu {{project.name}}",
-      "slot_picked": "Pro {{project.name}} je vybraný termín {{slot}} ({{tutor.display_name}}). Potvrďte ho prosím",
+      "slot_picked": "Pro {{project.name}} je vybraný termín {{slot}}. Potvrďte ho prosím",
       "confirmed": "Evaluace projektu {{project.name}} je potvrzená: {{slot}} ({{student.display_name}})",
       "declined": "Váš termín pro evaluaci {{project.name}} byl odmítnut ({{student.display_name}})",
-      "released": "Vaše žádost o evaluaci {{project.name}} byla uvolněna ({{tutor.display_name}}), čeká na nového Hitchhikera",
+      "released": "Termín evaluace {{project.name}} byl uvolněn",
       "cancelled": "Evaluace projektu {{project.name}} byla zrušena ({{cancelled_by.display_name}})",
+      "cancelled_hidden": "Evaluace projektu {{project.name}} byla zrušena",
       "expired_pending": "Vaše žádost o evaluaci projektu {{project.name}} vypršela: nikdo si ji nevybral",
       "expired_awaiting_confirmation": "Evaluace projektu {{project.name}} vypršela před potvrzením termínu",
       "result_recorded_passed": "Výsledek evaluace projektu {{project.name}}: úspěch",
@@ -480,11 +654,6 @@
     },
     "sc_message": {
       "created": "Nová anonymní zpráva pro Studentskou radu"
-    },
-    "resource": {
-      "created": "{{owner.display_name}} sdílí dokument „{{title}}“",
-      "updated": "Váš dokument „{{title}}“ byl upraven",
-      "deleted": "Váš dokument „{{title}}“ byl smazán"
     }
   },
   "home": {
@@ -529,7 +698,7 @@
   "dashboard": {
     "openRequests": "Otevřené žádosti",
     "studentOpenEmpty": "Vaše aktivní žádosti o hodnocení se objeví tady.",
-    "proposed": "{{name}} navrhl(a) <time>{{slot}}</time>",
+    "proposed": "Hitchhiker navrhl(a) <time>{{slot}}</time>",
     "evaluationRequest": "Žádost o hodnocení",
     "pending": "Čeká",
     "reviewProposal": "Zobrazit návrh",
@@ -699,6 +868,7 @@
     "or": "nebo",
     "continueWith42": "POKRAČOVAT PŘES 42",
     "registered": "Účet je vytvořený. Teď se můžete přihlásit.",
+    "missingFields": "Zadejte e-mail a heslo.",
     "invalidCredentials": "Nesprávný e-mail nebo heslo.",
     "loginError": "Přihlášení se nepovedlo. Zkuste to prosím znovu.",
     "register": "ZAREGISTROVAT SE",
@@ -732,7 +902,7 @@
     "passwordNumeric": "Heslo nemůže obsahovat jen číslice."
   },
   "legal": {
-    "copyright": "© transcendence 2026",
+    "copyright": "© transcendence {{year}}",
     "footerLabel": "Právní informace",
     "lastUpdated": "Poslední aktualizace: {{date}}",
     "back": "Zpět do aplikace",

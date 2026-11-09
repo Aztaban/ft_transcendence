@@ -10,6 +10,7 @@ import {
 } from "../api/eligibility";
 import ReviewDialog from "../features/headTutor/ReviewDialog";
 import { reviewErrorMessage } from "../features/headTutor/reviewErrorMessage";
+import { initials } from "../features/people/PersonAvatar";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { EligibilityRequest, EligibilityRequestStatus } from "../types/eligibility";
 import { formatTimeAgo } from "../utils/dateTime";
@@ -43,14 +44,6 @@ interface OpenReview {
 interface Decision {
   decision: EligibilityDecision;
   name: string;
-}
-
-// "dkolarov" → "DK"
-function initials(name: string) {
-  return name
-    .replace(/[^a-z0-9]/gi, "")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 // Head Tutor table of eligibility requests (#175, #176, #177): requester and full project list,

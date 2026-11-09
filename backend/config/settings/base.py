@@ -85,6 +85,7 @@ DATABASES = {
         "PASSWORD": os.getenv("MYSQL_PASSWORD", ""),
         "HOST": os.getenv("MYSQL_HOST", "db"),
         "PORT": os.getenv("MYSQL_PORT", "3306"),
+        "OPTIONS": {"charset": "utf8mb4"},
     }
 }
 
@@ -102,6 +103,7 @@ CSRF_COOKIE_SAMESITE = "Lax"
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "OPTIONS": {"user_attributes": ("email", "display_name")},
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
@@ -175,6 +177,9 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "ft_transcendence API",
     "VERSION": "1.0.0",
+    "ENUM_NAME_OVERRIDES": {
+        "EvaluationRequestStatusEnum": "apps.evaluations.models.EvaluationRequest.Status",
+    },
 }
 
 # Eligibility request submit: max projects in one request.
@@ -182,6 +187,9 @@ ELIGIBILITY_REQUEST_MAX_PROJECTS = 50
 
 # Unpicked evaluation requests expire after this many days.
 EVALUATION_REQUEST_TTL_DAYS = 14
+
+# Administration flags confirmed evaluations still missing a result after this interval.
+EVALUATION_RESULT_MISSING_DAYS = 7
 
 # Student Council message body and discussion note (api-plan §10.6): max characters.
 SC_MESSAGE_MAX_LENGTH = 5000
@@ -214,6 +222,10 @@ CELERY_BEAT_SCHEDULE = {
     },
     "purge-old-notifications-daily": {
         "task": "purge_old_notifications",
+        "schedule": 86400.0,
+    },
+    "clear-expired-sessions-daily": {
+        "task": "clear_expired_sessions",
         "schedule": 86400.0,
     },
     "expire-evaluation-requests-every-5m": {

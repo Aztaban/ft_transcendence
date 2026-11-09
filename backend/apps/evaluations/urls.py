@@ -2,9 +2,14 @@
 
 from django.urls import path
 
-from .views import eligibility, projects, requests
+from .views import eligibility, exceptions, projects, requests
 
 urlpatterns = [
+    path(
+        "admin/evaluation-requests/exceptions/",
+        exceptions.EvaluationExceptionListView.as_view(),
+        name="evaluation-request-exceptions",
+    ),
     path("projects/", projects.ProjectListView.as_view(), name="project-list"),
     path("projects/<slug:slug>/", projects.ProjectDetailView.as_view(), name="project-detail"),
     path(

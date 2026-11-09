@@ -5,12 +5,16 @@ interface PersonAvatarProps {
   className: string;
 }
 
-// "Lenka Husarova" → "LH", "dkolarov" → "DK".
+// "Lenka Husarova" → "LH", "dkolarov" → "DK", "😀 Lenka" → "😀L".
 export function initials(name: string) {
-  const words = name.trim().split(/\s+/);
-  const letters = words.length > 1 ? words[0][0] + words[1][0] : name.trim().slice(0, 2);
+  // Array.from splits by character, so an emoji is never cut in half.
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .map((word) => Array.from(word));
+  const letters = words.length > 1 ? [words[0][0], words[1][0]] : words[0].slice(0, 2);
 
-  return letters.toUpperCase();
+  return letters.join("").toUpperCase();
 }
 
 // A person's avatar, or their initials when `avatar_url` is null (the default avatar, §8.2).

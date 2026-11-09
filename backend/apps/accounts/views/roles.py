@@ -16,6 +16,7 @@ from apps.accounts.notifications import notify_role_changed
 from apps.accounts.permissions import NOT_REVOCABLE, CanAssignRoles, IsAdminRole, can_assign
 from apps.accounts.serializers.profiles import RoleAssignmentResultSerializer
 from apps.accounts.serializers.roles import RoleAssignSerializer
+from apps.accounts.services.locking import lock_users
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
@@ -43,9 +44,11 @@ User = get_user_model()
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, CanAssignRoles])
+@transaction.atomic
 def assign_role(request, user_id):
     """Assign a role to the target user, following the rules of api-plan §5.8."""
-    target = get_object_or_404(User, pk=user_id)
+    lock_users(request.user.pk, user_id)
+    target = get_object_or_404(User.objects.exclude(status=User.Status.DELETED), pk=user_id)
     serializer = RoleAssignSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     role_name = serializer.validated_data["role"]
@@ -62,7 +65,12 @@ def assign_role(request, user_id):
                 target_id=target.pk,
                 metadata={"role": role.name},
             )
-            notify_role_changed(target.pk, role.name, "assigned")
+            notify_role_changed(
+                target.pk,
+                role.name,
+                "assigned",
+                store_notification=target.pk != request.user.pk,
+            )
     return Response(
         RoleAssignmentResultSerializer(target).data,
         status=status.HTTP_200_OK,

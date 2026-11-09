@@ -135,8 +135,13 @@
 
 .sidebar__role-option--selected {
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-weight: 600;
+}
+
+/* The selected role keeps its teal on hover: its dark text would be unreadable on #383838. */
+.sidebar__role-option--selected:hover {
+  background: var(--color-accent);
 }
 
 /* Navigation */
@@ -186,8 +191,14 @@
 
 .sidebar__nav-link--active {
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-weight: 500;
+}
+
+/* The active link keeps its teal on hover: its dark text and icon would vanish on #303030. */
+.sidebar__nav-link--active:hover {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 .sidebar__nav-icon {
@@ -205,6 +216,11 @@
   max-height: 31px;
   object-fit: contain;
   filter: invert(1);
+}
+
+/* The icons are black SVGs shown white; on the teal active item they stay dark, like its text. */
+.sidebar__nav-link--active .sidebar__nav-icon img {
+  filter: none;
 }
 
 /* Sidebar bottom */
@@ -437,7 +453,7 @@
 }
 
 .topbar__search input::placeholder {
-  color: #747b7b;
+  color: var(--color-text-secondary);
   opacity: 1;
 }
 
@@ -496,7 +512,7 @@
   border: 2px solid #ffffff;
   border-radius: 9px;
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
@@ -709,7 +725,7 @@
 }
 
 .app-footer__links a:focus-visible {
-  outline: 2px solid var(--color-accent-dark);
+  outline: 2px solid var(--color-accent-text);
   outline-offset: 3px;
 }
 

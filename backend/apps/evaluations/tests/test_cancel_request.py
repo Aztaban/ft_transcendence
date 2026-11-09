@@ -91,7 +91,8 @@ def expected():
         "project": {"id": 4, "slug": "libft", "name": "Libft"},
         "note": "Parsing.",
         "status": "cancelled",
-        "picked_by": {"id": 42, "display_name": "Bob", "avatar_url": None},
+        # The student's view: the Hitchhiker stays hidden on a cancelled request (R18).
+        "picked_by": None,
         "starts_at": "2026-10-12T15:00:00Z",
         "ends_at": "2026-10-12T15:45:00Z",
         "cancelled_by": {"id": 7, "display_name": "Alice", "avatar_url": None},
@@ -189,7 +190,12 @@ def test_cancel_each_active_state_with_real_session(
     tutor_client = APIClient()
     tutor_client.force_authenticate(tutor)
     list_url = reverse("api:evaluation-request-list")
-    for viewer, scope in ((client, "mine"), (tutor_client, "picked")):
+    # The Hitchhiker keeps seeing their own name in the history.
+    picker_view = {
+        **expected,
+        "picked_by": {"id": 42, "display_name": "Bob", "avatar_url": None},
+    }
+    for viewer, scope, row in ((client, "mine", expected), (tutor_client, "picked", picker_view)):
         response = viewer.get(list_url, {"scope": scope, "history": "false"}, HTTP_HOST="localhost")
         assert response.status_code == 200
         assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
@@ -202,7 +208,7 @@ def test_cancel_each_active_state_with_real_session(
                 "count": 1,
                 "next": None,
                 "previous": None,
-                "results": [expected],
+                "results": [row],
             }
 
 
@@ -350,6 +356,7 @@ def test_cancelled_pick_no_longer_reserves_participants_time(student, tutor, eva
         "id": 18,
         "note": "New evaluation.",
         "status": "awaiting_confirmation",
+        "picked_by": {"id": 42, "display_name": "Bob", "avatar_url": None},
         "cancelled_by": None,
         "cancelled_at": None,
         "is_history": False,
@@ -382,18 +389,28 @@ def test_csrf_required(student, evaluation):
 
 
 @pytest.mark.parametrize("role", ["tutor", "head_tutor", "admin"])
-def test_non_owner_cannot_use_student_cancellation(tutor, evaluation, role):
+def test_non_owner_cancellation_needs_override_permission_and_reason(tutor, evaluation, role):
     tutor.roles.add(Role.objects.get(name=role))
     client = APIClient()
     client.force_authenticate(tutor)
     response = client.post(cancel_url())
-    assert response.status_code == 403
-    assert response.json() == {
-        "error": {
-            "code": "permission_denied",
-            "message": "You do not have permission to perform this action.",
+    if role == "tutor":
+        assert response.status_code == 403
+        assert response.json() == {
+            "error": {
+                "code": "permission_denied",
+                "message": "You do not have permission to perform this action.",
+            }
         }
-    }
+    else:
+        assert response.status_code == 400
+        assert response.json() == {
+            "error": {
+                "code": "validation_error",
+                "message": "Please correct the highlighted fields.",
+                "fields": {"reason": ["This field is required."]},
+            }
+        }
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
     assert evaluation.cancelled_at is None
@@ -420,11 +437,20 @@ def test_other_users_cannot_cancel_across_active_states_with_real_session(
         HTTP_HOST="localhost",
         HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
     )
-    # Normal cancellation never grants an override. Visible objects give 403;
-    # hidden ones give 404, including picked requests for an unrelated tutor.
+    # Privileged overrides need a reason. Other callers get 403 for visible
+    # requests and 404 for hidden requests.
     visible = role in ("head_tutor", "admin") or (role == "tutor" and state == "pending")
-    assert response.status_code == (403 if visible else 404)
-    if visible:
+    if role in ("head_tutor", "admin"):
+        assert response.status_code == 400
+        assert response.json() == {
+            "error": {
+                "code": "validation_error",
+                "message": "Please correct the highlighted fields.",
+                "fields": {"reason": ["This field is required."]},
+            }
+        }
+    elif visible:
+        assert response.status_code == 403
         assert response.json() == {
             "error": {
                 "code": "permission_denied",
@@ -432,12 +458,15 @@ def test_other_users_cannot_cancel_across_active_states_with_real_session(
             }
         }
     else:
+        assert response.status_code == 404
         assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
 
     # Verify the full representation through the owner's session after the denial.
     expected.update(status=state, cancelled_by=None, cancelled_at=None, is_history=False)
     if state == "pending":
         expected.update(picked_by=None, starts_at=None, ends_at=None)
+    if state == "confirmed":
+        expected.update(picked_by={"id": 42, "display_name": "Bob", "avatar_url": None})
     owner_client = session_client(student)
     response = owner_client.get(
         reverse("api:evaluation-request-detail", kwargs={"pk": 17}), HTTP_HOST="localhost"
@@ -571,30 +600,20 @@ def test_recorded_result_cannot_be_cancelled(student, evaluation, monkeypatch, r
     assert evaluation.starts_at == START
 
 
-def test_cancellation_refreshes_released_pick(
-    student, evaluation, expected, event_sender, django_capture_on_commit_callbacks
+def test_stale_cancellation_refuses_a_released_pick(
+    evaluation, event_sender, django_capture_on_commit_callbacks
 ):
-    # A decline/release may have cleared the slot after the view fetched the row.
     EvaluationRequest.objects.filter(pk=17).update(
         status="pending", picked_by=None, starts_at=None, ends_at=None
     )
-    other = get_user_model().objects.create_user(id=43, email="eligible@example.com")
-    other.roles.add(Role.objects.get(name="tutor"))
-    TutorEligibility.objects.create(tutor=other, project=evaluation.project)
-    with django_capture_on_commit_callbacks(execute=True):
-        cancel_request(evaluation)
-    message = {
-        "type": "user.event",
-        "event": "evaluation.cancelled",
-        "data": {"id": 17, "status": "cancelled"},
-    }
-    assert event_sender.await_args_list == [call("user_7", message), call("user_43", message)]
-    expected.update(picked_by=None, starts_at=None, ends_at=None)
-    client = APIClient()
-    client.force_authenticate(student)
-    response = client.get(reverse("api:evaluation-request-detail", kwargs={"pk": 17}))
-    assert response.status_code == 200
-    assert response.json() == expected
+    before = EvaluationRequest.objects.values().get(pk=17)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(InvalidStateTransition):
+            cancel_request(evaluation)
+    assert EvaluationRequest.objects.values().get(pk=17) == before
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    event_sender.assert_not_awaited()
 
 
 @pytest.mark.django_db(transaction=True)
@@ -644,6 +663,7 @@ def test_pending_cancellation_event_filters_and_deduplicates_queue_recipients(
     EvaluationRequest.objects.filter(pk=17).update(
         status="pending", picked_by=None, starts_at=None, ends_at=None
     )
+    evaluation.refresh_from_db()
     other_project = Project.objects.create(slug="other", name="Other")
     for pk, roles, status, project in (
         (43, ("head_tutor",), "active", evaluation.project),
@@ -677,36 +697,21 @@ def test_pending_cancellation_event_filters_and_deduplicates_queue_recipients(
     ]
 
 
-def test_cancellation_of_new_pick_uses_locked_state_for_recipients(
+def test_stale_cancellation_refuses_a_new_pick(
     evaluation, event_sender, django_capture_on_commit_callbacks
 ):
     EvaluationRequest.objects.filter(pk=17).update(status="confirmed")
     # The caller fetched the request before it was picked and confirmed.
     evaluation.status = "pending"
     evaluation.picked_by = None
-    other = get_user_model().objects.create_user(id=43, email="eligible@example.com")
-    other.roles.add(Role.objects.get(name="tutor"))
-    TutorEligibility.objects.create(tutor=other, project=evaluation.project)
-    with django_capture_on_commit_callbacks(execute=True):
-        cancel_request(evaluation)
-    message = {
-        "type": "user.event",
-        "event": "evaluation.cancelled",
-        "data": {"id": 17, "status": "cancelled"},
-    }
-    assert event_sender.await_args_list == [
-        call("user_7", message),
-        call("user_42", message),
-        call(
-            "user_42",
-            {
-                "type": "user.event",
-                "event": "notification.created",
-                "data": {"id": Notification.objects.get().pk},
-            },
-        ),
-    ]
-    assert evaluation.picked_by_id == 42
+    before = EvaluationRequest.objects.values().get(pk=17)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(InvalidStateTransition):
+            cancel_request(evaluation)
+    assert EvaluationRequest.objects.values().get(pk=17) == before
+    assert not Notification.objects.exists()
+    assert callbacks == []
+    event_sender.assert_not_awaited()
 
 
 def test_rolled_back_cancellation_sends_no_event(

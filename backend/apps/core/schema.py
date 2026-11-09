@@ -1,4 +1,4 @@
-"""Shared OpenAPI descriptions for API errors and CSRF (api-plan §5.4–§5.6)."""
+"""Shared OpenAPI descriptions for API errors and CSRF."""
 
 from drf_spectacular.openapi import AutoSchema as SpectacularAutoSchema
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse
