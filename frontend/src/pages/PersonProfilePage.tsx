@@ -220,7 +220,9 @@ function PersonProfilePage() {
   }, [person, hitchhiker]);
 
   // The student's own requests this Hitchhiker picked: the active ones and the latest history
-  // page. There is no filter on `picked_by`, so the pages are filtered here.
+  // page. There is no filter on `picked_by`, so the pages are filtered here. `history: false`
+  // keeps the two lists apart (the backend filters only when `history` is sent, §10.4), and a
+  // request that moved to the history between the two answers is still shown once (#771).
   useEffect(() => {
     if (!person || !showsTogether) {
       return;
@@ -232,15 +234,23 @@ function PersonProfilePage() {
     setTogetherFailed(false);
 
     Promise.all([
-      listEvaluationRequests({ scope: "mine" }),
+      listEvaluationRequests({ scope: "mine", history: false }),
       listEvaluationRequests({ scope: "mine", history: true }),
     ])
       .then(([current, past]) => {
         if (active) {
+          const seen = new Set<number>();
+
           setTogether(
-            [...current.results, ...past.results].filter(
-              (request) => request.picked_by?.id === person.id,
-            ),
+            [...current.results, ...past.results].filter((request) => {
+              if (request.picked_by?.id !== person.id || seen.has(request.id)) {
+                return false;
+              }
+
+              seen.add(request.id);
+
+              return true;
+            }),
           );
         }
       })
