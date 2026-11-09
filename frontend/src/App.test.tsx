@@ -3,10 +3,11 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { getSession, loginUser } from "./api/auth";
+import { getEligibilityRequest, listEligibilityRequests } from "./api/eligibility";
 import { listEvaluationRequests } from "./api/evaluationRequests";
 import { listProjects } from "./api/projects";
-import { getCurrentUser } from "./api/users";
 import App from "./App";
+import type { UserProfile } from "./types/user";
 import { AuthProvider } from "./store/AuthContext";
 import { RoleProvider } from "./store/RoleContext";
 
@@ -15,6 +16,13 @@ vi.mock("./api/auth", () => ({
   loginUser: vi.fn(),
   logoutUser: vi.fn(),
   registerUser: vi.fn(),
+}));
+vi.mock("./api/eligibility", () => ({
+  createEligibilityRequest: vi.fn(),
+  getEligibilityRequest: vi.fn(),
+  getTutorEligibility: vi.fn(),
+  listEligibilityRequests: vi.fn(),
+  reviewEligibilityRequest: vi.fn(),
 }));
 vi.mock("./api/evaluationRequests", () => ({ listEvaluationRequests: vi.fn() }));
 vi.mock("./api/projects", () => ({ listProjects: vi.fn() }));
@@ -26,10 +34,18 @@ vi.mock("./api/users", () => ({
 
 // The user's real roles from /users/me/. By default nothing is loaded, as without a provider; a
 // test sets `roles` and `isLoaded` when a page depends on them.
-const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
+const currentUser = vi.hoisted(() => ({
+  user: null as UserProfile | null,
+  roles: [] as string[],
+  isLoaded: false,
+}));
 
 vi.mock("./store/CurrentUserContext", () => ({
-  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+  useCurrentUser: () => ({
+    ...currentUser,
+    loadFailed: false,
+    update: () => Promise.resolve(),
+  }),
 }));
 
 const user = { id: 1, email: "student@example.com", display_name: "Student" };
@@ -48,6 +64,7 @@ afterEach(() => {
   cleanup();
   vi.resetAllMocks();
   sessionStorage.clear();
+  currentUser.user = null;
   currentUser.roles = [];
   currentUser.isLoaded = false;
 });
@@ -125,11 +142,65 @@ describe("logged in", () => {
   });
 
   // #687: notifications link to /profile from any workspace (§8.8).
+  test("opens an eligibility request from a notification in any workspace", async () => {
+    sessionStorage.setItem("active-role", "COUNCIL");
+    currentUser.roles = ["student", "head_tutor", "sc_member"];
+    currentUser.isLoaded = true;
+    vi.mocked(getEligibilityRequest).mockResolvedValue({
+      id: 9,
+      requester: { id: 42, display_name: "Bob", avatar_url: null },
+      projects: [{ id: 4, slug: "libft", name: "Libft" }],
+      status: "pending",
+      reviewed_by: null,
+      reviewed_at: null,
+      review_note: "",
+      created_at: "2026-10-09T08:00:00Z",
+    });
+
+    renderAt("/eligibility-requests/9");
+
+    // The heading is there at once; the requester only once the request has loaded.
+    expect(await screen.findByRole("link", { name: "Bob" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Eligibility request" })).toBeDefined();
+    expect(getEligibilityRequest).toHaveBeenCalledWith(9);
+  });
+
+  // The eligibility request page links to both from any workspace (#685).
+  test.each([
+    ["/eligibility-requests", "Eligibility requests"],
+    ["/eligibility-requests/new", "Projects you can evaluate"],
+  ])("opens %s from the Student workspace by switching to Hitchhiker", async (path, title) => {
+    currentUser.roles = ["student", "tutor", "head_tutor"];
+    currentUser.isLoaded = true;
+    vi.mocked(listEligibilityRequests).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    });
+
+    renderAt(path);
+
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeDefined();
+    expect(screen.queryByText("ACCESS RESTRICTED")).toBeNull();
+    expect(sessionStorage.getItem("active-role")).toBe("HITCHHIKER");
+  });
+
+  test("keeps /eligibility-requests/new for the request form, not as a request id", async () => {
+    // A student without a Hitchhiker workspace: the form's guard refuses, nothing is loaded.
+    currentUser.roles = ["student"];
+    currentUser.isLoaded = true;
+    renderAt("/eligibility-requests/new");
+
+    expect(await screen.findByText("ACCESS RESTRICTED")).toBeDefined();
+    expect(getEligibilityRequest).not.toHaveBeenCalled();
+  });
+
   test("opens /profile from the Student Council workspace instead of refusing it", async () => {
     sessionStorage.setItem("active-role", "COUNCIL");
     currentUser.roles = ["student", "tutor", "sc_member"];
     currentUser.isLoaded = true;
-    vi.mocked(getCurrentUser).mockResolvedValue({
+    currentUser.user = {
       ...user,
       display_name: "Bob",
       avatar_url: null,
@@ -140,7 +211,7 @@ describe("logged in", () => {
         { id: 3, name: "tutor" },
       ],
       intra_login: null,
-    });
+    };
 
     renderAt("/profile");
 
@@ -234,7 +305,7 @@ describe("logged out", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
     fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
   });
 
   test("shows nothing while the session check runs", () => {
@@ -265,7 +336,7 @@ describe("42 login", () => {
     sessionStorage.setItem("login-return-to", "/history?status=cancelled");
     renderAt("/");
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
   });
 
@@ -281,11 +352,11 @@ describe("42 login", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
     fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
     // The kept page was dropped at login, so nothing opens it once the app is shown.
     await act(async () => {});
-    expect(screen.getByRole("heading", { name: "History" })).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1, name: "History" })).toBeDefined();
   });
 
   test("uses the page kept for 42 when the 42 login failed and the form is used instead", async () => {
@@ -300,7 +371,7 @@ describe("42 login", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret-pass" } });
     fireEvent.submit(screen.getByLabelText("Email").closest("form") as HTMLFormElement);
 
-    expect(await screen.findByRole("heading", { name: "History" })).toBeDefined();
+    expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
   });
 });

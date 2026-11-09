@@ -1109,6 +1109,7 @@
     "pending": "Čekající",
     "approved": "Schválené",
     "declined": "Zamítnuté",
+    "badgePending": "Čeká",
     "badgeApproved": "Schválená",
     "badgeDeclined": "Zamítnutá",
     "noPending": "Žádné čekající žádosti",
@@ -1149,6 +1150,25 @@
     "noteFor": "Poznámka pro: {{name}}",
     "optional": "(nepovinné)",
     "saving": "Ukládám…"
+  },
+  "eligibilityDetail": {
+    "title": "Žádost o oprávnění",
+    "backToList": "Všechny žádosti o oprávnění",
+    "loading": "Načítám žádost…",
+    "loadError": "Žádost se nepodařilo načíst. Zkuste to prosím později.",
+    "requestedBy": "Žadatel",
+    "sent": "Odesláno",
+    "reviewedBy": "Posoudil(a)",
+    "decided": "Rozhodnuto",
+    "projects_one": "{{count}} projekt",
+    "projects_few": "{{count}} projekty",
+    "projects_many": "{{count}} projektu",
+    "projects_other": "{{count}} projektů",
+    "note": "Poznámka od Head Tutora",
+    "waitingOwn": "Head Tutor schválí, nebo zamítne celou žádost. Dostanete oznámení.",
+    "approvedOwn": "Teď si můžete brát otevřené žádosti k těmto projektům.",
+    "declinedOwn": "Novou žádost můžete poslat kdykoli.",
+    "sendNew": "Poslat novou žádost"
   },
   "unauthorized": {
     "eyebrow": "PŘÍSTUP OMEZEN",

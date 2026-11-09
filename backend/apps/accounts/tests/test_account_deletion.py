@@ -22,6 +22,7 @@ from apps.evaluations.models import (
     TutorEligibility,
     TutorEligibilityRequest,
 )
+from apps.evaluations.tasks import expire_evaluation_requests
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 
@@ -378,7 +379,7 @@ def test_deletion_anonymizes_and_cleans_every_existing_model(
     assert AuditLog.objects.values().get(pk=graph.audit.pk) == old_audit
     assert SCMessage.objects.values().get(pk=graph.message.pk) == {**old_message, "sender_id": None}
 
-    cancelled = {"own_pending", "own_awaiting", "own_awaiting_started", "own_future"}
+    cancelled = {"own_pending", "own_awaiting", "own_future"}
     released = {"pick_awaiting", "pick_future", "pick_admin_owned"}
     for label, row in graph.evaluations.items():
         after = EvaluationRequest.objects.values().get(pk=row.pk)
@@ -436,6 +437,20 @@ def test_deletion_anonymizes_and_cleans_every_existing_model(
     detail = graph.client.get(deletion_url(target.pk))
     assert detail.status_code == 200
     assert detail.json() == expected
+
+
+def test_started_requests_are_left_to_expire_after_deletion(deletion_graph, user_event_sender):
+    graph = deletion_graph
+    assert delete_user(graph.client, graph.target.pk).status_code == 204
+
+    assert expire_evaluation_requests() == 2
+
+    for label in ("own_awaiting_started", "pick_awaiting_started"):
+        evaluation = graph.evaluations[label]
+        evaluation.refresh_from_db()
+        assert evaluation.status == "expired"
+        assert evaluation.picked_by_id is None
+    assert not Notification.objects.filter(recipient=graph.target).exists()
 
 
 def test_other_parties_receive_exact_override_notifications(deletion_graph, user_event_sender):

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
   createEligibilityRequest,
+  getEligibilityRequest,
   listEligibilityRequests,
   reviewEligibilityRequest,
 } from "./eligibility";
@@ -78,5 +79,16 @@ describe("listEligibilityRequests", () => {
       "/api/v1/tutor-eligibility-requests/?status=pending",
       "/api/v1/tutor-eligibility-requests/?status=approved&ordering=-created_at&page=3",
     ]);
+  });
+});
+
+describe("getEligibilityRequest", () => {
+  test("loads one request by id", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 9, status: "pending" }));
+
+    expect(await getEligibilityRequest(9)).toEqual({ id: 9, status: "pending" });
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/tutor-eligibility-requests/9/");
   });
 });

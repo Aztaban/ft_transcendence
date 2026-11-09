@@ -12,6 +12,7 @@ import CouncilInboxPage from "./pages/CouncilInboxPage";
 import CouncilMessagePage from "./pages/CouncilMessagePage";
 import CouncilPage from "./pages/CouncilPage";
 import CreateRequestPage from "./pages/CreateRequestPage";
+import { EligibilityRequestRoute } from "./pages/EligibilityRequestDetailPage";
 import EligibilityRequestPage from "./pages/EligibilityRequestPage";
 import EligibilityReviewPage from "./pages/EligibilityReviewPage";
 import EvaluationPage from "./pages/EvaluationPage";
@@ -126,20 +127,27 @@ function AuthenticatedApp() {
         <Route
           path="/eligibility-requests/new"
           element={
+            // The eligibility request page links here from any workspace (#685).
             <RoleGuard
               allowedRoles={routePermissions.eligibilityRequest}
               fallback={<UnauthorizedPage />}
+              switchWorkspace
             >
               <EligibilityRequestPage />
             </RoleGuard>
           }
         />
+        {/* The eligibility notifications link here (§8.8) for the requester, Head Tutors and
+            Admins, in whichever workspace they are: the API decides who may see it (§10.3). */}
+        <Route path="/eligibility-requests/:id" element={<EligibilityRequestRoute />} />
         <Route
           path="/eligibility-requests"
           element={
+            // The eligibility request page links back here from any workspace (#685).
             <RoleGuard
               allowedRoles={routePermissions.eligibilityReview}
               fallback={<UnauthorizedPage />}
+              switchWorkspace
             >
               <EligibilityReviewPage />
             </RoleGuard>

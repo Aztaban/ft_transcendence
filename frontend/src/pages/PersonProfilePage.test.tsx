@@ -255,10 +255,31 @@ describe("PersonProfilePage", () => {
         .map((row) => row.querySelector(".person-profile__outcome")?.textContent),
     ).toEqual(["Needs your answer", "Upcoming", "Passed", "Cancelled"]);
     expect(vi.mocked(listEvaluationRequests).mock.calls).toEqual([
-      [{ scope: "mine" }],
+      [{ scope: "mine", history: false }],
       [{ scope: "mine", history: true }],
     ]);
     vi.useRealTimers();
+  });
+
+  // #771: a request that is in both answers (it moved to the history between them) is one row,
+  // and React logs no duplicate-key warning.
+  it("shows an evaluation that comes back in both lists only once", async () => {
+    const consoleError = vi.spyOn(console, "error");
+    const finished = {
+      ...withLenka(makeRequest(31, "push_swap", "confirmed")),
+      result: "passed" as const,
+    };
+
+    vi.mocked(listEvaluationRequests).mockResolvedValue(page([finished]));
+    renderPage();
+
+    const panel = await screen.findByRole("region", {
+      name: "Your evaluations with Lenka Husarova",
+    });
+
+    await waitFor(() => expect(within(panel).getAllByRole("listitem")).toHaveLength(1));
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it("says when the student has no evaluations with this Hitchhiker yet", async () => {

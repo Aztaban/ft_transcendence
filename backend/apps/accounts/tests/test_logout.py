@@ -224,6 +224,34 @@ def test_logout_schedules_session_event_only_after_commit(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_logout_succeeds_when_session_event_delivery_fails(group_send):
+    Role.objects.get_or_create(name=Role.Name.STUDENT)
+    user = create_user()
+    client = logged_in_client(user)
+    other_client = logged_in_client(user)
+    key = client.cookies["sessionid"].value
+    other_key = other_client.cookies["sessionid"].value
+    group_send.side_effect = RuntimeError("Session event delivery failed")
+    client.raise_request_exception = False
+
+    response = post_logout(client)
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.content == b""
+    assert not Session.objects.filter(session_key=key).exists()
+    assert SESSION_KEY not in client.session
+    group_send.assert_awaited_once_with(f"session_{key}", {"type": "session.ended", "data": {}})
+
+    replay = APIClient()
+    replay.cookies["sessionid"] = key
+    session_response = replay.get(reverse("api:session"), HTTP_HOST="localhost")
+    assert session_response.status_code == status.HTTP_200_OK
+    assert session_response.json() == {"authenticated": False, "user": None}
+    assert Session.objects.filter(session_key=other_key).exists()
+    assert other_client.session[SESSION_KEY] == str(user.pk)
+
+
+@pytest.mark.django_db(transaction=True)
 def test_rolled_back_logout_does_not_publish_event(group_send):
     Role.objects.get_or_create(name=Role.Name.STUDENT)
     client = logged_in_client(create_user())
