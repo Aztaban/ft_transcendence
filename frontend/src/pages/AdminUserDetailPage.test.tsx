@@ -157,6 +157,26 @@ describe("AdminUserDetailPage", () => {
     expect(updateAdminUser).not.toHaveBeenCalled();
   });
 
+  // Form validation (#358): the same limits as registration (api-plan §10.2).
+  it("checks the length of the name and the email before sending", async () => {
+    renderAt();
+
+    fireEvent.change(await screen.findByLabelText("Display name"), {
+      target: { value: "a".repeat(65) },
+    });
+    // 243 + 12 = 255 characters.
+    fireEvent.change(input("Email"), { target: { value: `${"a".repeat(243)}@example.com` } });
+    fireEvent.click(saveButton());
+
+    expect(screen.getByText("Display name must be 64 characters or fewer.").id).toBe(
+      "admin-user-name-error",
+    );
+    expect(screen.getByText("Email must be 254 characters or fewer.").id).toBe(
+      "admin-user-email-error",
+    );
+    expect(updateAdminUser).not.toHaveBeenCalled();
+  });
+
   it("shows a taken email next to the email field", async () => {
     vi.mocked(updateAdminUser).mockRejectedValue(
       new ApiError(409, "An account with this email already exists.", "email_already_exists"),
