@@ -16,7 +16,7 @@
 .unauthorized-page__code {
   color: var(--color-accent-text);
   font-size: clamp(5rem, 11vw, 9rem);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   line-height: 0.9;
   letter-spacing: -0.07em;
 }
@@ -24,8 +24,8 @@
 .unauthorized-page__eyebrow {
   margin: 0 0 12px;
   color: var(--color-accent-text);
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0.12em;
 }
 
@@ -33,7 +33,7 @@
   max-width: 580px;
   margin: 0;
   font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   line-height: 1.08;
   letter-spacing: -0.04em;
 }
@@ -42,7 +42,7 @@
   max-width: 560px;
   margin: 22px 0 0;
   color: #687070;
-  font-size: 1rem;
+  font-size: var(--font-size-lg);
   line-height: 1.6;
 }
 
@@ -57,7 +57,7 @@
   border-radius: 3px;
   background: var(--color-accent);
   color: #071313;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   text-decoration: none;
   transition:
     background 150ms ease,
@@ -65,8 +65,8 @@
 }
 
 .unauthorized-page__action:hover {
-  background: #111111;
-  color: #ffffff;
+  background: var(--color-neutral-950);
+  color: var(--color-white);
 }
 
 @media (max-width: 760px) {

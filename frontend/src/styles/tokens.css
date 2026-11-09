@@ -43,6 +43,67 @@
   --space-8: 32px;
   --space-10: 40px;
 
-  /* Typography */
+  /* Typography (#731). Sizes in rem, so they follow the browser's font size setting. */
   --font-family-base: Inter, Arial, sans-serif;
+  --font-size-2xs: 0.75rem;
+  --font-size-xs: 0.8rem;
+  --font-size-sm: 0.85rem;
+  --font-size-md: 0.9rem;
+  --font-size-base: 0.95rem;
+  --font-size-lg: 1rem;
+  --font-size-xl: 1.15rem;
+  --font-size-2xl: 1.3rem;
+  --font-size-3xl: 1.6rem;
+  --font-size-4xl: 2rem;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-tight: 1.1;
+  --line-height-snug: 1.3;
+  --line-height-normal: 1.5;
+
+  /* Palette (#731). Every colour family has a strong shade for fills, lines and icons, a text
+     shade (4.5:1 or more on white and on its own surface, WCAG AA) and light surface and border
+     shades. The strong amber is 2:1 on white: use it for decoration or with dark text on it, never
+     for text. `--color-neutral-400` is only for disabled controls, which WCAG exempts. The values
+     are the ones the pages already used, so moving to the tokens changes nothing visible. */
+  --color-white: #ffffff;
+  --color-neutral-950: #111111;
+  --color-neutral-700: #4d5555;
+  --color-neutral-400: #9aa1a1;
+  --color-neutral-300: #c9cfcf;
+  --color-neutral-250: #d5d9d9;
+  --color-neutral-200: #e3e7e7;
+  --color-neutral-150: #eceff0;
+  --color-neutral-100: #f0f2f2;
+  --color-neutral-50: #f6f7f7;
+
+  --color-accent-strong-text: #00797b;
+  --color-accent-surface: #e6f8f8;
+  --color-accent-surface-hover: #f6fdfd;
+
+  --color-danger: #d92d20;
+  --color-danger-text: #b42318;
+  --color-danger-border: #fecdca;
+  --color-danger-surface: #fef3f2;
+
+  --color-success: #16a34a;
+  --color-success-strong: #15803d;
+  --color-success-text: #1c7c3c;
+  --color-success-surface: #e7f6ec;
+
+  --color-warning: #f5a524;
+  --color-warning-text: #8a5a00;
+  --color-warning-border: #f5d27a;
+  --color-warning-surface: #fff4dc;
+  --color-warning-surface-soft: #fffaf0;
+
+  --color-info: #4a7bd0;
+  --color-info-text: #2f5ea8;
+  --color-info-surface: #eaf1fc;
+
+  --color-violet: #8a6cd1;
+  --color-violet-text: #6b4fb3;
+  --color-violet-surface: #f2eefb;
 }

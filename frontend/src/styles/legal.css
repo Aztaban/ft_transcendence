@@ -1,7 +1,7 @@
 .legal-page {
   position: relative;
   padding: 96px 24px 48px;
-  background: #ffffff;
+  background: var(--color-white);
 }
 
 .legal-page__article {
@@ -28,7 +28,7 @@
 
 .legal-page__brand span {
   font-size: 18px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   letter-spacing: -0.03em;
 }
 
@@ -72,7 +72,7 @@
   display: inline-block;
   margin-top: var(--space-8);
   color: #000000;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-decoration: underline;
   text-decoration-color: var(--color-accent-dark);
   text-decoration-thickness: 2px;

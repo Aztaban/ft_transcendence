@@ -4,7 +4,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
@@ -60,8 +60,8 @@
 }
 
 .ui-field__label {
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
 }
 
 .ui-input {
@@ -85,7 +85,7 @@
 
 .ui-field__error {
   color: #c62828;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .ui-checkbox {
@@ -121,7 +121,7 @@
 .ui-checkbox__input:checked + .ui-checkbox__control::after {
   width: 5px;
   height: 10px;
-  border: solid #ffffff;
+  border: solid var(--color-white);
   border-width: 0 2px 2px 0;
   content: "";
   transform: rotate(45deg);
@@ -137,8 +137,8 @@
   align-items: center;
   padding: var(--space-1) var(--space-3);
   border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .ui-badge--neutral {

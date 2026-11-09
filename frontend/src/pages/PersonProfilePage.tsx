@@ -2,15 +2,13 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
 
-import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
-import profileIcon from "../assets/figma/profile.svg";
-import councilIcon from "../assets/figma/student-council.svg";
 import { ApiError } from "../api/client";
 import { getTutorEligibility } from "../api/eligibility";
 import { listEvaluationRequests } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
 import { getPublicUser } from "../api/users";
 import usePageTitle from "../components/layout/usePageTitle";
+import Icon, { type IconName } from "../components/ui/Icon";
 import PersonAvatar from "../features/people/PersonAvatar";
 import RoleManager from "../features/people/RoleManager";
 import { isHitchhiker, roleBadges } from "../features/people/roleBadges";
@@ -32,7 +30,7 @@ type Tone = "green" | "red" | "teal" | "amber" | "violet" | "grey";
 interface RoleCard {
   role: UserRole["name"];
   text: string;
-  icon: string;
+  icon: IconName;
 }
 
 // What each role does (§5.8, §7.2, §7.3). A Head Tutor gets the Head Tutor card instead of the
@@ -41,17 +39,17 @@ const roleCards: RoleCard[] = [
   {
     role: "head_tutor",
     text: "headTutorText",
-    icon: profileIcon,
+    icon: "profile",
   },
   {
     role: "tutor",
     text: "tutorText",
-    icon: hitchhikersIcon,
+    icon: "hitchhikers",
   },
   {
     role: "sc_member",
     text: "councilText",
-    icon: councilIcon,
+    icon: "studentCouncil",
   },
 ];
 
@@ -477,7 +475,7 @@ function PersonProfilePage() {
                       style={{ "--index": index } as CSSProperties}
                     >
                       <span className="person-profile__card-icon">
-                        <img src={card.icon} alt="" aria-hidden="true" />
+                        <Icon name={card.icon} />
                       </span>
                       <div>
                         <h3>{t(`roles.${card.role}`)}</h3>

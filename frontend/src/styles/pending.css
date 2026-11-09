@@ -9,8 +9,8 @@
 
 .pending-page__header h1 {
   margin: 0;
-  font-size: 2rem;
-  font-weight: 500;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-medium);
 }
 
 .pending-page__header p {
@@ -43,7 +43,7 @@
   border: 2px solid #2b2400;
   border-radius: 50%;
   font-family: Georgia, serif;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .pending-page__notice p {
@@ -62,9 +62,9 @@
 
 .pending-page__day h2 {
   margin: 8px 0 0;
-  color: #2f5ea8;
-  font-size: 0.85rem;
-  font-weight: 600;
+  color: var(--color-info-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -82,18 +82,18 @@
 
 .pending-card {
   --tone: var(--color-accent);
-  --tone-ink: #00797b;
-  --tone-soft: #e6f8f8;
+  --tone-ink: var(--color-accent-strong-text);
+  --tone-soft: var(--color-accent-surface);
 
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 18px;
   padding: 20px 22px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-left: 5px solid var(--tone);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--color-white);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
   transition:
     box-shadow 0.2s ease,
@@ -108,7 +108,7 @@
 .pending-card--awaiting_confirmation {
   --tone: #e0a526;
   --tone-ink: #9a6512;
-  --tone-soft: #fff4dc;
+  --tone-soft: var(--color-warning-surface);
 }
 
 .pending-card__badge {
@@ -119,7 +119,7 @@
   border-radius: 12px;
   background: var(--tone-soft);
   color: var(--tone-ink);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .pending-card__title {
@@ -132,7 +132,7 @@
 .pending-card__title h3 {
   margin: 0;
   font-size: 1.2rem;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .pending-card__status {
@@ -141,7 +141,7 @@
   background: var(--tone-soft);
   color: var(--tone-ink);
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .pending-card__facts {
@@ -154,7 +154,7 @@
 .pending-card__facts div {
   display: flex;
   gap: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .pending-card__facts dt {
@@ -167,7 +167,7 @@
 
 .pending-card__facts dd {
   margin: 0;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .pending-card__actions {
@@ -181,11 +181,11 @@
   min-width: 110px;
   padding: 8px 16px;
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--color-white);
   cursor: pointer;
   font: inherit;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   transition:
@@ -195,7 +195,7 @@
 
 .pending-card__preview {
   border: 1px solid var(--color-accent);
-  color: #00797b;
+  color: var(--color-accent-strong-text);
 }
 
 .pending-card__preview:hover {
@@ -205,17 +205,17 @@
 
 .pending-card__cancel {
   border: 1px solid #f3b8b2;
-  color: #b42318;
+  color: var(--color-danger-text);
 }
 
 .pending-card__cancel:hover:enabled {
-  background: #fef3f2;
+  background: var(--color-danger-surface);
   transform: translateY(-1px);
 }
 
 .pending-card__cancel:disabled {
-  border-color: #d5d9d9;
-  color: #9aa1a1;
+  border-color: var(--color-neutral-250);
+  color: var(--color-neutral-400);
   cursor: not-allowed;
 }
 
@@ -230,23 +230,28 @@
 .pending-page__skeleton {
   min-height: 110px;
   border-radius: 14px;
-  background: linear-gradient(90deg, #eceff0 25%, #f6f7f7 50%, #eceff0 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-150) 25%,
+    var(--color-neutral-50) 50%,
+    var(--color-neutral-150) 75%
+  );
   background-size: 200% 100%;
   animation: pending-shimmer 1.3s ease-in-out infinite;
 }
 
 .pending-page__empty {
   padding: 40px 20px;
-  border: 1px dashed #c9cfcf;
+  border: 1px dashed var(--color-neutral-300);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--color-white);
   text-align: center;
 }
 
 .pending-page__empty h2 {
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 500;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-medium);
 }
 
 .pending-page__empty p {
@@ -258,10 +263,10 @@
 .pending-dialog__error {
   margin: 0;
   padding: 10px 14px;
-  border: 1px solid #fecdca;
+  border: 1px solid var(--color-danger-border);
   border-radius: 8px;
-  background: #fef3f2;
-  color: #b42318;
+  background: var(--color-danger-surface);
+  color: var(--color-danger-text);
 }
 
 .pending-page__sr-only {
@@ -297,7 +302,7 @@
   padding: 30px 32px 24px;
   border-top: 6px solid var(--color-accent);
   border-radius: 18px;
-  background: #ffffff;
+  background: var(--color-white);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
   animation: pending-pop-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.3);
 }
@@ -309,18 +314,18 @@
 .pending-dialog__card h2 {
   margin: 0;
   font-size: 1.35rem;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .pending-dialog__close {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  border: 1px solid #d5d9d9;
+  border: 1px solid var(--color-neutral-250);
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--color-white);
   cursor: pointer;
-  font-size: 1.3rem;
+  font-size: var(--font-size-2xl);
   line-height: 1;
 }
 
@@ -346,7 +351,7 @@
   margin: 0 0 4px;
   color: var(--color-text-secondary);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -364,38 +369,38 @@
 
 .pending-preview__facts div {
   padding: 12px 16px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--color-white);
 }
 
 .pending-preview__facts dt {
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .pending-preview__facts dd {
   margin: 4px 0 0;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .pending-preview__countdown {
   border-color: #b9e6e7 !important;
-  background: #e6f8f8 !important;
+  background: var(--color-accent-surface) !important;
 }
 
 .pending-preview__countdown dd {
-  color: #00797b;
+  color: var(--color-accent-strong-text);
   font-size: 1.1rem;
 }
 
 /* Cancel */
 
 .pending-dialog__card--cancel {
-  border-top-color: #d92d20;
+  border-top-color: var(--color-danger);
 }
 
 .pending-cancel__summary {
@@ -403,19 +408,19 @@
   flex-direction: column;
   gap: 4px;
   padding: 14px 16px;
-  border-left: 4px solid #d92d20;
+  border-left: 4px solid var(--color-danger);
   border-radius: 0 10px 10px 0;
   background: #fff6f5;
 }
 
 .pending-cancel__summary time {
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .pending-cancel__text {
   margin: 0;
-  color: #4d5555;
+  color: var(--color-neutral-700);
   line-height: 1.5;
 }
 
@@ -432,21 +437,21 @@
   border-radius: 8px;
   cursor: pointer;
   font: inherit;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .pending-cancel__keep {
-  border: 1px solid #111111;
-  background: #ffffff;
+  border: 1px solid var(--color-neutral-950);
+  background: var(--color-white);
 }
 
 .pending-cancel__confirm {
-  border: 1px solid #d92d20;
-  background: #d92d20;
-  color: #ffffff;
+  border: 1px solid var(--color-danger);
+  background: var(--color-danger);
+  color: var(--color-white);
 }
 
 .pending-cancel__confirm:disabled {
@@ -469,18 +474,18 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 8px 24px;
-  border-top-color: #16a34a;
+  border-top-color: var(--color-success);
 }
 
 .pending-dialog__card--done strong {
   display: block;
   margin-top: 4px;
-  color: #1c7c3c;
+  color: var(--color-success-text);
 }
 
 .pending-dialog__card--done p {
   margin: 10px 0 0;
-  color: #4d5555;
+  color: var(--color-neutral-700);
   line-height: 1.5;
 }
 
@@ -493,7 +498,7 @@
   grid-column: 1 / -1;
   margin: 0 !important;
   color: var(--color-text-secondary) !important;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-align: center;
 }
 

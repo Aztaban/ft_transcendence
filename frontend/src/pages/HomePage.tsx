@@ -3,11 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import type { ListEvaluationRequestsParams } from "../api/evaluationRequests";
-import historyIcon from "../assets/figma/history.svg";
-import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
-import pendingIcon from "../assets/figma/pending.svg";
-import requestIcon from "../assets/figma/request.svg";
 import usePageTitle from "../components/layout/usePageTitle";
+import Icon, { type IconName } from "../components/ui/Icon";
 import AwaitingConfirmation from "../features/hitchhiker/AwaitingConfirmation";
 import EvaluationHistory from "../features/hitchhiker/EvaluationHistory";
 import OpenRequestQueue from "../features/hitchhiker/OpenRequestQueue";
@@ -29,7 +26,7 @@ import "../styles/dashboard.css";
 interface OverviewItem {
   value: string;
   label: string;
-  icon: string;
+  icon: IconName;
   tone: "teal" | "violet" | "blue" | "amber";
 }
 
@@ -125,7 +122,7 @@ function Dashboard({ overview, action, children }: DashboardProps) {
               className={`dashboard-overview__card dashboard-overview__card--${item.tone}`}
               key={item.label}
             >
-              <img src={item.icon} alt="" aria-hidden="true" />
+              <Icon name={item.icon} />
 
               <div>
                 <strong>{item.value}</strong>
@@ -174,25 +171,25 @@ function StudentDashboard() {
     {
       value: countText(counts.open?.count),
       label: "home.openRequests",
-      icon: pendingIcon,
+      icon: "pending",
       tone: "teal",
     },
     {
       value: countText(counts.completed?.count),
       label: "home.completed",
-      icon: historyIcon,
+      icon: "history",
       tone: "violet",
     },
     {
       value: nextText,
       label: "home.nextEvaluation",
-      icon: requestIcon,
+      icon: "request",
       tone: "blue",
     },
     {
       value: t("home.workspaceStudent"),
       label: "home.workspace",
-      icon: hitchhikersIcon,
+      icon: "hitchhikers",
       tone: "amber",
     },
   ];
@@ -229,25 +226,25 @@ function HitchhikerDashboard() {
     {
       value: countText(openCount),
       label: "home.openRequests",
-      icon: requestIcon,
+      icon: "request",
       tone: "teal",
     },
     {
       value: countText(counts.awaiting?.count),
       label: "home.awaitingConfirmation",
-      icon: pendingIcon,
+      icon: "pending",
       tone: "amber",
     },
     {
       value: countText(counts.done?.count),
       label: "home.evaluationsDone",
-      icon: historyIcon,
+      icon: "history",
       tone: "violet",
     },
     {
       value: t("home.workspaceHitchhiker"),
       label: "home.workspace",
-      icon: hitchhikersIcon,
+      icon: "hitchhikers",
       tone: "blue",
     },
   ];
@@ -285,25 +282,25 @@ function CouncilDashboard() {
     {
       value: countText(isKnown ? unreadCount : null),
       label: "home.newMessages",
-      icon: requestIcon,
+      icon: "request",
       tone: "teal",
     },
     {
       value: countText(isKnown ? totalCount : null),
       label: "home.history",
-      icon: historyIcon,
+      icon: "history",
       tone: "violet",
     },
     {
       value: countText(hitchhikerCount),
       label: "home.hitchhikers",
-      icon: hitchhikersIcon,
+      icon: "hitchhikers",
       tone: "blue",
     },
     {
       value: t("home.workspaceCouncil"),
       label: "home.workspace",
-      icon: pendingIcon,
+      icon: "pending",
       tone: "amber",
     },
   ];
