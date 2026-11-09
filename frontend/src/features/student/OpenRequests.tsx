@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
 import ScrollableList from "../home/ScrollableList";
+import Skeleton from "../../components/ui/Skeleton";
 
 interface OpenRequestsProps {
   requests: EvaluationRequest[];
@@ -30,11 +31,11 @@ function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
       <h2 id="open-requests-title">{t("dashboard.openRequests")}</h2>
 
       {isLoading ? (
-        <div className="dashboard-requests" aria-busy="true">
-          <div className="dashboard-requests__skeleton" />
-          <div className="dashboard-requests__skeleton" />
-          <span className="dashboard-requests__sr-only">{t("myRequests.loading")}</span>
-        </div>
+        <Skeleton
+          className="dashboard-requests"
+          itemClassName="dashboard-requests__skeleton"
+          label={t("myRequests.loading")}
+        />
       ) : openRequests.length === 0 ? (
         <div className="dashboard-empty">
           <div className="dashboard-empty__history-mark" aria-hidden="true">

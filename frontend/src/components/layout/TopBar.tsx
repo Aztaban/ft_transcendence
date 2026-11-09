@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 
 import NotificationPanel from "../../features/notifications/NotificationPanel";
-import PersonAvatar from "../../features/people/PersonAvatar";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import { useNotificationCount } from "../../store/NotificationCountContext";
+import Avatar from "../ui/Avatar";
 import Icon from "../ui/Icon";
 import ConnectionStatus from "./ConnectionStatus";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -112,7 +112,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
           {isPanelOpen && <NotificationPanel onClose={() => setIsPanelOpen(false)} />}
         </div>
 
-        <PersonAvatar
+        <Avatar
           className="topbar__avatar"
           name={user?.display_name ?? ""}
           avatarUrl={user?.avatar_url ?? null}

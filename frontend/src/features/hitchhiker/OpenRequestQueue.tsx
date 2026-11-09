@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatTimeAgo } from "../../utils/dateTime";
 import ScrollableList from "../home/ScrollableList";
+import Skeleton from "../../components/ui/Skeleton";
 
 interface OpenRequestQueueProps {
   requests: EvaluationRequest[];
@@ -23,11 +24,11 @@ function OpenRequestQueue({ requests, isLoading = false }: OpenRequestQueueProps
       <h2 id="open-request-queue-title">{t("dashboard.openRequests")}</h2>
 
       {isLoading ? (
-        <div className="dashboard-requests" aria-busy="true">
-          <div className="dashboard-requests__skeleton" />
-          <div className="dashboard-requests__skeleton" />
-          <span className="dashboard-requests__sr-only">{t("dashboard.loadingOpen")}</span>
-        </div>
+        <Skeleton
+          className="dashboard-requests"
+          itemClassName="dashboard-requests__skeleton"
+          label={t("dashboard.loadingOpen")}
+        />
       ) : openRequests.length === 0 ? (
         <div className="dashboard-empty">
           <div className="dashboard-empty__history-mark" aria-hidden="true">

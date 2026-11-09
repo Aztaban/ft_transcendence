@@ -20,6 +20,7 @@ import { useCurrentUser } from "../store/CurrentUserContext";
 import { useRole, workspacesFor, type AppRole } from "../store/RoleContext";
 import { formatSlotStart } from "../utils/dateTime";
 import { EVALUATION_EVENTS, OPEN_QUEUE_EVENTS } from "../websocket/events";
+import Skeleton from "../components/ui/Skeleton";
 import "../styles/dashboard.css";
 
 // A box of the overview row. `label` is a key of the "home" texts in src/i18n/locales.
@@ -319,11 +320,11 @@ function CouncilDashboard() {
           <h2 id="council-messages-title">{t("home.messages")}</h2>
 
           {isLoading ? (
-            <div className="dashboard-requests" aria-busy="true">
-              <div className="dashboard-requests__skeleton" />
-              <div className="dashboard-requests__skeleton" />
-              <span className="dashboard-requests__sr-only">{t("council.loadingMessages")}</span>
-            </div>
+            <Skeleton
+              className="dashboard-requests"
+              itemClassName="dashboard-requests__skeleton"
+              label={t("council.loadingMessages")}
+            />
           ) : unread.length === 0 ? (
             <div className="dashboard-empty">
               <div className="dashboard-empty__history-mark" aria-hidden="true">
