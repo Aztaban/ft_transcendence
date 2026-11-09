@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { act } from "react";
+// Testing Library's act, not React's: it tells React this is a test environment for the call,
+// which React's own act expects and otherwise warns about in the console (#778).
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { confettiPieces, planetPixels, spritePixels, textPixels } from "./pixelArt";

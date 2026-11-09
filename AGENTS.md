@@ -107,6 +107,7 @@ When adding or changing a user-facing string, update backend/locale/*/LC_MESSAGE
 - Cover the failure cases: 401 when logged out, 403 or 404 for the wrong role or owner, 409 for forbidden state transitions, 400 for each validation rule.
 - For every endpoint that changes data, at least one test logs in through a real session with CSRF enforced (`APIClient(enforce_csrf_checks=True)`), not only `force_authenticate`.
 - Frontend tests are `*.test.ts` or `*.test.tsx` files next to the code they test (Vitest and Testing Library).
+- A frontend test fails when it writes to `console.error` or `console.warn` (`frontend/src/test/setup.ts`). Fix the cause; allowlist a message there only with a comment saying why it cannot be fixed.
 
 ## Git and pull requests
 
