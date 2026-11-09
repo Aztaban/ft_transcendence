@@ -1,6 +1,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import i18n from "../../i18n";
+import en from "../../i18n/locales/en.json";
 import ProjectOverview from "./ProjectOverview";
 
 afterEach(() => {
@@ -41,6 +43,37 @@ describe("ProjectOverview", () => {
   });
 });
 
+describe("ProjectOverview in another language", () => {
+  it("shows the topics and tested items in Czech, with the same icons as in English", async () => {
+    const { container } = render(<ProjectOverview project={project("push_swap", "push_swap")} />);
+    const englishIcons = [...container.querySelectorAll(".topics-chart__icon")].map((icon) =>
+      icon.getAttribute("d"),
+    );
+
+    cleanup();
+    await i18n.changeLanguage("cs");
+    const czech = render(<ProjectOverview project={project("push_swap", "push_swap")} />);
+
+    expect(screen.getByText("Optimalizace tahů", { selector: "li" })).toBeTruthy();
+    expect(screen.getByText("Volba algoritmu")).toBeTruthy();
+    expect(screen.queryByText("Move optimization", { selector: "li" })).toBeNull();
+    expect(
+      [...czech.container.querySelectorAll(".topics-chart__icon")].map((icon) =>
+        icon.getAttribute("d"),
+      ),
+    ).toEqual(englishIcons);
+  });
+
+  it("shows a new core project in Spanish", async () => {
+    await i18n.changeLanguage("es");
+
+    render(<ProjectOverview project={project("fly-in", "Fly-In")} />);
+
+    expect(screen.getByText("Búsqueda de rutas", { selector: "li" })).toBeTruthy();
+    expect(screen.getByText("Número de turnos frente a los objetivos")).toBeTruthy();
+  });
+});
+
 describe("topicIcon", () => {
   it("picks an icon from the topic's name, with a fallback", async () => {
     const { topicIcon } = await import("./topicIcons");
@@ -53,9 +86,9 @@ describe("topicIcon", () => {
 
   it("has a real icon for every topic of every project", async () => {
     const { topicIcon } = await import("./topicIcons");
-    const { projectContent } = await import("./projectContent");
     const fallback = topicIcon("Something new");
-    const topics = Object.values(projectContent).flatMap((content) => content.topics);
+    // Icons are picked from the English names, whatever the language.
+    const topics = Object.values(en.projectContent).flatMap((content) => content.topics);
 
     expect(topics.filter((topic) => topicIcon(topic) === fallback)).toEqual([]);
   });

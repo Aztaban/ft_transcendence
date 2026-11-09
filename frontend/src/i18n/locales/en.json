@@ -345,6 +345,163 @@
     "notAdded": "Not added yet.",
     "topics": "Project topics"
   },
+  "projectContent": {
+    "push_swap": {
+      "topics": [
+        "Algorithms",
+        "Parsing",
+        "Stacks",
+        "Operations",
+        "Move optimization",
+        "Error handling",
+        "Memory management",
+        "Code quality"
+      ],
+      "tested": ["Algorithm choice", "Code understanding", "Error handling", "Project constraints"]
+    },
+    "born2beroot": {
+      "topics": [
+        "Virtualization",
+        "Partitions & LVM",
+        "Users & groups",
+        "Password policy",
+        "SSH",
+        "Firewall",
+        "Sudo",
+        "Monitoring script"
+      ],
+      "tested": [
+        "Virtual machine setup",
+        "Security configuration",
+        "Monitoring script",
+        "Understanding of the system"
+      ]
+    },
+    "minishell": {
+      "topics": [
+        "Parsing",
+        "Quotes & expansion",
+        "Pipes",
+        "Redirections",
+        "Builtins",
+        "Signals",
+        "Environment",
+        "Memory management"
+      ],
+      "tested": ["Command execution", "Edge cases", "Error handling", "Code understanding"]
+    },
+    "cpp09": {
+      "topics": [
+        "STL containers",
+        "Algorithms",
+        "Input parsing",
+        "Exceptions",
+        "Sorting",
+        "Complexity"
+      ],
+      "tested": [
+        "Choice of containers",
+        "Algorithm correctness",
+        "Error handling",
+        "Code understanding"
+      ]
+    },
+    "codexion": {
+      "topics": [
+        "Threads",
+        "Mutexes",
+        "Condition variables",
+        "Deadlock prevention",
+        "Scheduling (FIFO / EDF)",
+        "Priority queue",
+        "Burnout monitor",
+        "Memory management"
+      ],
+      "tested": [
+        "No deadlock or starvation",
+        "Burnout logged within 10 ms",
+        "Dongle cooldown and fair scheduling",
+        "Clean logs, no data races or leaks",
+        "Code understanding"
+      ]
+    },
+    "fly-in": {
+      "topics": [
+        "Parsing",
+        "Graph modelling",
+        "Pathfinding",
+        "Zone & link capacity",
+        "Turn scheduling",
+        "Movement costs",
+        "Visualization",
+        "Type safety"
+      ],
+      "tested": [
+        "Parser and error messages",
+        "Turn count against the targets",
+        "Capacity rules respected",
+        "Algorithm explanation",
+        "Code understanding"
+      ]
+    },
+    "rag-against-the-machine": {
+      "topics": [
+        "Chunking",
+        "Indexing",
+        "BM25 / TF-IDF",
+        "Retrieval",
+        "Answer generation",
+        "Recall@k",
+        "CLI (Fire)",
+        "Data models (pydantic)"
+      ],
+      "tested": [
+        "Recall@5: 80% docs, 50% code",
+        "Indexing and search speed",
+        "Grounded answers",
+        "CLI edge cases",
+        "Code understanding"
+      ]
+    },
+    "agent-smith": {
+      "topics": [
+        "Agent loop",
+        "Code extraction",
+        "Sandbox security",
+        "MCP tools",
+        "LLM providers",
+        "Prompt design",
+        "Usage tracking",
+        "Benchmarking"
+      ],
+      "tested": [
+        "Mandatory tools",
+        "Agent reasoning loop",
+        "Sandbox isolation",
+        "Benchmark report",
+        "Live change to the agent"
+      ]
+    },
+    "the-answer-protocol": {
+      "topics": [
+        "TCP server",
+        "Protocol compliance",
+        "Concurrency",
+        "Items & inventory",
+        "Combat",
+        "Quests",
+        "CLI & GUI clients",
+        "Server logging"
+      ],
+      "tested": [
+        "Every protocol command and event",
+        "Multiplayer and disconnects",
+        "Combat and quests",
+        "Clients interchangeable between groups",
+        "Each member's contribution"
+      ]
+    }
+  },
   "council": {
     "title": "Student Council",
     "subtitle": "Share an idea, a problem or feedback with the people who represent you.",
@@ -1071,6 +1228,7 @@
     "pending": "Pending",
     "approved": "Approved",
     "declined": "Declined",
+    "badgePending": "Pending",
     "badgeApproved": "Approved",
     "badgeDeclined": "Declined",
     "noPending": "No pending requests",
@@ -1109,6 +1267,23 @@
     "noteFor": "Note for {{name}}",
     "optional": "(optional)",
     "saving": "Saving…"
+  },
+  "eligibilityDetail": {
+    "title": "Eligibility request",
+    "backToList": "All eligibility requests",
+    "loading": "Loading the request…",
+    "loadError": "Could not load the request. Please try again later.",
+    "requestedBy": "Requested by",
+    "sent": "Sent",
+    "reviewedBy": "Reviewed by",
+    "decided": "Decided",
+    "projects_one": "{{count}} project",
+    "projects_other": "{{count}} projects",
+    "note": "Note from the Head Tutor",
+    "waitingOwn": "A Head Tutor will approve or decline the whole request. You will get a notification.",
+    "approvedOwn": "You can now pick open requests for these projects.",
+    "declinedOwn": "You can send a new request at any time.",
+    "sendNew": "Send a new request"
   },
   "unauthorized": {
     "eyebrow": "ACCESS RESTRICTED",

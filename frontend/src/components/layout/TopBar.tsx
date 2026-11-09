@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
 
-import searchIcon from "../../assets/figma/search.svg";
-import bellIcon from "../../assets/figma/bell.svg";
 import NotificationPanel from "../../features/notifications/NotificationPanel";
 import PersonAvatar from "../../features/people/PersonAvatar";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import { useNotificationCount } from "../../store/NotificationCountContext";
+import Icon from "../ui/Icon";
 import ConnectionStatus from "./ConnectionStatus";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserMenu from "./UserMenu";
@@ -74,7 +73,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
       </button>
 
       <label className="topbar__search">
-        <img className="topbar__search-icon" src={searchIcon} alt="" aria-hidden="true" />
+        <Icon className="topbar__search-icon" name="search" />
 
         <input
           type="search"
@@ -102,7 +101,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
             aria-controls="notification-panel"
             onClick={() => setIsPanelOpen((open) => !open)}
           >
-            <img src={bellIcon} alt="" aria-hidden="true" />
+            <Icon name="bell" />
             {unreadCount > 0 && (
               <span className="topbar__notification-badge">
                 {unreadCount > 99 ? "99+" : unreadCount}

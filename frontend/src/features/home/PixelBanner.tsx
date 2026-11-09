@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore, type ComponentType } from "react";
+import { useState, useSyncExternalStore, type ComponentType, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
 import DeskScene from "./DeskScene";
@@ -11,7 +11,7 @@ interface Scene {
   Art: ComponentType;
   // A key of the "home" texts in src/i18n/locales.
   label: string;
-  // Must match the animation length of the scene in pixel-banner.css.
+  // Sets `--scene-length`, which pixel-banner.css reads.
   seconds: number;
 }
 
@@ -48,7 +48,11 @@ function PixelBanner() {
   const { Art, label, seconds } = scenes[isStill ? 0 : sceneIndex];
 
   return (
-    <div className={["pixel-banner", isPaused ? "pixel-banner--paused" : ""].join(" ").trim()}>
+    <div
+      className={["pixel-banner", isPaused ? "pixel-banner--paused" : ""].join(" ").trim()}
+      // The scene's length, for its animations and the clock: set only here (#713).
+      style={{ "--scene-length": `${seconds}s` } as CSSProperties}
+    >
       {/* The key restarts every animation when the scene changes. */}
       <svg
         key={label}
@@ -67,7 +71,6 @@ function PixelBanner() {
           key={`clock-${label}`}
           className="pixel-banner__clock"
           data-testid="pixel-banner-clock"
-          style={{ animationDuration: `${seconds}s` }}
           onAnimationEnd={() => setSceneIndex((index) => (index + 1) % scenes.length)}
         />
       )}

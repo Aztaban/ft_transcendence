@@ -348,6 +348,173 @@
     "notAdded": "Todavía no se ha añadido.",
     "topics": "Temas del proyecto"
   },
+  "projectContent": {
+    "push_swap": {
+      "topics": [
+        "Algoritmos",
+        "Parsing",
+        "Pilas",
+        "Operaciones",
+        "Optimización de movimientos",
+        "Gestión de errores",
+        "Gestión de memoria",
+        "Calidad del código"
+      ],
+      "tested": [
+        "Elección del algoritmo",
+        "Comprensión del código",
+        "Gestión de errores",
+        "Restricciones del proyecto"
+      ]
+    },
+    "born2beroot": {
+      "topics": [
+        "Virtualización",
+        "Particiones y LVM",
+        "Usuarios y grupos",
+        "Política de contraseñas",
+        "SSH",
+        "Cortafuegos",
+        "Sudo",
+        "Script de monitorización"
+      ],
+      "tested": [
+        "Configuración de la máquina virtual",
+        "Configuración de seguridad",
+        "Script de monitorización",
+        "Comprensión del sistema"
+      ]
+    },
+    "minishell": {
+      "topics": [
+        "Parsing",
+        "Comillas y expansión",
+        "Pipes",
+        "Redirecciones",
+        "Builtins",
+        "Señales",
+        "Entorno",
+        "Gestión de memoria"
+      ],
+      "tested": [
+        "Ejecución de comandos",
+        "Casos límite",
+        "Gestión de errores",
+        "Comprensión del código"
+      ]
+    },
+    "cpp09": {
+      "topics": [
+        "Contenedores STL",
+        "Algoritmos",
+        "Parsing de la entrada",
+        "Excepciones",
+        "Ordenación",
+        "Complejidad"
+      ],
+      "tested": [
+        "Elección de contenedores",
+        "Corrección del algoritmo",
+        "Gestión de errores",
+        "Comprensión del código"
+      ]
+    },
+    "codexion": {
+      "topics": [
+        "Hilos",
+        "Mutex",
+        "Variables de condición",
+        "Prevención de interbloqueos",
+        "Planificación (FIFO / EDF)",
+        "Cola de prioridad",
+        "Monitor de burnout",
+        "Gestión de memoria"
+      ],
+      "tested": [
+        "Sin interbloqueos ni inanición",
+        "Burnout registrado en menos de 10 ms",
+        "Enfriamiento del dongle y planificación justa",
+        "Logs limpios, sin carreras de datos ni fugas",
+        "Comprensión del código"
+      ]
+    },
+    "fly-in": {
+      "topics": [
+        "Parsing",
+        "Modelado de grafos",
+        "Búsqueda de rutas",
+        "Capacidad de zonas y enlaces",
+        "Planificación de turnos",
+        "Costes de movimiento",
+        "Visualización",
+        "Seguridad de tipos"
+      ],
+      "tested": [
+        "Parser y mensajes de error",
+        "Número de turnos frente a los objetivos",
+        "Reglas de capacidad respetadas",
+        "Explicación del algoritmo",
+        "Comprensión del código"
+      ]
+    },
+    "rag-against-the-machine": {
+      "topics": [
+        "Fragmentación",
+        "Indexación",
+        "BM25 / TF-IDF",
+        "Recuperación",
+        "Generación de respuestas",
+        "Recall@k",
+        "CLI (Fire)",
+        "Modelos de datos (pydantic)"
+      ],
+      "tested": [
+        "Recall@5: 80 % documentación, 50 % código",
+        "Velocidad de indexación y búsqueda",
+        "Respuestas fundamentadas",
+        "Casos límite de la CLI",
+        "Comprensión del código"
+      ]
+    },
+    "agent-smith": {
+      "topics": [
+        "Bucle del agente",
+        "Extracción de código",
+        "Seguridad del sandbox",
+        "Herramientas MCP",
+        "Proveedores de LLM",
+        "Diseño de prompts",
+        "Seguimiento del uso",
+        "Benchmarking"
+      ],
+      "tested": [
+        "Herramientas obligatorias",
+        "Bucle de razonamiento del agente",
+        "Aislamiento del sandbox",
+        "Informe del benchmark",
+        "Cambio en directo del agente"
+      ]
+    },
+    "the-answer-protocol": {
+      "topics": [
+        "Servidor TCP",
+        "Cumplimiento del protocolo",
+        "Concurrencia",
+        "Objetos e inventario",
+        "Combate",
+        "Misiones",
+        "Clientes CLI y GUI",
+        "Registro del servidor"
+      ],
+      "tested": [
+        "Cada comando y evento del protocolo",
+        "Multijugador y desconexiones",
+        "Combate y misiones",
+        "Clientes intercambiables entre grupos",
+        "Aportación de cada miembro"
+      ]
+    }
+  },
   "council": {
     "title": "Consejo estudiantil",
     "subtitle": "Comparte una idea, un problema o tu opinión con las personas que te representan.",
@@ -1077,6 +1244,7 @@
     "pending": "Pendientes",
     "approved": "Aprobadas",
     "declined": "Rechazadas",
+    "badgePending": "Pendiente",
     "badgeApproved": "Aprobada",
     "badgeDeclined": "Rechazada",
     "noPending": "No hay solicitudes pendientes",
@@ -1116,6 +1284,24 @@
     "noteFor": "Nota para {{name}}",
     "optional": "(opcional)",
     "saving": "Guardando…"
+  },
+  "eligibilityDetail": {
+    "title": "Solicitud de elegibilidad",
+    "backToList": "Todas las solicitudes de elegibilidad",
+    "loading": "Cargando la solicitud…",
+    "loadError": "No se pudo cargar la solicitud. Inténtalo más tarde.",
+    "requestedBy": "Solicitada por",
+    "sent": "Enviada",
+    "reviewedBy": "Revisada por",
+    "decided": "Decidida",
+    "projects_one": "{{count}} proyecto",
+    "projects_many": "{{count}} proyectos",
+    "projects_other": "{{count}} proyectos",
+    "note": "Nota del Head Tutor",
+    "waitingOwn": "Un Head Tutor aprobará o rechazará la solicitud completa. Recibirás una notificación.",
+    "approvedOwn": "Ya puedes tomar solicitudes abiertas de estos proyectos.",
+    "declinedOwn": "Puedes enviar una nueva solicitud cuando quieras.",
+    "sendNew": "Enviar una nueva solicitud"
   },
   "unauthorized": {
     "eyebrow": "ACCESO RESTRINGIDO",

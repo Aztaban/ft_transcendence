@@ -11,12 +11,16 @@ import { useLiveRefresh } from "../../websocket/LiveProvider";
 // - picked: GET /evaluation-requests/?scope=picked (awaiting, upcoming and history)
 // Only called once the user is logged in, so no 401 in the console.
 // Re-fetched in the background when a request or the Hitchhiker's eligibility changes, or after a
-// reconnect (§9, #254); a failed refresh keeps the requests already shown.
+// reconnect (§9, #254); a failed refresh keeps the requests already shown. `enabled` waits for
+// /users/me/ to confirm the Hitchhiker role: the workspace is restored from the tab's storage, and
+// asking without the role would put 403s in the console.
 // TODO: only the first page (20) of each list is loaded.
-export function useHitchhikerRequests() {
+export function useHitchhikerRequests(enabled = true) {
   const { isAuthenticated, isLoading: isCheckingSession } = useAuth();
   const [openRequests, setOpenRequests] = useState<EvaluationRequest[]>([]);
   const [pickedRequests, setPickedRequests] = useState<EvaluationRequest[]>([]);
+  // The whole open queue, not only the first page: Home shows it as a number (§5.7).
+  const [openCount, setOpenCount] = useState<number | null>(null);
   const [hasError, setHasError] = useState(false);
   // True until the first answers arrive or the first load fails; a background refresh keeps it
   // false, so the requests already shown stay on screen (#258).
@@ -27,16 +31,24 @@ export function useHitchhikerRequests() {
   useLiveRefresh(OPEN_QUEUE_EVENTS, () => setReloadKey((key) => key + 1));
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !enabled) {
       return;
     }
 
     let active = true;
+    const openQueue = listEvaluationRequests({ scope: "open" });
 
-    Promise.all([
-      listEvaluationRequests({ scope: "open" }),
-      listEvaluationRequests({ scope: "picked" }),
-    ])
+    // On its own: the number stays right even when the picked list fails.
+    openQueue.then(
+      (open) => {
+        if (active) {
+          setOpenCount(open.count);
+        }
+      },
+      () => {},
+    );
+
+    Promise.all([openQueue, listEvaluationRequests({ scope: "picked" })])
       .then(([open, picked]) => {
         if (active) {
           hasLoaded.current = true;
@@ -56,11 +68,11 @@ export function useHitchhikerRequests() {
     return () => {
       active = false;
     };
-  }, [isAuthenticated, reloadKey]);
+  }, [isAuthenticated, enabled, reloadKey]);
 
   // Loading while the session check runs and, once logged in, until the first answer. Logged out,
   // nothing is loaded, so there is nothing to wait for.
   const isLoading = isCheckingSession || (isAuthenticated && isFirstLoad);
 
-  return { openRequests, pickedRequests, isLoading, hasError };
+  return { openRequests, openCount, pickedRequests, isLoading, hasError };
 }
