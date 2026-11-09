@@ -17,13 +17,15 @@
     "studentCouncil": "Student Council",
     "messages": "Messages",
     "eligibility": "Eligibility",
+    "users": "Users",
     "skipToContent": "Skip to content"
   },
   "workspace": {
     "select": "Select role",
     "STUDENT": "STUDENT",
     "HITCHHIKER": "HITCHHIKER",
-    "COUNCIL": "COUNCIL"
+    "COUNCIL": "COUNCIL",
+    "ADMIN": "ADMIN"
   },
   "sidebar": {
     "logout": "Logout",
@@ -603,6 +605,84 @@
       "senderDeleted": "The sender's account was deleted.",
       "deleted": "The message was deleted. The reason is saved in the audit log."
     }
+  },
+  "adminUser": {
+    "title": "User",
+    "back": "All users",
+    "loading": "Loading the user…",
+    "loadError": "We couldn't load this user. Please try again later.",
+    "email": "Email",
+    "intraLogin": "42 login",
+    "language": "Language",
+    "roles": "Roles",
+    "createdAt": "Account created",
+    "lastLogin": "Last login",
+    "deletedNote": "This account was deleted. Deleted accounts cannot be edited.",
+    "editTitle": "Edit account",
+    "displayName": "Display name",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saved": "Changes saved.",
+    "emailTaken": "Another account already uses this email.",
+    "deletedMeanwhile": "This account was deleted in the meantime, so the changes were not saved.",
+    "saveError": "The changes could not be saved. Please try again.",
+    "actions": {
+      "title": "Account actions",
+      "ownAccount": "You cannot suspend or delete your own account.",
+      "suspend": "Suspend account",
+      "reactivate": "Reactivate account",
+      "delete": "Delete account",
+      "suspendTitle": "Suspend {{name}}?",
+      "reactivateTitle": "Reactivate {{name}}?",
+      "deleteTitle": "Delete {{name}}?",
+      "suspendText": "They are logged out at once and cannot log in until the account is reactivated. Their evaluation requests stay as they are.",
+      "reactivateText": "They can log in again.",
+      "deleteText": "The account is anonymized: its name, email and 42 login are removed, its roles are taken away, and its evaluations that have not started are cancelled or released. This cannot be undone.",
+      "reason": "Reason",
+      "reasonHint": "Required. It is kept in the audit log.",
+      "suspendConfirm": "Suspend",
+      "reactivateConfirm": "Reactivate",
+      "deleteConfirm": "Delete for good",
+      "suspendWorking": "Suspending…",
+      "reactivateWorking": "Reactivating…",
+      "deleteWorking": "Deleting…",
+      "suspendDone": "The account was suspended.",
+      "reactivateDone": "The account was reactivated.",
+      "deleteDone": "The account was deleted.",
+      "statusChanged": "The account changed in the meantime, so nothing was done. It is shown as it is now.",
+      "cannotModifySelf": "You cannot change the status of your own account.",
+      "error": "That did not work. Please try again."
+    }
+  },
+  "adminUsers": {
+    "title": "Users",
+    "subtitle": "Every account, with its roles and status.",
+    "search": "Search",
+    "searchPlaceholder": "Email, name or 42 login",
+    "searchButton": "Search",
+    "role": "Role",
+    "allRoles": "All roles",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "statuses": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "deleted": "Deleted"
+    },
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "roles": "Roles",
+      "status": "Status",
+      "lastLogin": "Last login"
+    },
+    "never": "Never",
+    "loading": "Loading users…",
+    "error": "We couldn't load the users. Please try again later.",
+    "emptyTitle": "No users yet",
+    "emptyFilteredTitle": "No users match these filters",
+    "pagesAria": "User pages",
+    "page": "Page {{page}} of {{count}}"
   },
   "roles": {
     "student": "Student",

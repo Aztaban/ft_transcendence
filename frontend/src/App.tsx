@@ -1,11 +1,13 @@
 import { useEffect } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router";
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router";
 
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
 import { LEGAL_PAGES, legalDocumentAt } from "./components/layout/legalPages";
 import PublicLayout from "./components/layout/PublicLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
 import CouncilHistoryPage from "./pages/CouncilHistoryPage";
 import { CouncilMessageRoute } from "./pages/CouncilInboxMessagePage";
 import CouncilInboxPage from "./pages/CouncilInboxPage";
@@ -40,6 +42,14 @@ function RequestsRoute() {
   const { activeRole } = useRole();
 
   return activeRole === "HITCHHIKER" ? <HitchhikerRequestsPage /> : <CreateRequestPage />;
+}
+
+// Each user gets a new page instance, so a form being edited never carries over to another user
+// opened from the list or with Back.
+function AdminUserRoute() {
+  const { id } = useParams();
+
+  return <AdminUserDetailPage key={id} />;
 }
 
 // Back from the 42 login, which always lands on "/" (api-plan §10.1): opens the page the user
@@ -217,6 +227,23 @@ function AuthenticatedApp() {
               fallback={<UnauthorizedPage />}
             >
               <CouncilHistoryPage />
+            </RoleGuard>
+          }
+        />
+        {/* Admin pages use /manage/: Nginx sends /admin/ to the Django admin. */}
+        <Route
+          path="/manage/users"
+          element={
+            <RoleGuard allowedRoles={routePermissions.adminUsers} fallback={<UnauthorizedPage />}>
+              <AdminUsersPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/manage/users/:id"
+          element={
+            <RoleGuard allowedRoles={routePermissions.adminUsers} fallback={<UnauthorizedPage />}>
+              <AdminUserRoute />
             </RoleGuard>
           }
         />

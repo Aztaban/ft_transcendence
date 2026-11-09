@@ -46,6 +46,10 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
     { labelKey: "nav.history", to: "/council/history", icon: "history" },
     { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: "hitchhikers" },
   ],
+
+  // The Admin pages live under /manage/ (/admin/ belongs to the Django admin). No Home: in this
+  // workspace Home opens Users.
+  ADMIN: [{ labelKey: "nav.users", to: "/manage/users", icon: "hitchhikers" }],
 };
 
 const eligibilityItem: NavigationItem = {

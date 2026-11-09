@@ -13,6 +13,8 @@ export const routePermissions = {
   council: ["STUDENT", "HITCHHIKER", "COUNCIL"],
   councilMessages: ["COUNCIL"],
   councilHistory: ["COUNCIL"],
+  // The backend also checks the real admin role (api-plan §10.2).
+  adminUsers: ["ADMIN"],
 } as const satisfies Record<string, readonly AppRole[]>;
 
 export function hasRolePermission(role: AppRole, allowedRoles: readonly AppRole[]): boolean {

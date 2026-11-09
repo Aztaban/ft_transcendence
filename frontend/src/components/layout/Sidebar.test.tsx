@@ -111,6 +111,45 @@ describe("Sidebar role switcher", () => {
       "COUNCIL",
     ]);
   });
+
+  test("offers the Admin workspace to an Admin, with Users as its only item", () => {
+    currentUser.roles = ["student", "admin"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+
+    // Admins also read the council messages (#725), so they get COUNCIL as well.
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "STUDENT",
+      "COUNCIL",
+      "ADMIN",
+    ]);
+
+    fireEvent.click(screen.getByRole("option", { name: "ADMIN" }));
+
+    const navigation = screen.getByRole("navigation", { name: "Primary navigation" });
+
+    expect(
+      within(navigation)
+        .getAllByRole("link")
+        .map((link) => [link.textContent, link.getAttribute("href")]),
+    ).toEqual([["Users", "/manage/users"]]);
+  });
+
+  test("does not offer the Admin workspace without the admin role", () => {
+    currentUser.roles = ["student", "tutor", "head_tutor", "sc_member"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "STUDENT",
+      "HITCHHIKER",
+      "COUNCIL",
+    ]);
+  });
 });
 
 describe("Sidebar language", () => {
