@@ -172,6 +172,9 @@ vi.mock("../api/eligibility", async (importOriginal) => ({
 vi.mock("../api/admin", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/admin")>()),
   listAdminUsers: vi.fn(async () => page([adminUser])),
+  listEvaluationExceptions: vi.fn(async () =>
+    page([{ ...evaluation(8, { result: null }), problem: "result_missing" as const }]),
+  ),
   getAdminUser: vi.fn(async () => adminUser),
   updateAdminUser: vi.fn(),
   suspendAdminUser: vi.fn(),
@@ -264,6 +267,7 @@ describe("accessibility of every page (axe-core, WCAG 2.1 AA)", () => {
     ["/requests/6", "HITCHHIKER", "Choose a slot for push_swap"],
     ["/manage/users", "ADMIN", "Users"],
     ["/manage/users/2", "ADMIN", "Lenka"],
+    ["/manage/exceptions", "ADMIN", "Evaluation exceptions"],
     ["/does-not-exist", "STUDENT", "404"],
   ])("%s in the %s workspace", async (path, workspace, heading) => {
     sessionStorage.setItem("active-role", workspace);

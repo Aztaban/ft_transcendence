@@ -1,5 +1,6 @@
 import { apiRequest } from "./client";
 import type { AdminUser, UserStatus } from "../types/adminUser";
+import type { EvaluationException } from "../types/evaluation";
 import type { Paginated } from "../types/pagination";
 import type { Language, RoleName } from "../types/user";
 
@@ -62,10 +63,9 @@ export function updateAdminUser(id: number, payload: UpdateAdminUserPayload): Pr
   });
 }
 
-// api-plan §10.2: suspend, reactivate and delete need a `reason` of 1–500 characters (trimmed),
-// kept in the audit log. A blank one is 400 `validation_error` with `fields.reason`.
-export const REASON_MAX_LENGTH = 500;
-
+// api-plan §10.2: suspend, reactivate and delete need a `reason` of 1–500 characters (trimmed,
+// REASON_MAX_LENGTH), kept in the audit log. A blank one is 400 `validation_error` with
+// `fields.reason`.
 function reasonRequest(method: "POST" | "DELETE", reason: string): RequestInit {
   return {
     method,
@@ -94,4 +94,14 @@ export function reactivateAdminUser(id: number, reason: string): Promise<AdminUs
 // `cannot_modify_self`.
 export function deleteAdminUser(id: number, reason: string): Promise<void> {
   return apiRequest<void>(`/api/v1/admin/users/${id}/`, reasonRequest("DELETE", reason));
+}
+
+// GET /api/v1/admin/evaluation-requests/exceptions/ (api-plan §10.9), Head Tutors and Admins:
+// the requests that need a human decision, newest first, paginated (§5.7). No filters.
+export function listEvaluationExceptions(page = 1): Promise<Paginated<EvaluationException>> {
+  const search = page > 1 ? `?page=${page}` : "";
+
+  return apiRequest<Paginated<EvaluationException>>(
+    `/api/v1/admin/evaluation-requests/exceptions/${search}`,
+  );
 }

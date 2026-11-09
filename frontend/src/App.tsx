@@ -17,6 +17,7 @@ import CreateRequestPage from "./pages/CreateRequestPage";
 import { EligibilityRequestRoute } from "./pages/EligibilityRequestDetailPage";
 import EligibilityRequestPage from "./pages/EligibilityRequestPage";
 import EligibilityReviewPage from "./pages/EligibilityReviewPage";
+import EvaluationExceptionsPage from "./pages/EvaluationExceptionsPage";
 import EvaluationPage from "./pages/EvaluationPage";
 import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
@@ -244,6 +245,17 @@ function AuthenticatedApp() {
           element={
             <RoleGuard allowedRoles={routePermissions.adminUsers} fallback={<UnauthorizedPage />}>
               <AdminUserRoute />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/manage/exceptions"
+          element={
+            <RoleGuard
+              allowedRoles={routePermissions.evaluationExceptions}
+              fallback={<UnauthorizedPage />}
+            >
+              <EvaluationExceptionsPage />
             </RoleGuard>
           }
         />

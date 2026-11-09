@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { deleteAdminUser, listAdminUsers, reactivateAdminUser, suspendAdminUser } from "./admin";
+import {
+  deleteAdminUser,
+  listAdminUsers,
+  listEvaluationExceptions,
+  reactivateAdminUser,
+  suspendAdminUser,
+} from "./admin";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -62,6 +68,22 @@ describe("account actions", () => {
       ["/api/v1/admin/users/7/suspend/", "POST", JSON.stringify({ reason: "Spam" })],
       ["/api/v1/admin/users/7/reactivate/", "POST", JSON.stringify({ reason: "Appeal accepted" })],
       ["/api/v1/admin/users/7/", "DELETE", JSON.stringify({ reason: "Left 42" })],
+    ]);
+  });
+});
+
+describe("listEvaluationExceptions", () => {
+  test("asks for the first page, then later pages", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() => Promise.resolve(emptyPage()));
+
+    await listEvaluationExceptions();
+    await listEvaluationExceptions(3);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/admin/evaluation-requests/exceptions/",
+      "/api/v1/admin/evaluation-requests/exceptions/?page=3",
     ]);
   });
 });
