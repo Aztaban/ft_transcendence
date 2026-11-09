@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -246,6 +246,35 @@ describe("HistoryPage", () => {
 
     expect(await screen.findByText("Page 2 of 3")).toBeTruthy();
     expect(listEvaluationRequests).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
+  });
+
+  // #772: the Hitchhiker's history may have fewer pages than the student's.
+  it("starts the other workspace's history at page 1", async () => {
+    vi.mocked(listEvaluationRequests).mockImplementation(async (params) =>
+      params?.scope === "mine"
+        ? page([past(1, "push_swap")], 45, "https://localhost/api/v1/evaluation-requests/?page=2")
+        : page([past(2, "minishell")]),
+    );
+
+    renderPage();
+    await screen.findByText("Page 1 of 3");
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Page 2 of 3")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "switch" }));
+
+    await screen.findByText("The evaluations you picked in the past.");
+    await waitFor(() =>
+      expect(listEvaluationRequests).toHaveBeenLastCalledWith(
+        expect.objectContaining({ scope: "picked", page: 1 }),
+      ),
+    );
+    expect(
+      vi
+        .mocked(listEvaluationRequests)
+        .mock.calls.filter(([params]) => params?.scope === "picked")
+        .map(([params]) => params?.page),
+    ).toEqual([1]);
   });
 
   it("shows an error when the history cannot be loaded", async () => {

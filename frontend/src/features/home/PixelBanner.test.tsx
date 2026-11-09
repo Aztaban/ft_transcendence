@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { act } from "react";
+// Testing Library's act, not React's: it tells React this is a test environment for the call,
+// which React's own act expects and otherwise warns about in the console (#778).
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { confettiPieces, planetPixels, spritePixels, textPixels } from "./pixelArt";
@@ -41,12 +42,17 @@ describe("PixelBanner", () => {
   });
 
   it("gives every scene a clock as long as its animation", () => {
-    render(<PixelBanner />);
+    const { container } = render(<PixelBanner />);
+    // One length per scene, read by its animations and its clock in pixel-banner.css.
+    const sceneLength = () =>
+      (container.querySelector(".pixel-banner") as HTMLElement).style.getPropertyValue(
+        "--scene-length",
+      );
 
-    expect(screen.getByTestId("pixel-banner-clock").style.animationDuration).toBe("16s");
+    expect(sceneLength()).toBe("16s");
 
     finishScene();
-    expect(screen.getByTestId("pixel-banner-clock").style.animationDuration).toBe("14s");
+    expect(sceneLength()).toBe("14s");
   });
 
   it("goes to the still rocket when reduced motion is turned on while it plays", () => {

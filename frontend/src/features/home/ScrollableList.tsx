@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 interface ScrollableListProps {
   labelledBy: string;
@@ -11,22 +11,34 @@ function ScrollableList({ labelledBy, children }: ScrollableListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = useState(false);
 
-  useEffect(() => {
-    function measure() {
-      const list = listRef.current;
+  const measure = useCallback(() => {
+    const list = listRef.current;
 
-      if (list) {
-        setIsScrollable(list.scrollHeight > list.clientHeight);
-      }
+    if (list) {
+      setIsScrollable(list.scrollHeight > list.clientHeight);
+    }
+  }, []);
+
+  // After every render: the rows may have changed. Setting the same value again renders nothing.
+  useEffect(measure);
+
+  // Any change of the list's size, also one that is not a window resize: the sidebar, the grid
+  // columns or a language switch.
+  useEffect(() => {
+    const list = listRef.current;
+
+    if (!list || typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+
+      return () => window.removeEventListener("resize", measure);
     }
 
-    measure();
-    window.addEventListener("resize", measure);
+    const observer = new ResizeObserver(measure);
 
-    return () => {
-      window.removeEventListener("resize", measure);
-    };
-  }, [children]);
+    observer.observe(list);
+
+    return () => observer.disconnect();
+  }, [measure]);
 
   return (
     <div

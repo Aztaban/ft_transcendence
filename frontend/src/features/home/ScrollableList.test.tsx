@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import ScrollableList from "./ScrollableList";
@@ -25,6 +25,38 @@ function renderList(contentHeight: number) {
 }
 
 describe("ScrollableList", () => {
+  it("measures again when its size changes without a window resize", () => {
+    let resized = () => {};
+    const observe = vi.fn();
+
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: () => void) {
+          resized = callback;
+        }
+
+        observe = observe;
+        disconnect = vi.fn();
+      },
+    );
+
+    try {
+      const list = renderList(100);
+
+      expect(observe).toHaveBeenCalledWith(list);
+      expect(list.getAttribute("tabindex")).toBeNull();
+
+      // The column got narrower (sidebar, grid, language): the rows now overflow.
+      vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(500);
+      act(() => resized());
+
+      expect(list.getAttribute("tabindex")).toBe("0");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("is a tab stop when its rows do not fit", () => {
     expect(renderList(500).getAttribute("tabindex")).toBe("0");
   });

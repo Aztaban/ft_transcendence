@@ -10,13 +10,13 @@
 .evaluation__back {
   align-self: flex-start;
   color: var(--color-text-secondary);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 .evaluation__back:hover {
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
 }
 
 /* Main card */
@@ -26,16 +26,16 @@
   flex-direction: column;
   gap: 26px;
   padding: 36px 40px 32px;
-  border: 1px solid #e3e7e7;
-  border-top: 6px solid #c9cfcf;
+  border: 1px solid var(--color-neutral-200);
+  border-top: 6px solid var(--color-neutral-300);
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--color-white);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
   animation: evaluation-rise 0.35s ease;
 }
 
 .evaluation__card--warm {
-  border-top-color: #f5a524;
+  border-top-color: var(--color-warning);
 }
 
 .evaluation__card--accent {
@@ -53,42 +53,42 @@
 .evaluation__header h1 {
   margin: 0;
   font-size: 2.1rem;
-  font-weight: 400;
+  font-weight: var(--font-weight-regular);
   line-height: 1.25;
 }
 
 .evaluation__header h1 strong {
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0.03em;
 }
 
 .evaluation__pill {
   padding: 5px 14px;
   border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .evaluation__pill--warm {
   background: #fff1d6;
-  color: #8a5a00;
+  color: var(--color-warning-text);
 }
 
 .evaluation__pill--accent {
-  background: #e6f8f8;
-  color: var(--color-accent-dark);
+  background: var(--color-accent-surface);
+  color: var(--color-accent-text);
 }
 
 .evaluation__pill--neutral {
   background: #eef1f1;
-  color: #4d5555;
+  color: var(--color-neutral-700);
 }
 
 .evaluation__pill--muted {
   background: #f4f5f5;
-  color: #87908f;
+  color: var(--color-text-secondary);
 }
 
 /* Project */
@@ -107,16 +107,16 @@
   height: 56px;
   place-items: center;
   border-radius: 14px;
-  background: #e6f8f8;
-  color: var(--color-accent-dark);
-  font-size: 1.15rem;
-  font-weight: 700;
+  background: var(--color-accent-surface);
+  color: var(--color-accent-text);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
 }
 
 .evaluation__project h2 {
   margin: 0;
-  font-size: 1.6rem;
-  font-weight: 500;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-medium);
 }
 
 /* Date, time and Hitchhiker tiles */
@@ -133,7 +133,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 20px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 12px;
   background: #fbfcfc;
   animation: evaluation-rise 0.35s ease both;
@@ -152,7 +152,7 @@
   align-items: center;
   gap: 10px;
   color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -163,8 +163,8 @@
   height: 34px;
   place-items: center;
   border-radius: 50%;
-  background: #e6f8f8;
-  font-size: 1rem;
+  background: var(--color-accent-surface);
+  font-size: var(--font-size-lg);
 }
 
 .evaluation__tile dd {
@@ -172,14 +172,14 @@
   flex-direction: column;
   gap: 4px;
   margin: 0;
-  color: #111111;
-  font-size: 1.15rem;
+  color: var(--color-neutral-950);
+  font-size: var(--font-size-xl);
   font-variant-numeric: tabular-nums;
 }
 
 .evaluation__tile dd small {
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 /* Yellow tip */
@@ -204,7 +204,7 @@
   border: 2px solid #2b2400;
   border-radius: 50%;
   font-family: Georgia, serif;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .evaluation__tip p {
@@ -225,10 +225,10 @@
   padding: 4px 2px;
   border: 0;
   background: none;
-  color: #b42318;
+  color: var(--color-danger-text);
   cursor: pointer;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -258,7 +258,7 @@
 
 .evaluation__question {
   margin-right: auto;
-  color: #4d5555;
+  color: var(--color-neutral-700);
 }
 
 .evaluation__button {
@@ -267,10 +267,10 @@
   align-items: center;
   gap: 10px;
   padding: 0 26px;
-  border: 1px solid #111111;
+  border: 1px solid var(--color-neutral-950);
   border-radius: 10px;
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-white);
+  color: var(--color-neutral-950);
   cursor: pointer;
   font: inherit;
   font-size: 1.05rem;
@@ -288,11 +288,11 @@
 .evaluation__button--primary {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .evaluation__button--primary:hover:enabled {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
 }
 
 /* A link styled as a button, e.g. "Pick a slot" (#690): links have no :enabled state. */
@@ -301,17 +301,17 @@ a.evaluation__button {
 }
 
 a.evaluation__button--primary:hover {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
   transform: translateY(-1px);
 }
 
 .evaluation__button--danger {
-  border-color: #d92d20;
-  color: #b42318;
+  border-color: var(--color-danger);
+  color: var(--color-danger-text);
 }
 
 .evaluation__button--danger:hover:enabled {
-  background: #fef3f2;
+  background: var(--color-danger-surface);
 }
 
 .evaluation__button:disabled {
@@ -331,7 +331,12 @@ a.evaluation__button--primary:hover {
 .evaluation__skeleton {
   height: 420px;
   border-radius: 16px;
-  background: linear-gradient(90deg, #eceff0 25%, #f6f7f7 50%, #eceff0 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-150) 25%,
+    var(--color-neutral-50) 50%,
+    var(--color-neutral-150) 75%
+  );
   background-size: 200% 100%;
   animation: evaluation-shimmer 1.3s ease-in-out infinite;
 }
@@ -348,10 +353,10 @@ a.evaluation__button--primary:hover {
 .evaluation__error {
   margin: 0;
   padding: 12px 16px;
-  border: 1px solid #fecdca;
+  border: 1px solid var(--color-danger-border);
   border-radius: 8px;
-  background: #fef3f2;
-  color: #b42318;
+  background: var(--color-danger-surface);
+  color: var(--color-danger-text);
 }
 
 /* Accepted popup (rendered into <body>) */
@@ -371,7 +376,7 @@ a.evaluation__button--primary:hover {
   width: min(520px, 100%);
   overflow: hidden;
   border-radius: 20px;
-  background: #ffffff;
+  background: var(--color-white);
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.3);
   text-align: center;
   animation: evaluation-pop-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.25);
@@ -394,10 +399,10 @@ a.evaluation__button--primary:hover {
   height: 76px;
   place-items: center;
   border-radius: 50%;
-  background: #ffffff;
-  color: var(--color-accent-dark);
+  background: var(--color-white);
+  color: var(--color-accent-text);
   font-size: 2.2rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   animation: evaluation-pop-in 0.5s 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
 }
 
@@ -412,13 +417,13 @@ a.evaluation__button--primary:hover {
 .evaluation-dialog__body h2 {
   margin: 0;
   font-size: 1.4rem;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   line-height: 1.35;
 }
 
 .evaluation-dialog__body p {
   margin: 0;
-  color: #4d5555;
+  color: var(--color-neutral-700);
 }
 
 .evaluation-dialog__body img {
@@ -431,20 +436,21 @@ a.evaluation__button--primary:hover {
   padding: 0 28px;
   border: 0;
   border-radius: 10px;
-  background: #111111;
-  color: #ffffff;
+  background: var(--color-neutral-950);
+  color: var(--color-white);
   cursor: pointer;
   font: inherit;
   transition: background-color 0.15s ease;
 }
 
 .evaluation-dialog__button:hover {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
+  color: var(--color-on-accent);
 }
 
 .evaluation-dialog__hint {
   color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 @keyframes evaluation-rise {
@@ -508,7 +514,7 @@ a.evaluation__button--primary:hover {
   }
 
   .evaluation__header h1 {
-    font-size: 1.6rem;
+    font-size: var(--font-size-3xl);
   }
 
   .evaluation__details {

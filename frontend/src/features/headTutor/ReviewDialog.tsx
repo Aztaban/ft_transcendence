@@ -68,7 +68,7 @@ function ReviewDialog({
             onChange={(event) => setNote(event.target.value)}
           />
           <span className="review-dialog__count" aria-live="polite">
-            {note.length} / {NOTE_MAX_LENGTH}
+            {Array.from(note).length} / {NOTE_MAX_LENGTH}
           </span>
         </label>
 

@@ -61,6 +61,12 @@ export function listEligibilityRequests(
   );
 }
 
+// GET /api/v1/tutor-eligibility-requests/{id}/ (api-plan §10.3): the requester, Head Tutors and
+// Admins. Anyone else gets 404, like an unknown id (§5.5).
+export function getEligibilityRequest(id: number): Promise<EligibilityRequest> {
+  return apiRequest<EligibilityRequest>(`/api/v1/tutor-eligibility-requests/${id}/`);
+}
+
 export type EligibilityDecision = "approved" | "declined";
 
 export interface ReviewEligibilityRequestPayload {

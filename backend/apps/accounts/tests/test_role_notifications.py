@@ -9,6 +9,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
+from apps.audit.models import AuditLog
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 
@@ -122,6 +123,48 @@ def test_assign_notifies_the_user_after_commit(make_user, send, django_capture_o
             {"type": "user.event", "event": "role.changed", "data": {}},
         ),
     ]
+
+
+def test_self_assignment_keeps_audit_and_event_without_notification(
+    make_user, send, django_capture_on_commit_callbacks
+):
+    admin = make_user("admin@example.com", roles=(ADMIN, Role.Name.STUDENT))
+    browser = logged_in_browser(admin)
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = assign(browser, admin, TUTOR, **csrf_header(browser))
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {
+            "id": admin.pk,
+            "display_name": admin.display_name,
+            "avatar_url": None,
+            "roles": [
+                {"id": Role.objects.get(name=ADMIN).pk, "name": "admin"},
+                {"id": Role.objects.get(name="student").pk, "name": "student"},
+                {"id": Role.objects.get(name=TUTOR).pk, "name": "tutor"},
+            ],
+        }
+        send.assert_not_awaited()
+        assert admin.has_role(TUTOR)
+        assert not Notification.objects.exists()
+        assert list(
+            AuditLog.objects.values(
+                "actor_id", "action", "target_type", "target_id", "reason", "metadata"
+            )
+        ) == [
+            {
+                "actor_id": admin.pk,
+                "action": "role.assigned",
+                "target_type": "user",
+                "target_id": admin.pk,
+                "reason": "",
+                "metadata": {"role": "tutor"},
+            }
+        ]
+    assert len(callbacks) == 1
+    send.assert_awaited_once_with(
+        f"user_{admin.pk}", {"type": "user.event", "event": "role.changed", "data": {}}
+    )
 
 
 def test_revoke_notifies_the_user_after_commit(make_user, send, django_capture_on_commit_callbacks):

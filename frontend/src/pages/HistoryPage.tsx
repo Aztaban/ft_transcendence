@@ -119,6 +119,15 @@ function HistoryPage() {
     historyFilters.find((option) => option.value === filter) ?? historyFilters[0];
   const [project, setProject] = useState("");
   const [page, setPage] = useState(1);
+  // The workspace the page number belongs to. Another workspace is another history: it starts at
+  // page 1, set while rendering, so its first request never asks for a page it may not have
+  // (DRF answers 404 past the last page) (#772).
+  const [pageViewer, setPageViewer] = useState(viewer);
+
+  if (pageViewer !== viewer) {
+    setPageViewer(viewer);
+    setPage(1);
+  }
   const [projects, setProjects] = useState<ProjectRef[]>([]);
   const [requests, setRequests] = useState<EvaluationRequest[]>([]);
   const [total, setTotal] = useState(0);
