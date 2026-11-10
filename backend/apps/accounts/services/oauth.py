@@ -1,7 +1,8 @@
 """42 OAuth provider calls and verified identity persistence (api-plan §10.1)."""
 
 import json
-from urllib.error import HTTPError, URLError
+from http.client import HTTPException
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request as URLRequest
 from urllib.request import urlopen
@@ -52,7 +53,7 @@ def exchange_42_code_for_access_token(code):
     try:
         with urlopen(token_request, timeout=OAUTH_42_HTTP_TIMEOUT_SECONDS) as response:
             token_data = json.loads(response.read().decode("utf-8"))
-    except (HTTPError, URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError):
+    except (HTTPError, OSError, HTTPException, UnicodeDecodeError, json.JSONDecodeError):
         return None
 
     access_token = token_data.get("access_token") if isinstance(token_data, dict) else None
@@ -76,7 +77,7 @@ def retrieve_42_account_information(access_token):
     try:
         with urlopen(profile_request, timeout=OAUTH_42_HTTP_TIMEOUT_SECONDS) as response:
             profile_data = json.loads(response.read().decode("utf-8"))
-    except (HTTPError, URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError):
+    except (HTTPError, OSError, HTTPException, UnicodeDecodeError, json.JSONDecodeError):
         return None
 
     serializer = OAuth42ProfileSerializer(data=profile_data)
