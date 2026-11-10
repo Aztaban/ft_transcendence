@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
 import Notice from "../components/ui/Notice";
+import ProgressBar from "../components/ui/ProgressBar";
 import { ApiError } from "../api/client";
 import { createEvaluationRequest } from "../api/evaluationRequests";
 import i18n from "../i18n";
@@ -155,16 +156,13 @@ function CreateRequestPage() {
         </div>
       </header>
 
-      <div
+      <ProgressBar
         className="create-request__progress"
-        role="progressbar"
-        aria-label={t("createRequest.progress")}
-        aria-valuemin={1}
-        aria-valuemax={steps.length}
-        aria-valuenow={stepIndex + 1}
-      >
-        <span style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }} />
-      </div>
+        label={t("createRequest.progress")}
+        min={1}
+        max={steps.length}
+        value={stepIndex + 1}
+      />
 
       <div className="create-request__layout">
         <div className="create-request__body" key={stepId}>

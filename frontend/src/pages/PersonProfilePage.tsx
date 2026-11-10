@@ -10,6 +10,7 @@ import { getPublicUser } from "../api/users";
 import usePageTitle from "../components/layout/usePageTitle";
 import Avatar from "../components/ui/Avatar";
 import Icon, { type IconName } from "../components/ui/Icon";
+import ProgressBar from "../components/ui/ProgressBar";
 import RoleManager from "../features/people/RoleManager";
 import { isHitchhiker, roleBadges } from "../features/people/roleBadges";
 import i18n, { dateLocale } from "../i18n";
@@ -368,16 +369,13 @@ function PersonProfilePage() {
                     })}
                   </strong>
                 </div>
-                <div
+                <ProgressBar
                   className="person-profile__level-bar"
-                  role="progressbar"
-                  aria-label={t("person.levelAria")}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={percent}
-                >
-                  <span style={{ width: `${percent}%` }} />
-                </div>
+                  label={t("person.levelAria")}
+                  min={0}
+                  max={100}
+                  value={percent}
+                />
                 <span className="person-profile__level-percent">{percent}%</span>
               </div>
             )}

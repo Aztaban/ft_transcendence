@@ -73,7 +73,7 @@ function BaseLayout({ children }: BaseLayoutProps) {
         <main ref={mainRef} id="main-content" className="app-shell__content" tabIndex={-1}>
           {children}
         </main>
-        <Footer />
+        <Footer showDesignSystemLink />
       </div>
     </div>
   );

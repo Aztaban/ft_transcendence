@@ -185,6 +185,9 @@
 
 .ui-dialog__card {
   width: min(100%, 440px);
+  /* A tall popup scrolls inside the card on a small screen. */
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow-y: auto;
   padding: var(--space-6);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
@@ -315,5 +318,119 @@
 @media (prefers-reduced-motion: reduce) {
   .ui-skeleton__item {
     animation: none;
+  }
+}
+
+/* Design system C (#730): the look of EmptyState, Tabs, TextArea and ProgressBar when a page
+   passes no classes of its own. */
+
+/* EmptyState */
+.ui-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.ui-empty-state h2,
+.ui-empty-state h3,
+.ui-empty-state h4 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.ui-empty-state p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-empty-state__icon {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-2xl);
+}
+
+/* Tabs */
+.ui-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-tabs__tab {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-neutral-250);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font: inherit;
+}
+
+.ui-tabs__tab--selected {
+  border-color: var(--color-accent-text);
+  background: var(--color-accent-surface);
+  color: var(--color-accent-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ui-tabs__tab:focus-visible {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 2px;
+}
+
+/* TextArea */
+.ui-textarea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-medium);
+}
+
+.ui-textarea textarea {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: var(--font-weight-regular);
+  resize: vertical;
+}
+
+.ui-textarea textarea:focus-visible {
+  border-color: var(--color-accent-text);
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 1px;
+}
+
+.ui-textarea__count {
+  align-self: flex-end;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+/* ProgressBar */
+.ui-progress {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-neutral-150);
+}
+
+.ui-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-progress span {
+    transition: none;
   }
 }

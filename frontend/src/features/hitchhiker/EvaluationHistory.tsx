@@ -5,6 +5,7 @@ import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
 import ScrollableList from "../home/ScrollableList";
 import Skeleton from "../../components/ui/Skeleton";
+import EmptyState from "../../components/ui/EmptyState";
 
 interface EvaluationHistoryProps {
   requests: EvaluationRequest[];
@@ -53,13 +54,13 @@ function EvaluationHistory({ requests, viewer, isLoading = false }: EvaluationHi
           label={t("dashboard.loadingHistory")}
         />
       ) : history.length === 0 ? (
-        <div className="dashboard-empty">
-          <div className="dashboard-empty__history-mark" aria-hidden="true">
-            —
-          </div>
-          <h3>{t("history.emptyTitle")}</h3>
-          <p>{t("history.emptyText")}</p>
-        </div>
+        <EmptyState
+          className="dashboard-empty"
+          iconClassName="dashboard-empty__history-mark"
+          icon="—"
+          title={t("history.emptyTitle")}
+          text={t("history.emptyText")}
+        />
       ) : (
         <ScrollableList labelledBy="evaluation-history-title">
           {history.map((request) => {
