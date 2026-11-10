@@ -459,3 +459,7 @@ msgstr "Smazaný uživatel"
 #: apps/evaluations/admin.py
 msgid "This evaluation changed since you loaded it. Reload the page and try again."
 msgstr "Toto hodnocení se od načtení změnilo. Obnovte stránku a zkuste to znovu."
+
+#: apps/accounts/admin.py
+msgid "The student role cannot be revoked."
+msgstr "Roli studenta nelze odebrat."
