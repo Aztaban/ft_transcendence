@@ -135,3 +135,15 @@ button.notification-panel__entry:focus-visible {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Phones (#372): the bell is not at the right edge any more, so the panel opened under it would
+   start off the screen on the left. It spans the screen under the top bar instead. */
+@media (max-width: 480px) {
+  .notification-panel {
+    position: fixed;
+    top: calc(var(--topbar-height) + 8px);
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}
