@@ -534,9 +534,17 @@
 
 /* Phones: the filters stack and each row becomes a card with its column names. */
 @media (max-width: 640px) {
+  /* One column as wide as the screen: with wrapping on, a column would be as wide as its
+     content and stick out on a phone (#372). */
   .admin-users__filters {
     align-items: stretch;
     flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .admin-users__select select {
+    width: 100%;
+    min-width: 0;
   }
 
   .admin-users__table-wrap {
