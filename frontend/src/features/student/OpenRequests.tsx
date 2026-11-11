@@ -5,6 +5,7 @@ import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
 import ScrollableList from "../home/ScrollableList";
 import Skeleton from "../../components/ui/Skeleton";
+import EmptyState from "../../components/ui/EmptyState";
 
 interface OpenRequestsProps {
   requests: EvaluationRequest[];
@@ -37,13 +38,13 @@ function OpenRequests({ requests, isLoading = false }: OpenRequestsProps) {
           label={t("myRequests.loading")}
         />
       ) : openRequests.length === 0 ? (
-        <div className="dashboard-empty">
-          <div className="dashboard-empty__history-mark" aria-hidden="true">
-            —
-          </div>
-          <h3>{t("hitchhikerRequests.emptyTitle")}</h3>
-          <p>{t("dashboard.studentOpenEmpty")}</p>
-        </div>
+        <EmptyState
+          className="dashboard-empty"
+          iconClassName="dashboard-empty__history-mark"
+          icon="—"
+          title={t("hitchhikerRequests.emptyTitle")}
+          text={t("dashboard.studentOpenEmpty")}
+        />
       ) : (
         <ScrollableList labelledBy="open-requests-title">
           {openRequests.map((request) => (

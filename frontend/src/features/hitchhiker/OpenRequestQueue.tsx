@@ -4,6 +4,7 @@ import type { EvaluationRequest } from "../../types/evaluation";
 import { formatTimeAgo } from "../../utils/dateTime";
 import ScrollableList from "../home/ScrollableList";
 import Skeleton from "../../components/ui/Skeleton";
+import EmptyState from "../../components/ui/EmptyState";
 
 interface OpenRequestQueueProps {
   requests: EvaluationRequest[];
@@ -30,13 +31,13 @@ function OpenRequestQueue({ requests, isLoading = false }: OpenRequestQueueProps
           label={t("dashboard.loadingOpen")}
         />
       ) : openRequests.length === 0 ? (
-        <div className="dashboard-empty">
-          <div className="dashboard-empty__history-mark" aria-hidden="true">
-            —
-          </div>
-          <h3>{t("hitchhikerRequests.emptyTitle")}</h3>
-          <p>{t("dashboard.queueEmpty")}</p>
-        </div>
+        <EmptyState
+          className="dashboard-empty"
+          iconClassName="dashboard-empty__history-mark"
+          icon="—"
+          title={t("hitchhikerRequests.emptyTitle")}
+          text={t("dashboard.queueEmpty")}
+        />
       ) : (
         <ScrollableList labelledBy="open-request-queue-title">
           {openRequests.map((request) => (

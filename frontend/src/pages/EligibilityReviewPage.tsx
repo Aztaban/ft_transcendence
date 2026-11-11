@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import usePageTitle from "../components/layout/usePageTitle";
 import { initials } from "../components/ui/Avatar";
 import StatusPill, { type StatusTone } from "../components/ui/StatusPill";
+import Tabs from "../components/ui/Tabs";
 import { ApiError } from "../api/client";
 import {
   listEligibilityRequests,
@@ -206,33 +207,34 @@ function EligibilityReviewPage() {
         </div>
       </header>
 
-      <div className="eligibility-review__tabs" role="tablist" aria-label={t("review.tabsAria")}>
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            className={
-              tab === status
-                ? `eligibility-review__tab eligibility-review__tab--${tab} eligibility-review__tab--active`
-                : `eligibility-review__tab eligibility-review__tab--${tab}`
-            }
-            type="button"
-            role="tab"
-            aria-selected={tab === status}
-            onClick={() => {
-              setStatus(tab);
-              setPage(1);
-              setMoreFailed(false);
-              setMessage(null);
-              setPageError(null);
-            }}
-          >
-            {t(statusTexts[tab].tabKey)}
-            {tab === status && loadState === "ready" && (
-              <span className="eligibility-review__tab-count">{total}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        className="eligibility-review__tabs"
+        label={t("review.tabsAria")}
+        items={tabs.map((tab) => ({
+          id: tab,
+          label: (
+            <>
+              {t(statusTexts[tab].tabKey)}
+              {tab === status && loadState === "ready" && (
+                <span className="eligibility-review__tab-count">{total}</span>
+              )}
+            </>
+          ),
+        }))}
+        selected={status}
+        tabClassName={(tab, isSelected) =>
+          isSelected
+            ? `eligibility-review__tab eligibility-review__tab--${tab} eligibility-review__tab--active`
+            : `eligibility-review__tab eligibility-review__tab--${tab}`
+        }
+        onSelect={(tab) => {
+          setStatus(tab);
+          setPage(1);
+          setMoreFailed(false);
+          setMessage(null);
+          setPageError(null);
+        }}
+      />
 
       {message && (
         <p className="eligibility-review__message" role="status">

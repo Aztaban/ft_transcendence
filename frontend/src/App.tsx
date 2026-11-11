@@ -14,6 +14,7 @@ import CouncilInboxPage from "./pages/CouncilInboxPage";
 import CouncilMessagePage from "./pages/CouncilMessagePage";
 import CouncilPage from "./pages/CouncilPage";
 import CreateRequestPage from "./pages/CreateRequestPage";
+import DesignSystemPage from "./pages/DesignSystemPage";
 import { EligibilityRequestRoute } from "./pages/EligibilityRequestDetailPage";
 import EligibilityRequestPage from "./pages/EligibilityRequestPage";
 import EligibilityReviewPage from "./pages/EligibilityReviewPage";
@@ -260,6 +261,8 @@ function AuthenticatedApp() {
           }
         />
         <Route path="/projects/:slug" element={<ProjectDetailsPage />} />
+        {/* The design system (#730), linked from the footer: open to every workspace. */}
+        <Route path="/design-system" element={<DesignSystemPage />} />
         {LEGAL_PAGES.map((page) => (
           <Route key={page.path} path={page.path} element={<LegalPage kind={page.kind} />} />
         ))}
