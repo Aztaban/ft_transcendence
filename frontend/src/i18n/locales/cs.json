@@ -278,7 +278,11 @@
       "alreadyStarted": "Termín už začal, proto ho nelze uvolnit.",
       "changed": "Žádost se mezitím změnila, proto se nic neprovedlo. Zobrazuje se její aktuální stav.",
       "error": "Nepodařilo se to. Zkuste to prosím znovu."
-    }
+    },
+    "finished": "Hodnocení je dokončené",
+    "ended": "Hodnocení skončilo",
+    "resultPendingNotice": "Výsledek se tu objeví, jakmile bude zapsaný.",
+    "result": "Výsledek"
   },
   "pickSlot": {
     "back": "Zpět na žádosti",

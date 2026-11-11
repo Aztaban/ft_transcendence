@@ -16,6 +16,7 @@ import { makeRequest } from "../features/student/testUtils";
 import { LiveContext } from "../websocket/LiveProvider";
 import { FakeSocket, openLiveSocket } from "../websocket/testSocket";
 import EvaluationPage from "./EvaluationPage";
+import type { EvaluationRequest } from "../types/evaluation";
 
 // The viewer: the student of `makeRequest` (id 1) unless a test changes it, the workspaces their
 // real roles open (only the student one unless a test adds the Hitchhiker one) and their real
@@ -51,6 +52,13 @@ vi.mock("../api/evaluationRequests", () => ({
 vi.mock("../api/eligibility", () => ({ getTutorEligibility: vi.fn() }));
 
 const awaiting = makeRequest(7, "push_swap", "awaiting_confirmation");
+
+// A slot that is still ahead (#804): a confirmed evaluation in the past has ended.
+const AHEAD = { starts_at: "2099-01-10T09:00:00Z", ends_at: "2099-01-10T09:45:00Z" };
+
+function confirmedAhead(): EvaluationRequest {
+  return { ...makeRequest(7, "push_swap", "confirmed"), ...AHEAD };
+}
 
 afterEach(() => {
   viewer.id = 1;
@@ -95,7 +103,11 @@ describe("EvaluationPage", () => {
 
   it("accepts the slot and shows the popup, which goes back home", async () => {
     vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
-    vi.mocked(confirmEvaluationRequest).mockResolvedValue({ ...awaiting, status: "confirmed" });
+    vi.mocked(confirmEvaluationRequest).mockResolvedValue({
+      ...awaiting,
+      ...AHEAD,
+      status: "confirmed",
+    });
     renderPage();
     await screen.findByRole("heading", { name: "push_swap" });
 
@@ -257,6 +269,60 @@ describe("EvaluationPage link to the slot picking", () => {
     vi.mocked(getTutorEligibility).mockResolvedValue([minishell, pushSwap]);
   });
 
+  // #804: a confirmed evaluation is not always ahead; opened from a result notification it is over.
+  it.each([
+    ["passed", "Passed"],
+    ["failed", "Failed"],
+  ] as const)(
+    "shows a %s evaluation as finished, with its result and feedback",
+    async (result, label) => {
+      vi.mocked(getEvaluationRequest).mockResolvedValue({
+        ...makeRequest(7, "push_swap", "confirmed"),
+        result,
+        feedback: "Clean code, good tests.",
+        completed_at: "2026-10-12T16:00:00Z",
+        is_history: true,
+      });
+      renderPage();
+
+      expect(
+        await screen.findByRole("heading", { level: 1, name: "The evaluation is finished" }),
+      ).toBeTruthy();
+      expect(screen.getByText(label, { selector: ".evaluation__pill" })).toBeTruthy();
+      expect(screen.getByRole("heading", { level: 3, name: `Result: ${label}` })).toBeTruthy();
+      expect(screen.getByText("Clean code, good tests.")).toBeTruthy();
+      expect(screen.queryByText(/Please be on time/)).toBeNull();
+      expect(screen.queryByText("Scheduled")).toBeNull();
+    },
+  );
+
+  it("says an evaluation that has ended waits for its result, without the tip", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "confirmed"));
+    renderPage();
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "The evaluation has ended" }),
+    ).toBeTruthy();
+    expect(screen.getByText("Result pending", { selector: ".evaluation__pill" })).toBeTruthy();
+    expect(screen.getByText("The result will appear here once it is recorded.")).toBeTruthy();
+    expect(screen.queryByText(/Please be on time/)).toBeNull();
+  });
+
+  it("marks an evaluation that is running now as in progress", async () => {
+    vi.mocked(getEvaluationRequest).mockResolvedValue({
+      ...makeRequest(7, "push_swap", "confirmed"),
+      starts_at: new Date(Date.now() - 10 * 60_000).toISOString(),
+      ends_at: new Date(Date.now() + 35 * 60_000).toISOString(),
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Your evaluation is scheduled" }),
+    ).toBeTruthy();
+    expect(screen.getByText("In progress", { selector: ".evaluation__pill" })).toBeTruthy();
+    expect(screen.getByText(/Please be on time/)).toBeTruthy();
+  });
+
   it("names the Hitchhiker once the student has confirmed", async () => {
     vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "confirmed"));
 
@@ -335,7 +401,7 @@ describe("EvaluationPage link to the slot picking", () => {
   it("does not offer it once the request is no longer pending", async () => {
     viewer.id = 9;
     viewer.workspaces = ["STUDENT", "HITCHHIKER"];
-    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "confirmed"));
+    vi.mocked(getEvaluationRequest).mockResolvedValue(confirmedAhead());
     renderPage();
 
     await screen.findByRole("heading", { name: "The evaluation is scheduled" });
@@ -574,7 +640,7 @@ describe("EvaluationPage for the picking Hitchhiker", () => {
 
   it("uses neutral words for someone who is neither the student nor the Hitchhiker", async () => {
     viewer.id = 9;
-    vi.mocked(getEvaluationRequest).mockResolvedValue(makeRequest(7, "push_swap", "confirmed"));
+    vi.mocked(getEvaluationRequest).mockResolvedValue(confirmedAhead());
     renderPage();
 
     expect(

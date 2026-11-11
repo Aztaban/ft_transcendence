@@ -274,7 +274,11 @@
       "alreadyStarted": "El horario ya empezó, así que no se puede liberar.",
       "changed": "La solicitud cambió mientras tanto, así que no se hizo nada. Se muestra su estado actual.",
       "error": "No funcionó. Inténtalo de nuevo."
-    }
+    },
+    "finished": "La evaluación está completada",
+    "ended": "La evaluación ha terminado",
+    "resultPendingNotice": "El resultado aparecerá aquí cuando se registre.",
+    "result": "Resultado"
   },
   "pickSlot": {
     "back": "Volver a las solicitudes",
