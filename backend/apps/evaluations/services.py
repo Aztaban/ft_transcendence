@@ -12,9 +12,9 @@ from apps.accounts.services.locking import lock_users
 from apps.audit.models import AuditLog
 from apps.audit.services import record_audit
 
+from .eligibility import eligible_hitchhiker_ids
 from .events import (
     EvaluationEvent,
-    _eligible_hitchhiker_ids,
     publish_cancelled_event,
     publish_created_event,
     publish_declined_event,
@@ -92,22 +92,27 @@ def history_filter(at):
     )
 
 
+def active_filter(at):
+    """Pending, awaiting confirmation, or confirmed and not yet ended (api-plan §7.1)."""
+    return Q(
+        status__in=(
+            EvaluationRequest.Status.PENDING,
+            EvaluationRequest.Status.AWAITING_CONFIRMATION,
+        )
+    ) | Q(status=EvaluationRequest.Status.CONFIRMED, ends_at__gt=at)
+
+
 @transaction.atomic
 def create_request(student, project, note):
-    recipient_ids = list(_eligible_hitchhiker_ids(project.pk))
+    recipient_ids = list(eligible_hitchhiker_ids(project.pk))
     lock_users(student.pk, *recipient_ids)
     student = get_user_model().objects.get(pk=student.pk)
     if not student.is_active:
         raise NotAuthenticated()
     # Membership may have changed while waiting. Only retain recipients whose
     # rows were locked up front; never acquire a newly discovered user out of order.
-    recipient_ids = list(_eligible_hitchhiker_ids(project.pk).filter(tutor_id__in=recipient_ids))
-    active = Q(
-        status__in=(
-            EvaluationRequest.Status.PENDING,
-            EvaluationRequest.Status.AWAITING_CONFIRMATION,
-        )
-    ) | Q(status=EvaluationRequest.Status.CONFIRMED, ends_at__gt=timezone.now())
+    recipient_ids = list(eligible_hitchhiker_ids(project.pk).filter(tutor_id__in=recipient_ids))
+    active = active_filter(timezone.now())
     if EvaluationRequest.objects.filter(active, student=student, project=project).exists():
         raise ActiveRequestExists()
     evaluation = EvaluationRequest.objects.create(student=student, project=project, note=note)

@@ -2,7 +2,6 @@
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -22,13 +21,17 @@ from apps.audit.services import record_audit
 from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
-from apps.evaluations.eligibility import list_approved_projects_for_tutor
+from apps.evaluations.eligibility import (
+    list_approved_projects_for_tutor,
+    visible_eligibility_requests,
+)
 from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
 from apps.evaluations.notifications import (
     notify_eligibility_decided,
     notify_eligibility_requested,
     notify_eligibility_revoked,
 )
+from apps.evaluations.permissions import OVERRIDE_ROLES
 from apps.evaluations.references import ProjectRefSerializer
 from apps.evaluations.serializers.eligibility import (
     EligibilityRequestCreateSerializer,
@@ -62,22 +65,9 @@ _ELIGIBILITY_REQUEST_ORDERINGS = frozenset({"created_at", "-created_at"})
 
 _ELIGIBILITY_REQUEST_STATUSES = frozenset(TutorEligibilityRequest.Status.values)
 
-_ELIGIBILITY_REQUEST_SEE_ALL = frozenset({Role.Name.HEAD_TUTOR, Role.Name.ADMIN})
-
-
-def _visible_eligibility_requests(user):
-    """Requests this user may see. Anyone else gets 404 on detail (api-plan §10.3)."""
-    projects = Prefetch("projects", queryset=Project.objects.order_by("name"))
-    qs = TutorEligibilityRequest.objects.select_related(
-        "requester", "reviewed_by"
-    ).prefetch_related(projects)
-    if not user.roles.filter(name__in=_ELIGIBILITY_REQUEST_SEE_ALL).exists():
-        qs = qs.filter(requester=user)
-    return qs
-
 
 def _list_eligibility_requests(request):
-    qs = _visible_eligibility_requests(request.user)
+    qs = visible_eligibility_requests(request.user)
 
     status_param = request.query_params.get("status")
     if status_param is not None:
@@ -252,7 +242,7 @@ def tutor_eligibility_request_list(request):
 def tutor_eligibility_request_detail(request, request_id):
     """One eligibility request (api-plan §10.3). Hidden from anyone who may not see it."""
     eligibility_request = get_object_or_404(
-        _visible_eligibility_requests(request.user), pk=request_id
+        visible_eligibility_requests(request.user), pk=request_id
     )
     return Response(EligibilityRequestSerializer(eligibility_request).data)
 
@@ -279,7 +269,7 @@ def tutor_eligibility_request_detail(request, request_id):
 @permission_classes([IsAuthenticated])
 def tutor_eligibility_request_review(request, request_id):
     """Approve or decline one eligibility request (api-plan §10.3, #176/#177)."""
-    if not request.user.roles.filter(name__in=_ELIGIBILITY_REQUEST_SEE_ALL).exists():
+    if not request.user.roles.filter(name__in=OVERRIDE_ROLES).exists():
         raise PermissionDenied(
             _("You do not have permission to perform this action."),
             code="permission_denied",
@@ -366,7 +356,7 @@ def tutor_eligibility_request_review(request, request_id):
 @permission_classes([IsAuthenticated])
 def revoke_tutor_eligibility(request, slug, tutor_id):
     """Delete one Hitchhiker's eligibility for a project (api-plan §10.3)."""
-    if not request.user.roles.filter(name__in=_ELIGIBILITY_REQUEST_SEE_ALL).exists():
+    if not request.user.roles.filter(name__in=OVERRIDE_ROLES).exists():
         raise PermissionDenied(
             _("You do not have permission to perform this action."),
             code="permission_denied",

@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import Role
-from apps.evaluations.events import _eligible_hitchhiker_ids
+from apps.evaluations.eligibility import eligible_hitchhiker_ids
 from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
 from apps.evaluations.notifications import notify_evaluation_expired
 from apps.evaluations.services import create_request, edit_note, release_slot
@@ -45,7 +45,7 @@ def participants():
 
 def test_eligible_hitchhikers_query_returns_each_active_hitchhiker_once(participants):
     project, _ = participants
-    assert list(_eligible_hitchhiker_ids(project.pk)) == [43]
+    assert list(eligible_hitchhiker_ids(project.pk)) == [43]
 
 
 @pytest.mark.parametrize(

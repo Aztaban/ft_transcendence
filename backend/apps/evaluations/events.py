@@ -3,9 +3,9 @@
 from collections.abc import Iterable
 from enum import StrEnum
 
-from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.core.events import publish_user_event
-from apps.evaluations.models import EvaluationRequest, TutorEligibility
+from apps.evaluations.eligibility import eligible_hitchhiker_ids
+from apps.evaluations.models import EvaluationRequest
 
 
 class EvaluationEvent(StrEnum):
@@ -30,19 +30,6 @@ def publish_evaluation_event(
     )
 
 
-def _eligible_hitchhiker_ids(project_id: int):
-    """Eligibility rows are inert without an active account and Hitchhiker role."""
-    return (
-        TutorEligibility.objects.filter(
-            project_id=project_id,
-            tutor__status="active",
-            tutor__roles__name__in=HITCHHIKER_ROLES,
-        )
-        .values_list("tutor_id", flat=True)
-        .distinct()
-    )
-
-
 def publish_created_event(evaluation: EvaluationRequest, *, user_ids: Iterable[int]) -> None:
     """Refresh eligible Hitchhikers' queues when a request appears."""
     publish_evaluation_event(
@@ -58,7 +45,7 @@ def publish_updated_event(evaluation: EvaluationRequest) -> None:
     if evaluation.picked_by_id is not None:
         recipients.append(evaluation.picked_by_id)
     if evaluation.status == EvaluationRequest.Status.PENDING:
-        recipients.extend(_eligible_hitchhiker_ids(evaluation.project_id))
+        recipients.extend(eligible_hitchhiker_ids(evaluation.project_id))
     publish_evaluation_event(EvaluationEvent.UPDATED, evaluation, user_ids=recipients)
 
 
@@ -73,7 +60,7 @@ def publish_released_event(
             [
                 evaluation.student_id,
                 previous_picker_id,
-                *_eligible_hitchhiker_ids(evaluation.project_id),
+                *eligible_hitchhiker_ids(evaluation.project_id),
             ]
         )
         - set(exclude_user_ids),
@@ -88,7 +75,7 @@ def publish_slot_picked_event(evaluation: EvaluationRequest) -> None:
         user_ids=[
             evaluation.student_id,
             evaluation.picked_by_id,
-            *_eligible_hitchhiker_ids(evaluation.project_id),
+            *eligible_hitchhiker_ids(evaluation.project_id),
         ],
     )
 
@@ -101,7 +88,7 @@ def publish_declined_event(evaluation: EvaluationRequest, *, previous_picker_id:
         user_ids=[
             evaluation.student_id,
             previous_picker_id,
-            *_eligible_hitchhiker_ids(evaluation.project_id),
+            *eligible_hitchhiker_ids(evaluation.project_id),
         ],
     )
 
@@ -114,7 +101,7 @@ def publish_cancelled_event(
     if evaluation.picked_by_id is not None:
         recipients.append(evaluation.picked_by_id)
     if previous_status == EvaluationRequest.Status.PENDING:
-        recipients.extend(_eligible_hitchhiker_ids(evaluation.project_id))
+        recipients.extend(eligible_hitchhiker_ids(evaluation.project_id))
     publish_evaluation_event(
         EvaluationEvent.CANCELLED, evaluation, user_ids=set(recipients) - set(exclude_user_ids)
     )
@@ -128,5 +115,5 @@ def publish_expired_event(
     if previous_picker_id is not None:
         recipients.append(previous_picker_id)
     if previous_status == EvaluationRequest.Status.PENDING:
-        recipients.extend(_eligible_hitchhiker_ids(evaluation.project_id))
+        recipients.extend(eligible_hitchhiker_ids(evaluation.project_id))
     publish_evaluation_event(EvaluationEvent.EXPIRED, evaluation, user_ids=recipients)
