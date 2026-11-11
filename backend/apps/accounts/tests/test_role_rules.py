@@ -1,7 +1,11 @@
 """Role assignment and revocation follow api-plan §5.8; errors use the §5.5 envelope."""
 
+import re
+
 import pytest
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -250,9 +254,14 @@ def test_assign_through_a_session_needs_the_csrf_token():
     assert_role_audit(admin, "role.assigned", target, TUTOR)
 
 
-def test_revoke_through_a_session_needs_the_csrf_token():
-    admin = make_user("admin@example.com", ADMIN)
-    target = make_user("target@example.com", TUTOR)
+@pytest.mark.parametrize("target_created_first", [False, True])
+def test_revoke_through_a_session_locks_users_before_deleting(target_created_first):
+    if target_created_first:
+        target = make_user("target@example.com", TUTOR)
+        admin = make_user("admin@example.com", ADMIN)
+    else:
+        admin = make_user("admin@example.com", ADMIN)
+        target = make_user("target@example.com", TUTOR)
     browser = logged_in_browser(admin)
     role = Role.objects.get(name=TUTOR)
     url = reverse("api:users-revoke-role", kwargs={"user_id": target.id, "role_id": role.id})
@@ -262,7 +271,22 @@ def test_revoke_through_a_session_needs_the_csrf_token():
     assert without.json()["error"]["code"] == "csrf_failed"
     assert not AuditLog.objects.exists()
 
-    with_token = browser.delete(url, **csrf_header(browser))
+    with CaptureQueriesContext(connection) as captured:
+        with_token = browser.delete(url, **csrf_header(browser))
     assert with_token.status_code == status.HTTP_204_NO_CONTENT
+    assert with_token.content == b""
     assert not target.has_role(TUTOR)
     assert_role_audit(admin, "role.revoked", target, TUTOR)
+
+    queries = [query["sql"] for query in captured]
+    lock_index = next(index for index, sql in enumerate(queries) if "FOR UPDATE" in sql)
+    delete_index = next(
+        index for index, sql in enumerate(queries) if sql.startswith("DELETE FROM `user_roles`")
+    )
+    assert lock_index < delete_index
+    lock_sql = queries[lock_index]
+    assert "FROM `user`" in lock_sql
+    assert "ORDER BY `user`.`id` ASC" in lock_sql
+    locked_ids = re.search(r"IN \(([\d, ]+)\)", lock_sql)
+    assert locked_ids is not None
+    assert {int(value) for value in locked_ids.group(1).split(",")} == {admin.pk, target.pk}
