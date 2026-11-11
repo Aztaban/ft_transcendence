@@ -11,8 +11,30 @@
 
 .create-request__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 16px;
+}
+
+.create-request__jump {
+  margin-left: auto;
+  padding: 8px 14px;
+  border: 1px solid var(--color-neutral-250);
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-accent-text);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.create-request__jump:hover {
+  border-color: var(--color-accent-text);
+}
+
+.create-request__jump:focus-visible {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 2px;
 }
 
 .create-request__header h1 {
