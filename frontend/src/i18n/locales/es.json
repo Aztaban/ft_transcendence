@@ -56,6 +56,7 @@
   },
   "common": {
     "backToHome": "Volver al inicio",
+    "back": "Volver",
     "clickToClose": "Haz clic en cualquier sitio para cerrar",
     "close": "Cerrar",
     "cancel": "Cancelar",

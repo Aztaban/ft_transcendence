@@ -56,6 +56,7 @@
   },
   "common": {
     "backToHome": "Back to home",
+    "back": "Back",
     "clickToClose": "Click anywhere to close",
     "close": "Close",
     "cancel": "Cancel",

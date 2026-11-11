@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
+import BackLink from "../components/layout/BackLink";
 import usePageTitle from "../components/layout/usePageTitle";
 import ReasonDialog from "../components/ui/ReasonDialog";
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
@@ -406,9 +407,7 @@ function EvaluationPage() {
 
   return (
     <section className="evaluation">
-      <Link className="evaluation__back" to="/">
-        <span aria-hidden="true">‹</span> {t("common.backToHome")}
-      </Link>
+      <BackLink className="evaluation__back" />
 
       {loadState === "loading" && <div className="evaluation__skeleton" aria-busy="true" />}
 

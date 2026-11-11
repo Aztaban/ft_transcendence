@@ -340,4 +340,18 @@ describe("Sidebar role menu keyboard", () => {
     expect(button.textContent).toBe("HITCHHIKER");
     expect(document.activeElement).toBe(button);
   });
+
+  // #374: a person's profile belongs to the Hitchhikers item.
+  test("keeps Hitchhikers highlighted on a person's profile", () => {
+    renderSidebar("/people/2");
+
+    expect(
+      screen
+        .getByRole("link", { name: "Hitchhikers" })
+        .classList.contains("sidebar__nav-link--active"),
+    ).toBe(true);
+    expect(
+      screen.getByRole("link", { name: "Home" }).classList.contains("sidebar__nav-link--active"),
+    ).toBe(false);
+  });
 });

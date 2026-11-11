@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { NavLink, useNavigate } from "react-router";
+import { NavLink, useLocation, useNavigate } from "react-router";
 
 import logo42 from "../../assets/figma/42.svg";
 import sidebarLine from "../../assets/figma/sidebar-line.svg";
@@ -18,6 +18,8 @@ interface NavigationItem {
   labelKey: string;
   to: string;
   icon: IconName;
+  // Other pages that belong to this item, by path prefix: it stays highlighted on them (#374).
+  alsoActiveOn?: string[];
 }
 
 const navigationByRole: Record<AppRole, NavigationItem[]> = {
@@ -26,7 +28,13 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
     { labelKey: "nav.request", to: "/requests", icon: "request" },
     { labelKey: "nav.pending", to: "/pending", icon: "pending" },
     { labelKey: "nav.history", to: "/history", icon: "history" },
-    { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: "hitchhikers" },
+    {
+      labelKey: "nav.hitchhikers",
+      to: "/hitchhikers",
+      icon: "hitchhikers",
+      // A person's profile is opened from the Hitchhikers list or the people search.
+      alsoActiveOn: ["/people/"],
+    },
     { labelKey: "nav.profile", to: "/profile", icon: "profile" },
     { labelKey: "nav.studentCouncil", to: "/council", icon: "studentCouncil" },
   ],
@@ -44,7 +52,13 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
     { labelKey: "nav.home", to: "/", icon: "home" },
     { labelKey: "nav.messages", to: "/council/inbox", icon: "studentCouncil" },
     { labelKey: "nav.history", to: "/council/history", icon: "history" },
-    { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: "hitchhikers" },
+    {
+      labelKey: "nav.hitchhikers",
+      to: "/hitchhikers",
+      icon: "hitchhikers",
+      // A person's profile is opened from the Hitchhikers list or the people search.
+      alsoActiveOn: ["/people/"],
+    },
   ],
 
   // The Admin pages live under /manage/ (/admin/ belongs to the Django admin). No Home: in this
@@ -78,6 +92,7 @@ function Sidebar({ isOpen = false }: SidebarProps) {
   const { activeRole, setActiveRole, availableRoles } = useRole();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
@@ -192,7 +207,12 @@ function Sidebar({ isOpen = false }: SidebarProps) {
                 visibleNavigation.some((other) => other.to.startsWith(`${item.to}/`))
               }
               className={({ isActive }) =>
-                ["sidebar__nav-link", isActive ? "sidebar__nav-link--active" : ""]
+                [
+                  "sidebar__nav-link",
+                  isActive || item.alsoActiveOn?.some((path) => pathname.startsWith(path))
+                    ? "sidebar__nav-link--active"
+                    : "",
+                ]
                   .filter(Boolean)
                   .join(" ")
               }

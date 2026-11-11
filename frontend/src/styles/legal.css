@@ -68,6 +68,18 @@
   margin-bottom: var(--space-2);
 }
 
+.legal-page__return {
+  display: inline-block;
+  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  text-decoration: none;
+}
+
+.legal-page__return:hover {
+  color: var(--color-accent-text);
+}
+
 .legal-page__back {
   display: inline-block;
   margin-top: var(--space-8);
