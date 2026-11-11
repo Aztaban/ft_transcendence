@@ -19,7 +19,8 @@
     "eligibility": "Elegibilidad",
     "users": "Usuarios",
     "exceptions": "Excepciones",
-    "skipToContent": "Saltar al contenido"
+    "skipToContent": "Saltar al contenido",
+    "auditLog": "Registro de auditoría"
   },
   "workspace": {
     "select": "Elegir rol",
@@ -1361,5 +1362,84 @@
     "charactersLeft_many": "Quedan {{count}} caracteres",
     "charactersLeft_other": "Quedan {{count}} caracteres",
     "footerLink": "Sistema de diseño"
+  },
+  "auditLog": {
+    "title": "Registro de auditoría",
+    "subtitle": "Cada acción sensible: quién la hizo, cuándo, sobre qué y por qué. Las entradas no se pueden cambiar ni borrar.",
+    "action": "Acción",
+    "allActions": "Todas las acciones",
+    "target": "Objeto",
+    "allTargets": "Todos los objetos",
+    "from": "Desde",
+    "to": "Hasta",
+    "when": "Cuándo",
+    "who": "Quién",
+    "what": "Qué",
+    "details": "Detalles",
+    "tableAria": "Entradas de auditoría",
+    "loading": "Cargando el registro de auditoría…",
+    "loadError": "No se pudo cargar el registro de auditoría. Inténtalo de nuevo.",
+    "empty": "Todavía no hay entradas",
+    "emptyText": "Aquí aparecerán las acciones sensibles, como cambios de rol, suspensiones o mensajes del consejo eliminados.",
+    "emptyFiltered": "Ninguna entrada coincide con estos filtros",
+    "clearFilters": "Quitar filtros",
+    "deletedActor": "Una cuenta eliminada",
+    "byActor": "Por {{name}}",
+    "removeActor": "Quitar el filtro por {{name}}",
+    "removeTarget": "Quitar el filtro de {{target}}",
+    "filterByActor": "Mostrar solo las acciones de {{name}}",
+    "filterByTarget": "Mostrar solo las entradas sobre {{target}}",
+    "open": "Abrir",
+    "openAria": "Abrir {{target}}",
+    "targetLabel": "{{type}} n.º {{id}}",
+    "roleDetail": "Rol: {{role}}",
+    "changed": "Cambiado: {{fields}}",
+    "decision": {
+      "approved": "Aprobada",
+      "declined": "Rechazada"
+    },
+    "fields": {
+      "display_name": "nombre visible",
+      "email": "correo",
+      "language": "idioma"
+    },
+    "total_one": "{{count}} entrada",
+    "total_many": "{{count}} entradas",
+    "total_other": "{{count}} entradas",
+    "page": "Página {{page}} de {{pages}}",
+    "pagesAria": "Páginas del registro de auditoría",
+    "unknownAction": "Otra acción",
+    "unknownTarget": "Otro",
+    "actions": {
+      "role": {
+        "assigned": "Rol asignado",
+        "revoked": "Rol retirado"
+      },
+      "user": {
+        "updated": "Cuenta editada",
+        "suspended": "Cuenta suspendida",
+        "reactivated": "Cuenta reactivada",
+        "deleted": "Cuenta eliminada"
+      },
+      "eligibility": {
+        "reviewed": "Solicitud de elegibilidad revisada",
+        "revoked": "Elegibilidad retirada"
+      },
+      "evaluation": {
+        "released_by_override": "Horario liberado por intervención",
+        "cancelled_by_override": "Evaluación cancelada por intervención"
+      },
+      "sc_message": {
+        "sender_revealed": "Remitente de un mensaje al consejo revelado",
+        "deleted": "Mensaje al consejo eliminado"
+      }
+    },
+    "targets": {
+      "user": "Usuario",
+      "evaluation_request": "Evaluación",
+      "tutor_eligibility_request": "Solicitud de elegibilidad",
+      "tutor_eligibility": "Elegibilidad",
+      "sc_message": "Mensaje al consejo"
+    }
   }
 }

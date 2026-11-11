@@ -19,7 +19,8 @@
     "eligibility": "Oprávnění",
     "users": "Uživatelé",
     "exceptions": "Výjimky",
-    "skipToContent": "Přeskočit na obsah"
+    "skipToContent": "Přeskočit na obsah",
+    "auditLog": "Auditní záznam"
   },
   "workspace": {
     "select": "Vybrat roli",
@@ -1359,5 +1360,85 @@
     "charactersLeft_many": "Zbývá {{count}} znaku",
     "charactersLeft_other": "Zbývá {{count}} znaků",
     "footerLink": "Design systém"
+  },
+  "auditLog": {
+    "title": "Auditní záznam",
+    "subtitle": "Každá citlivá akce: kdo ji provedl, kdy, čeho se týkala a proč. Záznamy nejde změnit ani smazat.",
+    "action": "Akce",
+    "allActions": "Všechny akce",
+    "target": "Cíl",
+    "allTargets": "Všechny cíle",
+    "from": "Od",
+    "to": "Do",
+    "when": "Kdy",
+    "who": "Kdo",
+    "what": "Co",
+    "details": "Podrobnosti",
+    "tableAria": "Auditní záznamy",
+    "loading": "Načítám auditní záznam…",
+    "loadError": "Auditní záznam se nepodařilo načíst. Zkuste to prosím znovu.",
+    "empty": "Zatím žádné záznamy",
+    "emptyText": "Objeví se tu citlivé akce, například změny rolí, pozastavení účtů nebo smazané zprávy radě.",
+    "emptyFiltered": "Těmto filtrům neodpovídá žádný záznam",
+    "clearFilters": "Zrušit filtry",
+    "deletedActor": "Smazaný účet",
+    "byActor": "Provedl(a) {{name}}",
+    "removeActor": "Zrušit filtr podle {{name}}",
+    "removeTarget": "Zrušit filtr {{target}}",
+    "filterByActor": "Zobrazit jen akce uživatele {{name}}",
+    "filterByTarget": "Zobrazit jen záznamy o {{target}}",
+    "open": "Otevřít",
+    "openAria": "Otevřít {{target}}",
+    "targetLabel": "{{type}} č. {{id}}",
+    "roleDetail": "Role: {{role}}",
+    "changed": "Změněno: {{fields}}",
+    "decision": {
+      "approved": "Schváleno",
+      "declined": "Zamítnuto"
+    },
+    "fields": {
+      "display_name": "zobrazované jméno",
+      "email": "e-mail",
+      "language": "jazyk"
+    },
+    "total_one": "{{count}} záznam",
+    "total_few": "{{count}} záznamy",
+    "total_many": "{{count}} záznamu",
+    "total_other": "{{count}} záznamů",
+    "page": "Strana {{page}} z {{pages}}",
+    "pagesAria": "Stránky auditního záznamu",
+    "unknownAction": "Jiná akce",
+    "unknownTarget": "Jiný cíl",
+    "actions": {
+      "role": {
+        "assigned": "Role přidělena",
+        "revoked": "Role odebrána"
+      },
+      "user": {
+        "updated": "Účet upraven",
+        "suspended": "Účet pozastaven",
+        "reactivated": "Účet obnoven",
+        "deleted": "Účet smazán"
+      },
+      "eligibility": {
+        "reviewed": "Žádost o oprávnění posouzena",
+        "revoked": "Oprávnění odebráno"
+      },
+      "evaluation": {
+        "released_by_override": "Termín uvolněn zásahem",
+        "cancelled_by_override": "Hodnocení zrušeno zásahem"
+      },
+      "sc_message": {
+        "sender_revealed": "Odhalen odesílatel zprávy radě",
+        "deleted": "Zpráva radě smazána"
+      }
+    },
+    "targets": {
+      "user": "Uživatel",
+      "evaluation_request": "Hodnocení",
+      "tutor_eligibility_request": "Žádost o oprávnění",
+      "tutor_eligibility": "Oprávnění",
+      "sc_message": "Zpráva radě"
+    }
   }
 }
