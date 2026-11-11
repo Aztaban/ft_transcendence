@@ -57,7 +57,22 @@ describe("workspacesFor", () => {
   });
 
   it("gives Admins the Student Council workspace, where they read and moderate messages", () => {
-    expect(workspacesFor(["student", "admin"])).toEqual(["STUDENT", "COUNCIL"]);
+    expect(workspacesFor(["student", "admin"])).toContain("COUNCIL");
+  });
+
+  it("opens the Admin workspace only for the admin role", () => {
+    expect(workspacesFor(["student", "admin"])).toEqual(["STUDENT", "COUNCIL", "ADMIN"]);
+    expect(workspacesFor(["student", "tutor", "head_tutor", "sc_member", "admin"])).toEqual([
+      "STUDENT",
+      "HITCHHIKER",
+      "COUNCIL",
+      "ADMIN",
+    ]);
+    expect(workspacesFor(["student", "tutor", "head_tutor", "sc_member"])).toEqual([
+      "STUDENT",
+      "HITCHHIKER",
+      "COUNCIL",
+    ]);
   });
 });
 
@@ -69,7 +84,7 @@ describe("RoleProvider", () => {
       </RoleProvider>,
     );
 
-    expect(screen.getByText("available: STUDENT,HITCHHIKER,COUNCIL")).toBeTruthy();
+    expect(screen.getByText("available: STUDENT,HITCHHIKER,COUNCIL,ADMIN")).toBeTruthy();
   });
 
   it("offers only the workspaces of the user's roles", () => {
@@ -155,7 +170,7 @@ describe("RoleProvider after a reload", () => {
   });
 
   it("ignores a saved value that is not a workspace", () => {
-    sessionStorage.setItem("active-role", "ADMIN");
+    sessionStorage.setItem("active-role", "MODERATOR");
     renderProvider();
 
     expect(screen.getByText("active: STUDENT")).toBeTruthy();

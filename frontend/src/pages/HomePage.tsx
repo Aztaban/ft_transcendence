@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
+import { Link, Navigate } from "react-router";
 
 import type { ListEvaluationRequestsParams } from "../api/evaluationRequests";
 import usePageTitle from "../components/layout/usePageTitle";
@@ -20,6 +20,7 @@ import { useCurrentUser } from "../store/CurrentUserContext";
 import { useRole, workspacesFor, type AppRole } from "../store/RoleContext";
 import { formatSlotStart } from "../utils/dateTime";
 import { EVALUATION_EVENTS, OPEN_QUEUE_EVENTS } from "../websocket/events";
+import Skeleton from "../components/ui/Skeleton";
 import "../styles/dashboard.css";
 
 // A box of the overview row. `label` is a key of the "home" texts in src/i18n/locales.
@@ -77,7 +78,8 @@ const hitchhikerQueries = {
   done: { scope: "picked", status: ["confirmed"], history: true },
 } satisfies Record<string, ListEvaluationRequestsParams>;
 
-const subtitles: Record<AppRole, string> = {
+// No Administration banner: HomePage sends that workspace to Users before it is shown.
+const subtitles: Record<Exclude<AppRole, "ADMIN">, string> = {
   STUDENT: "home.bannerStudent",
   HITCHHIKER: "home.bannerHitchhiker",
   COUNCIL: "home.bannerCouncil",
@@ -319,11 +321,11 @@ function CouncilDashboard() {
           <h2 id="council-messages-title">{t("home.messages")}</h2>
 
           {isLoading ? (
-            <div className="dashboard-requests" aria-busy="true">
-              <div className="dashboard-requests__skeleton" />
-              <div className="dashboard-requests__skeleton" />
-              <span className="dashboard-requests__sr-only">{t("council.loadingMessages")}</span>
-            </div>
+            <Skeleton
+              className="dashboard-requests"
+              itemClassName="dashboard-requests__skeleton"
+              label={t("council.loadingMessages")}
+            />
           ) : unread.length === 0 ? (
             <div className="dashboard-empty">
               <div className="dashboard-empty__history-mark" aria-hidden="true">
@@ -371,6 +373,12 @@ function HomePage() {
 
   usePageTitle(t("nav.home"));
   const { activeRole } = useRole();
+
+  // The Administration workspace has no Home of its own and opens on Users. `replace` keeps the
+  // Back button from returning here and being sent forward again.
+  if (activeRole === "ADMIN") {
+    return <Navigate to="/manage/users" replace />;
+  }
 
   return (
     <section className="dashboard">

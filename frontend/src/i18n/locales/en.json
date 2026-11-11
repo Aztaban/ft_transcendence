@@ -17,13 +17,16 @@
     "studentCouncil": "Student Council",
     "messages": "Messages",
     "eligibility": "Eligibility",
+    "users": "Users",
+    "exceptions": "Exceptions",
     "skipToContent": "Skip to content"
   },
   "workspace": {
     "select": "Select role",
     "STUDENT": "STUDENT",
     "HITCHHIKER": "HITCHHIKER",
-    "COUNCIL": "COUNCIL"
+    "COUNCIL": "COUNCIL",
+    "ADMIN": "ADMIN"
   },
   "sidebar": {
     "logout": "Logout",
@@ -248,7 +251,26 @@
     "errorGeneric": "Something went wrong. Please try again.",
     "acceptedTitle": "The evaluation has been accepted by the tutor and confirmed by the student!",
     "acceptedText": "Your <strong>{{project}}</strong> evaluation is now in your Pending Evaluations.",
-    "orClickToClose": "or click anywhere to close"
+    "orClickToClose": "or click anywhere to close",
+    "override": {
+      "title": "Override",
+      "text": "As a Head Tutor or Admin you can release the slot or cancel this request. Both need a reason, and the student and the Hitchhiker are notified.",
+      "release": "Release the slot",
+      "cancel": "Cancel the request",
+      "releaseTitle": "Release the slot for {{project}}?",
+      "releaseText": "The request goes back to the queue, so a Hitchhiker can pick a new slot. The Hitchhiker and the student are notified.",
+      "cancelTitle": "Cancel the {{project}} request?",
+      "cancelText": "The request ends for good. The student and the Hitchhiker, if any, are notified. This cannot be undone.",
+      "releaseConfirm": "Release",
+      "cancelConfirm": "Cancel the request",
+      "releaseWorking": "Releasing…",
+      "cancelWorking": "Cancelling…",
+      "releaseDone": "The slot was released. The request is back in the queue.",
+      "cancelDone": "The request was cancelled.",
+      "alreadyStarted": "The slot has already started, so it can no longer be released.",
+      "changed": "The request changed in the meantime, so nothing was done. It is shown as it is now.",
+      "error": "That did not work. Please try again."
+    }
   },
   "pickSlot": {
     "back": "Back to requests",
@@ -603,6 +625,114 @@
       "senderDeleted": "The sender's account was deleted.",
       "deleted": "The message was deleted. The reason is saved in the audit log."
     }
+  },
+  "exceptions": {
+    "title": "Evaluation exceptions",
+    "subtitle": "Evaluation requests that need a human decision, newest first.",
+    "loading": "Loading the exceptions…",
+    "error": "We couldn't load the exceptions. Please try again later.",
+    "emptyTitle": "Nothing needs a decision",
+    "emptyText": "Requests show up here when a participant is suspended, a Hitchhiker loses eligibility or a result is missing.",
+    "columns": {
+      "problem": "Problem",
+      "request": "Request",
+      "student": "Student",
+      "hitchhiker": "Hitchhiker",
+      "slot": "Slot"
+    },
+    "problems": {
+      "participant_inactive": "Participant suspended",
+      "tutor_lost_eligibility": "Hitchhiker not eligible",
+      "result_missing": "Result missing"
+    },
+    "hints": {
+      "participant_inactive": "The student or the Hitchhiker is suspended. Release or cancel the request, or reactivate the account.",
+      "tutor_lost_eligibility": "The Hitchhiker can no longer evaluate this project. Release the slot or cancel the request.",
+      "result_missing": "The evaluation is over but has no result. Enter it in the Django admin."
+    },
+    "noSlot": "No slot yet",
+    "pagesAria": "Exception pages",
+    "page": "Page {{page}} of {{count}}"
+  },
+  "reasonDialog": {
+    "reason": "Reason",
+    "hint": "Required. It is kept in the audit log."
+  },
+  "adminUser": {
+    "title": "User",
+    "back": "All users",
+    "loading": "Loading the user…",
+    "loadError": "We couldn't load this user. Please try again later.",
+    "email": "Email",
+    "intraLogin": "42 login",
+    "language": "Language",
+    "roles": "Roles",
+    "createdAt": "Account created",
+    "lastLogin": "Last login",
+    "deletedNote": "This account was deleted. Deleted accounts cannot be edited.",
+    "editTitle": "Edit account",
+    "displayName": "Display name",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saved": "Changes saved.",
+    "emailTaken": "Another account already uses this email.",
+    "deletedMeanwhile": "This account was deleted in the meantime, so the changes were not saved.",
+    "saveError": "The changes could not be saved. Please try again.",
+    "actions": {
+      "title": "Account actions",
+      "ownAccount": "You cannot suspend or delete your own account.",
+      "suspend": "Suspend account",
+      "reactivate": "Reactivate account",
+      "delete": "Delete account",
+      "suspendTitle": "Suspend {{name}}?",
+      "reactivateTitle": "Reactivate {{name}}?",
+      "deleteTitle": "Delete {{name}}?",
+      "suspendText": "They are logged out at once and cannot log in until the account is reactivated. Their evaluation requests stay as they are.",
+      "reactivateText": "They can log in again.",
+      "deleteText": "The account is anonymized: its name, email and 42 login are removed, its roles are taken away, and its evaluations that have not started are cancelled or released. This cannot be undone.",
+      "suspendConfirm": "Suspend",
+      "reactivateConfirm": "Reactivate",
+      "deleteConfirm": "Delete for good",
+      "suspendWorking": "Suspending…",
+      "reactivateWorking": "Reactivating…",
+      "deleteWorking": "Deleting…",
+      "suspendDone": "The account was suspended.",
+      "reactivateDone": "The account was reactivated.",
+      "deleteDone": "The account was deleted.",
+      "statusChanged": "The account changed in the meantime, so nothing was done. It is shown as it is now.",
+      "cannotModifySelf": "You cannot change the status of your own account.",
+      "error": "That did not work. Please try again."
+    }
+  },
+  "adminUsers": {
+    "title": "Users",
+    "subtitle": "Every account, with its roles and status.",
+    "search": "Search",
+    "searchPlaceholder": "Email, name or 42 login",
+    "searchButton": "Search",
+    "role": "Role",
+    "allRoles": "All roles",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "statuses": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "deleted": "Deleted"
+    },
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "roles": "Roles",
+      "status": "Status",
+      "lastLogin": "Last login"
+    },
+    "never": "Never",
+    "loading": "Loading users…",
+    "error": "We couldn't load the users. Please try again later.",
+    "emptyTitle": "No users yet",
+    "emptyFilteredTitle": "No users match these filters",
+    "pagesAria": "User pages",
+    "page": "Page {{page}} of {{count}}"
   },
   "roles": {
     "student": "Student",
