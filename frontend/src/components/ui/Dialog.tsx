@@ -12,15 +12,16 @@ interface DialogProps {
   // Classes of the card and of the backdrop behind it; the page's own styles.
   className?: string;
   backdropClassName?: string;
-  // A click outside the card closes it, unless the popup asks the user to decide.
+  // false: a click outside the card does nothing. Escape still calls `onClose`; a popup that must
+  // not close (while saving, say) ignores that call in its own `onClose`.
   closeOnBackdrop?: boolean;
   backdropTestId?: string;
 }
 
-// A modal popup (#730). With the page's own classes it looks exactly as before; without them it
-// gets the design system's look (ui-dialog).: a backdrop and a card with role="dialog" and aria-modal, named by its
-// title. The keyboard behaviour comes from useDialog (#320): the card takes the focus, Tab stays
-// inside, Escape closes, and the focus goes back to the opener on close.
+// A modal popup (#730): a backdrop and a card with role="dialog" and aria-modal, named by its
+// title. With the page's own classes it looks exactly as before; without them it gets the design
+// system's look (ui-dialog). The keyboard behaviour comes from useDialog (#320): the card takes
+// the focus, Tab stays inside, Escape calls `onClose`, and the focus goes back to the opener.
 function Dialog({
   titleId,
   describedById,

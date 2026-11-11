@@ -20,7 +20,7 @@ function RoleGuard({
   switchWorkspace = false,
 }: RoleGuardProps) {
   const { activeRole, setActiveRole, availableRoles } = useRole();
-  const { isLoaded } = useCurrentUser();
+  const { isLoaded, loadFailed } = useCurrentUser();
   const isAllowed = hasRolePermission(activeRole, allowedRoles);
   // Only once /users/me/ has answered: until then every workspace counts as available.
   const target =
@@ -34,8 +34,16 @@ function RoleGuard({
     }
   }, [target, setActiveRole]);
 
+  // A workspace other than Student is restored from the tab's storage: it only counts once
+  // /users/me/ has answered and still gives that workspace, so a page never asks the API with a
+  // role the user lost (403s in the console, #770). RoleProvider moves a lost workspace back to
+  // Student only in its effect, after this render. Every account is a student, so that one needs
+  // no wait. If /users/me/ failed, the page shows and reports its own load error.
+  const isConfirmed =
+    activeRole === "STUDENT" || (isLoaded && availableRoles.includes(activeRole)) || loadFailed;
+
   if (isAllowed) {
-    return <>{children}</>;
+    return isConfirmed ? <>{children}</> : null;
   }
 
   // Waiting for the user's roles, or switching: nothing yet (no API call, no Unauthorized flash).

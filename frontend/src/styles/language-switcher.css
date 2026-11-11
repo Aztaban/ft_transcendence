@@ -51,6 +51,18 @@
   }
 }
 
+/* Phones (#372): the three languages still fit next to the bell and avatar at 320px. */
+@media (max-width: 480px) {
+  .language-switcher {
+    margin-right: 4px;
+  }
+
+  .language-switcher__option {
+    min-width: 24px;
+    padding: 0 3px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .language-switcher__option {
     transition: none;
