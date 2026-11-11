@@ -147,6 +147,21 @@ describe("logged in", () => {
     expect(listEvaluationRequests).not.toHaveBeenCalled();
   });
 
+  test("asks for no Hitchhiker list when the stored workspace's role was lost", async () => {
+    sessionStorage.setItem("active-role", "HITCHHIKER");
+    currentUser.roles = ["student"];
+    currentUser.isLoaded = true;
+
+    renderAt("/pending");
+
+    expect(await screen.findByRole("heading", { level: 1 })).toBeTruthy();
+    await act(async () => {});
+
+    expect(
+      vi.mocked(listEvaluationRequests).mock.calls.filter(([params]) => params?.scope === "picked"),
+    ).toEqual([]);
+  });
+
   // #687: notifications link to /profile from any workspace (§8.8).
   test("opens an eligibility request from a notification in any workspace", async () => {
     sessionStorage.setItem("active-role", "COUNCIL");
