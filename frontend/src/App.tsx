@@ -8,6 +8,7 @@ import PublicLayout from "./components/layout/PublicLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
 import AdminUserDetailPage from "./pages/AdminUserDetailPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import AuditLogPage from "./pages/AuditLogPage";
 import CouncilHistoryPage from "./pages/CouncilHistoryPage";
 import { CouncilMessageRoute } from "./pages/CouncilInboxMessagePage";
 import CouncilInboxPage from "./pages/CouncilInboxPage";
@@ -256,6 +257,14 @@ function AuthenticatedApp() {
               fallback={<UnauthorizedPage />}
             >
               <EvaluationExceptionsPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/manage/audit-log"
+          element={
+            <RoleGuard allowedRoles={routePermissions.auditLog} fallback={<UnauthorizedPage />}>
+              <AuditLogPage />
             </RoleGuard>
           }
         />
