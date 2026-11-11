@@ -46,7 +46,9 @@ class PeopleSearchThrottle(UserRateThrottle):
     ],
     responses={
         200: PeopleSearchSerializer(many=True),
-        **error_responses({400: ("validation_error",), 401: ("not_authenticated",)}),
+        **error_responses(
+            {400: ("validation_error",), 401: ("not_authenticated",), 404: ("not_found",)}
+        ),
     },
 )
 class PeopleSearchView(ListAPIView):
