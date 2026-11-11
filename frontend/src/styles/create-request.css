@@ -323,7 +323,7 @@
   animation: create-request-slide-in 0.45s ease;
 }
 
-.info-notice__icon {
+.info-notice .ui-notice__icon {
   display: grid;
   width: 46px;
   height: 46px;
@@ -336,13 +336,13 @@
   font-weight: var(--font-weight-bold);
 }
 
-.info-notice__text p {
+.info-notice .ui-notice__text p {
   margin: 0;
   line-height: 1.55;
   letter-spacing: 0.02em;
 }
 
-.info-notice__text p + p {
+.info-notice .ui-notice__text p + p {
   margin-top: 12px;
 }
 

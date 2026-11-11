@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
 import ScrollableList from "../home/ScrollableList";
+import Skeleton from "../../components/ui/Skeleton";
 
 interface AwaitingConfirmationProps {
   requests: EvaluationRequest[];
@@ -23,11 +24,11 @@ function AwaitingConfirmation({ requests, isLoading = false }: AwaitingConfirmat
       <h2 id="awaiting-confirmation-title">{t("dashboard.awaitingTitle")}</h2>
 
       {isLoading ? (
-        <div className="dashboard-requests" aria-busy="true">
-          <div className="dashboard-requests__skeleton" />
-          <div className="dashboard-requests__skeleton" />
-          <span className="dashboard-requests__sr-only">{t("dashboard.loadingProposed")}</span>
-        </div>
+        <Skeleton
+          className="dashboard-requests"
+          itemClassName="dashboard-requests__skeleton"
+          label={t("dashboard.loadingProposed")}
+        />
       ) : awaitingRequests.length === 0 ? (
         <div className="dashboard-empty">
           <div className="dashboard-empty__history-mark" aria-hidden="true">

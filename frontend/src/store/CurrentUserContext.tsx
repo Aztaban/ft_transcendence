@@ -25,6 +25,9 @@ interface CurrentUserValue {
   // PATCH /users/me/ (204, §10.2), then re-fetch, so every reader of `user` sees the change.
   // Rejects when either request fails; the previous profile is kept until a later load.
   update: (payload: UpdateUserProfilePayload) => Promise<void>;
+  // Re-fetch after the profile changed through another endpoint: an Admin editing their own
+  // account with PATCH /admin/users/{id}/ (§10.2).
+  refresh: () => void;
 }
 
 const CurrentUserContext = createContext<CurrentUserValue | undefined>(undefined);
@@ -39,7 +42,8 @@ interface CurrentUserProviderProps {
 
 // The single owner of the logged-in user's profile and real roles, from GET /users/me/. Loaded
 // only once the session check says the user is logged in, re-fetched on the WebSocket event
-// `role.changed` (api-plan §9.3) and after every `update`. Pages read it; none keeps a copy.
+// `role.changed` (api-plan §9.3), after every `update` and on `refresh`. Pages read it; none
+// keeps a copy.
 export function CurrentUserProvider({ children }: CurrentUserProviderProps) {
   const { isAuthenticated } = useAuth();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -116,7 +120,7 @@ export function CurrentUserProvider({ children }: CurrentUserProviderProps) {
 
   return (
     <CurrentUserContext.Provider
-      value={{ user, roles: roleNames(user), isLoaded, loadFailed, update }}
+      value={{ user, roles: roleNames(user), isLoaded, loadFailed, update, refresh }}
     >
       {children}
     </CurrentUserContext.Provider>
@@ -129,6 +133,7 @@ const noCurrentUser: CurrentUserValue = {
   isLoaded: false,
   loadFailed: false,
   update: () => Promise.reject(new Error("No CurrentUserProvider above this component.")),
+  refresh: () => {},
 };
 
 // Without a provider (e.g. in component tests) nothing is loaded.

@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import Notice from "../components/ui/Notice";
 import { ApiError } from "../api/client";
 import { createEvaluationRequest } from "../api/evaluationRequests";
 import i18n from "../i18n";
 import ProjectSelect from "../features/projects/ProjectSelect";
-import InfoNotice from "../features/requests/InfoNotice";
 import RequestSuccessDialog from "../features/requests/RequestSuccessDialog";
 import MyRequests from "../features/student/MyRequests";
 import type { ProjectRef } from "../types/project";
@@ -194,10 +194,10 @@ function CreateRequestPage() {
                 </div>
               </div>
 
-              <InfoNotice>
+              <Notice tone="warning" icon="i" className="info-notice">
                 <p>{t("createRequest.lastEvaluation")}</p>
                 <p>{t("createRequest.failWarning")}</p>
-              </InfoNotice>
+              </Notice>
 
               <div className="create-request__actions">
                 <button
@@ -238,9 +238,9 @@ function CreateRequestPage() {
                 </button>
               </article>
 
-              <InfoNotice>
+              <Notice tone="warning" icon="i" className="info-notice">
                 <p>{t("createRequest.visible")}</p>
-              </InfoNotice>
+              </Notice>
 
               {submitError && (
                 <p className="create-request__error" role="alert">

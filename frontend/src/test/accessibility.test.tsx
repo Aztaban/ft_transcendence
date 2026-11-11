@@ -84,6 +84,17 @@ const eligibilityRequest = {
   created_at: "2026-10-29T09:00:00Z",
 };
 
+// An account as the admin user endpoints return it (api-plan §8.4).
+const adminUser = {
+  ...person,
+  email: "lenka@example.com",
+  language: "en" as const,
+  intra_login: null,
+  status: "active" as const,
+  created_at: "2026-10-01T09:00:00Z",
+  last_login: "2026-10-30T09:00:00Z",
+};
+
 const message = {
   id: 3,
   body: "The fridge on the second floor is broken again.",
@@ -157,6 +168,18 @@ vi.mock("../api/eligibility", async (importOriginal) => ({
   getTutorEligibility: vi.fn(async () => [project]),
   listEligibilityRequests: vi.fn(async () => page([eligibilityRequest])),
   reviewEligibilityRequest: vi.fn(),
+}));
+vi.mock("../api/admin", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/admin")>()),
+  listAdminUsers: vi.fn(async () => page([adminUser])),
+  listEvaluationExceptions: vi.fn(async () =>
+    page([{ ...evaluation(8, { result: null }), problem: "result_missing" as const }]),
+  ),
+  getAdminUser: vi.fn(async () => adminUser),
+  updateAdminUser: vi.fn(),
+  suspendAdminUser: vi.fn(),
+  reactivateAdminUser: vi.fn(),
+  deleteAdminUser: vi.fn(),
 }));
 vi.mock("../api/notifications", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/notifications")>()),
@@ -242,6 +265,9 @@ describe("accessibility of every page (axe-core, WCAG 2.1 AA)", () => {
     ["/privacy", "STUDENT", "Privacy Policy"],
     ["/terms", "STUDENT", "Terms of Service"],
     ["/requests/6", "HITCHHIKER", "Choose a slot for push_swap"],
+    ["/manage/users", "ADMIN", "Users"],
+    ["/manage/users/2", "ADMIN", "Lenka"],
+    ["/manage/exceptions", "ADMIN", "Evaluation exceptions"],
     ["/does-not-exist", "STUDENT", "404"],
   ])("%s in the %s workspace", async (path, workspace, heading) => {
     sessionStorage.setItem("active-role", workspace);

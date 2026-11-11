@@ -137,3 +137,33 @@ export function cancelEvaluationRequest(id: number): Promise<EvaluationRequest> 
 export function releaseEvaluationRequest(id: number): Promise<EvaluationRequest> {
   return postTransition(id, "release");
 }
+
+// An override (api-plan §5.8): a Head Tutor or Admin releasing or cancelling someone else's
+// request sends `{"reason": "..."}`, 1–500 characters, kept in the audit log.
+function postOverride(id: number, action: "cancel" | "release", reason: string) {
+  return apiRequest<EvaluationRequest>(`/api/v1/evaluation-requests/${id}/${action}/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  });
+}
+
+// POST …/{id}/release/ as an override (api-plan §10.4): 200 `pending` with the pick cleared; 409
+// `evaluation_already_started` once `starts_at` has passed, `invalid_state_transition` if the
+// request has no pick any more; 400 `validation_error` for a blank reason.
+export function overrideReleaseEvaluationRequest(
+  id: number,
+  reason: string,
+): Promise<EvaluationRequest> {
+  return postOverride(id, "release", reason);
+}
+
+// POST …/{id}/cancel/ as an override (api-plan §10.4): 200 `cancelled`, at any time, but 409
+// `invalid_state_transition` once a result is recorded or the request has ended; 400
+// `validation_error` for a blank reason.
+export function overrideCancelEvaluationRequest(
+  id: number,
+  reason: string,
+): Promise<EvaluationRequest> {
+  return postOverride(id, "cancel", reason);
+}

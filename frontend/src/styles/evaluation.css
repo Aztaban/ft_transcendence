@@ -217,6 +217,40 @@
 /* Buttons */
 
 /* "Cancel request" for the student (#595): quieter than the main actions. */
+/* Override: a Head Tutor or Admin acting on someone else's request (api-plan §5.8) */
+
+.evaluation__override {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid #e3e7e7;
+}
+
+.evaluation__override h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.evaluation__override p {
+  margin: 0;
+  color: #5b6262;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.evaluation__override-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.evaluation__notice:focus-visible {
+  outline: 3px solid #007577;
+  outline-offset: 2px;
+}
+
 .evaluation__cancel {
   display: flex;
   justify-content: flex-end;
