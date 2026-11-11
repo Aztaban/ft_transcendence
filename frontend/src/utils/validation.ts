@@ -3,6 +3,9 @@ import i18n from "../i18n";
 export const DISPLAY_NAME_MAX_LENGTH = 64;
 export const EMAIL_MAX_LENGTH = 254;
 export const PASSWORD_MIN_LENGTH = 8;
+// The `reason` of an override (api-plan §5.8) and of suspending, reactivating or deleting an
+// account (§10.2): 1–500 characters once trimmed, kept in the audit log.
+export const REASON_MAX_LENGTH = 500;
 
 // Shared by the Register and Login forms, which check fields themselves (noValidate, #683).
 // The usual HTML email check: allowed characters before the @, then domain labels of 1–63 letters,

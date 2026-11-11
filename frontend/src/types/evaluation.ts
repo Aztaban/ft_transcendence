@@ -30,3 +30,14 @@ export interface EvaluationRequest {
   created_at: string;
   updated_at: string;
 }
+
+// Why a request needs a human decision (api-plan §10.9). When several apply, the backend picks
+// the first in this order: participant_inactive, tutor_lost_eligibility, result_missing.
+export type EvaluationProblem =
+  "participant_inactive" | "tutor_lost_eligibility" | "result_missing";
+
+// One row of GET /admin/evaluation-requests/exceptions/: an EvaluationRequest (§8.7) with the
+// extra `problem` field (§10.9).
+export interface EvaluationException extends EvaluationRequest {
+  problem: EvaluationProblem;
+}

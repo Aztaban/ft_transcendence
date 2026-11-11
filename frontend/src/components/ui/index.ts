@@ -1,5 +1,11 @@
+export { default as Avatar, initials } from "./Avatar";
 export { default as Badge } from "./Badge";
 export { default as Button } from "./Button";
 export { default as Card } from "./Card";
 export { default as Checkbox } from "./Checkbox";
+export { default as Dialog } from "./Dialog";
+export { default as Icon } from "./Icon";
 export { default as Input } from "./Input";
+export { default as Notice } from "./Notice";
+export { default as Skeleton } from "./Skeleton";
+export { default as StatusPill } from "./StatusPill";

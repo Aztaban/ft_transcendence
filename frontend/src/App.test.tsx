@@ -1,7 +1,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useNavigate } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { getAdminUser, updateAdminUser } from "./api/admin";
 import { getSession, loginUser } from "./api/auth";
 import { getEligibilityRequest, listEligibilityRequests } from "./api/eligibility";
 import { listEvaluationRequests } from "./api/evaluationRequests";
@@ -16,6 +17,11 @@ vi.mock("./api/auth", () => ({
   loginUser: vi.fn(),
   logoutUser: vi.fn(),
   registerUser: vi.fn(),
+}));
+vi.mock("./api/admin", () => ({
+  listAdminUsers: vi.fn(),
+  getAdminUser: vi.fn(),
+  updateAdminUser: vi.fn(),
 }));
 vi.mock("./api/eligibility", () => ({
   createEligibilityRequest: vi.fn(),
@@ -373,5 +379,72 @@ describe("42 login", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "History" })).toBeDefined();
     expect(sessionStorage.getItem("login-return-to")).toBeNull();
+  });
+});
+
+describe("Administration user page", () => {
+  // Opens another user's page in place, as Back or a link from outside the list would.
+  function OpenUser({ id }: { id: number }) {
+    const navigate = useNavigate();
+
+    return (
+      <button type="button" onClick={() => navigate(`/manage/users/${id}`)}>
+        open user {id}
+      </button>
+    );
+  }
+
+  function adminUser(id: number) {
+    return {
+      id,
+      email: `user${id}@example.com`,
+      display_name: `User ${id}`,
+      avatar_url: null,
+      language: "en" as const,
+      roles: [{ id: 1, name: "student" as const }],
+      intra_login: null,
+      status: "active" as const,
+      created_at: "2026-10-01T08:00:00Z",
+      last_login: null,
+    };
+  }
+
+  beforeEach(() => {
+    vi.mocked(getSession).mockResolvedValue({ authenticated: true, user });
+    currentUser.roles = ["student", "admin"];
+    currentUser.isLoaded = true;
+    sessionStorage.setItem("active-role", "ADMIN");
+  });
+
+  test("starts with a fresh page when another user is opened", async () => {
+    vi.mocked(getAdminUser).mockImplementation((id) =>
+      // User 2 stays loading, so the test sees what is shown in the meantime.
+      id === 1 ? Promise.resolve(adminUser(1)) : new Promise(() => {}),
+    );
+    vi.mocked(updateAdminUser).mockResolvedValue({ ...adminUser(1), display_name: "Renamed" });
+
+    render(
+      <MemoryRouter initialEntries={["/manage/users/1"]}>
+        <AuthProvider>
+          <RoleProvider>
+            <OpenUser id={2} />
+            <App />
+          </RoleProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(await screen.findByLabelText("Display name"), {
+      target: { value: "Renamed" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByText("Changes saved.")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "open user 2" }));
+
+    expect(await screen.findByText("Loading the user…")).toBeDefined();
+    expect(screen.queryByRole("heading", { name: "Renamed" })).toBeNull();
+    expect(screen.queryByText("Changes saved.")).toBeNull();
+    expect(getAdminUser).toHaveBeenLastCalledWith(2);
   });
 });
