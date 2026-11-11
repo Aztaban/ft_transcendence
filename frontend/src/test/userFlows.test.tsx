@@ -186,7 +186,8 @@ vi.mock("../api/evaluationRequests", async (importOriginal) => ({
       backend.requests.push({
         id: backend.nextId++,
         student: ref(me()),
-        project: [pushSwap, minishell].find((project) => project.id === project_id) ?? pushSwap,
+        // An unknown project is a bug in the flow: fail instead of quietly using push_swap.
+        project: [pushSwap, minishell].find((project) => project.id === project_id) ?? notFound(),
         note: note ?? "",
         status: "pending",
         picked_by: null,
@@ -307,6 +308,10 @@ function switchWorkspace(workspace: string) {
   fireEvent.click(screen.getByRole("option", { name: workspace }));
 }
 
+// A flow renders the whole application several times, once per user. Alone it takes about 1 s,
+// but in the full parallel run it can pass Vitest's default of 5 s per test, so it gets more.
+const FLOW_TIMEOUT = 20_000;
+
 function button(name: string | RegExp) {
   return screen.getByRole("button", { name }) as HTMLButtonElement;
 }
@@ -327,7 +332,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("user flows", () => {
+describe("user flows", { timeout: FLOW_TIMEOUT }, () => {
   it("a student requests an evaluation, a Hitchhiker picks a slot, the student confirms it", async () => {
     // 1. Alice asks for an evaluation of push_swap from the Request page.
     await openAs(alice);
