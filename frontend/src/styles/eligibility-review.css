@@ -1,4 +1,6 @@
 .eligibility-review {
+  /* The table switches to cards by the room it really has, sidebar or not (#372). */
+  container-type: inline-size;
   display: flex;
   max-width: 1080px;
   flex-direction: column;
@@ -697,9 +699,9 @@
   }
 }
 
-/* The table becomes one card per request while the content area is narrow, including next to
-   the sidebar on a tablet, where the Decision column was cut off (#372). */
-@media (max-width: 1024px) {
+/* The table becomes one card per request when the page itself is narrower than the table needs,
+   at any screen width (#372). */
+@container (max-width: 760px) {
   .eligibility-review__table thead {
     position: absolute;
     width: 1px;

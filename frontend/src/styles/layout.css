@@ -871,6 +871,17 @@
     padding: 0 10px;
   }
 
+  /* There is no room for the typed name next to the bell and avatar: while it has the focus, the
+     search spans the top bar, over the other controls. */
+  .topbar__search:focus-within {
+    position: absolute;
+    top: calc((var(--topbar-height) - 44px) / 2);
+    right: 10px;
+    left: 10px;
+    z-index: 2;
+    background: var(--color-surface);
+  }
+
   .topbar__notifications {
     margin-right: 6px;
   }
