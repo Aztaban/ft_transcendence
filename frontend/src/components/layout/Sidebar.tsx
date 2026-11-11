@@ -52,6 +52,7 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
   ADMIN: [
     { labelKey: "nav.users", to: "/manage/users", icon: "hitchhikers" },
     { labelKey: "nav.exceptions", to: "/manage/exceptions", icon: "pending" },
+    { labelKey: "nav.auditLog", to: "/manage/audit-log", icon: "history" },
   ],
 };
 

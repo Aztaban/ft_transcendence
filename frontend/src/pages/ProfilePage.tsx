@@ -4,8 +4,7 @@ import { useTranslation } from "react-i18next";
 import usePageTitle from "../components/layout/usePageTitle";
 import i18n from "../i18n";
 import { ApiError } from "../api/client";
-import { Button, Input } from "../components/ui";
-import PersonAvatar from "../features/people/PersonAvatar";
+import { Avatar, Button, Input } from "../components/ui";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { Language, UserRole } from "../types/user";
 import { DISPLAY_NAME_MAX_LENGTH } from "../utils/validation";
@@ -196,7 +195,7 @@ function ProfilePage() {
         <>
           <section className="profile-hero" aria-labelledby="profile-name">
             <div className="profile-hero__body">
-              <PersonAvatar
+              <Avatar
                 className="profile-card__avatar"
                 name={profile.display_name}
                 avatarUrl={profile.avatar_url ?? null}

@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -133,6 +133,33 @@ describe("logged in", () => {
     await screen.findByRole("heading", { name: "Welcome Back" });
     expect(container.querySelector(".sidebar")).toBeTruthy();
     expect(container.querySelector(".topbar")).toBeTruthy();
+  });
+
+  // #770: a Hitchhiker workspace restored from the tab, for a user who may have lost the role.
+  test("asks for no Hitchhiker list before /users/me/ confirms the workspace", async () => {
+    sessionStorage.setItem("active-role", "HITCHHIKER");
+
+    const { container } = renderAt("/pending");
+
+    await waitFor(() => expect(container.querySelector(".sidebar")).toBeTruthy());
+    await act(async () => {});
+
+    expect(listEvaluationRequests).not.toHaveBeenCalled();
+  });
+
+  test("asks for no Hitchhiker list when the stored workspace's role was lost", async () => {
+    sessionStorage.setItem("active-role", "HITCHHIKER");
+    currentUser.roles = ["student"];
+    currentUser.isLoaded = true;
+
+    renderAt("/pending");
+
+    expect(await screen.findByRole("heading", { level: 1 })).toBeTruthy();
+    await act(async () => {});
+
+    expect(
+      vi.mocked(listEvaluationRequests).mock.calls.filter(([params]) => params?.scope === "picked"),
+    ).toEqual([]);
   });
 
   // #687: notifications link to /profile from any workspace (§8.8).

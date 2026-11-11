@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import { initials } from "../components/ui/Avatar";
+import StatusPill, { type StatusTone } from "../components/ui/StatusPill";
+import Tabs from "../components/ui/Tabs";
 import { ApiError } from "../api/client";
 import {
   listEligibilityRequests,
@@ -10,7 +13,6 @@ import {
 } from "../api/eligibility";
 import ReviewDialog from "../features/headTutor/ReviewDialog";
 import { reviewErrorMessage } from "../features/headTutor/reviewErrorMessage";
-import { initials } from "../features/people/PersonAvatar";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { EligibilityRequest, EligibilityRequestStatus } from "../types/eligibility";
 import { formatTimeAgo } from "../utils/dateTime";
@@ -45,6 +47,13 @@ interface Decision {
   decision: EligibilityDecision;
   name: string;
 }
+
+// The status pill's colour for each status (#730); the page's classes keep its own look.
+const statusTones: Record<EligibilityRequest["status"], StatusTone> = {
+  pending: "warning",
+  approved: "success",
+  declined: "danger",
+};
 
 // Head Tutor table of eligibility requests (#175, #176, #177): requester and full project list,
 // one Approve / Decline decision for the whole request (api-plan §7.2, §10.3).
@@ -198,33 +207,34 @@ function EligibilityReviewPage() {
         </div>
       </header>
 
-      <div className="eligibility-review__tabs" role="tablist" aria-label={t("review.tabsAria")}>
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            className={
-              tab === status
-                ? `eligibility-review__tab eligibility-review__tab--${tab} eligibility-review__tab--active`
-                : `eligibility-review__tab eligibility-review__tab--${tab}`
-            }
-            type="button"
-            role="tab"
-            aria-selected={tab === status}
-            onClick={() => {
-              setStatus(tab);
-              setPage(1);
-              setMoreFailed(false);
-              setMessage(null);
-              setPageError(null);
-            }}
-          >
-            {t(statusTexts[tab].tabKey)}
-            {tab === status && loadState === "ready" && (
-              <span className="eligibility-review__tab-count">{total}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        className="eligibility-review__tabs"
+        label={t("review.tabsAria")}
+        items={tabs.map((tab) => ({
+          id: tab,
+          label: (
+            <>
+              {t(statusTexts[tab].tabKey)}
+              {tab === status && loadState === "ready" && (
+                <span className="eligibility-review__tab-count">{total}</span>
+              )}
+            </>
+          ),
+        }))}
+        selected={status}
+        tabClassName={(tab, isSelected) =>
+          isSelected
+            ? `eligibility-review__tab eligibility-review__tab--${tab} eligibility-review__tab--active`
+            : `eligibility-review__tab eligibility-review__tab--${tab}`
+        }
+        onSelect={(tab) => {
+          setStatus(tab);
+          setPage(1);
+          setMoreFailed(false);
+          setMessage(null);
+          setPageError(null);
+        }}
+      />
 
       {message && (
         <p className="eligibility-review__message" role="status">
@@ -336,11 +346,12 @@ function EligibilityReviewPage() {
                       </div>
                     ) : (
                       <div className="eligibility-review__decision">
-                        <span
+                        <StatusPill
+                          tone={statusTones[request.status]}
                           className={`eligibility-review__status eligibility-review__status--${request.status}`}
                         >
                           {t(badgeKeys[request.status])}
-                        </span>
+                        </StatusPill>
                         {request.reviewed_by && (
                           <span>{t("review.by", { name: request.reviewed_by.display_name })}</span>
                         )}

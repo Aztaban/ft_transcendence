@@ -118,3 +118,8 @@ export function formatStartsIn(startsAt: string, now = new Date()) {
 
   return plural(rest, "minutes");
 }
+
+// A date and time in the user's local time, e.g. "6 Nov 2026, 14:05".
+export function formatDateTime(date: string) {
+  return new Date(date).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" });
+}

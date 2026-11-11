@@ -90,6 +90,21 @@
   }
 }
 
+/* Phones (#372): the top bar has no room left, so the spinner shows just below it, at the
+   right, instead of pushing the bell and avatar off the screen. */
+@media (max-width: 480px) {
+  .connection-status {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 10px;
+  }
+
+  .connection-status__pill {
+    margin-right: 0;
+    box-shadow: var(--shadow-card);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .connection-status__pill,
   .connection-status__spinner {

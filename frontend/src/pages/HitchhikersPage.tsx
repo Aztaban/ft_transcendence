@@ -6,8 +6,8 @@ import { ApiError } from "../api/client";
 import { countPeople, searchPeople, type PeopleOrdering } from "../api/people";
 import { listProjects } from "../api/projects";
 import usePageTitle from "../components/layout/usePageTitle";
+import Avatar from "../components/ui/Avatar";
 import Icon, { type IconName } from "../components/ui/Icon";
-import PersonAvatar from "../features/people/PersonAvatar";
 import i18n from "../i18n";
 import { roleBadges } from "../features/people/roleBadges";
 import { useRole } from "../store/RoleContext";
@@ -400,7 +400,7 @@ function HitchhikersPage() {
               style={{ "--index": index % 20 } as CSSProperties}
             >
               <div className="hitchhiker-card__person">
-                <PersonAvatar
+                <Avatar
                   className="hitchhiker-card__avatar"
                   name={person.display_name}
                   avatarUrl={person.avatar_url}

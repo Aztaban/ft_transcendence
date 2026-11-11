@@ -112,6 +112,7 @@ def revoke_role(request, user_id, role_id):
             "cannot_modify_self", _("You cannot change your own roles."), status.HTTP_409_CONFLICT
         )
     with transaction.atomic():
+        lock_users(request.user.pk, target.pk)
         deleted, _per_model = UserRole.objects.filter(user=target, role=role).delete()
         if deleted:
             record_audit(

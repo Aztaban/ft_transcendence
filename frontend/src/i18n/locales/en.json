@@ -19,7 +19,8 @@
     "eligibility": "Eligibility",
     "users": "Users",
     "exceptions": "Exceptions",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "auditLog": "Audit log"
   },
   "workspace": {
     "select": "Select role",
@@ -1299,5 +1300,126 @@
     "register": "Create an account",
     "notFound": "Page not found",
     "unauthorized": "Access restricted"
+  },
+  "designSystem": {
+    "title": "Design system",
+    "intro": "The colours, type, icons and reusable components every page of 42 Evals is built from.",
+    "colours": "Colour palette",
+    "coloursText": "Each family has a strong shade, a text shade that reads at 4.5:1 or more (WCAG AA) and a light surface.",
+    "families": {
+      "neutral": "Neutral",
+      "accent": "Accent (teal)",
+      "success": "Success",
+      "warning": "Warning",
+      "danger": "Danger",
+      "info": "Information",
+      "violet": "Violet"
+    },
+    "typography": "Type scale",
+    "sample": "Evaluate with 42 Evals",
+    "icons": "Icons",
+    "components": "Components",
+    "primary": "Primary",
+    "secondary": "Secondary",
+    "ghost": "Ghost",
+    "inputLabel": "Display name",
+    "checkboxLabel": "Remember my choice",
+    "new": "New",
+    "bell": "Notifications",
+    "noticeInfo": "The Hitchhiker evaluation must be the last one.",
+    "noticeSuccess": "Your request was sent.",
+    "noticeWarning": "This slot starts in less than an hour.",
+    "noticeError": "The request could not be sent.",
+    "tabsLabel": "Filter by status",
+    "progressLabel": "Request progress",
+    "textAreaLabel": "Note for the Hitchhiker",
+    "loading": "Loading the example…",
+    "emptyTitle": "Nothing here yet",
+    "emptyText": "Your evaluations will appear here.",
+    "openDialog": "Open a dialog",
+    "dialogTitle": "Delete this message?",
+    "dialogText": "This cannot be undone.",
+    "close": "Close",
+    "charactersLeft_one": "{{count}} character left",
+    "charactersLeft_other": "{{count}} characters left",
+    "footerLink": "Design system"
+  },
+  "auditLog": {
+    "title": "Audit log",
+    "subtitle": "Every sensitive action: who did it, when, to what and why. Entries cannot be changed or deleted.",
+    "action": "Action",
+    "allActions": "All actions",
+    "target": "Target",
+    "allTargets": "All targets",
+    "from": "From",
+    "to": "To",
+    "when": "When",
+    "who": "Who",
+    "what": "What",
+    "details": "Details",
+    "tableAria": "Audit entries",
+    "loading": "Loading the audit log…",
+    "loadError": "Could not load the audit log. Please try again.",
+    "empty": "No entries yet",
+    "emptyText": "Sensitive actions such as role changes, suspensions or deleted council messages will appear here.",
+    "emptyFiltered": "No entries match these filters",
+    "clearFilters": "Clear filters",
+    "deletedActor": "A deleted account",
+    "byActor": "By {{name}}",
+    "removeActor": "Remove the filter by {{name}}",
+    "removeTarget": "Remove the filter on {{target}}",
+    "filterByActor": "Show only the actions of {{name}}",
+    "filterByTarget": "Show only the entries about {{target}}",
+    "open": "Open",
+    "openAria": "Open {{target}}",
+    "targetLabel": "{{type}} #{{id}}",
+    "roleDetail": "Role: {{role}}",
+    "changed": "Changed: {{fields}}",
+    "decision": {
+      "approved": "Approved",
+      "declined": "Declined"
+    },
+    "fields": {
+      "display_name": "display name",
+      "email": "email",
+      "language": "language"
+    },
+    "total_one": "{{count}} entry",
+    "total_other": "{{count}} entries",
+    "page": "Page {{page}} of {{pages}}",
+    "pagesAria": "Audit log pages",
+    "unknownAction": "Other action",
+    "unknownTarget": "Other",
+    "actions": {
+      "role": {
+        "assigned": "Role assigned",
+        "revoked": "Role removed"
+      },
+      "user": {
+        "updated": "Account edited",
+        "suspended": "Account suspended",
+        "reactivated": "Account reactivated",
+        "deleted": "Account deleted"
+      },
+      "eligibility": {
+        "reviewed": "Eligibility request reviewed",
+        "revoked": "Eligibility revoked"
+      },
+      "evaluation": {
+        "released_by_override": "Slot released by override",
+        "cancelled_by_override": "Evaluation cancelled by override"
+      },
+      "sc_message": {
+        "sender_revealed": "Council message sender revealed",
+        "deleted": "Council message deleted"
+      }
+    },
+    "targets": {
+      "user": "User",
+      "evaluation_request": "Evaluation",
+      "tutor_eligibility_request": "Eligibility request",
+      "tutor_eligibility": "Eligibility",
+      "sc_message": "Council message"
+    }
   }
 }

@@ -1,8 +1,9 @@
-interface PersonAvatarProps {
+interface AvatarProps {
   name: string;
   avatarUrl: string | null;
-  // The initials get the same class with the `--initials` modifier.
-  className: string;
+  // The page's own class, which keeps its look; the initials get it with the `--initials`
+  // modifier too. Without it, the design system's round avatar (ui-avatar).
+  className?: string;
 }
 
 // "Lenka Husarova" → "LH", "dkolarov" → "DK", "😀 Lenka" → "😀L".
@@ -17,9 +18,9 @@ export function initials(name: string) {
   return letters.join("").toUpperCase();
 }
 
-// A person's avatar, or their initials when `avatar_url` is null (the default avatar, §8.2).
-// Decorative: the name is always shown next to it.
-function PersonAvatar({ name, avatarUrl, className }: PersonAvatarProps) {
+// A person's picture, or their initials when `avatar_url` is null (the default avatar, §8.2)
+// (#730). Decorative: the name is always shown next to it.
+function Avatar({ name, avatarUrl, className = "ui-avatar" }: AvatarProps) {
   if (avatarUrl) {
     return <img className={className} src={avatarUrl} alt="" />;
   }
@@ -31,4 +32,4 @@ function PersonAvatar({ name, avatarUrl, className }: PersonAvatarProps) {
   );
 }
 
-export default PersonAvatar;
+export default Avatar;

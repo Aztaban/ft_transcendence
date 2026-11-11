@@ -352,7 +352,8 @@
 
 @media (max-width: 960px) {
   .pick-slot__layout {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): the row of days scrolls inside its card instead of widening the page (#372). */
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

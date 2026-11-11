@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot } from "../../utils/dateTime";
 import ScrollableList from "../home/ScrollableList";
+import Skeleton from "../../components/ui/Skeleton";
+import EmptyState from "../../components/ui/EmptyState";
 
 interface ScheduledEvaluationsProps {
   requests: EvaluationRequest[];
@@ -37,19 +39,19 @@ function ScheduledEvaluations({ requests, viewer, isLoading = false }: Scheduled
       <h2 id={titleId}>{t(texts[viewer].title)}</h2>
 
       {isLoading ? (
-        <div className="dashboard-requests" aria-busy="true">
-          <div className="dashboard-requests__skeleton" />
-          <div className="dashboard-requests__skeleton" />
-          <span className="dashboard-requests__sr-only">{t("dashboard.loadingScheduled")}</span>
-        </div>
+        <Skeleton
+          className="dashboard-requests"
+          itemClassName="dashboard-requests__skeleton"
+          label={t("dashboard.loadingScheduled")}
+        />
       ) : scheduled.length === 0 ? (
-        <div className="dashboard-empty">
-          <div className="dashboard-empty__history-mark" aria-hidden="true">
-            —
-          </div>
-          <h3>{t("pending.emptyTitle")}</h3>
-          <p>{t(texts[viewer].empty)}</p>
-        </div>
+        <EmptyState
+          className="dashboard-empty"
+          iconClassName="dashboard-empty__history-mark"
+          icon="—"
+          title={t("pending.emptyTitle")}
+          text={t(texts[viewer].empty)}
+        />
       ) : (
         <ScrollableList labelledBy={titleId}>
           {scheduled.map((request) => {

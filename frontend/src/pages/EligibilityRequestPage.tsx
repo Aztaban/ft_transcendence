@@ -8,6 +8,7 @@ import EligibilitySentDialog from "../features/hitchhiker/EligibilitySentDialog"
 import { eligibilityRequestErrorMessage } from "../features/hitchhiker/eligibilityRequestError";
 import ProjectMultiSelect from "../features/hitchhiker/ProjectMultiSelect";
 import type { ProjectRef } from "../types/project";
+import ProgressBar from "../components/ui/ProgressBar";
 import "../styles/eligibility-request.css";
 
 // The confirm step shares its name with the evaluation request wizard, like the rest of the header.
@@ -133,16 +134,13 @@ function EligibilityRequestPage() {
         </div>
       </header>
 
-      <div
+      <ProgressBar
         className="eligibility-request__progress"
-        role="progressbar"
-        aria-label={t("createRequest.progress")}
-        aria-valuemin={1}
-        aria-valuemax={steps.length}
-        aria-valuenow={stepIndex + 1}
-      >
-        <span style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }} />
-      </div>
+        label={t("createRequest.progress")}
+        min={1}
+        max={steps.length}
+        value={stepIndex + 1}
+      />
 
       <div className="eligibility-request__layout">
         <div className="eligibility-request__body" key={stepId}>

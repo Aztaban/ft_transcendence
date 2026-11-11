@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { EligibilityDecision } from "../../api/eligibility";
+import TextArea from "../../components/ui/TextArea";
 import useDialog from "../../hooks/useDialog";
 import type { EligibilityRequest } from "../../types/eligibility";
 
@@ -57,20 +58,19 @@ function ReviewDialog({
           ))}
         </ul>
 
-        <label className="review-dialog__note">
-          <span>
-            {t("review.noteFor", { name })} <em>{t("review.optional")}</em>
-          </span>
-          <textarea
-            value={note}
-            maxLength={NOTE_MAX_LENGTH}
-            rows={3}
-            onChange={(event) => setNote(event.target.value)}
-          />
-          <span className="review-dialog__count" aria-live="polite">
-            {Array.from(note).length} / {NOTE_MAX_LENGTH}
-          </span>
-        </label>
+        <TextArea
+          className="review-dialog__note"
+          countClassName="review-dialog__count"
+          label={
+            <>
+              {t("review.noteFor", { name })} <em>{t("review.optional")}</em>
+            </>
+          }
+          value={note}
+          maxLength={NOTE_MAX_LENGTH}
+          rows={3}
+          onChange={(event) => setNote(event.target.value)}
+        />
 
         {error && (
           <p className="review-dialog__error" role="alert">

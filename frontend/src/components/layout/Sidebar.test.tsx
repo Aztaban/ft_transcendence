@@ -112,7 +112,7 @@ describe("Sidebar role switcher", () => {
     ]);
   });
 
-  test("offers the Admin workspace to an Admin, with Users and Exceptions", () => {
+  test("offers the Admin workspace to an Admin, with Users, Exceptions and the audit log", () => {
     currentUser.roles = ["student", "admin"];
     currentUser.isLoaded = true;
 
@@ -137,6 +137,7 @@ describe("Sidebar role switcher", () => {
     ).toEqual([
       ["Users", "/manage/users"],
       ["Exceptions", "/manage/exceptions"],
+      ["Audit log", "/manage/audit-log"],
     ]);
   });
 
