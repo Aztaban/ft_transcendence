@@ -271,7 +271,11 @@
       "alreadyStarted": "The slot has already started, so it can no longer be released.",
       "changed": "The request changed in the meantime, so nothing was done. It is shown as it is now.",
       "error": "That did not work. Please try again."
-    }
+    },
+    "finished": "The evaluation is finished",
+    "ended": "The evaluation has ended",
+    "resultPendingNotice": "The result will appear here once it is recorded.",
+    "result": "Result"
   },
   "pickSlot": {
     "back": "Back to requests",

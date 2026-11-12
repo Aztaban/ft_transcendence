@@ -50,6 +50,51 @@ const statusInfo: Record<EvaluationRequestStatus, { labelKey: string; tone: stri
   expired: { labelKey: "status.expired", tone: "muted" },
 };
 
+// Where a confirmed evaluation stands (#804). `status` stays "confirmed" after the slot, so the
+// page also looks at the result and the time: a recorded result, an ended slot waiting for its
+// result, a slot running now, or one still ahead.
+type ConfirmedPhase = "passed" | "failed" | "resultPending" | "inProgress" | "upcoming";
+
+const phaseInfo: Record<Exclude<ConfirmedPhase, "upcoming">, { labelKey: string; tone: string }> = {
+  passed: { labelKey: "status.passed", tone: "success" },
+  failed: { labelKey: "status.failed", tone: "danger" },
+  resultPending: { labelKey: "status.resultPending", tone: "neutral" },
+  inProgress: { labelKey: "status.inProgress", tone: "accent" },
+};
+
+function confirmedPhase(request: EvaluationRequest, now: number): ConfirmedPhase | null {
+  if (request.status !== "confirmed") {
+    return null;
+  }
+
+  if (request.result) {
+    return request.result;
+  }
+
+  if (request.ends_at && Date.parse(request.ends_at) <= now) {
+    return "resultPending";
+  }
+
+  if (request.starts_at && Date.parse(request.starts_at) <= now) {
+    return "inProgress";
+  }
+
+  return "upcoming";
+}
+
+// The time, once a minute: no event fires when a slot starts or ends.
+function useCurrentMinute() {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return now;
+}
+
 function formatDay(iso: string) {
   return new Date(iso).toLocaleDateString(dateLocale(), {
     weekday: "long",
@@ -134,6 +179,7 @@ function AcceptedDialog({ project, onClose }: { project: string; onClose: () => 
 // Student view of the Figma "Notification" frame: accept or decline the proposed slot (#507).
 function EvaluationPage() {
   const { t } = useTranslation();
+  const now = useCurrentMinute();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, roles } = useCurrentUser();
@@ -374,7 +420,13 @@ function EvaluationPage() {
     }
   }
 
-  const baseStatus = request ? statusInfo[request.status] : null;
+  const phase = request ? confirmedPhase(request, now) : null;
+  const isOver = phase === "passed" || phase === "failed" || phase === "resultPending";
+  const baseStatus = request
+    ? phase && phase !== "upcoming"
+      ? phaseInfo[phase]
+      : statusInfo[request.status]
+    : null;
   // The Hitchhiker who proposed the slot. Everyone else who is not the student (a Head Tutor,
   // an Admin) gets the same neutral wording.
   const isPicker = request?.picked_by != null && request.picked_by.id === user?.id;
@@ -439,7 +491,9 @@ function EvaluationPage() {
                 ) : (
                   t("evaluation.proposed")
                 ))}
-              {request.status === "confirmed" &&
+              {(phase === "passed" || phase === "failed") && t("evaluation.finished")}
+              {phase === "resultPending" && t("evaluation.ended")}
+              {(phase === "upcoming" || phase === "inProgress") &&
                 (isOwnRequest || isPicker
                   ? t("evaluation.scheduledOwn")
                   : t("evaluation.scheduledOther"))}
@@ -531,11 +585,37 @@ function EvaluationPage() {
                 </div>
               </dl>
 
-              <div className="evaluation__tip">
-                <span aria-hidden="true">i</span>
-                <p>{isOwnRequest ? t("evaluation.tipOwn") : t("evaluation.tipOther")}</p>
-              </div>
+              {!isOver && (
+                <div className="evaluation__tip">
+                  <span aria-hidden="true">i</span>
+                  <p>{isOwnRequest ? t("evaluation.tipOwn") : t("evaluation.tipOther")}</p>
+                </div>
+              )}
             </>
+          )}
+
+          {phase === "resultPending" && (
+            <p className="evaluation__notice">{t("evaluation.resultPendingNotice")}</p>
+          )}
+
+          {request.result && (
+            <section
+              className={`evaluation__result evaluation__result--${request.result}`}
+              aria-labelledby="evaluation-result-title"
+            >
+              <h3 id="evaluation-result-title">
+                {t("evaluation.result")}: <strong>{t(`status.${request.result}`)}</strong>
+              </h3>
+              {request.completed_at && (
+                <p>{t("history.resultOn", { date: formatDay(request.completed_at) })}</p>
+              )}
+              {request.feedback && (
+                <blockquote className="evaluation__feedback">
+                  <span>{t("history.feedback")}</span>
+                  <p>{request.feedback}</p>
+                </blockquote>
+              )}
+            </section>
           )}
 
           {answerError && (
