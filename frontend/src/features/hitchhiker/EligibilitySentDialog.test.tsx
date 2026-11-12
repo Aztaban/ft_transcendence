@@ -5,22 +5,17 @@ import EligibilitySentDialog from "./EligibilitySentDialog";
 
 afterEach(cleanup);
 
+// Focus, Escape and a click inside come from the shared Dialog, tested in Dialog.test.tsx.
 describe("EligibilitySentDialog", () => {
-  it("closes on a click outside or Escape, not on a click inside", () => {
+  it("is named by its title and closes on a click outside", () => {
     const onClose = vi.fn();
     render(<EligibilitySentDialog onClose={onClose} />);
 
-    const dialog = screen.getByRole("dialog", {
-      name: "Your request was sent to the HEAD TUTORS!",
-    });
-
-    expect(document.activeElement).toBe(dialog);
-
-    fireEvent.click(dialog);
-    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("dialog", { name: "Your request was sent to the HEAD TUTORS!" }),
+    ).toBeTruthy();
 
     fireEvent.click(screen.getByTestId("eligibility-dialog-backdrop"));
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

@@ -5,20 +5,17 @@ import MarkedReadDialog from "./MarkedReadDialog";
 
 afterEach(cleanup);
 
+// Focus, Escape and a click inside come from the shared Dialog, tested in Dialog.test.tsx.
 describe("MarkedReadDialog", () => {
-  it("closes on a click outside or Escape, not on a click inside", () => {
+  it("is named by its title and closes on a click outside", () => {
     const onClose = vi.fn();
     render(<MarkedReadDialog onClose={onClose} />);
 
-    const dialog = screen.getByRole("dialog", { name: "Done. The message is marked as read." });
-
-    expect(document.activeElement).toBe(dialog);
-
-    fireEvent.click(dialog);
-    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("dialog", { name: "Done. The message is marked as read." }),
+    ).toBeTruthy();
 
     fireEvent.click(screen.getByTestId("marked-read-backdrop"));
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
