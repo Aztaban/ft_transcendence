@@ -21,12 +21,14 @@ Fixed after the audit:
 
 - **Login form:** used the browser's own "fill out this field" bubble, which looks different in each browser and is shown in the browser's language instead of the app's. The form now checks the fields itself, with a translated message, like the registration form.
 - **Search field on the Hitchhikers page:** Chrome and Edge showed their own clear button and Firefox did not. It is hidden everywhere now; the name chip clears the search in every browser.
+- **Hitchhikers page at 200 % zoom:** with the sidebar open, a 700px window (a 1400px screen at 200 %) left the page phone-sized, but its narrow layout only started on phone-sized windows: the overview labels were cut off and the project chips stuck out of the cards. The narrow layout now follows the page's own width (a container query), in every browser.
 
 ## Known differences (by design, not bugs)
 
 - **The self-signed certificate.** Each browser asks once to accept the certificate of `https://localhost`. The WebSocket (`wss://localhost/ws/`) uses the same exception, so open the page and accept it first, or live updates cannot connect.
 - **Native controls.** Dropdowns (`<select>`) and scrollbars keep each browser's own look. Firefox gets thin scrollbars in the app's colours through `scrollbar-width` and `scrollbar-color`.
 - **Network lines in the console.** A request the server refuses on purpose, such as a wrong password (`401 invalid_credentials`, api-plan §10.1), is logged by the browser itself as a network entry. Chrome and Edge show these in the Console by default; Firefox shows them only with the "XHR" / "Requests" filter on. They are not JavaScript errors, and the app shows the user a translated message for each.
+- **While the server restarts,** the browser logs each failed WebSocket attempt (Firefox: "can't establish a connection to the server at wss://localhost/ws/"). The app shows "Reconnecting…", tries again and shows "Back online"; these lines stop once it is back.
 - **Dates and times** are formatted by the browser (`Intl`). The values are the same everywhere; separators can differ slightly between browsers.
 - **Reduced motion** follows the operating system setting in all three browsers: the Home banner then shows a still image.
 

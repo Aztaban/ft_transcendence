@@ -1,6 +1,9 @@
 .hitchhikers {
   display: flex;
   max-width: 980px;
+  /* The narrow layout below follows the page's own width, not the window's: with the sidebar
+     open, a 700px window (a 1400px screen at 200 % zoom) leaves the page phone-sized. */
+  container: hitchhikers / inline-size;
   flex-direction: column;
   gap: 18px;
   margin: 0 auto;
@@ -696,7 +699,10 @@
   .hitchhikers {
     padding: 8px 0 40px;
   }
+}
 
+/* 640px: the page's width on a 680px phone, where these rules started before. */
+@container hitchhikers (max-width: 640px) {
   .hitchhikers__overview {
     gap: 10px;
   }
