@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { useEffect } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -26,6 +26,11 @@ const data = vi.hoisted(() => ({
   totalCount: 0,
   hitchhikerCount: 0 as number | null,
   openCount: null as number | null,
+  // What the list hooks give the boxes: the student's requests, the Hitchhiker's open queue and
+  // the requests the Hitchhiker picked.
+  studentRequests: [] as EvaluationRequest[],
+  openRequests: [] as EvaluationRequest[],
+  pickedRequests: [] as EvaluationRequest[],
 }));
 
 // The student boxes load data from the API; that is tested in OpenRequests and the hook itself.
@@ -36,11 +41,16 @@ vi.mock("../features/hitchhiker/useHitchhikerRequests", () => ({
   useHitchhikerRequests: (enabled?: boolean) => {
     enabledWith.hitchhiker = enabled;
 
-    return { openRequests: [], openCount: data.openCount, pickedRequests: [], ...load };
+    return {
+      openRequests: data.openRequests,
+      openCount: data.openCount,
+      pickedRequests: data.pickedRequests,
+      ...load,
+    };
   },
 }));
 vi.mock("../features/student/useStudentRequests", () => ({
-  useStudentRequests: () => ({ requests: [], ...load, reload: vi.fn() }),
+  useStudentRequests: () => ({ requests: data.studentRequests, ...load, reload: vi.fn() }),
 }));
 vi.mock("../features/home/useRequestOverview", () => ({
   useRequestOverview: (_queries: unknown, _events: unknown, enabled: boolean) => {
@@ -71,6 +81,10 @@ afterEach(() => {
   data.totalCount = 0;
   data.hitchhikerCount = 0;
   data.openCount = null;
+  data.studentRequests = [];
+  data.openRequests = [];
+  data.pickedRequests = [];
+  vi.useRealTimers();
   currentUser.roles = [];
   currentUser.isLoaded = false;
   enabledWith.hitchhiker = undefined;
@@ -149,6 +163,9 @@ describe("HomePage", () => {
 
     expect(screen.getByText("Need an evaluation?")).toBeTruthy();
     expect(screen.getByText("Student")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "New Request" }).getAttribute("href")).toBe(
+      "/requests",
+    );
     expect(document.title).toBe("Home · 42 Evals");
   });
 
@@ -210,6 +227,85 @@ describe("HomePage", () => {
     expect(screen.queryByText("No open requests")).toBeNull();
     expect(screen.queryByText("No history yet")).toBeNull();
   });
+
+  it("shows only the error when a student's requests cannot be loaded", () => {
+    load.hasError = true;
+    renderHomeAs("STUDENT");
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Could not load your requests. Please try again later.",
+    );
+    expect(screen.queryByRole("region", { name: "Open Requests" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Pending Evaluations" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "History" })).toBeNull();
+    // The way on stays: the call to action does not need the list.
+    expect(screen.getByText("Need an evaluation?")).toBeTruthy();
+  });
+});
+
+// The rows of a Home box, as [project, what the row's status column says].
+function rowsIn(box: string) {
+  const region = screen.getByRole("region", { name: box });
+
+  return within(region)
+    .queryAllByRole("article")
+    .map((row) => [
+      within(row).getByRole("heading", { level: 3 }).textContent,
+      row.querySelector(".dashboard-request__status")?.textContent,
+    ]);
+}
+
+// The projects listed in a Home box, in their order.
+function projectsIn(box: string) {
+  return rowsIn(box).map(([project]) => project);
+}
+
+// The dashboard hands one list to several boxes, and each box keeps its own requests (#360).
+describe("HomePage boxes", () => {
+  it("puts each of the student's requests in its box", () => {
+    data.studentRequests = [
+      makeRequest(1, "minishell", "pending"),
+      makeRequest(2, "push_swap", "awaiting_confirmation"),
+      makeRequest(3, "libft", "confirmed"),
+      { ...makeRequest(4, "ft_printf", "confirmed"), is_history: true, result: "passed" },
+      makeRequest(5, "so_long", "cancelled"),
+      makeRequest(6, "pipex", "expired"),
+    ];
+    renderHomeAs("STUDENT");
+
+    // A proposed slot waits for the student's answer, so it comes first.
+    expect(rowsIn("Open Requests")).toEqual([
+      ["push_swap", "Needs your confirmation"],
+      ["minishell", "Pending"],
+    ]);
+    expect(projectsIn("Pending Evaluations")).toEqual(["libft"]);
+    expect(rowsIn("History")).toEqual([
+      ["ft_printf", "Passed"],
+      ["so_long", "Cancelled"],
+      ["pipex", "Expired"],
+    ]);
+  });
+
+  it("puts each of the Hitchhiker's requests in its box", () => {
+    // The open queue is its own list (scope=open); the other boxes share the picked requests.
+    data.openRequests = [{ ...makeRequest(11, "minishell", "pending"), student: null }];
+    data.pickedRequests = [
+      makeRequest(12, "push_swap", "awaiting_confirmation"),
+      makeRequest(13, "libft", "confirmed"),
+      { ...makeRequest(14, "ft_printf", "confirmed"), is_history: true, result: "failed" },
+      { ...makeRequest(15, "so_long", "confirmed"), is_history: true },
+    ];
+    renderHomeAs("HITCHHIKER");
+
+    expect(rowsIn("Open Requests")).toEqual([["minishell", "Open"]]);
+    expect(rowsIn("Awaiting Confirmation")).toEqual([["push_swap", "Waiting for student"]]);
+    expect(projectsIn("Upcoming Evaluations")).toEqual(["libft"]);
+    // An ended evaluation without a result yet is history too, waiting for its result.
+    expect(rowsIn("History")).toEqual([
+      ["ft_printf", "Failed"],
+      ["so_long", "Result pending"],
+    ]);
+  });
 });
 
 function overviewBox(label: string) {
@@ -246,6 +342,32 @@ describe("HomePage overview", () => {
     renderHomeAs("STUDENT");
 
     expect(within(overviewBox("Next evaluation")).getByText(/10 Nov/)).toBeTruthy();
+  });
+
+  // No event fires when an evaluation ends: the page looks at the clock once a minute.
+  it("moves on to the next evaluation once the current one has ended", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.setSystemTime(new Date("2026-11-12T10:30:00Z"));
+    data.overview = {
+      upcoming: list(2, [
+        evaluation(1, "2026-11-12T10:00:00Z", "2026-11-12T10:45:00Z"),
+        evaluation(2, "2026-11-20T10:00:00Z", "2026-11-20T10:45:00Z"),
+      ]),
+    };
+    renderHomeAs("STUDENT");
+
+    // The running evaluation is still the next one until it ends.
+    expect(within(overviewBox("Next evaluation")).getByText(/12 Nov/)).toBeTruthy();
+
+    act(() => vi.advanceTimersByTime(15 * 60 * 1000));
+    expect(within(overviewBox("Next evaluation")).getByText(/20 Nov/)).toBeTruthy();
+
+    // Eight days later, without running the timer for each of those minutes: the next tick sees it.
+    act(() => {
+      vi.setSystemTime(new Date("2026-11-20T10:45:00Z"));
+      vi.advanceTimersByTime(60 * 1000);
+    });
+    expect(within(overviewBox("Next evaluation")).getByText("Not scheduled")).toBeTruthy();
   });
 
   it("leaves a box without a number when its list has not answered", () => {
