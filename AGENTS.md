@@ -102,7 +102,8 @@ When adding or changing a user-facing string, update backend/locale/*/LC_MESSAGE
 
 ## Tests
 
-- Backend tests live in `backend/apps/<app>/tests/test_*.py` (pytest with pytest-django). Shared fixtures go in `backend/conftest.py`.
+- Backend tests live in `backend/apps/<app>/tests/test_*.py` (pytest with pytest-django). Fixtures used by more than one app go in `backend/conftest.py`; fixtures used by one app go in `backend/apps/<app>/tests/conftest.py`.
+- Reuse the shared fixtures instead of copying them into a test module: `user_event_sender` captures WebSocket delivery, `api_login` logs a user in through the login endpoint with CSRF enforced, `api_client` is a plain `APIClient`.
 - Assert whole response bodies with `==` against literal expected values, so an extra or missing field fails the test. Do not compute the expected values with the code under test.
 - Cover the failure cases: 401 when logged out, 403 or 404 for the wrong role or owner, 409 for forbidden state transitions, 400 for each validation rule.
 - For every endpoint that changes data, at least one test logs in through a real session with CSRF enforced (`APIClient(enforce_csrf_checks=True)`), not only `force_authenticate`.

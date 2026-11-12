@@ -1,8 +1,5 @@
 """Notification creation is durable before delivery and follows workflow rollback."""
 
-from types import SimpleNamespace
-from unittest.mock import AsyncMock
-
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -24,17 +21,8 @@ def recipient():
     )
 
 
-@pytest.fixture
-def send(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
-
-
 def test_creation_stores_exact_facts_and_defers_recipient_only_event(
-    recipient, send, django_capture_on_commit_callbacks
+    recipient, user_event_sender, django_capture_on_commit_callbacks
 ):
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         notification = create_notification(
@@ -43,7 +31,7 @@ def test_creation_stores_exact_facts_and_defers_recipient_only_event(
             payload={"request_id": 7, "decision": "approved", "review_note": ""},
             target_url="/eligibility-requests/7",
         )
-        send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
         notification.refresh_from_db()
         assert notification.recipient_id == recipient.pk
         assert notification.type == "eligibility.decided"
@@ -58,14 +46,14 @@ def test_creation_stores_exact_facts_and_defers_recipient_only_event(
         original_id = notification.pk
         notification.pk = 999999
     assert len(callbacks) == 1
-    send.assert_awaited_once_with(
+    user_event_sender.assert_awaited_once_with(
         f"user_{recipient.pk}",
         {"type": "user.event", "event": "notification.created", "data": {"id": original_id}},
     )
 
 
 def test_creation_supports_notifications_without_a_target(
-    recipient, send, django_capture_on_commit_callbacks
+    recipient, user_event_sender, django_capture_on_commit_callbacks
 ):
     with django_capture_on_commit_callbacks(execute=True):
         notification = create_notification(
@@ -89,7 +77,7 @@ def test_creation_supports_notifications_without_a_target(
     ],
 )
 def test_invalid_input_creates_no_row_or_event(
-    recipient, send, django_capture_on_commit_callbacks, overrides, field
+    recipient, user_event_sender, django_capture_on_commit_callbacks, overrides, field
 ):
     arguments = {
         "recipient_id": recipient.pk,
@@ -103,11 +91,11 @@ def test_invalid_input_creates_no_row_or_event(
     assert set(exc.value.message_dict) == {field}
     assert not Notification.objects.exists()
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 def test_workflow_rollback_removes_notification_and_discards_delivery(
-    recipient, send, django_capture_on_commit_callbacks
+    recipient, user_event_sender, django_capture_on_commit_callbacks
 ):
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         with pytest.raises(RuntimeError, match="rollback"):
@@ -124,11 +112,11 @@ def test_workflow_rollback_removes_notification_and_discards_delivery(
     assert recipient.display_name == "Recipient"
     assert not Notification.objects.exists()
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 @pytest.mark.django_db(transaction=True)
-def test_delivery_waits_for_outermost_commit(recipient, send):
+def test_delivery_waits_for_outermost_commit(recipient, user_event_sender):
     with transaction.atomic():
         with transaction.atomic():
             notification = create_notification(
@@ -136,17 +124,17 @@ def test_delivery_waits_for_outermost_commit(recipient, send):
                 notification_type="account.updated",
                 payload={"fields": ["email"]},
             )
-        send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
     assert Notification.objects.filter(pk=notification.pk).exists()
-    send.assert_awaited_once_with(
+    user_event_sender.assert_awaited_once_with(
         f"user_{recipient.pk}",
         {"type": "user.event", "event": "notification.created", "data": {"id": notification.pk}},
     )
 
 
 @pytest.mark.django_db(transaction=True)
-def test_delivery_failure_preserves_committed_notification(recipient, send, caplog):
-    send.side_effect = ConnectionError("Redis unavailable")
+def test_delivery_failure_preserves_committed_notification(recipient, user_event_sender, caplog):
+    user_event_sender.side_effect = ConnectionError("Redis unavailable")
     notification = create_notification(
         recipient_id=recipient.pk,
         notification_type="account.updated",
