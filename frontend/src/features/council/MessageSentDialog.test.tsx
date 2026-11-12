@@ -5,20 +5,15 @@ import MessageSentDialog from "./MessageSentDialog";
 
 afterEach(cleanup);
 
+// Focus, Escape and a click inside come from the shared Dialog, tested in Dialog.test.tsx.
 describe("MessageSentDialog", () => {
-  it("closes on a click outside or Escape, not on a click inside", () => {
+  it("is named by its title and closes on a click outside", () => {
     const onClose = vi.fn();
     render(<MessageSentDialog onClose={onClose} />);
 
-    const dialog = screen.getByRole("dialog", { name: "Message Sent" });
-
-    expect(document.activeElement).toBe(dialog);
-
-    fireEvent.click(dialog);
-    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Message Sent" })).toBeTruthy();
 
     fireEvent.click(screen.getByTestId("message-sent-backdrop"));
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
