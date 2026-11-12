@@ -73,12 +73,13 @@ describe("LegalPage", () => {
     );
   });
 
-  it("leaves the logo, language and way back to the application shell", () => {
+  it("leaves the logo and language to the application shell, with a back link at the top", () => {
     renderPage("privacy", false);
 
     expect(screen.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeTruthy();
     expect(screen.queryByRole("main")).toBeNull();
-    expect(screen.queryByRole("link")).toBeNull();
+    // Only the back link (#374): no logo link and no "back to the application" at the bottom.
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(["‹ Back to home"]);
     expect(screen.queryByRole("group", { name: "Language" })).toBeNull();
   });
 

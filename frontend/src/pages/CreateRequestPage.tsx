@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
@@ -74,6 +74,22 @@ function writeDraft(draft: Draft | null) {
   } catch {
     // The draft is a convenience only.
   }
+}
+
+// Scrolls to the student's requests and moves the focus there, gently unless the user asked
+// for less motion.
+function jumpToMyRequests(event: MouseEvent<HTMLAnchorElement>) {
+  const target = document.getElementById("my-requests-title");
+
+  if (!target) {
+    return;
+  }
+
+  event.preventDefault();
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+  target.scrollIntoView?.({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  target.focus({ preventScroll: true });
 }
 
 function CreateRequestPage() {
@@ -154,6 +170,13 @@ function CreateRequestPage() {
             })}
           </p>
         </div>
+
+        {/* The list of the student's requests sits below the form: a way to it from the top (#374). */}
+        {stepId === "project" && (
+          <a className="create-request__jump" href="#my-requests-title" onClick={jumpToMyRequests}>
+            {t("myRequests.title")} <span aria-hidden="true">↓</span>
+          </a>
+        )}
       </header>
 
       <ProgressBar

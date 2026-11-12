@@ -402,7 +402,7 @@ function CouncilInboxMessagePage() {
                     <strong>{t("council.moderation.sender")}</strong>
                     {revealed.sender ? (
                       <>
-                        <Link to={`/people/${revealed.sender.id}`}>
+                        <Link to={`/people/${revealed.sender.id}`} state={{ from: backTo }}>
                           {revealed.sender.display_name}
                         </Link>
                         <span>{revealed.sender.email}</span>

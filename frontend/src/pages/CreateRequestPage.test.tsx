@@ -11,7 +11,13 @@ import CreateRequestPage from "./CreateRequestPage";
 vi.mock("../api/projects", () => ({ listProjects: vi.fn() }));
 vi.mock("../api/evaluationRequests", () => ({ createEvaluationRequest: vi.fn() }));
 vi.mock("../features/student/MyRequests", () => ({
-  default: () => <section>Your requests list</section>,
+  default: () => (
+    <section>
+      <h2 id="my-requests-title" tabIndex={-1}>
+        Your requests list
+      </h2>
+    </section>
+  ),
 }));
 
 const projects = [
@@ -70,6 +76,22 @@ describe("CreateRequestPage", () => {
     fireEvent.click(getButton("Next"));
 
     expect(screen.queryByText("Your requests list")).toBeNull();
+  });
+
+  // #374: the list is below the form, so the top of the page links to it.
+  it("links from the top to the student's requests and moves the focus there", async () => {
+    renderPage();
+    await chooseProject("push_swap");
+
+    const jump = screen.getByRole("link", { name: "Your requests" });
+
+    expect(jump.getAttribute("href")).toBe("#my-requests-title");
+    fireEvent.click(jump);
+    expect(document.activeElement?.textContent).toBe("Your requests list");
+
+    fireEvent.click(getButton("Next"));
+
+    expect(screen.queryByRole("link", { name: "Your requests" })).toBeNull();
   });
 
   it("explains how a request works next to the form", async () => {
