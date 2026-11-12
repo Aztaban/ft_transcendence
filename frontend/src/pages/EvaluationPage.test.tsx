@@ -85,6 +85,17 @@ function getButton(name: RegExp | string) {
 }
 
 describe("EvaluationPage", () => {
+  // #369: screen readers hear what is loading, not only an empty busy block.
+  it("says that the evaluation is loading", () => {
+    vi.mocked(getEvaluationRequest).mockReturnValue(new Promise(() => {}));
+
+    renderPage();
+
+    const label = screen.getByText("Loading the evaluation…");
+
+    expect(label.closest("[aria-busy='true']")).toBeTruthy();
+  });
+
   it("shows the proposed slot and the tip, without the Hitchhiker (R18)", async () => {
     vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
 

@@ -29,6 +29,20 @@ function getButton(name: string) {
 }
 
 describe("WelcomeHitchhikerDialog", () => {
+  // #369: placeholders and a text for screen readers instead of an empty box.
+  it("shows placeholders while the projects load", async () => {
+    render(<WelcomeHitchhikerDialog onClose={() => {}} />);
+
+    const projectBox = screen.getByRole("group", { name: "Projects" });
+
+    expect(projectBox.getAttribute("aria-busy")).toBe("true");
+    expect(screen.getByText("Loading projects…")).toBeTruthy();
+
+    expect(await screen.findByRole("checkbox", { name: /minishell/ })).toBeTruthy();
+    expect(projectBox.getAttribute("aria-busy")).toBe("false");
+    expect(screen.queryByText("Loading projects…")).toBeNull();
+  });
+
   it("says when the projects cannot be loaded, with Submit disabled", async () => {
     vi.mocked(listProjects).mockRejectedValue(new Error("network"));
     render(<WelcomeHitchhikerDialog onClose={() => {}} />);

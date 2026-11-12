@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -212,6 +212,45 @@ describe("AuditLogPage", () => {
       target: { value: "user.deleted" },
     });
     await waitFor(() => expect(lastQuery()).toMatchObject({ action: "user.deleted", page: 1 }));
+  });
+
+  // #369: the entries stay until the next page arrives, so the button just used keeps the focus.
+  it("keeps the entries and the focus on Next while the next page loads", async () => {
+    let answer: (value: ReturnType<typeof page>) => void = () => {};
+
+    vi.mocked(listAuditLog)
+      .mockResolvedValueOnce(page([roleAssigned], 41, "next"))
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      .mockResolvedValueOnce(page([messageDeleted], 41));
+    renderPage();
+
+    const next = await screen.findByRole("button", { name: /Next/ });
+
+    next.focus();
+    fireEvent.click(next);
+
+    await waitFor(() => expect(lastQuery()?.page).toBe(2));
+    expect(rows()).toHaveLength(1);
+    expect(screen.getByText("Page 2 of 3")).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Audit entries" }).getAttribute("aria-busy")).toBe(
+      "true",
+    );
+    expect(document.activeElement).toBe(next);
+
+    await act(async () => answer(page([userEdited], 41, "next")));
+
+    expect(within(rows()[0]).getByText("A deleted account")).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Audit entries" }).getAttribute("aria-busy")).toBe(
+      "false",
+    );
+    expect(document.activeElement).toBe(next);
+
+    // A quick second click on the last page asks for nothing past it.
+    fireEvent.click(next);
+    fireEvent.click(next);
+
+    await waitFor(() => expect(within(rows()[0]).getByText("Insults.")).toBeTruthy());
+    expect(vi.mocked(listAuditLog).mock.calls.map(([query]) => query?.page)).toEqual([1, 2, 3]);
   });
 
   it("says when nothing matches and clears the filters", async () => {

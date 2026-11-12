@@ -179,9 +179,13 @@ function PersonProfilePage() {
     };
   }, [personId, isSessionLoading, isAuthenticated, retryKey]);
 
+  // Who is shown, once loaded. A role change replaces `person` (RoleManager) but not who it is,
+  // so the projects and the evaluations below stay shown instead of loading again (#369).
+  const shownId = person?.id;
+
   // The projects they can evaluate, out of all active projects.
   useEffect(() => {
-    if (!person || !hitchhiker) {
+    if (shownId === undefined || !hitchhiker) {
       return;
     }
 
@@ -191,7 +195,7 @@ function PersonProfilePage() {
     setAllProjects(null);
     setProjectsFailed(false);
 
-    getTutorEligibility(person.id)
+    getTutorEligibility(shownId)
       .then((list) => {
         if (active) {
           setEligible(list);
@@ -216,14 +220,14 @@ function PersonProfilePage() {
     return () => {
       active = false;
     };
-  }, [person, hitchhiker]);
+  }, [shownId, hitchhiker]);
 
   // The student's own requests this Hitchhiker picked: the active ones and the latest history
   // page. There is no filter on `picked_by`, so the pages are filtered here. `history: false`
   // keeps the two lists apart (the backend filters only when `history` is sent, §10.4), and a
   // request that moved to the history between the two answers is still shown once (#771).
   useEffect(() => {
-    if (!person || !showsTogether) {
+    if (shownId === undefined || !showsTogether) {
       return;
     }
 
@@ -242,7 +246,7 @@ function PersonProfilePage() {
 
           setTogether(
             [...current.results, ...past.results].filter((request) => {
-              if (request.picked_by?.id !== person.id || seen.has(request.id)) {
+              if (request.picked_by?.id !== shownId || seen.has(request.id)) {
                 return false;
               }
 
@@ -262,7 +266,7 @@ function PersonProfilePage() {
     return () => {
       active = false;
     };
-  }, [person, showsTogether]);
+  }, [shownId, showsTogether]);
 
   useEffect(() => {
     if (!isCopied) {

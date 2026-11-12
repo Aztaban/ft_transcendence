@@ -101,6 +101,12 @@
   animation: history-slide-in 0.35s ease;
 }
 
+/* The cards of the page shown while the next one loads (#369). The loading placeholder is a
+   <div> with the same class. */
+ul.history-page__list[aria-busy="true"] {
+  opacity: 0.55;
+}
+
 .history-card {
   --tone: var(--color-neutral-400);
   --tone-ink: #5c6464;

@@ -107,6 +107,11 @@
   background: #ffffff;
 }
 
+/* The rows of the page shown while the next one loads (#369). */
+.admin-users__table-wrap[aria-busy="true"] {
+  opacity: 0.55;
+}
+
 .admin-users__table {
   width: 100%;
   border-collapse: collapse;

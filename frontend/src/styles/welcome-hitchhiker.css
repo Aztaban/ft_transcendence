@@ -72,6 +72,18 @@
   background: #fafcfc;
 }
 
+/* Placeholders the size of a project row while the projects load (#369). */
+.welcome-dialog__loading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.welcome-dialog__loading .welcome-dialog__skeleton {
+  height: 50px;
+  border-radius: 10px;
+}
+
 .welcome-dialog__project {
   display: flex;
   align-items: center;

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -159,6 +159,42 @@ describe("AdminUsersPage", () => {
       { ...noFilters, page: 1 },
       { ...noFilters, page: 2 },
     ]);
+  });
+
+  // #369: the rows stay until the next page arrives, so the button just used keeps the focus.
+  it("keeps the users and the focus on Next while the next page loads", async () => {
+    let answer: (value: ReturnType<typeof page>) => void = () => {};
+
+    vi.mocked(listAdminUsers)
+      .mockResolvedValueOnce(page([adminUser(1, "Anna")], 41, "?page=2"))
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      .mockResolvedValueOnce(page([adminUser(41, "Zoe")], 41, null));
+
+    renderPage();
+
+    const next = await screen.findByRole("button", { name: /Next/ });
+
+    next.focus();
+    fireEvent.click(next);
+
+    expect(screen.getByText("Anna")).toBeTruthy();
+    expect(screen.getByText("Page 2 of 3")).toBeTruthy();
+    expect(screen.getByRole("table").parentElement?.getAttribute("aria-busy")).toBe("true");
+    expect(document.activeElement).toBe(next);
+
+    await act(async () => answer(page([adminUser(21, "Mia")], 41, "?page=3")));
+
+    expect(screen.queryByText("Anna")).toBeNull();
+    expect(screen.getByText("Mia")).toBeTruthy();
+    expect(screen.getByRole("table").parentElement?.getAttribute("aria-busy")).toBe("false");
+    expect(document.activeElement).toBe(next);
+
+    // A quick second click on the last page asks for nothing past it.
+    fireEvent.click(next);
+    fireEvent.click(next);
+
+    expect(await screen.findByText("Zoe")).toBeTruthy();
+    expect(requests().map((params) => params?.page)).toEqual([1, 2, 3]);
   });
 
   it("shows no page buttons when everything fits on one page", async () => {

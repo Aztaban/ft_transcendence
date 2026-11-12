@@ -5,9 +5,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { getAdminUser, updateAdminUser } from "./api/admin";
 import { getSession, loginUser } from "./api/auth";
 import { getEligibilityRequest, listEligibilityRequests } from "./api/eligibility";
-import { listEvaluationRequests } from "./api/evaluationRequests";
+import { getEvaluationRequest, listEvaluationRequests } from "./api/evaluationRequests";
 import { listProjects } from "./api/projects";
 import App from "./App";
+import { makeRequest } from "./features/student/testUtils";
 import type { UserProfile } from "./types/user";
 import { AuthProvider } from "./store/AuthContext";
 import { RoleProvider } from "./store/RoleContext";
@@ -30,7 +31,10 @@ vi.mock("./api/eligibility", () => ({
   listEligibilityRequests: vi.fn(),
   reviewEligibilityRequest: vi.fn(),
 }));
-vi.mock("./api/evaluationRequests", () => ({ listEvaluationRequests: vi.fn() }));
+vi.mock("./api/evaluationRequests", () => ({
+  getEvaluationRequest: vi.fn(),
+  listEvaluationRequests: vi.fn(),
+}));
 vi.mock("./api/projects", () => ({ listProjects: vi.fn() }));
 vi.mock("./api/users", () => ({
   getCurrentUser: vi.fn(),
@@ -463,5 +467,49 @@ describe("Administration user page", () => {
     expect(screen.queryByRole("heading", { name: "Renamed" })).toBeNull();
     expect(screen.queryByText("Changes saved.")).toBeNull();
     expect(getAdminUser).toHaveBeenLastCalledWith(2);
+  });
+});
+
+describe("Evaluation page", () => {
+  // Opens another evaluation in place, as a link in the notification panel would.
+  function OpenEvaluation({ id }: { id: number }) {
+    const navigate = useNavigate();
+
+    return (
+      <button type="button" onClick={() => navigate(`/evaluations/${id}`)}>
+        open evaluation {id}
+      </button>
+    );
+  }
+
+  beforeEach(() => {
+    vi.mocked(getSession).mockResolvedValue({ authenticated: true, user });
+  });
+
+  // #369: the previous evaluation is never shown while the next one loads.
+  test("starts with a fresh page when another evaluation is opened", async () => {
+    vi.mocked(getEvaluationRequest).mockImplementation((id) =>
+      // Evaluation 2 stays loading, so the test sees what is shown in the meantime.
+      id === 1 ? Promise.resolve(makeRequest(1, "push_swap", "confirmed")) : new Promise(() => {}),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/evaluations/1"]}>
+        <AuthProvider>
+          <RoleProvider>
+            <OpenEvaluation id={2} />
+            <App />
+          </RoleProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("article")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "open evaluation 2" }));
+
+    expect(await screen.findByText("Loading the evaluation…")).toBeDefined();
+    expect(screen.queryByRole("article")).toBeNull();
+    expect(getEvaluationRequest).toHaveBeenLastCalledWith(2);
   });
 });

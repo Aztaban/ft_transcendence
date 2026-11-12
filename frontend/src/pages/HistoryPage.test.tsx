@@ -248,6 +248,44 @@ describe("HistoryPage", () => {
     expect(listEvaluationRequests).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
   });
 
+  // #369: the cards stay until the next page arrives, so the button just used keeps the focus.
+  it("keeps the cards and the focus on Next while the next page loads", async () => {
+    let answer: (value: ReturnType<typeof page>) => void = () => {};
+
+    vi.mocked(listEvaluationRequests)
+      .mockResolvedValueOnce(page([past(1, "push_swap")], 41, "?page=2"))
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      .mockResolvedValueOnce(page([past(3, "minishell")], 41));
+
+    renderPage();
+
+    const next = await screen.findByRole("button", { name: "Next" });
+
+    next.focus();
+    fireEvent.click(next);
+
+    expect(screen.getByRole("heading", { name: "push_swap" })).toBeTruthy();
+    expect(screen.getByText("Page 2 of 3")).toBeTruthy();
+    expect(screen.getByRole("list").getAttribute("aria-busy")).toBe("true");
+    expect(document.activeElement).toBe(next);
+
+    await act(async () => answer(page([past(2, "born2beroot")], 41, "?page=3")));
+
+    expect(screen.queryByRole("heading", { name: "push_swap" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "born2beroot" })).toBeTruthy();
+    expect(screen.getByRole("list").getAttribute("aria-busy")).toBe("false");
+    expect(document.activeElement).toBe(next);
+
+    // A quick second click on the last page asks for nothing past it.
+    fireEvent.click(next);
+    fireEvent.click(next);
+
+    expect(await screen.findByRole("heading", { name: "minishell" })).toBeTruthy();
+    expect(vi.mocked(listEvaluationRequests).mock.calls.map(([query]) => query?.page)).toEqual([
+      1, 2, 3,
+    ]);
+  });
+
   // #772: the Hitchhiker's history may have fewer pages than the student's.
   it("starts the other workspace's history at page 1", async () => {
     vi.mocked(listEvaluationRequests).mockImplementation(async (params) =>

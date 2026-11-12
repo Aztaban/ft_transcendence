@@ -77,6 +77,9 @@ function AdminUsersPage() {
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const isFiltered = query !== "" || role !== "" || status !== "";
+  // Another page or filter keeps the rows shown, greyed out, until the new ones arrive: the
+  // Previous / Next button just used stays in place and keeps the focus (#369).
+  const isRefreshing = loadState === "loading" && users.length > 0;
 
   return (
     <section className="admin-users">
@@ -138,7 +141,7 @@ function AdminUsersPage() {
         </label>
       </div>
 
-      {loadState === "loading" && (
+      {loadState === "loading" && !isRefreshing && (
         <div className="admin-users__list" aria-busy="true">
           {[1, 2, 3].map((placeholder) => (
             <div className="admin-users__skeleton" key={placeholder} />
@@ -159,9 +162,9 @@ function AdminUsersPage() {
         </div>
       )}
 
-      {loadState === "ready" && users.length > 0 && (
+      {(loadState === "ready" || isRefreshing) && users.length > 0 && (
         <>
-          <div className="admin-users__table-wrap">
+          <div className="admin-users__table-wrap" aria-busy={isRefreshing}>
             <table className="admin-users__table" aria-labelledby="admin-users-title">
               <thead>
                 <tr>
@@ -208,7 +211,9 @@ function AdminUsersPage() {
               <span aria-live="polite">{t("adminUsers.page", { page, count: pageCount })}</span>
               <button
                 type="button"
-                disabled={!hasNext}
+                // `hasNext` is the shown page's until the next one arrives: a second quick click
+                // must not ask for a page past the last one.
+                disabled={!hasNext || page >= pageCount}
                 onClick={() => setPage((current) => current + 1)}
               >
                 {t("common.next")} <span aria-hidden="true">›</span>
