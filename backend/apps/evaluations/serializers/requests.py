@@ -117,7 +117,12 @@ class EvaluationExceptionSerializer(EvaluationRequestSerializer):
 
 
 class EvaluationRequestCreateSerializer(serializers.Serializer):
-    project_id = serializers.PrimaryKeyRelatedField(queryset=Project.objects.filter(is_active=True))
+    # A project turned off while the student's form was open is "not found" here: the student
+    # sees a sentence, not DRF's 'Invalid pk "4" - object does not exist.' (#811).
+    project_id = serializers.PrimaryKeyRelatedField(
+        queryset=Project.objects.filter(is_active=True),
+        error_messages={"does_not_exist": _("This project is not available any more.")},
+    )
     note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
 
 

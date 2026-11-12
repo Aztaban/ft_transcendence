@@ -169,7 +169,7 @@ def test_csrf_required(student, evaluation, method):
         ({}, "project_id", "This field is required."),
         ({"project_id": None}, "project_id", "This field may not be null."),
         ({"project_id": "wrong"}, "project_id", "Incorrect type. Expected pk value, received str."),
-        ({"project_id": 99}, "project_id", 'Invalid pk "99" - object does not exist.'),
+        ({"project_id": 99}, "project_id", "This project is not available any more."),
         ({"project_id": 4, "note": None}, "note", "This field may not be null."),
         (
             {"project_id": 4, "note": "x" * 501},
@@ -191,15 +191,26 @@ def test_create_validation(client, project, payload, field, message):
     assert not EvaluationRequest.objects.exists()
 
 
-def test_inactive_project(client, project):
+# A project turned off while the student's form was open (#811), in each language (§5.5).
+@pytest.mark.parametrize(
+    "language,message,field_message",
+    [
+        ("en", "Please correct the highlighted fields.", "This project is not available any more."),
+        ("cs", "Opravte prosím zvýrazněná pole.", "Tento projekt už není k dispozici."),
+        ("es", "Corrija los campos resaltados.", "Este proyecto ya no está disponible."),
+    ],
+)
+def test_inactive_project(client, project, language, message, field_message):
     Project.objects.filter(pk=4).update(is_active=False)
-    response = client.post(list_url(), {"project_id": 4}, format="json")
+    response = client.post(
+        list_url(), {"project_id": 4}, format="json", HTTP_ACCEPT_LANGUAGE=language
+    )
     assert response.status_code == 400
     assert response.json() == {
         "error": {
             "code": "validation_error",
-            "message": "Please correct the highlighted fields.",
-            "fields": {"project_id": ['Invalid pk "4" - object does not exist.']},
+            "message": message,
+            "fields": {"project_id": [field_message]},
         }
     }
 
