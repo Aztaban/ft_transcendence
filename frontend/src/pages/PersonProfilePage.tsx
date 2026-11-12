@@ -10,6 +10,7 @@ import { getPublicUser } from "../api/users";
 import usePageTitle from "../components/layout/usePageTitle";
 import Avatar from "../components/ui/Avatar";
 import Icon, { type IconName } from "../components/ui/Icon";
+import LoadError from "../components/ui/LoadError";
 import ProgressBar from "../components/ui/ProgressBar";
 import RoleManager from "../features/people/RoleManager";
 import { isHitchhiker, roleBadges } from "../features/people/roleBadges";
@@ -131,6 +132,9 @@ function PersonProfilePage() {
   const [eligible, setEligible] = useState<ProjectRef[] | null>(null);
   const [allProjects, setAllProjects] = useState<ProjectRef[] | null>(null);
   const [projectsFailed, setProjectsFailed] = useState(false);
+  // "Try again" of the project strip and of the evaluations together (#371).
+  const [projectsRetryKey, setProjectsRetryKey] = useState(0);
+  const [togetherRetryKey, setTogetherRetryKey] = useState(0);
   const [together, setTogether] = useState<EvaluationRequest[] | null>(null);
   const [togetherFailed, setTogetherFailed] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -220,7 +224,7 @@ function PersonProfilePage() {
     return () => {
       active = false;
     };
-  }, [shownId, hitchhiker]);
+  }, [shownId, hitchhiker, projectsRetryKey]);
 
   // The student's own requests this Hitchhiker picked: the active ones and the latest history
   // page. There is no filter on `picked_by`, so the pages are filtered here. `history: false`
@@ -266,7 +270,7 @@ function PersonProfilePage() {
     return () => {
       active = false;
     };
-  }, [shownId, showsTogether]);
+  }, [shownId, showsTogether, togetherRetryKey]);
 
   useEffect(() => {
     if (!isCopied) {
@@ -427,7 +431,12 @@ function PersonProfilePage() {
               )}
 
               {projectsFailed && (
-                <p className="person-profile__strip-note">{t("person.projectsError")}</p>
+                <LoadError
+                  className="person-profile__strip-note"
+                  onRetry={() => setProjectsRetryKey((key) => key + 1)}
+                >
+                  {t("person.projectsError")}
+                </LoadError>
               )}
 
               {eligible?.length === 0 && (
@@ -512,7 +521,12 @@ function PersonProfilePage() {
                 )}
 
                 {togetherFailed && (
-                  <p className="person-profile__note">{t("person.togetherError")}</p>
+                  <LoadError
+                    className="person-profile__note"
+                    onRetry={() => setTogetherRetryKey((key) => key + 1)}
+                  >
+                    {t("person.togetherError")}
+                  </LoadError>
                 )}
 
                 {together?.length === 0 && (

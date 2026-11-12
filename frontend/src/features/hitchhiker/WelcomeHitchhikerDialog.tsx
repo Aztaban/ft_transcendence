@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { createEligibilityRequest } from "../../api/eligibility";
 import { listProjects } from "../../api/projects";
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
+import LoadError from "../../components/ui/LoadError";
 import Skeleton from "../../components/ui/Skeleton";
 import useDialog from "../../hooks/useDialog";
 import type { ProjectRef } from "../../types/project";
@@ -25,16 +26,26 @@ const TONES = ["teal", "amber", "blue", "violet"] as const;
 // Projects can be added later from /eligibility-requests/new.
 function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
   const { t } = useTranslation();
-  const cardRef = useDialog<HTMLDivElement>(onClose);
   const [view, setView] = useState<View>("form");
   const [projects, setProjects] = useState<ProjectRef[]>([]);
   // Until GET /projects/ answers (#369): placeholders instead of an empty box.
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // The failed submit, translated at render so it follows the language switcher.
   const [submitError, setSubmitError] = useState<unknown>(null);
+
+  // Nothing closes the popup while the request is on its way: "Form sent!" or the error would
+  // come back with nothing open to show it (#371).
+  function close() {
+    if (!isSubmitting) {
+      onClose();
+    }
+  }
+
+  const cardRef = useDialog<HTMLDivElement>(close);
 
   useEffect(() => {
     let active = true;
@@ -56,12 +67,13 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [retryKey]);
 
-  // useDialog focuses the card when it opens; the "Form sent!" view gets the focus again.
+  // useDialog focuses the card when it opens; the "Form sent!" view gets the focus again, and so
+  // does the form after sending, which disables the focused button.
   useEffect(() => {
     cardRef.current?.focus();
-  }, [view]);
+  }, [view, isSubmitting]);
 
   function toggle(projectId: number) {
     setSelectedIds((current) =>
@@ -135,9 +147,16 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
         </p>
 
         {loadError ? (
-          <p className="welcome-dialog__error" role="alert">
+          <LoadError
+            className="welcome-dialog__error"
+            onRetry={() => {
+              setLoadError(false);
+              setIsLoading(true);
+              setRetryKey((key) => key + 1);
+            }}
+          >
             {t("projectSelect.error")}
-          </p>
+          </LoadError>
         ) : (
           <fieldset className="welcome-dialog__projects" aria-busy={isLoading}>
             <legend className="welcome-dialog__sr-only">{t("welcome.projects")}</legend>
@@ -188,7 +207,12 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
           <span className="welcome-dialog__count" aria-live="polite">
             {t("welcome.selected", { count: selectedIds.length })}
           </span>
-          <button className="welcome-dialog__later" type="button" onClick={onClose}>
+          <button
+            className="welcome-dialog__later"
+            type="button"
+            disabled={isSubmitting}
+            onClick={close}
+          >
             {t("welcome.notNow")}
           </button>
           <button

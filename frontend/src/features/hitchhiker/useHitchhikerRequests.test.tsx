@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { listEvaluationRequests } from "../../api/evaluationRequests";
@@ -156,6 +156,29 @@ describe("useHitchhikerRequests", () => {
     render(<Probe />);
 
     expect(await screen.findByText("error")).toBeTruthy();
+  });
+
+  // #371: Try again on Home.
+  it("loads again on retry, showing the loading state until the answer", async () => {
+    loggedIn(true);
+    vi.mocked(listEvaluationRequests).mockRejectedValue(new Error("network"));
+
+    const { result } = renderHook(() => useHitchhikerRequests());
+
+    await waitFor(() => expect(result.current.hasError).toBe(true));
+
+    vi.mocked(listEvaluationRequests).mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [makeRequest(1, "push_swap", "pending")],
+    });
+    act(() => result.current.retry());
+
+    expect(result.current.hasError).toBe(false);
+    expect(result.current.isLoading).toBe(true);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.openRequests.map((request) => request.id)).toEqual([1]);
   });
 });
 

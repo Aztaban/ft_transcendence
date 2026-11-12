@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import usePageTitle from "../components/layout/usePageTitle";
 import i18n from "../i18n";
 import { ApiError } from "../api/client";
-import { Avatar, Button, Input } from "../components/ui";
+import { Avatar, Button, Input, LoadError } from "../components/ui";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { Language, UserRole } from "../types/user";
 import { DISPLAY_NAME_MAX_LENGTH } from "../utils/validation";
@@ -53,7 +53,7 @@ function ProfilePage() {
   usePageTitle(t("nav.profile"));
   // The profile is the shared one: the context loads it, follows `role.changed` and re-fetches
   // after every save, so the top bar and this page can never disagree (#776).
-  const { user: profile, loadFailed, update } = useCurrentUser();
+  const { user: profile, loadFailed, update, refresh } = useCurrentUser();
   const isLoading = !profile && !loadFailed;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -186,9 +186,9 @@ function ProfilePage() {
       )}
 
       {!isLoading && !profile && (
-        <div className="profile-page__message" role="alert">
+        <LoadError className="profile-page__message" onRetry={refresh}>
           {t("profile.unavailable")}
-        </div>
+        </LoadError>
       )}
 
       {!isLoading && profile && (

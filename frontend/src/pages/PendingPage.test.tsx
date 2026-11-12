@@ -89,6 +89,25 @@ describe("PendingPage", () => {
     });
   });
 
+  // #371: a failed load says so and offers to load again.
+  it("shows an error and loads again on Try again", async () => {
+    vi.mocked(listEvaluationRequests).mockRejectedValueOnce(new Error("network"));
+    vi.mocked(listEvaluationRequests).mockResolvedValueOnce(page([]));
+
+    renderPage();
+
+    const alert = await screen.findByRole("alert");
+
+    expect(
+      within(alert).getByText("Could not load your evaluations. Please try again."),
+    ).toBeTruthy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText("Nothing scheduled yet")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("loads the evaluations a Hitchhiker picked", async () => {
     vi.mocked(listEvaluationRequests).mockResolvedValue(page([]));
 
@@ -158,6 +177,31 @@ describe("PendingPage", () => {
     fireEvent.click(screen.getByTestId("released-dialog-backdrop"));
 
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  // #371: closing during the request used to lose its error (shown with no popup open).
+  it("keeps the popup open while the cancel is on its way, then shows its error there", async () => {
+    let fail: (error: Error) => void = () => {};
+
+    vi.mocked(listEvaluationRequests).mockResolvedValue(page([scheduled(1, "push_swap", 26)]));
+    vi.mocked(cancelEvaluationRequest).mockReturnValue(new Promise((_, reject) => (fail = reject)));
+
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel push_swap" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel evaluation" }));
+
+    const keep = screen.getByRole("button", { name: "Keep evaluation" }) as HTMLButtonElement;
+
+    expect(keep.disabled).toBe(true);
+    fireEvent.click(keep);
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByTestId("cancel-dialog-backdrop"));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    await act(async () => fail(new ApiError(500, "Server error")));
+
+    expect(within(screen.getByRole("dialog")).getByRole("alert").textContent).toBe("Server error");
+    expect(keep.disabled).toBe(false);
   });
 
   it("releases the slot when a Hitchhiker cancels", async () => {

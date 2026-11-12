@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import Skeleton from "../components/ui/Skeleton";
 import { ApiError } from "../api/client";
 import { getProject } from "../api/projects";
@@ -20,6 +21,7 @@ function ProjectDetailsPage() {
   const { slug = "" } = useParams();
   const [project, setProject] = useState<Project | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [retryKey, setRetryKey] = useState(0);
 
   usePageTitle(project?.name ?? t("pageTitle.project"));
 
@@ -43,7 +45,7 @@ function ProjectDetailsPage() {
     return () => {
       active = false;
     };
-  }, [slug]);
+  }, [slug, retryKey]);
 
   return (
     <section className="project-details">
@@ -67,9 +69,9 @@ function ProjectDetailsPage() {
       )}
 
       {loadState === "error" && (
-        <p className="project-details__error" role="alert">
+        <LoadError className="project-details__error" onRetry={() => setRetryKey((key) => key + 1)}>
           {t("project.error")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && project && (

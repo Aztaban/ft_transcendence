@@ -4,6 +4,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import ReasonDialog from "../components/ui/ReasonDialog";
 import Skeleton from "../components/ui/Skeleton";
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
@@ -473,9 +474,15 @@ function EvaluationPage() {
       )}
 
       {loadState === "error" && !isGone && (
-        <p className="evaluation__error" role="alert">
+        <LoadError
+          className="evaluation__error"
+          onRetry={() => {
+            setLoadState("loading");
+            setReloadKey((key) => key + 1);
+          }}
+        >
           {t("evaluation.loadError")}
-        </p>
+        </LoadError>
       )}
 
       {isGone && (

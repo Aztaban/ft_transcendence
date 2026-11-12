@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../api/client";
@@ -53,15 +53,22 @@ describe("WelcomeHitchhikerDialog", () => {
     expect(getButton("Submit").disabled).toBe(true);
   });
 
-  it("says when the projects cannot be loaded, with Submit disabled", async () => {
-    vi.mocked(listProjects).mockRejectedValue(new Error("network"));
+  it("says when the projects cannot be loaded, with Submit disabled, and loads again", async () => {
+    vi.mocked(listProjects).mockRejectedValueOnce(new Error("network"));
     render(<WelcomeHitchhikerDialog onClose={() => {}} />);
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "Could not load the projects. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load the projects. Please try again.")).toBeTruthy();
     expect(screen.queryByRole("checkbox")).toBeNull();
     expect(getButton("Submit").disabled).toBe(true);
+
+    // #371: Try again shows the placeholders, then the projects.
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(screen.getByText("Loading projects…")).toBeTruthy();
+    expect(await screen.findByRole("checkbox", { name: /minishell/ })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("unmarks a project on a second click and sends only the marked ones", async () => {
@@ -165,6 +172,22 @@ describe("WelcomeHitchhikerDialog", () => {
       "You already have a request waiting for review.",
     );
     expect(screen.getByRole("dialog", { name: "Welcome Hitchhiker" })).toBeTruthy();
+  });
+
+  // #371: closing during the request used to drop "Form sent!" or the error.
+  it("stays open while the request is on its way", async () => {
+    const onClose = vi.fn();
+
+    vi.mocked(createEligibilityRequest).mockReturnValue(new Promise(() => {}));
+    render(<WelcomeHitchhikerDialog onClose={onClose} />);
+    fireEvent.click(await screen.findByRole("checkbox", { name: /minishell/ }));
+    fireEvent.click(getButton("Submit"));
+
+    expect(getButton("Not now").disabled).toBe(true);
+    fireEvent.click(getButton("Not now"));
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("closes with Not now or Escape", async () => {

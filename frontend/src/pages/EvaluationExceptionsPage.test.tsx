@@ -11,10 +11,15 @@ import EvaluationExceptionsPage from "./EvaluationExceptionsPage";
 vi.mock("../api/admin", () => ({ listEvaluationExceptions: vi.fn() }));
 
 // The user's real roles from /users/me/; each test may change them before rendering.
-const currentUser = vi.hoisted(() => ({ roles: ["student", "head_tutor"], isLoaded: true }));
+const currentUser = vi.hoisted(() => ({
+  roles: ["student", "head_tutor"],
+  isLoaded: true,
+  loadFailed: false,
+  refresh: vi.fn(),
+}));
 
 vi.mock("../store/CurrentUserContext", () => ({
-  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+  useCurrentUser: () => ({ ...currentUser, user: null }),
 }));
 
 function exception(
@@ -62,6 +67,7 @@ afterEach(() => {
   sessionStorage.clear();
   currentUser.roles = ["student", "head_tutor"];
   currentUser.isLoaded = true;
+  currentUser.loadFailed = false;
 });
 
 describe("EvaluationExceptionsPage", () => {
@@ -171,14 +177,43 @@ describe("EvaluationExceptionsPage", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
-  it("shows an error when the exceptions cannot be loaded", async () => {
-    vi.mocked(listEvaluationExceptions).mockRejectedValue(new Error("network"));
+  it("shows an error when the exceptions cannot be loaded, and loads again on Try again", async () => {
+    vi.mocked(listEvaluationExceptions).mockRejectedValueOnce(new Error("network"));
+    vi.mocked(listEvaluationExceptions).mockResolvedValueOnce(
+      page([exception(1, "libft", "confirmed", "result_missing")]),
+    );
 
     renderPage();
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "We couldn't load the exceptions. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(
+      within(alert).getByText("We couldn't load the exceptions. Please try again."),
+    ).toBeTruthy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByRole("link", { name: "libft" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // #371: without the roles nothing is asked, so a failed /users/me/ is said, not a skeleton.
+  it("says when the account cannot be loaded and loads it again on Try again", async () => {
+    currentUser.roles = [];
+    currentUser.isLoaded = false;
+    currentUser.loadFailed = true;
+
+    renderPage();
+
+    const alert = screen.getByRole("alert");
+
+    expect(within(alert).getByText("Could not load your account. Please try again.")).toBeTruthy();
+    expect(document.querySelector("[aria-busy='true']")).toBeNull();
+    expect(listEvaluationExceptions).not.toHaveBeenCalled();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(currentUser.refresh).toHaveBeenCalledTimes(1);
   });
 
   it("is open to an Admin who is not a Head Tutor", async () => {

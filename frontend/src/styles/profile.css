@@ -357,6 +357,11 @@
   text-align: center;
 }
 
+/* The text and "Try again" stay centred, like the text alone was (#371). */
+.profile-page__message.ui-load-error {
+  justify-content: center;
+}
+
 /* Animations */
 
 @keyframes profile-rise {

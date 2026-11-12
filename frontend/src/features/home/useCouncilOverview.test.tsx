@@ -81,6 +81,23 @@ describe("useCouncilOverview", () => {
     await waitFor(() => expect(result.current.hasError).toBe(true));
   });
 
+  // #371: Try again on Home.
+  it("loads again on retry, showing the loading state until the answer", async () => {
+    vi.mocked(listSCMessages).mockRejectedValue(new Error("network"));
+
+    const { result } = renderHook(() => useCouncilOverview());
+
+    await waitFor(() => expect(result.current.hasError).toBe(true));
+
+    vi.mocked(listSCMessages).mockResolvedValue(page([message]));
+    act(() => result.current.retry());
+
+    expect(result.current.hasError).toBe(false);
+    expect(result.current.isLoading).toBe(true);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.unread).toEqual([message]);
+  });
+
   it("loads again when the tab is shown", async () => {
     const { result } = renderHook(() => useCouncilOverview());
 

@@ -234,14 +234,24 @@ describe("AdminUsersPage", () => {
     expect(screen.queryByRole("navigation", { name: "User pages" })).toBeNull();
   });
 
-  it("shows an error when the users cannot be loaded", async () => {
-    vi.mocked(listAdminUsers).mockRejectedValue(new Error("network"));
+  it("shows an error when the users cannot be loaded, and loads again on Try again", async () => {
+    vi.mocked(listAdminUsers).mockRejectedValueOnce(new Error("network"));
+    vi.mocked(listAdminUsers).mockResolvedValueOnce(page([adminUser(1, "Anna")]));
 
     renderPage();
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "We couldn't load the users. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("We couldn't load the users. Please try again.")).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText("Anna")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(requests()).toEqual([
+      { ...noFilters, page: 1 },
+      { ...noFilters, page: 1 },
+    ]);
   });
 });

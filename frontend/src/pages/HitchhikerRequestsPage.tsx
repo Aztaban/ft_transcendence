@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import { listEvaluationRequests } from "../api/evaluationRequests";
 import { DURATION_OPTIONS } from "../features/hitchhiker/slotRules";
 import { projectInitials } from "../features/projects/ProjectOverview";
@@ -57,9 +58,10 @@ function HitchhikerRequestsPage() {
         }
       })
       .catch(() => {
-        // A failed background refresh keeps the cards already shown.
-        if (active && reloadKey === 0) {
-          setLoadState("error");
+        // A failed background refresh keeps the cards already shown. Anything else is an error,
+        // even when a live event restarted the first load (#371: no skeleton forever).
+        if (active) {
+          setLoadState((current) => (current === "ready" ? current : "error"));
         }
       });
 
@@ -184,9 +186,15 @@ function HitchhikerRequestsPage() {
           )}
 
           {loadState === "error" && (
-            <p className="hitchhiker-requests__error" role="alert">
+            <LoadError
+              className="hitchhiker-requests__error"
+              onRetry={() => {
+                setLoadState("loading");
+                setReloadKey((key) => key + 1);
+              }}
+            >
               {t("hitchhikerRequests.error")}
-            </p>
+            </LoadError>
           )}
 
           {loadState === "ready" && requests.length === 0 && (

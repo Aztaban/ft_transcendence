@@ -15,10 +15,12 @@ const currentUser = vi.hoisted(() => ({
   user: null as UserProfile | null,
   roles: [] as string[],
   isLoaded: false,
+  loadFailed: false,
+  refresh: vi.fn(),
 }));
 
 vi.mock("../store/CurrentUserContext", () => ({
-  useCurrentUser: () => ({ ...currentUser, refresh: () => {} }),
+  useCurrentUser: () => currentUser,
 }));
 vi.mock("../api/eligibility", () => ({
   listEligibilityRequests: vi.fn(),
@@ -70,6 +72,7 @@ afterEach(() => {
   currentUser.user = null;
   currentUser.roles = [];
   currentUser.isLoaded = false;
+  currentUser.loadFailed = false;
   sessionStorage.clear();
 });
 
@@ -120,6 +123,42 @@ describe("EligibilityReviewPage", () => {
 
     expect(await screen.findByText("No declined requests")).toBeTruthy();
     expect(screen.getByText("Declined requests will appear here.")).toBeTruthy();
+  });
+
+  it("shows an error when the requests cannot be loaded, and loads again on Try again", async () => {
+    vi.mocked(listEligibilityRequests)
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce(page([request(9, "dkolarov")]));
+
+    renderPage();
+
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load the requests. Please try again.")).toBeTruthy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByRole("button", { name: "Approve dkolarov's request" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // #371: without the roles nothing is asked, so a failed /users/me/ is said, not a blank page.
+  it("says when the account cannot be loaded and loads it again on Try again", () => {
+    currentUser.user = null;
+    currentUser.roles = [];
+    currentUser.isLoaded = false;
+    currentUser.loadFailed = true;
+
+    renderPage();
+
+    const alert = screen.getByRole("alert");
+
+    expect(within(alert).getByText("Could not load your account. Please try again.")).toBeTruthy();
+    expect(listEligibilityRequests).not.toHaveBeenCalled();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(currentUser.refresh).toHaveBeenCalledTimes(1);
   });
 
   it("shows the restricted page without the head_tutor or admin role", async () => {
@@ -209,6 +248,34 @@ describe("EligibilityReviewPage", () => {
     expect(await screen.findByText("No pending requests")).toBeTruthy();
     expect(listEligibilityRequests).toHaveBeenCalledTimes(2);
     expect(reviewEligibilityRequest).toHaveBeenCalledTimes(1);
+  });
+
+  // #371: closing during the request used to lose its error (shown with no dialog open).
+  it("keeps the dialog open while the decision is on its way, then shows its error there", async () => {
+    let fail: (error: Error) => void = () => {};
+
+    vi.mocked(listEligibilityRequests).mockResolvedValue(page([request(9, "dkolarov")]));
+    vi.mocked(reviewEligibilityRequest).mockReturnValue(
+      new Promise((_, reject) => (fail = reject)),
+    );
+
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Approve dkolarov's request" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }));
+
+    const cancel = within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Cancel",
+    }) as HTMLButtonElement;
+
+    expect(cancel.disabled).toBe(true);
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByTestId("review-dialog-backdrop"));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    await act(async () => fail(new ApiError(403, "Forbidden", "cannot_review_own_request")));
+
+    expect(within(screen.getByRole("dialog")).getByRole("alert")).toBeTruthy();
+    expect(cancel.disabled).toBe(false);
   });
 
   it("keeps other errors inside the dialog", async () => {

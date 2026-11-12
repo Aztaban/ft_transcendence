@@ -10,6 +10,7 @@ const current = vi.hoisted(() => ({
   user: null as UserProfile | null,
   loadFailed: false,
   update: vi.fn(),
+  refresh: vi.fn(),
 }));
 
 vi.mock("../store/CurrentUserContext", () => ({
@@ -19,6 +20,7 @@ vi.mock("../store/CurrentUserContext", () => ({
     isLoaded: current.user !== null,
     loadFailed: current.loadFailed,
     update: current.update,
+    refresh: current.refresh,
   }),
 }));
 
@@ -233,13 +235,17 @@ describe("ProfilePage", () => {
     expect(screen.queryByText("Profile updated.")).toBeNull();
   });
 
-  it("says when the profile cannot be loaded", async () => {
+  it("says when the profile cannot be loaded, and loads it again on Try again", async () => {
     current.user = null;
     current.loadFailed = true;
     render(<ProfilePage />);
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "Profile information is currently unavailable.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Profile information is currently unavailable.")).toBeTruthy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(current.refresh).toHaveBeenCalledTimes(1);
   });
 });

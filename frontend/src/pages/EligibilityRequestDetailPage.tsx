@@ -9,6 +9,7 @@ import {
   type EligibilityDecision,
 } from "../api/eligibility";
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import ReviewDialog from "../features/headTutor/ReviewDialog";
 import { reviewErrorMessage } from "../features/headTutor/reviewErrorMessage";
 import { useCurrentUser } from "../store/CurrentUserContext";
@@ -202,9 +203,15 @@ function EligibilityRequestDetailPage() {
       )}
 
       {loadState === "error" && (
-        <p className="eligibility-review__error" role="alert">
+        <LoadError
+          className="eligibility-review__error"
+          onRetry={() => {
+            setLoadState("loading");
+            setReloadKey((key) => key + 1);
+          }}
+        >
           {t("eligibilityDetail.loadError")}
-        </p>
+        </LoadError>
       )}
 
       {decided && request?.status === decided && (

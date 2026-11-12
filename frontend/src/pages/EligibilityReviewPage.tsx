@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import { initials } from "../components/ui/Avatar";
 import StatusPill, { type StatusTone } from "../components/ui/StatusPill";
 import Tabs from "../components/ui/Tabs";
@@ -78,7 +79,7 @@ function EligibilityReviewPage() {
 
   usePageTitle(t("review.title"));
   // The real roles from the shared /users/me/ store; the backend checks them again (§10.3).
-  const { user, roles, isLoaded } = useCurrentUser();
+  const { user, roles, isLoaded, loadFailed, refresh } = useCurrentUser();
   const userId = user?.id ?? null;
   const allowed = canReviewEligibility(roles);
   const [status, setStatus] = useState<EligibilityRequestStatus>("pending");
@@ -203,7 +204,14 @@ function EligibilityReviewPage() {
   }
 
   if (!isLoaded) {
-    return (
+    // /users/me/ failed: the roles stay unknown until it loads, so say so instead of waiting (#371).
+    return loadFailed ? (
+      <section className="eligibility-review">
+        <LoadError className="eligibility-review__error" onRetry={refresh}>
+          {t("common.userLoadError")}
+        </LoadError>
+      </section>
+    ) : (
       <section className="eligibility-review" aria-busy="true">
         <span className="eligibility-review__sr-only">{t("review.loading")}</span>
       </section>
@@ -277,9 +285,9 @@ function EligibilityReviewPage() {
       )}
 
       {loadState === "error" && (
-        <p className="eligibility-review__error" role="alert">
+        <LoadError className="eligibility-review__error" onRetry={reload}>
           {t("review.loadError")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && requests.length === 0 && (

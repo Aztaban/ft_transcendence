@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { listProjects } from "../../api/projects";
+import LoadError from "../../components/ui/LoadError";
 import type { ProjectRef } from "../../types/project";
 import { projectInitials } from "./ProjectOverview";
 import "../../styles/project-select.css";
@@ -22,6 +23,7 @@ function ProjectSelect({ value, onChange }: ProjectSelectProps) {
   const groupName = useId();
   const [projects, setProjects] = useState<ProjectRef[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -42,7 +44,7 @@ function ProjectSelect({ value, onChange }: ProjectSelectProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [retryKey]);
 
   return (
     <fieldset className="project-select">
@@ -58,9 +60,15 @@ function ProjectSelect({ value, onChange }: ProjectSelectProps) {
       )}
 
       {loadState === "error" && (
-        <p className="project-select__error" role="alert">
+        <LoadError
+          className="project-select__error"
+          onRetry={() => {
+            setLoadState("loading");
+            setRetryKey((key) => key + 1);
+          }}
+        >
           {t("projectSelect.error")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && projects.length === 0 && (

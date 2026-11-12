@@ -7,6 +7,7 @@ export { default as Dialog } from "./Dialog";
 export { default as EmptyState } from "./EmptyState";
 export { default as Icon } from "./Icon";
 export { default as Input } from "./Input";
+export { default as LoadError } from "./LoadError";
 export { default as Notice } from "./Notice";
 export { default as ProgressBar } from "./ProgressBar";
 export { default as Skeleton } from "./Skeleton";
