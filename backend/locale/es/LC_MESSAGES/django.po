@@ -258,6 +258,10 @@ msgstr "Los ID de proyecto deben ser distintos."
 msgid "Select at most %(max)s projects."
 msgstr "Seleccione como máximo %(max)s proyectos."
 
+#: apps/evaluations/serializers/requests.py:124
+msgid "This project is not available any more."
+msgstr "Este proyecto ya no está disponible."
+
 #: apps/evaluations/serializers/requests.py:91
 msgid "Datetime must include a timezone (Z or an offset)."
 msgstr "La fecha y hora deben incluir una zona horaria (Z o un desfase)."
