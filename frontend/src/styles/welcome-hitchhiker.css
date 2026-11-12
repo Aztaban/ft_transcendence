@@ -84,6 +84,13 @@
   border-radius: 10px;
 }
 
+/* No active project to choose (#370). */
+.welcome-dialog__empty {
+  margin: auto 0;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
 .welcome-dialog__project {
   display: flex;
   align-items: center;

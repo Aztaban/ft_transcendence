@@ -43,6 +43,16 @@ describe("WelcomeHitchhikerDialog", () => {
     expect(screen.queryByText("Loading projects…")).toBeNull();
   });
 
+  // #370: an empty list says so, instead of an empty box.
+  it("says when there is no project to choose", async () => {
+    vi.mocked(listProjects).mockResolvedValue([]);
+    render(<WelcomeHitchhikerDialog onClose={() => {}} />);
+
+    expect(await screen.findByText("No projects available")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Projects" }).getAttribute("aria-busy")).toBe("false");
+    expect(getButton("Submit").disabled).toBe(true);
+  });
+
   it("says when the projects cannot be loaded, with Submit disabled", async () => {
     vi.mocked(listProjects).mockRejectedValue(new Error("network"));
     render(<WelcomeHitchhikerDialog onClose={() => {}} />);

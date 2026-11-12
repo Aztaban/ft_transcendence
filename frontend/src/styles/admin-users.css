@@ -195,6 +195,24 @@
   font-weight: 500;
 }
 
+.admin-users__empty p {
+  margin: 8px 0 0;
+  color: var(--color-text-secondary);
+}
+
+/* "Clear filters" (#370), like the audit log's. */
+.admin-users__empty button {
+  min-height: 38px;
+  margin-top: 16px;
+  padding: 0 16px;
+  border: 1px solid #c9cfcf;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font: inherit;
+}
+
 .admin-users__error {
   margin: 0;
   padding: 10px 14px;

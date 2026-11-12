@@ -75,6 +75,15 @@ function AdminUsersPage() {
     setPage(1);
   }
 
+  // Back to every user, from the first page (#370).
+  function clearFilters() {
+    setText("");
+    setQuery("");
+    setRole("");
+    setStatus("");
+    setPage(1);
+  }
+
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const isFiltered = query !== "" || role !== "" || status !== "";
   // Another page or filter keeps the rows shown, greyed out, until the new ones arrive: the
@@ -159,6 +168,12 @@ function AdminUsersPage() {
       {loadState === "ready" && users.length === 0 && (
         <div className="admin-users__empty">
           <h2>{isFiltered ? t("adminUsers.emptyFilteredTitle") : t("adminUsers.emptyTitle")}</h2>
+          <p>{isFiltered ? t("adminUsers.emptyFilteredText") : t("adminUsers.emptyText")}</p>
+          {isFiltered && (
+            <button type="button" onClick={clearFilters}>
+              {t("adminUsers.clearFilters")}
+            </button>
+          )}
         </div>
       )}
 

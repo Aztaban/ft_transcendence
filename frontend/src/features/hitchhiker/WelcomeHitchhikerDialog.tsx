@@ -149,6 +149,9 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
                 itemClassName="ui-skeleton__item welcome-dialog__skeleton"
               />
             )}
+            {!isLoading && projects.length === 0 && (
+              <p className="welcome-dialog__empty">{t("projectSelect.empty")}</p>
+            )}
             {projects.map((project, index) => (
               <label
                 className={

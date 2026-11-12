@@ -24,11 +24,27 @@ type LoadState = "loading" | "ready" | "error";
 
 const tabs: EligibilityRequestStatus[] = ["pending", "approved", "declined"];
 
-// Keys of the "review" texts for each status: the tab (a plural heading) and its empty list.
-const statusTexts: Record<EligibilityRequestStatus, { tabKey: string; emptyKey: string }> = {
-  pending: { tabKey: "review.pending", emptyKey: "review.noPending" },
-  approved: { tabKey: "review.approved", emptyKey: "review.noApproved" },
-  declined: { tabKey: "review.declined", emptyKey: "review.noDeclined" },
+// Keys of the "review" texts for each status: the tab (a plural heading), and the title and the
+// text of its empty list (#370: every tab says what will appear there).
+const statusTexts: Record<
+  EligibilityRequestStatus,
+  { tabKey: string; emptyKey: string; emptyTextKey: string }
+> = {
+  pending: {
+    tabKey: "review.pending",
+    emptyKey: "review.noPending",
+    emptyTextKey: "review.newRequests",
+  },
+  approved: {
+    tabKey: "review.approved",
+    emptyKey: "review.noApproved",
+    emptyTextKey: "review.noApprovedText",
+  },
+  declined: {
+    tabKey: "review.declined",
+    emptyKey: "review.noDeclined",
+    emptyTextKey: "review.noDeclinedText",
+  },
 };
 
 // The badge of one reviewed request, singular: the tab says "Aprobadas", a row "Aprobada".
@@ -269,7 +285,7 @@ function EligibilityReviewPage() {
       {loadState === "ready" && requests.length === 0 && (
         <div className="eligibility-review__empty">
           <h2>{t(statusTexts[status].emptyKey)}</h2>
-          {status === "pending" && <p>{t("review.newRequests")}</p>}
+          <p>{t(statusTexts[status].emptyTextKey)}</p>
         </div>
       )}
 
