@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import bellSvg from "../../assets/figma/bell.svg?raw";
 import Icon, { ICON_NAMES } from "./Icon";
 
 afterEach(cleanup);
@@ -32,5 +33,12 @@ describe("Icon", () => {
       expect(container.querySelector("img")?.getAttribute("src")).toBeTruthy();
       cleanup();
     }
+  });
+
+  // #806: a dot drawn into the bell showed with nothing unread. The top bar's badge, shown only
+  // when something is unread, is the bell's only dot.
+  it("draws the bell without a dot of its own", () => {
+    expect(bellSvg).not.toMatch(/<circle/);
+    expect(bellSvg).not.toMatch(/fill="#/i);
   });
 });
