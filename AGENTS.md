@@ -41,7 +41,8 @@ backend/
   apps/accounts/services/   OAuth provider calls and local account resolution
   apps/evaluations/views/       project, request and eligibility endpoints
   apps/evaluations/serializers/ project, request and eligibility serializers
-  apps/evaluations/eligibility.py  approved-project lookup helper
+  apps/evaluations/eligibility.py  eligibility lookups: approved projects, eligible Hitchhikers, visible eligibility requests
+  apps/evaluations/visibility.py   evaluation request querysets and who may see them
   apps/core/         shared base model (TimeStampedModel) and cross-app helpers
 frontend/src/
   api/               client.ts (apiRequest) and one module per backend area
@@ -82,6 +83,7 @@ Python is formatted by black and isort, line length 100: fix with `black . && is
 - Keep OAuth provider calls and local account resolution in `apps.accounts.services.oauth`; views own session state validation, redirects and Django session login.
 - Import evaluation views and serializers from their concrete `projects`, `requests` or `eligibility` modules; keep package `__init__.py` files free of eager re-exports, as in accounts.
 - Keep tutor eligibility endpoints in `apps.evaluations.views.eligibility`, serializers in `apps.evaluations.serializers.eligibility` and lookup queries in `apps.evaluations.eligibility`. Their routes, tests, models and migrations belong to evaluations; use account models and shared references without importing account views or workflow serializers.
+- Keep reusable evaluation request querysets and visibility filters in `apps.evaluations.visibility`, not in view modules. Recipient lists stay explicit per workflow in `apps.evaluations.events`.
 - Change the state of shared rows (evaluation requests, eligibility reviews, council notes) with an atomic conditional update: `filter(pk=..., status=expected).update(...)`, then check the row count. Never read, modify, then `save()` (schema §4.2).
 - Create notifications and WebSocket events exactly as listed in api-plan §8.8 and §9.3. Push events with `transaction.on_commit`.
 - Wrap user-facing strings in `gettext`; responses are translated into the user's language (§5.5).

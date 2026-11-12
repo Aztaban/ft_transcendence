@@ -6,8 +6,8 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 
-from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.core.schema import error_responses
+from apps.evaluations.eligibility import eligible_hitchhiker_ids
 from apps.evaluations.models import Project
 from apps.evaluations.references import ProjectRefSerializer
 from apps.evaluations.serializers.projects import ProjectSerializer
@@ -50,14 +50,9 @@ class ProjectDetailView(RetrieveAPIView):
 
     def get_object(self):
         project = super().get_object()
-        User = get_user_model()
         project.eligible_tutors = (
-            User.objects.filter(
-                status=User.Status.ACTIVE,
-                roles__name__in=HITCHHIKER_ROLES,
-                eligibilities__project=project,
-            )
+            get_user_model()
+            .objects.filter(pk__in=eligible_hitchhiker_ids(project.pk))
             .order_by("display_name")
-            .distinct()
         )
         return project

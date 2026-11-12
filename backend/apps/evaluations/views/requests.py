@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from apps.accounts.permissions import HITCHHIKER_ROLES
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
-from apps.evaluations.models import EvaluationRequest, TutorEligibility
+from apps.evaluations.models import EvaluationRequest
 from apps.evaluations.permissions import (
     CanCancelRequest,
     CanPickSlot,
@@ -37,15 +37,13 @@ from apps.evaluations.services import (
     pick_slot,
     release_slot,
 )
-from apps.evaluations.visibility import visible_evaluation_requests
+from apps.evaluations.visibility import evaluation_requests, open_queue, visible_evaluation_requests
 
 
 class EvaluationRequestBaseView(GenericAPIView):
     permission_classes = [IsAuthenticated, EvaluationRequestPermission]
     serializer_class = EvaluationRequestSerializer
-    queryset = EvaluationRequest.objects.select_related(
-        "student", "project", "picked_by", "cancelled_by"
-    )
+    queryset = evaluation_requests()
 
 
 class EvaluationRequestListCreateView(EvaluationRequestBaseView):
@@ -95,12 +93,7 @@ class EvaluationRequestListCreateView(EvaluationRequestBaseView):
         if scope == "mine":
             queryset = queryset.filter(student=request.user)
         elif scope == "open":
-            queryset = queryset.filter(
-                status=EvaluationRequest.Status.PENDING,
-                project_id__in=TutorEligibility.objects.filter(tutor=request.user).values(
-                    "project_id"
-                ),
-            ).exclude(student=request.user)
+            queryset = queryset.filter(open_queue(request.user)).exclude(student=request.user)
         elif scope == "picked":
             queryset = queryset.filter(picked_by=request.user)
         if "status" in filters:

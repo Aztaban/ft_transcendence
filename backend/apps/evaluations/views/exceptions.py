@@ -15,6 +15,8 @@ from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import error_responses
 from apps.evaluations.models import EvaluationRequest, TutorEligibility
 from apps.evaluations.serializers.requests import EvaluationExceptionSerializer
+from apps.evaluations.services import active_filter
+from apps.evaluations.visibility import evaluation_requests
 
 
 def exception_conditions(at):
@@ -29,12 +31,11 @@ def exception_conditions(at):
     )
     awaiting = Q(status=EvaluationRequest.Status.AWAITING_CONFIRMATION)
     confirmed = Q(status=EvaluationRequest.Status.CONFIRMED)
-    active = Q(status=EvaluationRequest.Status.PENDING) | awaiting | (confirmed & Q(ends_at__gt=at))
     return {
         "tutor_lost_eligibility": (
             (awaiting | (confirmed & Q(starts_at__gt=at))) & (~has_role | ~has_eligibility)
         ),
-        "participant_inactive": active
+        "participant_inactive": active_filter(at)
         & (Q(student__status=User.Status.SUSPENDED) | Q(picked_by__status=User.Status.SUSPENDED)),
         "result_missing": confirmed
         & Q(
@@ -61,9 +62,7 @@ class EvaluationExceptionListView(ListAPIView):
     def get_queryset(self):
         conditions = exception_conditions(timezone.now())
         return (
-            EvaluationRequest.objects.select_related(
-                "student", "project", "picked_by", "cancelled_by"
-            )
+            evaluation_requests()
             .annotate(
                 problem=Case(
                     *[
