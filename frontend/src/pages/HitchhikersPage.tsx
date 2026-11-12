@@ -85,11 +85,6 @@ function HitchhikersPage() {
 
   const [text, setText] = useState(query);
 
-  // The top bar's search can change `q` while this page is open: show the new name in the box,
-  // or the timer below would write the old one back into the URL.
-  useEffect(() => {
-    setText((current) => (current.trim() === query ? current : query));
-  }, [query]);
   // `null` until loaded (or when the list could not be loaded).
   const [projects, setProjects] = useState<ProjectRef[] | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -106,6 +101,15 @@ function HitchhikersPage() {
   // "Show more" failed: the next click loads the same page again.
   const [moreFailed, setMoreFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+
+  // The top bar's search can change `q` while this page is open: show the new name in the box,
+  // or the timer below would write the old one back into the URL. A new name also starts again
+  // from the first page, or "Show more" would add the new search's next page to the old list.
+  useEffect(() => {
+    setText((current) => (current.trim() === query ? current : query));
+    setPage(1);
+    setMoreFailed(false);
+  }, [query]);
 
   useEffect(() => {
     let active = true;
@@ -215,7 +219,7 @@ function HitchhikersPage() {
     const timeout = window.setTimeout(() => applyFilters({ q: value }), SEARCH_DELAY_MS);
 
     return () => window.clearTimeout(timeout);
-  }, [text, query, project, ordering]);
+  }, [text, query, who, project, ordering]);
 
   // Back to the page's heading: the Hitchhikers, with no name or project.
   function clearFilters() {

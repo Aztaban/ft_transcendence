@@ -437,6 +437,38 @@ describe("HitchhikersPage people search", () => {
     expect(screen.getByTestId("url").textContent).toBe("?q=mjusta&role=all");
   });
 
+  it("keeps Who when it changes right after typing a name", async () => {
+    renderWithUrl();
+    await findCard("Psimcak");
+
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "ps" } });
+    fireEvent.change(who(), { target: { value: "sc_member" } });
+
+    // The name's timer fires after Who changed: it must not write the old URL back.
+    await waitFor(() => expect(searchedWith()).toMatchObject({ role: "sc_member", q: "ps" }));
+    expect(who().value).toBe("sc_member");
+    expect(screen.getByTestId("url").textContent).toBe("?role=sc_member&q=ps");
+  });
+
+  it("starts a top bar search from the first page after Show more", async () => {
+    vi.mocked(searchPeople)
+      .mockResolvedValueOnce(resultPage([psimcak, lenka], 3, "/api/v1/search/people/?page=2"))
+      .mockResolvedValueOnce(resultPage([mjusta], 3))
+      .mockResolvedValue(resultPage([lenka]));
+    renderWithUrl("/hitchhikers?role=all");
+    await findCard("Psimcak");
+    fireEvent.click(screen.getByRole("button", { name: "Show more (1 left)" }));
+    await findCard("Mjusta");
+
+    fireEvent.click(screen.getByRole("button", { name: "Top bar search" }));
+
+    // Only the new search's first page: nothing of the old list is kept.
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Psimcak" })).toBeNull());
+    expect(searchedWith()).toMatchObject({ q: "mjusta", page: 1 });
+    expect(screen.queryByRole("heading", { name: "Mjusta" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Lenka Husarova" })).toBeTruthy();
+  });
+
   it("says nobody was found, not no Hitchhikers, outside the Hitchhikers", async () => {
     vi.mocked(searchPeople).mockResolvedValue(resultPage([]));
     renderPage("/hitchhikers?q=zz&role=sc_member");
