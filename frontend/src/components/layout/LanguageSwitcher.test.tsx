@@ -7,19 +7,19 @@ import LanguageSwitcher from "./LanguageSwitcher";
 
 const current = vi.hoisted(() => ({
   user: null as UserProfile | null,
-  refresh: vi.fn(),
+  update: vi.fn(),
 }));
-const updateCurrentUserMock = vi.hoisted(() => vi.fn());
 
+// The language is saved through the shared user, which re-fetches itself (#776).
 vi.mock("../../store/CurrentUserContext", () => ({
   useCurrentUser: () => ({
     user: current.user,
     roles: [],
     isLoaded: true,
-    refresh: current.refresh,
+    loadFailed: false,
+    update: current.update,
   }),
 }));
-vi.mock("../../api/users", () => ({ updateCurrentUser: updateCurrentUserMock }));
 
 const lenka: UserProfile = {
   id: 7,
@@ -47,9 +47,21 @@ describe("LanguageSwitcher", () => {
     ).toEqual(["true", "false", "false"]);
   });
 
+  it("does nothing for the language already shown", () => {
+    current.user = lenka;
+    render(<LanguageSwitcher />);
+
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+
+    // Switching stores the choice for this browser; nothing was switched.
+    expect(window.localStorage.getItem("language")).toBeNull();
+    expect(i18n.language).toBe("en");
+    expect(current.update).not.toHaveBeenCalled();
+  });
+
   it("switches the page and saves the language of a logged-in user", async () => {
     current.user = lenka;
-    updateCurrentUserMock.mockResolvedValue(undefined);
+    current.update.mockResolvedValue(undefined);
     render(<LanguageSwitcher />);
 
     fireEvent.click(screen.getByRole("button", { name: "Čeština" }));
@@ -59,8 +71,17 @@ describe("LanguageSwitcher", () => {
     expect(screen.getByRole("button", { name: "Čeština" }).getAttribute("aria-pressed")).toBe(
       "true",
     );
-    expect(updateCurrentUserMock).toHaveBeenCalledWith({ language: "cs" });
-    await waitFor(() => expect(current.refresh).toHaveBeenCalledTimes(1));
+    expect(current.update).toHaveBeenCalledWith({ language: "cs" });
+  });
+
+  it("does not save a language the shared user already has", () => {
+    current.user = { ...lenka, language: "cs" };
+    render(<LanguageSwitcher />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Čeština" }));
+
+    expect(i18n.language).toBe("cs");
+    expect(current.update).not.toHaveBeenCalled();
   });
 
   it("does not call the API when nobody is logged in", () => {
@@ -69,18 +90,17 @@ describe("LanguageSwitcher", () => {
     fireEvent.click(screen.getByRole("button", { name: "Español" }));
 
     expect(i18n.language).toBe("es");
-    expect(updateCurrentUserMock).not.toHaveBeenCalled();
+    expect(current.update).not.toHaveBeenCalled();
   });
 
   it("keeps the chosen language when saving fails", async () => {
     current.user = lenka;
-    updateCurrentUserMock.mockRejectedValue(new Error("offline"));
+    current.update.mockRejectedValue(new Error("offline"));
     render(<LanguageSwitcher />);
 
     fireEvent.click(screen.getByRole("button", { name: "Español" }));
 
-    await waitFor(() => expect(updateCurrentUserMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(current.update).toHaveBeenCalledTimes(1));
     expect(i18n.language).toBe("es");
-    expect(current.refresh).not.toHaveBeenCalled();
   });
 });

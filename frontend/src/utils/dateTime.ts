@@ -4,17 +4,9 @@ const timeFormat: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-dig
 
 // Formats an evaluation slot in the user's local time, e.g. "Mon, 12 Oct, 17:00–17:45".
 export function formatSlot(startsAt: string, endsAt: string) {
-  const start = new Date(startsAt);
-  const end = new Date(endsAt);
+  const end = new Date(endsAt).toLocaleTimeString(dateLocale(), timeFormat);
 
-  const locale = dateLocale();
-  const day = start.toLocaleDateString(locale, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-
-  return `${day}, ${start.toLocaleTimeString(locale, timeFormat)}–${end.toLocaleTimeString(locale, timeFormat)}`;
+  return `${formatSlotStart(startsAt)}–${end}`;
 }
 
 // The start of a slot in the user's local time, e.g. "Tue, 3 Nov, 14:00".
@@ -125,4 +117,9 @@ export function formatStartsIn(startsAt: string, now = new Date()) {
   }
 
   return plural(rest, "minutes");
+}
+
+// A date and time in the user's local time, e.g. "6 Nov 2026, 14:05".
+export function formatDateTime(date: string) {
+  return new Date(date).toLocaleString(dateLocale(), { dateStyle: "medium", timeStyle: "short" });
 }

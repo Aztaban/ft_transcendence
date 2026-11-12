@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import logoutIcon from "../../assets/figma/logout.svg";
-import userChevron from "../../assets/figma/user-chevron.svg";
 import { useAuth } from "../../store/AuthContext";
+import Icon from "../ui/Icon";
 
 // The arrow next to the user's name: opens a small menu with "Logout", the same action and
 // texts as the sidebar button (POST /auth/logout/, then the login page). Closes on Escape (focus
@@ -76,7 +75,7 @@ function UserMenu() {
         aria-controls={isOpen ? "user-menu" : undefined}
         onClick={toggle}
       >
-        <img src={userChevron} alt="" aria-hidden="true" />
+        <Icon name="userChevron" />
       </button>
 
       {isOpen && (
@@ -87,7 +86,7 @@ function UserMenu() {
             disabled={isLoggingOut}
             onClick={() => void handleLogout()}
           >
-            <img src={logoutIcon} alt="" aria-hidden="true" />
+            <Icon name="logout" />
             <span>{isLoggingOut ? t("sidebar.loggingOut") : t("sidebar.logout")}</span>
           </button>
 

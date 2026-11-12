@@ -195,6 +195,27 @@ describe("CouncilInboxMessagePage", () => {
     expect(noteBox().value).toBe("My note");
   });
 
+  // Form validation (#358): the backend's message about the note (api-plan §10.6, up to 5000).
+  it("shows the backend's message about the note and keeps the draft", async () => {
+    vi.mocked(getSCMessage).mockResolvedValue(unread);
+    vi.mocked(saveSCMessageNote).mockRejectedValue(
+      new ApiError(400, "Please correct the highlighted fields.", "validation_error", {
+        discussion_note: ["Ensure this field has no more than 5000 characters."],
+      }),
+    );
+    renderPage();
+    await screen.findByText(unread.body);
+
+    fireEvent.change(noteBox(), { target: { value: "Forwarded to the building manager." } });
+    fireEvent.click(button("Save note"));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Ensure this field has no more than 5000 characters.",
+    );
+    expect(noteBox().value).toBe("Forwarded to the building manager.");
+    expect(button("Save note").disabled).toBe(false);
+  });
+
   it("saves the council note with the version it was loaded at", async () => {
     vi.mocked(getSCMessage).mockResolvedValue(unread);
     vi.mocked(saveSCMessageNote).mockResolvedValue({

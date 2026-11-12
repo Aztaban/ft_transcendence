@@ -33,13 +33,13 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid #111111;
+  border: 1px solid var(--color-neutral-950);
   border-radius: 8px;
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-white);
+  color: var(--color-neutral-950);
   cursor: pointer;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .pixel-banner__pause:hover {
@@ -47,7 +47,7 @@
 }
 
 .pixel-banner__pause:focus-visible {
-  outline: 3px solid #ffffff;
+  outline: 3px solid var(--color-white);
   outline-offset: 2px;
 }
 
@@ -60,32 +60,32 @@
 }
 
 .pixel-rocket__rocket {
-  animation: pixel-rocket-rocket 16s steps(40) infinite;
+  animation: pixel-rocket-rocket var(--scene-length) steps(40) infinite;
 }
 
 .pixel-rocket__rock {
   transform: translateX(-40px);
-  animation: pixel-rocket-rock 16s steps(44) infinite;
+  animation: pixel-rocket-rock var(--scene-length) steps(44) infinite;
 }
 
 .pixel-rocket__mug {
   transform: translateX(-40px);
-  animation: pixel-rocket-mug 16s steps(44) infinite;
+  animation: pixel-rocket-mug var(--scene-length) steps(44) infinite;
 }
 
 .pixel-rocket__duck {
   transform: translateX(-40px);
-  animation: pixel-rocket-duck 16s steps(44) infinite;
+  animation: pixel-rocket-duck var(--scene-length) steps(44) infinite;
 }
 
 .pixel-rocket__planet {
   transform: translate(148px, 10px);
-  animation: pixel-rocket-planet 16s steps(30) infinite;
+  animation: pixel-rocket-planet var(--scene-length) steps(30) infinite;
 }
 
 .pixel-rocket__flag {
   transform: translate(167px, 1px);
-  animation: pixel-rocket-flag 16s step-end infinite;
+  animation: pixel-rocket-flag var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-rocket-stars {
@@ -194,7 +194,7 @@
   width: 0;
   height: 0;
   opacity: 0;
-  animation: pixel-banner-clock 1s linear;
+  animation: pixel-banner-clock var(--scene-length) linear;
 }
 
 @keyframes pixel-banner-clock {
@@ -241,7 +241,7 @@
 
 .pixel-road__car {
   transform: translateX(200px);
-  animation: pixel-road-car 14s steps(34) infinite;
+  animation: pixel-road-car var(--scene-length) steps(34) infinite;
 }
 
 .pixel-road__car--second {
@@ -273,7 +273,7 @@
 }
 
 .pixel-road__saucer {
-  animation: pixel-road-saucer 14s steps(30) infinite;
+  animation: pixel-road-saucer var(--scene-length) steps(30) infinite;
 }
 
 @keyframes pixel-road-saucer {
@@ -294,7 +294,7 @@
 }
 
 .pixel-road__hiker {
-  animation: pixel-road-hiker 14s steps(20) infinite;
+  animation: pixel-road-hiker var(--scene-length) steps(20) infinite;
 }
 
 @keyframes pixel-road-hiker {
@@ -318,7 +318,7 @@
 
 .pixel-road__dots {
   opacity: 0;
-  animation: pixel-road-dots 14s step-end infinite;
+  animation: pixel-road-dots var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-road-dots {
@@ -345,7 +345,7 @@
 
 .pixel-road__question {
   opacity: 0;
-  animation: pixel-road-question 14s step-end infinite;
+  animation: pixel-road-question var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-road-question {
@@ -364,7 +364,7 @@
 
 .pixel-road__beam {
   opacity: 0;
-  animation: pixel-road-beam 14s step-end infinite;
+  animation: pixel-road-beam var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-road-beam {
@@ -385,7 +385,7 @@
 
 .pixel-desk__prompt {
   opacity: 0;
-  animation: pixel-desk-prompt 14s step-end infinite;
+  animation: pixel-desk-prompt var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-desk-prompt {
@@ -408,7 +408,7 @@
 
 .pixel-desk__crash {
   opacity: 0;
-  animation: pixel-desk-crash 14s step-end infinite;
+  animation: pixel-desk-crash var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-desk-crash {
@@ -427,7 +427,7 @@
 
 .pixel-desk__pass {
   opacity: 0;
-  animation: pixel-desk-pass 14s step-end infinite;
+  animation: pixel-desk-pass var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-desk-pass {
@@ -442,7 +442,7 @@
 
 .pixel-desk__typing {
   opacity: 0;
-  animation: pixel-desk-typing 14s step-end infinite;
+  animation: pixel-desk-typing var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-desk-typing {
@@ -465,7 +465,7 @@
 
 .pixel-desk__head-down {
   opacity: 0;
-  animation: pixel-desk-head-down 14s step-end infinite;
+  animation: pixel-desk-head-down var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-desk-head-down {
@@ -484,7 +484,7 @@
 
 .pixel-desk__cheering {
   opacity: 0;
-  animation: pixel-desk-cheering 14s step-end infinite;
+  animation: pixel-desk-cheering var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-desk-cheering {
@@ -499,7 +499,7 @@
 
 .pixel-desk__rain {
   opacity: 0;
-  animation: pixel-desk-rain 14s step-end infinite;
+  animation: pixel-desk-rain var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-desk-rain {
@@ -518,7 +518,7 @@
 
 .pixel-desk__confetti {
   opacity: 0;
-  animation: pixel-desk-confetti 14s step-end infinite;
+  animation: pixel-desk-confetti var(--scene-length) step-end infinite;
 }
 
 @keyframes pixel-desk-confetti {

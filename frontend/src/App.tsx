@@ -1,19 +1,25 @@
 import { useEffect } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router";
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router";
 
 import RoleGuard from "./components/auth/RoleGuard";
 import BaseLayout from "./components/layout/BaseLayout";
 import { LEGAL_PAGES, legalDocumentAt } from "./components/layout/legalPages";
 import PublicLayout from "./components/layout/PublicLayout";
 import HitchhikerOnboarding from "./features/hitchhiker/HitchhikerOnboarding";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AuditLogPage from "./pages/AuditLogPage";
 import CouncilHistoryPage from "./pages/CouncilHistoryPage";
 import { CouncilMessageRoute } from "./pages/CouncilInboxMessagePage";
 import CouncilInboxPage from "./pages/CouncilInboxPage";
 import CouncilMessagePage from "./pages/CouncilMessagePage";
 import CouncilPage from "./pages/CouncilPage";
 import CreateRequestPage from "./pages/CreateRequestPage";
+import DesignSystemPage from "./pages/DesignSystemPage";
+import { EligibilityRequestRoute } from "./pages/EligibilityRequestDetailPage";
 import EligibilityRequestPage from "./pages/EligibilityRequestPage";
 import EligibilityReviewPage from "./pages/EligibilityReviewPage";
+import EvaluationExceptionsPage from "./pages/EvaluationExceptionsPage";
 import EvaluationPage from "./pages/EvaluationPage";
 import HistoryPage from "./pages/HistoryPage";
 import HitchhikerRequestsPage from "./pages/HitchhikerRequestsPage";
@@ -39,6 +45,14 @@ function RequestsRoute() {
   const { activeRole } = useRole();
 
   return activeRole === "HITCHHIKER" ? <HitchhikerRequestsPage /> : <CreateRequestPage />;
+}
+
+// Each user gets a new page instance, so a form being edited never carries over to another user
+// opened from the list or with Back.
+function AdminUserRoute() {
+  const { id } = useParams();
+
+  return <AdminUserDetailPage key={id} />;
 }
 
 // Back from the 42 login, which always lands on "/" (api-plan §10.1): opens the page the user
@@ -126,20 +140,27 @@ function AuthenticatedApp() {
         <Route
           path="/eligibility-requests/new"
           element={
+            // The eligibility request page links here from any workspace (#685).
             <RoleGuard
               allowedRoles={routePermissions.eligibilityRequest}
               fallback={<UnauthorizedPage />}
+              switchWorkspace
             >
               <EligibilityRequestPage />
             </RoleGuard>
           }
         />
+        {/* The eligibility notifications link here (§8.8) for the requester, Head Tutors and
+            Admins, in whichever workspace they are: the API decides who may see it (§10.3). */}
+        <Route path="/eligibility-requests/:id" element={<EligibilityRequestRoute />} />
         <Route
           path="/eligibility-requests"
           element={
+            // The eligibility request page links back here from any workspace (#685).
             <RoleGuard
               allowedRoles={routePermissions.eligibilityReview}
               fallback={<UnauthorizedPage />}
+              switchWorkspace
             >
               <EligibilityReviewPage />
             </RoleGuard>
@@ -212,7 +233,45 @@ function AuthenticatedApp() {
             </RoleGuard>
           }
         />
+        {/* Admin pages use /manage/: Nginx sends /admin/ to the Django admin. */}
+        <Route
+          path="/manage/users"
+          element={
+            <RoleGuard allowedRoles={routePermissions.adminUsers} fallback={<UnauthorizedPage />}>
+              <AdminUsersPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/manage/users/:id"
+          element={
+            <RoleGuard allowedRoles={routePermissions.adminUsers} fallback={<UnauthorizedPage />}>
+              <AdminUserRoute />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/manage/exceptions"
+          element={
+            <RoleGuard
+              allowedRoles={routePermissions.evaluationExceptions}
+              fallback={<UnauthorizedPage />}
+            >
+              <EvaluationExceptionsPage />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/manage/audit-log"
+          element={
+            <RoleGuard allowedRoles={routePermissions.auditLog} fallback={<UnauthorizedPage />}>
+              <AuditLogPage />
+            </RoleGuard>
+          }
+        />
         <Route path="/projects/:slug" element={<ProjectDetailsPage />} />
+        {/* The design system (#730), linked from the footer: open to every workspace. */}
+        <Route path="/design-system" element={<DesignSystemPage />} />
         {LEGAL_PAGES.map((page) => (
           <Route key={page.path} path={page.path} element={<LegalPage kind={page.kind} />} />
         ))}

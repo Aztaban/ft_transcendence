@@ -17,13 +17,17 @@
     "studentCouncil": "Studentská rada",
     "messages": "Zprávy",
     "eligibility": "Oprávnění",
-    "skipToContent": "Přeskočit na obsah"
+    "users": "Uživatelé",
+    "exceptions": "Výjimky",
+    "skipToContent": "Přeskočit na obsah",
+    "auditLog": "Auditní záznam"
   },
   "workspace": {
     "select": "Vybrat roli",
     "STUDENT": "STUDENT",
     "HITCHHIKER": "HITCHHIKER",
-    "COUNCIL": "RADA"
+    "COUNCIL": "RADA",
+    "ADMIN": "ADMIN"
   },
   "sidebar": {
     "logout": "Odhlásit se",
@@ -255,7 +259,30 @@
     "errorGeneric": "Něco se pokazilo. Zkuste to prosím znovu.",
     "acceptedTitle": "Hodnocení přijal tutor a potvrdil student!",
     "acceptedText": "Vaše hodnocení <strong>{{project}}</strong> je teď mezi čekajícími hodnoceními.",
-    "orClickToClose": "nebo zavřete kliknutím kamkoli"
+    "orClickToClose": "nebo zavřete kliknutím kamkoli",
+    "override": {
+      "title": "Zásah",
+      "text": "Jako Head Tutor nebo Admin můžete uvolnit termín nebo zrušit tuto žádost. Obojí vyžaduje důvod a student i Hitchhiker dostanou oznámení.",
+      "release": "Uvolnit termín",
+      "cancel": "Zrušit žádost",
+      "releaseTitle": "Uvolnit termín žádosti {{project}}?",
+      "releaseText": "Žádost se vrátí do fronty a Hitchhiker může vybrat nový termín. Hitchhiker i student dostanou oznámení.",
+      "cancelTitle": "Zrušit žádost {{project}}?",
+      "cancelText": "Žádost skončí natrvalo. Student a případný Hitchhiker dostanou oznámení. Tuto akci nelze vrátit.",
+      "releaseConfirm": "Uvolnit",
+      "cancelConfirm": "Zrušit žádost",
+      "releaseWorking": "Uvolňuji…",
+      "cancelWorking": "Ruším…",
+      "releaseDone": "Termín byl uvolněn. Žádost je zpět ve frontě.",
+      "cancelDone": "Žádost byla zrušena.",
+      "alreadyStarted": "Termín už začal, proto ho nelze uvolnit.",
+      "changed": "Žádost se mezitím změnila, proto se nic neprovedlo. Zobrazuje se její aktuální stav.",
+      "error": "Nepodařilo se to. Zkuste to prosím znovu."
+    },
+    "finished": "Hodnocení je dokončené",
+    "ended": "Hodnocení skončilo",
+    "resultPendingNotice": "Výsledek se tu objeví, jakmile bude zapsaný.",
+    "result": "Výsledek"
   },
   "pickSlot": {
     "back": "Zpět na žádosti",
@@ -329,6 +356,158 @@
     "tested": "Z čeho budete zkoušeni?",
     "notAdded": "Zatím nepřidáno.",
     "topics": "Témata projektu"
+  },
+  "projectContent": {
+    "push_swap": {
+      "topics": [
+        "Algoritmy",
+        "Parsování",
+        "Zásobníky",
+        "Operace",
+        "Optimalizace tahů",
+        "Ošetření chyb",
+        "Správa paměti",
+        "Kvalita kódu"
+      ],
+      "tested": ["Volba algoritmu", "Porozumění kódu", "Ošetření chyb", "Omezení projektu"]
+    },
+    "born2beroot": {
+      "topics": [
+        "Virtualizace",
+        "Oddíly a LVM",
+        "Uživatelé a skupiny",
+        "Pravidla hesel",
+        "SSH",
+        "Firewall",
+        "Sudo",
+        "Monitorovací skript"
+      ],
+      "tested": [
+        "Nastavení virtuálního stroje",
+        "Nastavení zabezpečení",
+        "Monitorovací skript",
+        "Porozumění systému"
+      ]
+    },
+    "minishell": {
+      "topics": [
+        "Parsování",
+        "Uvozovky a expanze",
+        "Roury",
+        "Přesměrování",
+        "Vestavěné příkazy",
+        "Signály",
+        "Prostředí",
+        "Správa paměti"
+      ],
+      "tested": ["Spouštění příkazů", "Okrajové případy", "Ošetření chyb", "Porozumění kódu"]
+    },
+    "cpp09": {
+      "topics": [
+        "Kontejnery STL",
+        "Algoritmy",
+        "Parsování vstupu",
+        "Výjimky",
+        "Řazení",
+        "Složitost"
+      ],
+      "tested": ["Volba kontejnerů", "Správnost algoritmu", "Ošetření chyb", "Porozumění kódu"]
+    },
+    "codexion": {
+      "topics": [
+        "Vlákna",
+        "Mutexy",
+        "Podmínkové proměnné",
+        "Prevence deadlocku",
+        "Plánování (FIFO / EDF)",
+        "Prioritní fronta",
+        "Hlídání vyhoření",
+        "Správa paměti"
+      ],
+      "tested": [
+        "Žádný deadlock ani hladovění",
+        "Vyhoření zaznamenané do 10 ms",
+        "Prodleva donglu a férové plánování",
+        "Čisté logy bez souběhů a úniků paměti",
+        "Porozumění kódu"
+      ]
+    },
+    "fly-in": {
+      "topics": [
+        "Parsování",
+        "Modelování grafu",
+        "Hledání cest",
+        "Kapacita zón a spojů",
+        "Plánování tahů",
+        "Cena pohybu",
+        "Vizualizace",
+        "Typová bezpečnost"
+      ],
+      "tested": [
+        "Parser a chybové hlášky",
+        "Počet tahů oproti cílům",
+        "Dodržení pravidel kapacity",
+        "Vysvětlení algoritmu",
+        "Porozumění kódu"
+      ]
+    },
+    "rag-against-the-machine": {
+      "topics": [
+        "Dělení textu",
+        "Indexování",
+        "BM25 / TF-IDF",
+        "Vyhledávání",
+        "Generování odpovědí",
+        "Recall@k",
+        "CLI (Fire)",
+        "Datové modely (pydantic)"
+      ],
+      "tested": [
+        "Recall@5: 80 % dokumentace, 50 % kódu",
+        "Rychlost indexování a vyhledávání",
+        "Podložené odpovědi",
+        "Okrajové případy CLI",
+        "Porozumění kódu"
+      ]
+    },
+    "agent-smith": {
+      "topics": [
+        "Smyčka agenta",
+        "Extrakce kódu",
+        "Bezpečnost sandboxu",
+        "Nástroje MCP",
+        "Poskytovatelé LLM",
+        "Návrh promptů",
+        "Sledování spotřeby",
+        "Benchmarky"
+      ],
+      "tested": [
+        "Povinné nástroje",
+        "Uvažovací smyčka agenta",
+        "Izolace sandboxu",
+        "Zpráva z benchmarku",
+        "Živá úprava agenta"
+      ]
+    },
+    "the-answer-protocol": {
+      "topics": [
+        "TCP server",
+        "Dodržení protokolu",
+        "Souběžnost",
+        "Předměty a inventář",
+        "Boj",
+        "Úkoly",
+        "Klienti CLI a GUI",
+        "Logování serveru"
+      ],
+      "tested": [
+        "Každý příkaz a událost protokolu",
+        "Hra více hráčů a odpojení",
+        "Boj a úkoly",
+        "Klienti zaměnitelní mezi skupinami",
+        "Přínos každého člena"
+      ]
+    }
   },
   "council": {
     "title": "Studentská rada",
@@ -456,6 +635,114 @@
       "senderDeleted": "Účet odesílatele byl smazán.",
       "deleted": "Zpráva byla smazána. Důvod je uložen v auditním záznamu."
     }
+  },
+  "exceptions": {
+    "title": "Výjimky v hodnoceních",
+    "subtitle": "Žádosti o hodnocení, o kterých musí rozhodnout člověk, od nejnovějších.",
+    "loading": "Načítám výjimky…",
+    "error": "Výjimky se nepodařilo načíst. Zkuste to prosím později.",
+    "emptyTitle": "Nic nečeká na rozhodnutí",
+    "emptyText": "Žádosti se tu objeví, když je účastník pozastaven, Hitchhiker přijde o oprávnění nebo chybí výsledek.",
+    "columns": {
+      "problem": "Problém",
+      "request": "Žádost",
+      "student": "Student",
+      "hitchhiker": "Hitchhiker",
+      "slot": "Termín"
+    },
+    "problems": {
+      "participant_inactive": "Účastník pozastaven",
+      "tutor_lost_eligibility": "Hitchhiker bez oprávnění",
+      "result_missing": "Chybí výsledek"
+    },
+    "hints": {
+      "participant_inactive": "Student nebo Hitchhiker je pozastaven. Uvolněte nebo zrušte žádost, nebo účet obnovte.",
+      "tutor_lost_eligibility": "Hitchhiker už tento projekt hodnotit nemůže. Uvolněte termín nebo zrušte žádost.",
+      "result_missing": "Hodnocení skončilo, ale nemá výsledek. Zadejte ho v administraci Django."
+    },
+    "noSlot": "Zatím bez termínu",
+    "pagesAria": "Stránky výjimek",
+    "page": "Strana {{page}} z {{count}}"
+  },
+  "reasonDialog": {
+    "reason": "Důvod",
+    "hint": "Povinné. Uloží se do auditního záznamu."
+  },
+  "adminUser": {
+    "title": "Uživatel",
+    "back": "Všichni uživatelé",
+    "loading": "Načítám uživatele…",
+    "loadError": "Uživatele se nepodařilo načíst. Zkuste to prosím později.",
+    "email": "E-mail",
+    "intraLogin": "Login 42",
+    "language": "Jazyk",
+    "roles": "Role",
+    "createdAt": "Účet vytvořen",
+    "lastLogin": "Poslední přihlášení",
+    "deletedNote": "Tento účet byl smazán. Smazané účty nelze upravovat.",
+    "editTitle": "Upravit účet",
+    "displayName": "Zobrazované jméno",
+    "save": "Uložit změny",
+    "saving": "Ukládám…",
+    "saved": "Změny byly uloženy.",
+    "emailTaken": "Tento e-mail už používá jiný účet.",
+    "deletedMeanwhile": "Tento účet byl mezitím smazán, změny se proto neuložily.",
+    "saveError": "Změny se nepodařilo uložit. Zkuste to prosím znovu.",
+    "actions": {
+      "title": "Akce s účtem",
+      "ownAccount": "Vlastní účet nemůžete pozastavit ani smazat.",
+      "suspend": "Pozastavit účet",
+      "reactivate": "Obnovit účet",
+      "delete": "Smazat účet",
+      "suspendTitle": "Pozastavit účet {{name}}?",
+      "reactivateTitle": "Obnovit účet {{name}}?",
+      "deleteTitle": "Smazat účet {{name}}?",
+      "suspendText": "Uživatel bude hned odhlášen a nepřihlásí se, dokud účet neobnovíte. Jeho žádosti o hodnocení zůstanou beze změny.",
+      "reactivateText": "Uživatel se bude moci znovu přihlásit.",
+      "deleteText": "Účet bude anonymizován: odstraní se jméno, e-mail a login 42, odeberou se role a hodnocení, která ještě nezačala, se zruší nebo uvolní. Tuto akci nelze vrátit.",
+      "suspendConfirm": "Pozastavit",
+      "reactivateConfirm": "Obnovit",
+      "deleteConfirm": "Smazat natrvalo",
+      "suspendWorking": "Pozastavuji…",
+      "reactivateWorking": "Obnovuji…",
+      "deleteWorking": "Mažu…",
+      "suspendDone": "Účet byl pozastaven.",
+      "reactivateDone": "Účet byl obnoven.",
+      "deleteDone": "Účet byl smazán.",
+      "statusChanged": "Účet se mezitím změnil, proto se nic neprovedlo. Zobrazuje se jeho aktuální stav.",
+      "cannotModifySelf": "Stav vlastního účtu nemůžete změnit.",
+      "error": "Nepodařilo se to. Zkuste to prosím znovu."
+    }
+  },
+  "adminUsers": {
+    "title": "Uživatelé",
+    "subtitle": "Všechny účty s jejich rolemi a stavem.",
+    "search": "Hledat",
+    "searchPlaceholder": "E-mail, jméno nebo login 42",
+    "searchButton": "Hledat",
+    "role": "Role",
+    "allRoles": "Všechny role",
+    "status": "Stav",
+    "allStatuses": "Všechny stavy",
+    "statuses": {
+      "active": "Aktivní",
+      "suspended": "Pozastavený",
+      "deleted": "Smazaný"
+    },
+    "columns": {
+      "name": "Jméno",
+      "email": "E-mail",
+      "roles": "Role",
+      "status": "Stav",
+      "lastLogin": "Poslední přihlášení"
+    },
+    "never": "Nikdy",
+    "loading": "Načítám uživatele…",
+    "error": "Uživatele se nepodařilo načíst. Zkuste to prosím později.",
+    "emptyTitle": "Zatím žádní uživatelé",
+    "emptyFilteredTitle": "Těmto filtrům neodpovídá žádný uživatel",
+    "pagesAria": "Stránky uživatelů",
+    "page": "Strana {{page}} z {{count}}"
   },
   "roles": {
     "student": "Student",
@@ -969,6 +1256,7 @@
     "pending": "Čekající",
     "approved": "Schválené",
     "declined": "Zamítnuté",
+    "badgePending": "Čeká",
     "badgeApproved": "Schválená",
     "badgeDeclined": "Zamítnutá",
     "noPending": "Žádné čekající žádosti",
@@ -1010,6 +1298,25 @@
     "optional": "(nepovinné)",
     "saving": "Ukládám…"
   },
+  "eligibilityDetail": {
+    "title": "Žádost o oprávnění",
+    "backToList": "Všechny žádosti o oprávnění",
+    "loading": "Načítám žádost…",
+    "loadError": "Žádost se nepodařilo načíst. Zkuste to prosím později.",
+    "requestedBy": "Žadatel",
+    "sent": "Odesláno",
+    "reviewedBy": "Posoudil(a)",
+    "decided": "Rozhodnuto",
+    "projects_one": "{{count}} projekt",
+    "projects_few": "{{count}} projekty",
+    "projects_many": "{{count}} projektu",
+    "projects_other": "{{count}} projektů",
+    "note": "Poznámka od Head Tutora",
+    "waitingOwn": "Head Tutor schválí, nebo zamítne celou žádost. Dostanete oznámení.",
+    "approvedOwn": "Teď si můžete brát otevřené žádosti k těmto projektům.",
+    "declinedOwn": "Novou žádost můžete poslat kdykoli.",
+    "sendNew": "Poslat novou žádost"
+  },
   "unauthorized": {
     "eyebrow": "PŘÍSTUP OMEZEN",
     "title": "Tato stránka není pro vaši aktuální roli dostupná.",
@@ -1024,5 +1331,130 @@
     "register": "Registrace",
     "notFound": "Stránka nenalezena",
     "unauthorized": "Přístup omezen"
+  },
+  "designSystem": {
+    "title": "Design systém",
+    "intro": "Barvy, písmo, ikony a znovupoužitelné komponenty, ze kterých je postavená každá stránka 42 Evals.",
+    "colours": "Barevná paleta",
+    "coloursText": "Každá skupina má sytý odstín, odstín pro text s kontrastem aspoň 4,5:1 (WCAG AA) a světlé pozadí.",
+    "families": {
+      "neutral": "Neutrální",
+      "accent": "Akcent (tyrkysová)",
+      "success": "Úspěch",
+      "warning": "Upozornění",
+      "danger": "Chyba",
+      "info": "Informace",
+      "violet": "Fialová"
+    },
+    "typography": "Velikosti písma",
+    "sample": "Hodnoť s 42 Evals",
+    "icons": "Ikony",
+    "components": "Komponenty",
+    "primary": "Hlavní",
+    "secondary": "Vedlejší",
+    "ghost": "Průhledné",
+    "inputLabel": "Zobrazované jméno",
+    "checkboxLabel": "Zapamatovat volbu",
+    "new": "Nové",
+    "bell": "Oznámení",
+    "noticeInfo": "Hodnocení Hitchhikerem musí být poslední.",
+    "noticeSuccess": "Žádost byla odeslána.",
+    "noticeWarning": "Tento termín začíná za méně než hodinu.",
+    "noticeError": "Žádost se nepodařilo odeslat.",
+    "tabsLabel": "Filtrovat podle stavu",
+    "progressLabel": "Průběh žádosti",
+    "textAreaLabel": "Poznámka pro Hitchhikera",
+    "loading": "Načítání ukázky…",
+    "emptyTitle": "Zatím tu nic není",
+    "emptyText": "Tvoje hodnocení se zobrazí tady.",
+    "openDialog": "Otevřít dialog",
+    "dialogTitle": "Smazat tuto zprávu?",
+    "dialogText": "Tuto akci nelze vrátit.",
+    "close": "Zavřít",
+    "charactersLeft_one": "Zbývá {{count}} znak",
+    "charactersLeft_few": "Zbývají {{count}} znaky",
+    "charactersLeft_many": "Zbývá {{count}} znaku",
+    "charactersLeft_other": "Zbývá {{count}} znaků",
+    "footerLink": "Design systém"
+  },
+  "auditLog": {
+    "title": "Auditní záznam",
+    "subtitle": "Každá citlivá akce: kdo ji provedl, kdy, čeho se týkala a proč. Záznamy nejde změnit ani smazat.",
+    "action": "Akce",
+    "allActions": "Všechny akce",
+    "target": "Cíl",
+    "allTargets": "Všechny cíle",
+    "from": "Od",
+    "to": "Do",
+    "when": "Kdy",
+    "who": "Kdo",
+    "what": "Co",
+    "details": "Podrobnosti",
+    "tableAria": "Auditní záznamy",
+    "loading": "Načítám auditní záznam…",
+    "loadError": "Auditní záznam se nepodařilo načíst. Zkuste to prosím znovu.",
+    "empty": "Zatím žádné záznamy",
+    "emptyText": "Objeví se tu citlivé akce, například změny rolí, pozastavení účtů nebo smazané zprávy radě.",
+    "emptyFiltered": "Těmto filtrům neodpovídá žádný záznam",
+    "clearFilters": "Zrušit filtry",
+    "deletedActor": "Smazaný účet",
+    "byActor": "Provedl(a) {{name}}",
+    "removeActor": "Zrušit filtr podle {{name}}",
+    "removeTarget": "Zrušit filtr {{target}}",
+    "filterByActor": "Zobrazit jen akce uživatele {{name}}",
+    "filterByTarget": "Zobrazit jen záznamy o {{target}}",
+    "open": "Otevřít",
+    "openAria": "Otevřít {{target}}",
+    "targetLabel": "{{type}} č. {{id}}",
+    "roleDetail": "Role: {{role}}",
+    "changed": "Změněno: {{fields}}",
+    "decision": {
+      "approved": "Schváleno",
+      "declined": "Zamítnuto"
+    },
+    "fields": {
+      "display_name": "zobrazované jméno",
+      "email": "e-mail",
+      "language": "jazyk"
+    },
+    "total_one": "{{count}} záznam",
+    "total_few": "{{count}} záznamy",
+    "total_many": "{{count}} záznamu",
+    "total_other": "{{count}} záznamů",
+    "page": "Strana {{page}} z {{pages}}",
+    "pagesAria": "Stránky auditního záznamu",
+    "unknownAction": "Jiná akce",
+    "unknownTarget": "Jiný cíl",
+    "actions": {
+      "role": {
+        "assigned": "Role přidělena",
+        "revoked": "Role odebrána"
+      },
+      "user": {
+        "updated": "Účet upraven",
+        "suspended": "Účet pozastaven",
+        "reactivated": "Účet obnoven",
+        "deleted": "Účet smazán"
+      },
+      "eligibility": {
+        "reviewed": "Žádost o oprávnění posouzena",
+        "revoked": "Oprávnění odebráno"
+      },
+      "evaluation": {
+        "released_by_override": "Termín uvolněn zásahem",
+        "cancelled_by_override": "Hodnocení zrušeno zásahem"
+      },
+      "sc_message": {
+        "sender_revealed": "Odhalen odesílatel zprávy radě",
+        "deleted": "Zpráva radě smazána"
+      }
+    },
+    "targets": {
+      "user": "Uživatel",
+      "evaluation_request": "Hodnocení",
+      "tutor_eligibility_request": "Žádost o oprávnění",
+      "tutor_eligibility": "Oprávnění",
+      "sc_message": "Zpráva radě"
+    }
   }
 }

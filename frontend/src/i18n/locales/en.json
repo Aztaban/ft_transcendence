@@ -17,13 +17,17 @@
     "studentCouncil": "Student Council",
     "messages": "Messages",
     "eligibility": "Eligibility",
-    "skipToContent": "Skip to content"
+    "users": "Users",
+    "exceptions": "Exceptions",
+    "skipToContent": "Skip to content",
+    "auditLog": "Audit log"
   },
   "workspace": {
     "select": "Select role",
     "STUDENT": "STUDENT",
     "HITCHHIKER": "HITCHHIKER",
-    "COUNCIL": "COUNCIL"
+    "COUNCIL": "COUNCIL",
+    "ADMIN": "ADMIN"
   },
   "sidebar": {
     "logout": "Logout",
@@ -248,7 +252,30 @@
     "errorGeneric": "Something went wrong. Please try again.",
     "acceptedTitle": "The evaluation has been accepted by the tutor and confirmed by the student!",
     "acceptedText": "Your <strong>{{project}}</strong> evaluation is now in your Pending Evaluations.",
-    "orClickToClose": "or click anywhere to close"
+    "orClickToClose": "or click anywhere to close",
+    "override": {
+      "title": "Override",
+      "text": "As a Head Tutor or Admin you can release the slot or cancel this request. Both need a reason, and the student and the Hitchhiker are notified.",
+      "release": "Release the slot",
+      "cancel": "Cancel the request",
+      "releaseTitle": "Release the slot for {{project}}?",
+      "releaseText": "The request goes back to the queue, so a Hitchhiker can pick a new slot. The Hitchhiker and the student are notified.",
+      "cancelTitle": "Cancel the {{project}} request?",
+      "cancelText": "The request ends for good. The student and the Hitchhiker, if any, are notified. This cannot be undone.",
+      "releaseConfirm": "Release",
+      "cancelConfirm": "Cancel the request",
+      "releaseWorking": "Releasing…",
+      "cancelWorking": "Cancelling…",
+      "releaseDone": "The slot was released. The request is back in the queue.",
+      "cancelDone": "The request was cancelled.",
+      "alreadyStarted": "The slot has already started, so it can no longer be released.",
+      "changed": "The request changed in the meantime, so nothing was done. It is shown as it is now.",
+      "error": "That did not work. Please try again."
+    },
+    "finished": "The evaluation is finished",
+    "ended": "The evaluation has ended",
+    "resultPendingNotice": "The result will appear here once it is recorded.",
+    "result": "Result"
   },
   "pickSlot": {
     "back": "Back to requests",
@@ -322,6 +349,163 @@
     "tested": "What will you be tested on?",
     "notAdded": "Not added yet.",
     "topics": "Project topics"
+  },
+  "projectContent": {
+    "push_swap": {
+      "topics": [
+        "Algorithms",
+        "Parsing",
+        "Stacks",
+        "Operations",
+        "Move optimization",
+        "Error handling",
+        "Memory management",
+        "Code quality"
+      ],
+      "tested": ["Algorithm choice", "Code understanding", "Error handling", "Project constraints"]
+    },
+    "born2beroot": {
+      "topics": [
+        "Virtualization",
+        "Partitions & LVM",
+        "Users & groups",
+        "Password policy",
+        "SSH",
+        "Firewall",
+        "Sudo",
+        "Monitoring script"
+      ],
+      "tested": [
+        "Virtual machine setup",
+        "Security configuration",
+        "Monitoring script",
+        "Understanding of the system"
+      ]
+    },
+    "minishell": {
+      "topics": [
+        "Parsing",
+        "Quotes & expansion",
+        "Pipes",
+        "Redirections",
+        "Builtins",
+        "Signals",
+        "Environment",
+        "Memory management"
+      ],
+      "tested": ["Command execution", "Edge cases", "Error handling", "Code understanding"]
+    },
+    "cpp09": {
+      "topics": [
+        "STL containers",
+        "Algorithms",
+        "Input parsing",
+        "Exceptions",
+        "Sorting",
+        "Complexity"
+      ],
+      "tested": [
+        "Choice of containers",
+        "Algorithm correctness",
+        "Error handling",
+        "Code understanding"
+      ]
+    },
+    "codexion": {
+      "topics": [
+        "Threads",
+        "Mutexes",
+        "Condition variables",
+        "Deadlock prevention",
+        "Scheduling (FIFO / EDF)",
+        "Priority queue",
+        "Burnout monitor",
+        "Memory management"
+      ],
+      "tested": [
+        "No deadlock or starvation",
+        "Burnout logged within 10 ms",
+        "Dongle cooldown and fair scheduling",
+        "Clean logs, no data races or leaks",
+        "Code understanding"
+      ]
+    },
+    "fly-in": {
+      "topics": [
+        "Parsing",
+        "Graph modelling",
+        "Pathfinding",
+        "Zone & link capacity",
+        "Turn scheduling",
+        "Movement costs",
+        "Visualization",
+        "Type safety"
+      ],
+      "tested": [
+        "Parser and error messages",
+        "Turn count against the targets",
+        "Capacity rules respected",
+        "Algorithm explanation",
+        "Code understanding"
+      ]
+    },
+    "rag-against-the-machine": {
+      "topics": [
+        "Chunking",
+        "Indexing",
+        "BM25 / TF-IDF",
+        "Retrieval",
+        "Answer generation",
+        "Recall@k",
+        "CLI (Fire)",
+        "Data models (pydantic)"
+      ],
+      "tested": [
+        "Recall@5: 80% docs, 50% code",
+        "Indexing and search speed",
+        "Grounded answers",
+        "CLI edge cases",
+        "Code understanding"
+      ]
+    },
+    "agent-smith": {
+      "topics": [
+        "Agent loop",
+        "Code extraction",
+        "Sandbox security",
+        "MCP tools",
+        "LLM providers",
+        "Prompt design",
+        "Usage tracking",
+        "Benchmarking"
+      ],
+      "tested": [
+        "Mandatory tools",
+        "Agent reasoning loop",
+        "Sandbox isolation",
+        "Benchmark report",
+        "Live change to the agent"
+      ]
+    },
+    "the-answer-protocol": {
+      "topics": [
+        "TCP server",
+        "Protocol compliance",
+        "Concurrency",
+        "Items & inventory",
+        "Combat",
+        "Quests",
+        "CLI & GUI clients",
+        "Server logging"
+      ],
+      "tested": [
+        "Every protocol command and event",
+        "Multiplayer and disconnects",
+        "Combat and quests",
+        "Clients interchangeable between groups",
+        "Each member's contribution"
+      ]
+    }
   },
   "council": {
     "title": "Student Council",
@@ -446,6 +630,114 @@
       "senderDeleted": "The sender's account was deleted.",
       "deleted": "The message was deleted. The reason is saved in the audit log."
     }
+  },
+  "exceptions": {
+    "title": "Evaluation exceptions",
+    "subtitle": "Evaluation requests that need a human decision, newest first.",
+    "loading": "Loading the exceptions…",
+    "error": "We couldn't load the exceptions. Please try again later.",
+    "emptyTitle": "Nothing needs a decision",
+    "emptyText": "Requests show up here when a participant is suspended, a Hitchhiker loses eligibility or a result is missing.",
+    "columns": {
+      "problem": "Problem",
+      "request": "Request",
+      "student": "Student",
+      "hitchhiker": "Hitchhiker",
+      "slot": "Slot"
+    },
+    "problems": {
+      "participant_inactive": "Participant suspended",
+      "tutor_lost_eligibility": "Hitchhiker not eligible",
+      "result_missing": "Result missing"
+    },
+    "hints": {
+      "participant_inactive": "The student or the Hitchhiker is suspended. Release or cancel the request, or reactivate the account.",
+      "tutor_lost_eligibility": "The Hitchhiker can no longer evaluate this project. Release the slot or cancel the request.",
+      "result_missing": "The evaluation is over but has no result. Enter it in the Django admin."
+    },
+    "noSlot": "No slot yet",
+    "pagesAria": "Exception pages",
+    "page": "Page {{page}} of {{count}}"
+  },
+  "reasonDialog": {
+    "reason": "Reason",
+    "hint": "Required. It is kept in the audit log."
+  },
+  "adminUser": {
+    "title": "User",
+    "back": "All users",
+    "loading": "Loading the user…",
+    "loadError": "We couldn't load this user. Please try again later.",
+    "email": "Email",
+    "intraLogin": "42 login",
+    "language": "Language",
+    "roles": "Roles",
+    "createdAt": "Account created",
+    "lastLogin": "Last login",
+    "deletedNote": "This account was deleted. Deleted accounts cannot be edited.",
+    "editTitle": "Edit account",
+    "displayName": "Display name",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saved": "Changes saved.",
+    "emailTaken": "Another account already uses this email.",
+    "deletedMeanwhile": "This account was deleted in the meantime, so the changes were not saved.",
+    "saveError": "The changes could not be saved. Please try again.",
+    "actions": {
+      "title": "Account actions",
+      "ownAccount": "You cannot suspend or delete your own account.",
+      "suspend": "Suspend account",
+      "reactivate": "Reactivate account",
+      "delete": "Delete account",
+      "suspendTitle": "Suspend {{name}}?",
+      "reactivateTitle": "Reactivate {{name}}?",
+      "deleteTitle": "Delete {{name}}?",
+      "suspendText": "They are logged out at once and cannot log in until the account is reactivated. Their evaluation requests stay as they are.",
+      "reactivateText": "They can log in again.",
+      "deleteText": "The account is anonymized: its name, email and 42 login are removed, its roles are taken away, and its evaluations that have not started are cancelled or released. This cannot be undone.",
+      "suspendConfirm": "Suspend",
+      "reactivateConfirm": "Reactivate",
+      "deleteConfirm": "Delete for good",
+      "suspendWorking": "Suspending…",
+      "reactivateWorking": "Reactivating…",
+      "deleteWorking": "Deleting…",
+      "suspendDone": "The account was suspended.",
+      "reactivateDone": "The account was reactivated.",
+      "deleteDone": "The account was deleted.",
+      "statusChanged": "The account changed in the meantime, so nothing was done. It is shown as it is now.",
+      "cannotModifySelf": "You cannot change the status of your own account.",
+      "error": "That did not work. Please try again."
+    }
+  },
+  "adminUsers": {
+    "title": "Users",
+    "subtitle": "Every account, with its roles and status.",
+    "search": "Search",
+    "searchPlaceholder": "Email, name or 42 login",
+    "searchButton": "Search",
+    "role": "Role",
+    "allRoles": "All roles",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "statuses": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "deleted": "Deleted"
+    },
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "roles": "Roles",
+      "status": "Status",
+      "lastLogin": "Last login"
+    },
+    "never": "Never",
+    "loading": "Loading users…",
+    "error": "We couldn't load the users. Please try again later.",
+    "emptyTitle": "No users yet",
+    "emptyFilteredTitle": "No users match these filters",
+    "pagesAria": "User pages",
+    "page": "Page {{page}} of {{count}}"
   },
   "roles": {
     "student": "Student",
@@ -951,6 +1243,7 @@
     "pending": "Pending",
     "approved": "Approved",
     "declined": "Declined",
+    "badgePending": "Pending",
     "badgeApproved": "Approved",
     "badgeDeclined": "Declined",
     "noPending": "No pending requests",
@@ -990,6 +1283,23 @@
     "optional": "(optional)",
     "saving": "Saving…"
   },
+  "eligibilityDetail": {
+    "title": "Eligibility request",
+    "backToList": "All eligibility requests",
+    "loading": "Loading the request…",
+    "loadError": "Could not load the request. Please try again later.",
+    "requestedBy": "Requested by",
+    "sent": "Sent",
+    "reviewedBy": "Reviewed by",
+    "decided": "Decided",
+    "projects_one": "{{count}} project",
+    "projects_other": "{{count}} projects",
+    "note": "Note from the Head Tutor",
+    "waitingOwn": "A Head Tutor will approve or decline the whole request. You will get a notification.",
+    "approvedOwn": "You can now pick open requests for these projects.",
+    "declinedOwn": "You can send a new request at any time.",
+    "sendNew": "Send a new request"
+  },
   "unauthorized": {
     "eyebrow": "ACCESS RESTRICTED",
     "title": "This page is not available for your current role.",
@@ -1004,5 +1314,126 @@
     "register": "Create an account",
     "notFound": "Page not found",
     "unauthorized": "Access restricted"
+  },
+  "designSystem": {
+    "title": "Design system",
+    "intro": "The colours, type, icons and reusable components every page of 42 Evals is built from.",
+    "colours": "Colour palette",
+    "coloursText": "Each family has a strong shade, a text shade that reads at 4.5:1 or more (WCAG AA) and a light surface.",
+    "families": {
+      "neutral": "Neutral",
+      "accent": "Accent (teal)",
+      "success": "Success",
+      "warning": "Warning",
+      "danger": "Danger",
+      "info": "Information",
+      "violet": "Violet"
+    },
+    "typography": "Type scale",
+    "sample": "Evaluate with 42 Evals",
+    "icons": "Icons",
+    "components": "Components",
+    "primary": "Primary",
+    "secondary": "Secondary",
+    "ghost": "Ghost",
+    "inputLabel": "Display name",
+    "checkboxLabel": "Remember my choice",
+    "new": "New",
+    "bell": "Notifications",
+    "noticeInfo": "The Hitchhiker evaluation must be the last one.",
+    "noticeSuccess": "Your request was sent.",
+    "noticeWarning": "This slot starts in less than an hour.",
+    "noticeError": "The request could not be sent.",
+    "tabsLabel": "Filter by status",
+    "progressLabel": "Request progress",
+    "textAreaLabel": "Note for the Hitchhiker",
+    "loading": "Loading the example…",
+    "emptyTitle": "Nothing here yet",
+    "emptyText": "Your evaluations will appear here.",
+    "openDialog": "Open a dialog",
+    "dialogTitle": "Delete this message?",
+    "dialogText": "This cannot be undone.",
+    "close": "Close",
+    "charactersLeft_one": "{{count}} character left",
+    "charactersLeft_other": "{{count}} characters left",
+    "footerLink": "Design system"
+  },
+  "auditLog": {
+    "title": "Audit log",
+    "subtitle": "Every sensitive action: who did it, when, to what and why. Entries cannot be changed or deleted.",
+    "action": "Action",
+    "allActions": "All actions",
+    "target": "Target",
+    "allTargets": "All targets",
+    "from": "From",
+    "to": "To",
+    "when": "When",
+    "who": "Who",
+    "what": "What",
+    "details": "Details",
+    "tableAria": "Audit entries",
+    "loading": "Loading the audit log…",
+    "loadError": "Could not load the audit log. Please try again.",
+    "empty": "No entries yet",
+    "emptyText": "Sensitive actions such as role changes, suspensions or deleted council messages will appear here.",
+    "emptyFiltered": "No entries match these filters",
+    "clearFilters": "Clear filters",
+    "deletedActor": "A deleted account",
+    "byActor": "By {{name}}",
+    "removeActor": "Remove the filter by {{name}}",
+    "removeTarget": "Remove the filter on {{target}}",
+    "filterByActor": "Show only the actions of {{name}}",
+    "filterByTarget": "Show only the entries about {{target}}",
+    "open": "Open",
+    "openAria": "Open {{target}}",
+    "targetLabel": "{{type}} #{{id}}",
+    "roleDetail": "Role: {{role}}",
+    "changed": "Changed: {{fields}}",
+    "decision": {
+      "approved": "Approved",
+      "declined": "Declined"
+    },
+    "fields": {
+      "display_name": "display name",
+      "email": "email",
+      "language": "language"
+    },
+    "total_one": "{{count}} entry",
+    "total_other": "{{count}} entries",
+    "page": "Page {{page}} of {{pages}}",
+    "pagesAria": "Audit log pages",
+    "unknownAction": "Other action",
+    "unknownTarget": "Other",
+    "actions": {
+      "role": {
+        "assigned": "Role assigned",
+        "revoked": "Role removed"
+      },
+      "user": {
+        "updated": "Account edited",
+        "suspended": "Account suspended",
+        "reactivated": "Account reactivated",
+        "deleted": "Account deleted"
+      },
+      "eligibility": {
+        "reviewed": "Eligibility request reviewed",
+        "revoked": "Eligibility revoked"
+      },
+      "evaluation": {
+        "released_by_override": "Slot released by override",
+        "cancelled_by_override": "Evaluation cancelled by override"
+      },
+      "sc_message": {
+        "sender_revealed": "Council message sender revealed",
+        "deleted": "Council message deleted"
+      }
+    },
+    "targets": {
+      "user": "User",
+      "evaluation_request": "Evaluation",
+      "tutor_eligibility_request": "Eligibility request",
+      "tutor_eligibility": "Eligibility",
+      "sc_message": "Council message"
+    }
   }
 }

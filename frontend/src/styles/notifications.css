@@ -27,17 +27,17 @@
 .notification-panel__title {
   margin: 0;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .notification-panel__mark-all {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
   font: inherit;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
 }
 
@@ -64,15 +64,15 @@
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
   font: inherit;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
 }
 
 .notification-panel__retry:hover {
-  background: #e6f8f8;
+  background: var(--color-accent-surface);
 }
 
 .notification-panel__list {
@@ -111,20 +111,20 @@ a.notification-panel__entry:hover,
 a.notification-panel__entry:focus-visible,
 button.notification-panel__entry:hover,
 button.notification-panel__entry:focus-visible {
-  background: #f0f2f2;
+  background: var(--color-neutral-100);
 }
 
 /* Unread: an accent bar and a light tint, like the badge on the bell. */
 .notification-panel__item--unread .notification-panel__entry {
   border-left-color: var(--color-accent);
   background: #effafa;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .notification-panel__time {
   color: var(--color-text-secondary);
   font-size: 12px;
-  font-weight: 400;
+  font-weight: var(--font-weight-regular);
 }
 
 .notification-panel__sr-only {
@@ -134,4 +134,16 @@ button.notification-panel__entry:focus-visible {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* Phones (#372): the bell is not at the right edge any more, so the panel opened under it would
+   start off the screen on the left. It spans the screen under the top bar instead. */
+@media (max-width: 480px) {
+  .notification-panel {
+    position: fixed;
+    top: calc(var(--topbar-height) + 8px);
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
 }

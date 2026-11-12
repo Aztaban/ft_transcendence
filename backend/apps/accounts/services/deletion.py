@@ -26,13 +26,8 @@ class _ParticipantsChanged(Exception):
 
 def _affected_evaluations(user_id, at):
     own = Q(student_id=user_id) & (
-        Q(
-            status__in=(
-                EvaluationRequest.Status.PENDING,
-                EvaluationRequest.Status.AWAITING_CONFIRMATION,
-            )
-        )
-        | Q(status=EvaluationRequest.Status.CONFIRMED, starts_at__gt=at)
+        Q(status=EvaluationRequest.Status.PENDING)
+        | Q(status__in=EvaluationRequest.PICKED_STATUSES, starts_at__gt=at)
     )
     picks = Q(picked_by_id=user_id, status__in=EvaluationRequest.PICKED_STATUSES, starts_at__gt=at)
     return EvaluationRequest.objects.filter(own | picks)

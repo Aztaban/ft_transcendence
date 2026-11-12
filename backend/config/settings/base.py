@@ -85,6 +85,7 @@ DATABASES = {
         "PASSWORD": os.getenv("MYSQL_PASSWORD", ""),
         "HOST": os.getenv("MYSQL_HOST", "db"),
         "PORT": os.getenv("MYSQL_PORT", "3306"),
+        "OPTIONS": {"charset": "utf8mb4"},
     }
 }
 
@@ -102,6 +103,7 @@ CSRF_COOKIE_SAMESITE = "Lax"
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "OPTIONS": {"user_attributes": ("email", "display_name")},
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",

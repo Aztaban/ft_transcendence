@@ -9,8 +9,8 @@
 
 .history-page__header h1 {
   margin: 0;
-  font-size: 2rem;
-  font-weight: 500;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-medium);
 }
 
 .history-page__header p {
@@ -28,9 +28,9 @@
   justify-content: space-between;
   gap: 14px;
   padding: 14px 18px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--color-white);
 }
 
 .history-page__chips {
@@ -41,12 +41,12 @@
 
 .history-page__chip {
   padding: 7px 16px;
-  border: 1px solid #d5d9d9;
+  border: 1px solid var(--color-neutral-250);
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--color-white);
   cursor: pointer;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   transition:
     border-color 0.2s ease,
     background-color 0.2s ease,
@@ -59,9 +59,9 @@
 
 .history-page__chip--active {
   border-color: var(--color-accent);
-  background: #e6f8f8;
-  color: #00797b;
-  font-weight: 500;
+  background: var(--color-accent-surface);
+  color: var(--color-accent-strong-text);
+  font-weight: var(--font-weight-medium);
 }
 
 .history-page__project {
@@ -69,16 +69,16 @@
   align-items: center;
   gap: 10px;
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .history-page__project select {
   min-width: 180px;
   padding: 8px 12px;
-  border: 1px solid #c9cfcf;
+  border: 1px solid var(--color-neutral-300);
   border-radius: 8px;
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-white);
+  color: var(--color-neutral-950);
   font: inherit;
 }
 
@@ -102,18 +102,18 @@
 }
 
 .history-card {
-  --tone: #9aa1a1;
+  --tone: var(--color-neutral-400);
   --tone-ink: #5c6464;
-  --tone-soft: #f0f2f2;
+  --tone-soft: var(--color-neutral-100);
 
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 16px;
   padding: 18px 22px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-left: 5px solid var(--tone);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--color-white);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
   transition:
     box-shadow 0.2s ease,
@@ -126,21 +126,21 @@
 }
 
 .history-card--green {
-  --tone: #16a34a;
-  --tone-ink: #1c7c3c;
-  --tone-soft: #e7f6ec;
+  --tone: var(--color-success);
+  --tone-ink: var(--color-success-text);
+  --tone-soft: var(--color-success-surface);
 }
 
 .history-card--red {
-  --tone: #d92d20;
-  --tone-ink: #b42318;
-  --tone-soft: #fef3f2;
+  --tone: var(--color-danger);
+  --tone-ink: var(--color-danger-text);
+  --tone-soft: var(--color-danger-surface);
 }
 
 .history-card--violet {
   --tone: #8b6fd1;
-  --tone-ink: #6b4fb3;
-  --tone-soft: #f2eefb;
+  --tone-ink: var(--color-violet-text);
+  --tone-soft: var(--color-violet-surface);
 }
 
 .history-card__badge {
@@ -151,7 +151,7 @@
   border-radius: 12px;
   background: var(--tone-soft);
   color: var(--tone-ink);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .history-card__title {
@@ -163,8 +163,8 @@
 
 .history-card__title h2 {
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 500;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-medium);
 }
 
 .history-card__outcome {
@@ -172,8 +172,8 @@
   border-radius: 999px;
   background: var(--tone-soft);
   color: var(--tone-ink);
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
 }
 
 .history-card__meta {
@@ -182,13 +182,13 @@
   gap: 4px 18px;
   margin: 6px 0 0;
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .history-card__note {
   margin: 6px 0 0;
-  color: #4d5555;
-  font-size: 0.85rem;
+  color: var(--color-neutral-700);
+  font-size: var(--font-size-sm);
 }
 
 .history-card__feedback {
@@ -202,7 +202,7 @@
 .history-card__feedback span {
   color: var(--tone-ink);
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -221,15 +221,15 @@
   justify-content: center;
   gap: 16px;
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .history-page__pages button {
   padding: 8px 16px;
-  border: 1px solid #c9cfcf;
+  border: 1px solid var(--color-neutral-300);
   border-radius: 8px;
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-white);
+  color: var(--color-neutral-950);
   cursor: pointer;
   font: inherit;
   transition:
@@ -239,11 +239,11 @@
 
 .history-page__pages button:hover:enabled {
   border-color: var(--color-accent);
-  background: #f6fdfd;
+  background: var(--color-accent-surface-hover);
 }
 
 .history-page__pages button:disabled {
-  color: #9aa1a1;
+  color: var(--color-neutral-400);
   cursor: not-allowed;
 }
 
@@ -252,23 +252,28 @@
 .history-page__skeleton {
   min-height: 92px;
   border-radius: 14px;
-  background: linear-gradient(90deg, #eceff0 25%, #f6f7f7 50%, #eceff0 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-150) 25%,
+    var(--color-neutral-50) 50%,
+    var(--color-neutral-150) 75%
+  );
   background-size: 200% 100%;
   animation: history-shimmer 1.3s ease-in-out infinite;
 }
 
 .history-page__empty {
   padding: 40px 20px;
-  border: 1px dashed #c9cfcf;
+  border: 1px dashed var(--color-neutral-300);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--color-white);
   text-align: center;
 }
 
 .history-page__empty h2 {
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 500;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-medium);
 }
 
 .history-page__empty p {
@@ -279,10 +284,10 @@
 .history-page__error {
   margin: 0;
   padding: 10px 14px;
-  border: 1px solid #fecdca;
+  border: 1px solid var(--color-danger-border);
   border-radius: 8px;
-  background: #fef3f2;
-  color: #b42318;
+  background: var(--color-danger-surface);
+  color: var(--color-danger-text);
 }
 
 .history-page__sr-only {

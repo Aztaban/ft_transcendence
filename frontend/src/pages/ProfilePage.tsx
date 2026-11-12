@@ -2,15 +2,12 @@ import { useEffect, useState, type CSSProperties, type FormEvent, type ReactNode
 import { useTranslation } from "react-i18next";
 
 import usePageTitle from "../components/layout/usePageTitle";
-import { getCurrentUser, updateCurrentUser } from "../api/users";
-import i18n, { changeLanguage } from "../i18n";
+import i18n from "../i18n";
 import { ApiError } from "../api/client";
-import { Button, Input } from "../components/ui";
-import PersonAvatar from "../features/people/PersonAvatar";
+import { Avatar, Button, Input } from "../components/ui";
 import { useCurrentUser } from "../store/CurrentUserContext";
-import type { Language, UserProfile, UserRole } from "../types/user";
+import type { Language, UserRole } from "../types/user";
 import { DISPLAY_NAME_MAX_LENGTH } from "../utils/validation";
-import { useLiveRefresh } from "../websocket/LiveProvider";
 import "../styles/profile.css";
 
 const languages: Language[] = ["en", "cs", "es"];
@@ -54,9 +51,10 @@ function ProfilePage() {
   const { t } = useTranslation();
 
   usePageTitle(t("nav.profile"));
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  // The profile is the shared one: the context loads it, follows `role.changed` and re-fetches
+  // after every save, so the top bar and this page can never disagree (#776).
+  const { user: profile, loadFailed, update } = useCurrentUser();
+  const isLoading = !profile && !loadFailed;
 
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
@@ -64,56 +62,16 @@ function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
-  const [settingsLanguage, setSettingsLanguage] = useState<Language>("en");
+  // The language picked but not saved yet; `null` shows the saved one.
+  const [draftLanguage, setDraftLanguage] = useState<Language | null>(null);
+  const settingsLanguage: Language = draftLanguage ?? profile?.language ?? "en";
+
+  // A change of the saved language, here or in the top bar, drops the pick: otherwise Save would
+  // write the stale pick over the top bar's choice.
+  useEffect(() => setDraftLanguage(null), [profile?.language]);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState("");
   const [settingsMessage, setSettingsMessage] = useState("");
-
-  useEffect(() => {
-    let active = true;
-
-    getCurrentUser()
-      .then((data) => {
-        if (active) {
-          setProfile(data);
-          setDisplayName(data.display_name);
-          setSettingsLanguage(data.language);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setLoadError(true);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  // A language picked in the top bar is saved to the profile as well: show it here too.
-  const savedLanguage = useCurrentUser().user?.language;
-
-  useEffect(() => {
-    if (savedLanguage) {
-      setProfile((shown) => (shown ? { ...shown, language: savedLanguage } : shown));
-      setSettingsLanguage(savedLanguage);
-    }
-  }, [savedLanguage]);
-
-  // §9.3 `role.changed`: re-fetch the roles shown here. The form fields being edited are kept.
-  useLiveRefresh(["role.changed"], () => {
-    getCurrentUser()
-      .then((data) => setProfile(data))
-      .catch(() => {
-        // The roles shown stay as they were; the next page load gets them.
-      });
-  });
 
   function startEditing() {
     if (!profile) return;
@@ -153,15 +111,8 @@ function ProfilePage() {
     setIsSaving(true);
 
     try {
-      await updateCurrentUser({
-        display_name: trimmedDisplayName,
-      });
+      await update({ display_name: trimmedDisplayName });
 
-      const updatedProfile = await getCurrentUser();
-
-      setProfile(updatedProfile);
-      setDisplayName(updatedProfile.display_name);
-      setSettingsLanguage(updatedProfile.language);
       setIsEditing(false);
       setSaveMessage(t("profile.updated"));
     } catch (error) {
@@ -185,15 +136,9 @@ function ProfilePage() {
     setIsSavingSettings(true);
 
     try {
-      await updateCurrentUser({
-        language: settingsLanguage,
-      });
+      // The context switches the page to the saved language once it has re-fetched.
+      await update({ language: settingsLanguage });
 
-      const updatedProfile = await getCurrentUser();
-
-      setProfile(updatedProfile);
-      setSettingsLanguage(updatedProfile.language);
-      changeLanguage(updatedProfile.language);
       setSettingsMessage(t("profile.settingsUpdated"));
     } catch (error) {
       if (error instanceof ApiError) {
@@ -240,7 +185,7 @@ function ProfilePage() {
         </div>
       )}
 
-      {!isLoading && (loadError || !profile) && (
+      {!isLoading && !profile && (
         <div className="profile-page__message" role="alert">
           {t("profile.unavailable")}
         </div>
@@ -250,7 +195,7 @@ function ProfilePage() {
         <>
           <section className="profile-hero" aria-labelledby="profile-name">
             <div className="profile-hero__body">
-              <PersonAvatar
+              <Avatar
                 className="profile-card__avatar"
                 name={profile.display_name}
                 avatarUrl={profile.avatar_url ?? null}
@@ -360,7 +305,7 @@ function ProfilePage() {
                       name="profile-language"
                       value={language}
                       checked={settingsLanguage === language}
-                      onChange={() => setSettingsLanguage(language)}
+                      onChange={() => setDraftLanguage(language)}
                     />
                     <span className="profile-language__code" aria-hidden="true">
                       {language.toUpperCase()}

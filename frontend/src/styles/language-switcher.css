@@ -18,7 +18,7 @@
   background: transparent;
   color: #5d6464;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: 0.04em;
   cursor: pointer;
   transition:
@@ -37,7 +37,7 @@
 
 .language-switcher__option[aria-pressed="true"] {
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 @media (max-width: 680px) {
@@ -48,6 +48,18 @@
   .language-switcher__option {
     min-width: 28px;
     padding: 0 5px;
+  }
+}
+
+/* Phones (#372): the three languages still fit next to the bell and avatar at 320px. */
+@media (max-width: 480px) {
+  .language-switcher {
+    margin-right: 4px;
+  }
+
+  .language-switcher__option {
+    min-width: 24px;
+    padding: 0 3px;
   }
 }
 

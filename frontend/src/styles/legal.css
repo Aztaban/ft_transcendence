@@ -1,7 +1,7 @@
 .legal-page {
   position: relative;
   padding: 96px 24px 48px;
-  background: #ffffff;
+  background: var(--color-white);
 }
 
 .legal-page__article {
@@ -28,13 +28,14 @@
 
 .legal-page__brand span {
   font-size: 18px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   letter-spacing: -0.03em;
 }
 
 .legal-page__article h1 {
   margin: 0 0 var(--space-2);
-  font-size: 32px;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-medium);
   line-height: 1.2;
 }
 
@@ -72,7 +73,7 @@
   display: inline-block;
   margin-top: var(--space-8);
   color: #000000;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-decoration: underline;
   text-decoration-color: var(--color-accent-dark);
   text-decoration-thickness: 2px;
@@ -81,7 +82,7 @@
 
 .legal-page__brand:focus-visible,
 .legal-page__back:focus-visible {
-  outline: 2px solid var(--color-accent-dark);
+  outline: 2px solid var(--color-accent-text);
   outline-offset: 3px;
 }
 

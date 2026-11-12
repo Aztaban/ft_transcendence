@@ -2,13 +2,12 @@ import { useEffect, useRef, useState, type FormEvent, type RefObject } from "rea
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import searchIcon from "../../assets/figma/search.svg";
-import bellIcon from "../../assets/figma/bell.svg";
 import { PEOPLE_QUERY_MAX_LENGTH } from "../../api/people";
 import NotificationPanel from "../../features/notifications/NotificationPanel";
-import PersonAvatar from "../../features/people/PersonAvatar";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import { useNotificationCount } from "../../store/NotificationCountContext";
+import Avatar from "../ui/Avatar";
+import Icon from "../ui/Icon";
 import ConnectionStatus from "./ConnectionStatus";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserMenu from "./UserMenu";
@@ -92,7 +91,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
       {/* People search from anywhere, like on intra: Enter opens the Hitchhikers page with
           everyone who can be found, council members too (api-plan §10.8, R11). */}
       <form className="topbar__search" role="search" onSubmit={searchPeople}>
-        <img className="topbar__search-icon" src={searchIcon} alt="" aria-hidden="true" />
+        <Icon className="topbar__search-icon" name="search" />
 
         <input
           type="search"
@@ -124,7 +123,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
             aria-controls="notification-panel"
             onClick={() => setIsPanelOpen((open) => !open)}
           >
-            <img src={bellIcon} alt="" aria-hidden="true" />
+            <Icon name="bell" />
             {unreadCount > 0 && (
               <span className="topbar__notification-badge">
                 {unreadCount > 99 ? "99+" : unreadCount}
@@ -135,7 +134,7 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
           {isPanelOpen && <NotificationPanel onClose={() => setIsPanelOpen(false)} />}
         </div>
 
-        <PersonAvatar
+        <Avatar
           className="topbar__avatar"
           name={user?.display_name ?? ""}
           avatarUrl={user?.avatar_url ?? null}

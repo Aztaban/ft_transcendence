@@ -17,13 +17,17 @@
     "studentCouncil": "Consejo estudiantil",
     "messages": "Mensajes",
     "eligibility": "Elegibilidad",
-    "skipToContent": "Saltar al contenido"
+    "users": "Usuarios",
+    "exceptions": "Excepciones",
+    "skipToContent": "Saltar al contenido",
+    "auditLog": "Registro de auditoría"
   },
   "workspace": {
     "select": "Elegir rol",
     "STUDENT": "ESTUDIANTE",
     "HITCHHIKER": "HITCHHIKER",
-    "COUNCIL": "CONSEJO"
+    "COUNCIL": "CONSEJO",
+    "ADMIN": "ADMIN"
   },
   "sidebar": {
     "logout": "Cerrar sesión",
@@ -251,7 +255,30 @@
     "errorGeneric": "Algo ha salido mal. Inténtalo de nuevo.",
     "acceptedTitle": "¡El tutor ha aceptado la evaluación y el estudiante la ha confirmado!",
     "acceptedText": "Tu evaluación de <strong>{{project}}</strong> ya está en tus evaluaciones pendientes.",
-    "orClickToClose": "o haz clic en cualquier sitio para cerrar"
+    "orClickToClose": "o haz clic en cualquier sitio para cerrar",
+    "override": {
+      "title": "Intervención",
+      "text": "Como Head Tutor o Admin puedes liberar el horario o cancelar esta solicitud. Ambas acciones necesitan un motivo, y el estudiante y el Hitchhiker reciben un aviso.",
+      "release": "Liberar el horario",
+      "cancel": "Cancelar la solicitud",
+      "releaseTitle": "¿Liberar el horario de {{project}}?",
+      "releaseText": "La solicitud vuelve a la cola para que un Hitchhiker elija un nuevo horario. El Hitchhiker y el estudiante reciben un aviso.",
+      "cancelTitle": "¿Cancelar la solicitud de {{project}}?",
+      "cancelText": "La solicitud termina definitivamente. El estudiante y el Hitchhiker, si lo hay, reciben un aviso. No se puede deshacer.",
+      "releaseConfirm": "Liberar",
+      "cancelConfirm": "Cancelar la solicitud",
+      "releaseWorking": "Liberando…",
+      "cancelWorking": "Cancelando…",
+      "releaseDone": "El horario se liberó. La solicitud vuelve a estar en la cola.",
+      "cancelDone": "La solicitud se canceló.",
+      "alreadyStarted": "El horario ya empezó, así que no se puede liberar.",
+      "changed": "La solicitud cambió mientras tanto, así que no se hizo nada. Se muestra su estado actual.",
+      "error": "No funcionó. Inténtalo de nuevo."
+    },
+    "finished": "La evaluación está completada",
+    "ended": "La evaluación ha terminado",
+    "resultPendingNotice": "El resultado aparecerá aquí cuando se registre.",
+    "result": "Resultado"
   },
   "pickSlot": {
     "back": "Volver a las solicitudes",
@@ -325,6 +352,173 @@
     "tested": "¿Sobre qué te evaluarán?",
     "notAdded": "Todavía no se ha añadido.",
     "topics": "Temas del proyecto"
+  },
+  "projectContent": {
+    "push_swap": {
+      "topics": [
+        "Algoritmos",
+        "Parsing",
+        "Pilas",
+        "Operaciones",
+        "Optimización de movimientos",
+        "Gestión de errores",
+        "Gestión de memoria",
+        "Calidad del código"
+      ],
+      "tested": [
+        "Elección del algoritmo",
+        "Comprensión del código",
+        "Gestión de errores",
+        "Restricciones del proyecto"
+      ]
+    },
+    "born2beroot": {
+      "topics": [
+        "Virtualización",
+        "Particiones y LVM",
+        "Usuarios y grupos",
+        "Política de contraseñas",
+        "SSH",
+        "Cortafuegos",
+        "Sudo",
+        "Script de monitorización"
+      ],
+      "tested": [
+        "Configuración de la máquina virtual",
+        "Configuración de seguridad",
+        "Script de monitorización",
+        "Comprensión del sistema"
+      ]
+    },
+    "minishell": {
+      "topics": [
+        "Parsing",
+        "Comillas y expansión",
+        "Pipes",
+        "Redirecciones",
+        "Builtins",
+        "Señales",
+        "Entorno",
+        "Gestión de memoria"
+      ],
+      "tested": [
+        "Ejecución de comandos",
+        "Casos límite",
+        "Gestión de errores",
+        "Comprensión del código"
+      ]
+    },
+    "cpp09": {
+      "topics": [
+        "Contenedores STL",
+        "Algoritmos",
+        "Parsing de la entrada",
+        "Excepciones",
+        "Ordenación",
+        "Complejidad"
+      ],
+      "tested": [
+        "Elección de contenedores",
+        "Corrección del algoritmo",
+        "Gestión de errores",
+        "Comprensión del código"
+      ]
+    },
+    "codexion": {
+      "topics": [
+        "Hilos",
+        "Mutex",
+        "Variables de condición",
+        "Prevención de interbloqueos",
+        "Planificación (FIFO / EDF)",
+        "Cola de prioridad",
+        "Monitor de burnout",
+        "Gestión de memoria"
+      ],
+      "tested": [
+        "Sin interbloqueos ni inanición",
+        "Burnout registrado en menos de 10 ms",
+        "Enfriamiento del dongle y planificación justa",
+        "Logs limpios, sin carreras de datos ni fugas",
+        "Comprensión del código"
+      ]
+    },
+    "fly-in": {
+      "topics": [
+        "Parsing",
+        "Modelado de grafos",
+        "Búsqueda de rutas",
+        "Capacidad de zonas y enlaces",
+        "Planificación de turnos",
+        "Costes de movimiento",
+        "Visualización",
+        "Seguridad de tipos"
+      ],
+      "tested": [
+        "Parser y mensajes de error",
+        "Número de turnos frente a los objetivos",
+        "Reglas de capacidad respetadas",
+        "Explicación del algoritmo",
+        "Comprensión del código"
+      ]
+    },
+    "rag-against-the-machine": {
+      "topics": [
+        "Fragmentación",
+        "Indexación",
+        "BM25 / TF-IDF",
+        "Recuperación",
+        "Generación de respuestas",
+        "Recall@k",
+        "CLI (Fire)",
+        "Modelos de datos (pydantic)"
+      ],
+      "tested": [
+        "Recall@5: 80 % documentación, 50 % código",
+        "Velocidad de indexación y búsqueda",
+        "Respuestas fundamentadas",
+        "Casos límite de la CLI",
+        "Comprensión del código"
+      ]
+    },
+    "agent-smith": {
+      "topics": [
+        "Bucle del agente",
+        "Extracción de código",
+        "Seguridad del sandbox",
+        "Herramientas MCP",
+        "Proveedores de LLM",
+        "Diseño de prompts",
+        "Seguimiento del uso",
+        "Benchmarking"
+      ],
+      "tested": [
+        "Herramientas obligatorias",
+        "Bucle de razonamiento del agente",
+        "Aislamiento del sandbox",
+        "Informe del benchmark",
+        "Cambio en directo del agente"
+      ]
+    },
+    "the-answer-protocol": {
+      "topics": [
+        "Servidor TCP",
+        "Cumplimiento del protocolo",
+        "Concurrencia",
+        "Objetos e inventario",
+        "Combate",
+        "Misiones",
+        "Clientes CLI y GUI",
+        "Registro del servidor"
+      ],
+      "tested": [
+        "Cada comando y evento del protocolo",
+        "Multijugador y desconexiones",
+        "Combate y misiones",
+        "Clientes intercambiables entre grupos",
+        "Aportación de cada miembro"
+      ]
+    }
   },
   "council": {
     "title": "Consejo estudiantil",
@@ -450,6 +644,114 @@
       "senderDeleted": "La cuenta del remitente fue eliminada.",
       "deleted": "El mensaje se ha eliminado. El motivo queda guardado en el registro de auditoría."
     }
+  },
+  "exceptions": {
+    "title": "Excepciones de evaluación",
+    "subtitle": "Solicitudes de evaluación que necesitan una decisión humana, de la más reciente a la más antigua.",
+    "loading": "Cargando las excepciones…",
+    "error": "No pudimos cargar las excepciones. Inténtalo de nuevo más tarde.",
+    "emptyTitle": "Nada necesita una decisión",
+    "emptyText": "Las solicitudes aparecen aquí cuando un participante está suspendido, un Hitchhiker pierde la elegibilidad o falta un resultado.",
+    "columns": {
+      "problem": "Problema",
+      "request": "Solicitud",
+      "student": "Estudiante",
+      "hitchhiker": "Hitchhiker",
+      "slot": "Horario"
+    },
+    "problems": {
+      "participant_inactive": "Participante suspendido",
+      "tutor_lost_eligibility": "Hitchhiker no elegible",
+      "result_missing": "Falta el resultado"
+    },
+    "hints": {
+      "participant_inactive": "El estudiante o el Hitchhiker está suspendido. Libera o cancela la solicitud, o reactiva la cuenta.",
+      "tutor_lost_eligibility": "El Hitchhiker ya no puede evaluar este proyecto. Libera el horario o cancela la solicitud.",
+      "result_missing": "La evaluación terminó pero no tiene resultado. Introdúcelo en el admin de Django."
+    },
+    "noSlot": "Aún sin horario",
+    "pagesAria": "Páginas de excepciones",
+    "page": "Página {{page}} de {{count}}"
+  },
+  "reasonDialog": {
+    "reason": "Motivo",
+    "hint": "Obligatorio. Se guarda en el registro de auditoría."
+  },
+  "adminUser": {
+    "title": "Usuario",
+    "back": "Todos los usuarios",
+    "loading": "Cargando el usuario…",
+    "loadError": "No pudimos cargar este usuario. Inténtalo de nuevo más tarde.",
+    "email": "Correo",
+    "intraLogin": "Login de 42",
+    "language": "Idioma",
+    "roles": "Roles",
+    "createdAt": "Cuenta creada",
+    "lastLogin": "Último acceso",
+    "deletedNote": "Esta cuenta fue eliminada. Las cuentas eliminadas no se pueden editar.",
+    "editTitle": "Editar cuenta",
+    "displayName": "Nombre visible",
+    "save": "Guardar cambios",
+    "saving": "Guardando…",
+    "saved": "Cambios guardados.",
+    "emailTaken": "Otra cuenta ya usa este correo.",
+    "deletedMeanwhile": "Esta cuenta se eliminó mientras tanto, así que los cambios no se guardaron.",
+    "saveError": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
+    "actions": {
+      "title": "Acciones de la cuenta",
+      "ownAccount": "No puedes suspender ni eliminar tu propia cuenta.",
+      "suspend": "Suspender cuenta",
+      "reactivate": "Reactivar cuenta",
+      "delete": "Eliminar cuenta",
+      "suspendTitle": "¿Suspender a {{name}}?",
+      "reactivateTitle": "¿Reactivar a {{name}}?",
+      "deleteTitle": "¿Eliminar a {{name}}?",
+      "suspendText": "Se cerrará su sesión al momento y no podrá iniciarla hasta que se reactive la cuenta. Sus solicitudes de evaluación no cambian.",
+      "reactivateText": "Podrá volver a iniciar sesión.",
+      "deleteText": "La cuenta se anonimiza: se borran su nombre, correo y login de 42, se le quitan los roles y sus evaluaciones que aún no han empezado se cancelan o se liberan. No se puede deshacer.",
+      "suspendConfirm": "Suspender",
+      "reactivateConfirm": "Reactivar",
+      "deleteConfirm": "Eliminar definitivamente",
+      "suspendWorking": "Suspendiendo…",
+      "reactivateWorking": "Reactivando…",
+      "deleteWorking": "Eliminando…",
+      "suspendDone": "La cuenta se suspendió.",
+      "reactivateDone": "La cuenta se reactivó.",
+      "deleteDone": "La cuenta se eliminó.",
+      "statusChanged": "La cuenta cambió mientras tanto, así que no se hizo nada. Se muestra su estado actual.",
+      "cannotModifySelf": "No puedes cambiar el estado de tu propia cuenta.",
+      "error": "No funcionó. Inténtalo de nuevo."
+    }
+  },
+  "adminUsers": {
+    "title": "Usuarios",
+    "subtitle": "Todas las cuentas, con sus roles y su estado.",
+    "search": "Buscar",
+    "searchPlaceholder": "Correo, nombre o login de 42",
+    "searchButton": "Buscar",
+    "role": "Rol",
+    "allRoles": "Todos los roles",
+    "status": "Estado",
+    "allStatuses": "Todos los estados",
+    "statuses": {
+      "active": "Activa",
+      "suspended": "Suspendida",
+      "deleted": "Eliminada"
+    },
+    "columns": {
+      "name": "Nombre",
+      "email": "Correo",
+      "roles": "Roles",
+      "status": "Estado",
+      "lastLogin": "Último acceso"
+    },
+    "never": "Nunca",
+    "loading": "Cargando usuarios…",
+    "error": "No pudimos cargar los usuarios. Inténtalo de nuevo más tarde.",
+    "emptyTitle": "Aún no hay usuarios",
+    "emptyFilteredTitle": "Ningún usuario coincide con estos filtros",
+    "pagesAria": "Páginas de usuarios",
+    "page": "Página {{page}} de {{count}}"
   },
   "roles": {
     "student": "Estudiante",
@@ -958,6 +1260,7 @@
     "pending": "Pendientes",
     "approved": "Aprobadas",
     "declined": "Rechazadas",
+    "badgePending": "Pendiente",
     "badgeApproved": "Aprobada",
     "badgeDeclined": "Rechazada",
     "noPending": "No hay solicitudes pendientes",
@@ -998,6 +1301,24 @@
     "optional": "(opcional)",
     "saving": "Guardando…"
   },
+  "eligibilityDetail": {
+    "title": "Solicitud de elegibilidad",
+    "backToList": "Todas las solicitudes de elegibilidad",
+    "loading": "Cargando la solicitud…",
+    "loadError": "No se pudo cargar la solicitud. Inténtalo más tarde.",
+    "requestedBy": "Solicitada por",
+    "sent": "Enviada",
+    "reviewedBy": "Revisada por",
+    "decided": "Decidida",
+    "projects_one": "{{count}} proyecto",
+    "projects_many": "{{count}} proyectos",
+    "projects_other": "{{count}} proyectos",
+    "note": "Nota del Head Tutor",
+    "waitingOwn": "Un Head Tutor aprobará o rechazará la solicitud completa. Recibirás una notificación.",
+    "approvedOwn": "Ya puedes tomar solicitudes abiertas de estos proyectos.",
+    "declinedOwn": "Puedes enviar una nueva solicitud cuando quieras.",
+    "sendNew": "Enviar una nueva solicitud"
+  },
   "unauthorized": {
     "eyebrow": "ACCESO RESTRINGIDO",
     "title": "Esta página no está disponible para tu rol actual.",
@@ -1012,5 +1333,128 @@
     "register": "Crear una cuenta",
     "notFound": "Página no encontrada",
     "unauthorized": "Acceso restringido"
+  },
+  "designSystem": {
+    "title": "Sistema de diseño",
+    "intro": "Los colores, la tipografía, los iconos y los componentes reutilizables con los que se construye cada página de 42 Evals.",
+    "colours": "Paleta de colores",
+    "coloursText": "Cada familia tiene un tono fuerte, un tono para texto con un contraste de al menos 4,5:1 (WCAG AA) y un fondo claro.",
+    "families": {
+      "neutral": "Neutro",
+      "accent": "Acento (turquesa)",
+      "success": "Éxito",
+      "warning": "Aviso",
+      "danger": "Error",
+      "info": "Información",
+      "violet": "Violeta"
+    },
+    "typography": "Escala tipográfica",
+    "sample": "Evalúa con 42 Evals",
+    "icons": "Iconos",
+    "components": "Componentes",
+    "primary": "Principal",
+    "secondary": "Secundario",
+    "ghost": "Transparente",
+    "inputLabel": "Nombre visible",
+    "checkboxLabel": "Recordar mi elección",
+    "new": "Nuevo",
+    "bell": "Notificaciones",
+    "noticeInfo": "La evaluación del Hitchhiker debe ser la última.",
+    "noticeSuccess": "Tu solicitud se ha enviado.",
+    "noticeWarning": "Este horario empieza en menos de una hora.",
+    "noticeError": "No se ha podido enviar la solicitud.",
+    "tabsLabel": "Filtrar por estado",
+    "progressLabel": "Progreso de la solicitud",
+    "textAreaLabel": "Nota para el Hitchhiker",
+    "loading": "Cargando el ejemplo…",
+    "emptyTitle": "Todavía no hay nada",
+    "emptyText": "Tus evaluaciones aparecerán aquí.",
+    "openDialog": "Abrir un diálogo",
+    "dialogTitle": "¿Borrar este mensaje?",
+    "dialogText": "No se puede deshacer.",
+    "close": "Cerrar",
+    "charactersLeft_one": "Queda {{count}} carácter",
+    "charactersLeft_many": "Quedan {{count}} caracteres",
+    "charactersLeft_other": "Quedan {{count}} caracteres",
+    "footerLink": "Sistema de diseño"
+  },
+  "auditLog": {
+    "title": "Registro de auditoría",
+    "subtitle": "Cada acción sensible: quién la hizo, cuándo, sobre qué y por qué. Las entradas no se pueden cambiar ni borrar.",
+    "action": "Acción",
+    "allActions": "Todas las acciones",
+    "target": "Objeto",
+    "allTargets": "Todos los objetos",
+    "from": "Desde",
+    "to": "Hasta",
+    "when": "Cuándo",
+    "who": "Quién",
+    "what": "Qué",
+    "details": "Detalles",
+    "tableAria": "Entradas de auditoría",
+    "loading": "Cargando el registro de auditoría…",
+    "loadError": "No se pudo cargar el registro de auditoría. Inténtalo de nuevo.",
+    "empty": "Todavía no hay entradas",
+    "emptyText": "Aquí aparecerán las acciones sensibles, como cambios de rol, suspensiones o mensajes del consejo eliminados.",
+    "emptyFiltered": "Ninguna entrada coincide con estos filtros",
+    "clearFilters": "Quitar filtros",
+    "deletedActor": "Una cuenta eliminada",
+    "byActor": "Por {{name}}",
+    "removeActor": "Quitar el filtro por {{name}}",
+    "removeTarget": "Quitar el filtro de {{target}}",
+    "filterByActor": "Mostrar solo las acciones de {{name}}",
+    "filterByTarget": "Mostrar solo las entradas sobre {{target}}",
+    "open": "Abrir",
+    "openAria": "Abrir {{target}}",
+    "targetLabel": "{{type}} n.º {{id}}",
+    "roleDetail": "Rol: {{role}}",
+    "changed": "Cambiado: {{fields}}",
+    "decision": {
+      "approved": "Aprobada",
+      "declined": "Rechazada"
+    },
+    "fields": {
+      "display_name": "nombre visible",
+      "email": "correo",
+      "language": "idioma"
+    },
+    "total_one": "{{count}} entrada",
+    "total_many": "{{count}} entradas",
+    "total_other": "{{count}} entradas",
+    "page": "Página {{page}} de {{pages}}",
+    "pagesAria": "Páginas del registro de auditoría",
+    "unknownAction": "Otra acción",
+    "unknownTarget": "Otro",
+    "actions": {
+      "role": {
+        "assigned": "Rol asignado",
+        "revoked": "Rol retirado"
+      },
+      "user": {
+        "updated": "Cuenta editada",
+        "suspended": "Cuenta suspendida",
+        "reactivated": "Cuenta reactivada",
+        "deleted": "Cuenta eliminada"
+      },
+      "eligibility": {
+        "reviewed": "Solicitud de elegibilidad revisada",
+        "revoked": "Elegibilidad retirada"
+      },
+      "evaluation": {
+        "released_by_override": "Horario liberado por intervención",
+        "cancelled_by_override": "Evaluación cancelada por intervención"
+      },
+      "sc_message": {
+        "sender_revealed": "Remitente de un mensaje al consejo revelado",
+        "deleted": "Mensaje al consejo eliminado"
+      }
+    },
+    "targets": {
+      "user": "Usuario",
+      "evaluation_request": "Evaluación",
+      "tutor_eligibility_request": "Solicitud de elegibilidad",
+      "tutor_eligibility": "Elegibilidad",
+      "sc_message": "Mensaje al consejo"
+    }
   }
 }

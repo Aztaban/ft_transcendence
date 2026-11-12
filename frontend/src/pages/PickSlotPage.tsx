@@ -192,7 +192,11 @@ function PickSlotPage() {
         <span aria-hidden="true">‹</span> {t("pickSlot.back")}
       </Link>
 
-      {loadState === "loading" && <p className="pick-slot__status">{t("pickSlot.loading")}</p>}
+      {loadState === "loading" && (
+        <p className="pick-slot__status" aria-busy="true">
+          {t("pickSlot.loading")}
+        </p>
+      )}
 
       {loadState === "error" && (
         <p className="pick-slot__error" role="alert">

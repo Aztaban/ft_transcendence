@@ -6,10 +6,12 @@ import { LEGAL_PAGES } from "./legalPages";
 interface FooterProps {
   // On Login and Register: leaving in the same tab would lose the form and the page to return to.
   legalLinksInNewTab?: boolean;
+  // Inside the application (logged in): also links the design system page (#730).
+  showDesignSystemLink?: boolean;
 }
 
 // The links the subject requires on every page, logged in or not.
-function Footer({ legalLinksInNewTab = false }: FooterProps) {
+function Footer({ legalLinksInNewTab = false, showDesignSystemLink = false }: FooterProps) {
   const { t } = useTranslation();
 
   return (
@@ -31,6 +33,7 @@ function Footer({ legalLinksInNewTab = false }: FooterProps) {
             {t(page.titleKey)}
           </Link>
         ))}
+        {showDesignSystemLink && <Link to="/design-system">{t("designSystem.footerLink")}</Link>}
       </nav>
     </footer>
   );

@@ -111,6 +111,49 @@ describe("Sidebar role switcher", () => {
       "COUNCIL",
     ]);
   });
+
+  test("offers the Admin workspace to an Admin, with Users, Exceptions and the audit log", () => {
+    currentUser.roles = ["student", "admin"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+
+    // Admins also read the council messages (#725), so they get COUNCIL as well.
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "STUDENT",
+      "COUNCIL",
+      "ADMIN",
+    ]);
+
+    fireEvent.click(screen.getByRole("option", { name: "ADMIN" }));
+
+    const navigation = screen.getByRole("navigation", { name: "Primary navigation" });
+
+    expect(
+      within(navigation)
+        .getAllByRole("link")
+        .map((link) => [link.textContent, link.getAttribute("href")]),
+    ).toEqual([
+      ["Users", "/manage/users"],
+      ["Exceptions", "/manage/exceptions"],
+      ["Audit log", "/manage/audit-log"],
+    ]);
+  });
+
+  test("does not offer the Admin workspace without the admin role", () => {
+    currentUser.roles = ["student", "tutor", "head_tutor", "sc_member"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "STUDENT",
+      "HITCHHIKER",
+      "COUNCIL",
+    ]);
+  });
 });
 
 describe("Sidebar language", () => {
@@ -207,6 +250,18 @@ describe("Sidebar eligibility link", () => {
     );
   });
 
+  test("shows Exceptions to a Head Tutor in the Hitchhiker workspace", () => {
+    currentUser.roles = ["tutor", "head_tutor"];
+    currentUser.isLoaded = true;
+
+    renderSidebar();
+    switchToHitchhiker();
+
+    expect(screen.getByRole("link", { name: "Exceptions" }).getAttribute("href")).toBe(
+      "/manage/exceptions",
+    );
+  });
+
   test("hides Eligibility from a Hitchhiker who is not a Head Tutor", () => {
     currentUser.roles = ["tutor"];
     currentUser.isLoaded = true;
@@ -215,6 +270,7 @@ describe("Sidebar eligibility link", () => {
     switchToHitchhiker();
 
     expect(screen.queryByRole("link", { name: "Eligibility" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Exceptions" })).toBeNull();
   });
 });
 
@@ -235,6 +291,21 @@ describe("Sidebar role menu keyboard", () => {
     openWithKeyboard();
 
     expect(document.activeElement?.textContent).toBe("STUDENT");
+  });
+
+  // A listbox button opens with either arrow key (WAI-ARIA), other keys leave it closed.
+  test("opens with ArrowUp too, and not with other keys", () => {
+    currentUser.roles = ["student", "tutor", "sc_member"];
+    currentUser.isLoaded = true;
+    renderSidebar();
+    const button = screen.getByRole("button", { name: /STUDENT/ });
+
+    fireEvent.keyDown(button, { key: "a" });
+    expect(screen.queryByRole("listbox")).toBeNull();
+
+    fireEvent.keyDown(button, { key: "ArrowUp" });
+    expect(screen.getByRole("listbox")).toBeTruthy();
+    expect(button.getAttribute("aria-expanded")).toBe("true");
   });
 
   test("moves with the arrow keys, Home and End, and wraps around", () => {

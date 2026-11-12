@@ -10,24 +10,24 @@
 .pick-slot__back {
   align-self: flex-start;
   color: var(--color-text-secondary);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 .pick-slot__back:hover {
-  color: var(--color-accent-dark);
+  color: var(--color-accent-text);
 }
 
 .pick-slot__header {
   padding-bottom: 18px;
-  border-bottom: 1px solid #e3e7e7;
+  border-bottom: 1px solid var(--color-neutral-200);
 }
 
 .pick-slot__header h1 {
   margin: 0;
-  font-size: 2rem;
-  font-weight: 500;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-medium);
 }
 
 .pick-slot__header p {
@@ -51,16 +51,16 @@
 .pick-slot__card,
 .pick-slot__panel {
   padding: 22px 24px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--color-white);
 }
 
 .pick-slot__card h2,
 .pick-slot__panel h2 {
   margin: 0 0 14px;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
 }
 
 .pick-slot__note {
@@ -91,7 +91,7 @@
   margin-bottom: 10px;
   padding: 0;
   color: var(--color-text-secondary);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -111,20 +111,20 @@
 .slot-picker__options--minutes {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px dashed #e3e7e7;
+  border-top: 1px dashed var(--color-neutral-200);
 }
 
 .slot-picker__option {
   flex-shrink: 0;
   min-width: 70px;
   padding: 9px 14px;
-  border: 1px solid #d5d9d9;
+  border: 1px solid var(--color-neutral-250);
   border-radius: 8px;
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-white);
+  color: var(--color-neutral-950);
   cursor: pointer;
   font: inherit;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-variant-numeric: tabular-nums;
   transition:
     background-color 0.15s ease,
@@ -138,7 +138,7 @@
 .slot-picker__option[aria-pressed="true"] {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .slot-picker__option:disabled {
@@ -158,13 +158,13 @@
 
 .slot-picker__group--error {
   padding-left: 12px;
-  border-left: 3px solid #d92d20;
+  border-left: 3px solid var(--color-danger);
 }
 
 .slot-picker__error {
   margin: 10px 0 0;
-  color: #b42318;
-  font-size: 0.9rem;
+  color: var(--color-danger-text);
+  font-size: var(--font-size-md);
 }
 
 .pick-slot__summary {
@@ -172,9 +172,9 @@
   align-items: center;
   gap: 16px;
   padding: 18px 22px;
-  border: 1px solid #e3e7e7;
+  border: 1px solid var(--color-neutral-200);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--color-white);
 }
 
 .pick-slot__check {
@@ -185,17 +185,17 @@
   place-items: center;
   border: 2px solid var(--color-accent);
   border-radius: 50%;
-  color: var(--color-accent-dark);
-  font-weight: 700;
+  color: var(--color-accent-text);
+  font-weight: var(--font-weight-bold);
 }
 
 .pick-slot__summary strong {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .pick-slot__summary p {
   margin: 2px 0 0;
-  color: #4d5555;
+  color: var(--color-neutral-700);
 }
 
 .pick-slot__actions {
@@ -207,10 +207,10 @@
   min-width: 150px;
   min-height: 46px;
   padding: 0 26px;
-  border: 1px solid #111111;
+  border: 1px solid var(--color-neutral-950);
   border-radius: 8px;
-  background: #ffffff;
-  color: #111111;
+  background: var(--color-white);
+  color: var(--color-neutral-950);
   cursor: pointer;
   font: inherit;
   font-size: 1.05rem;
@@ -220,13 +220,13 @@
 }
 
 .pick-slot__submit:hover:enabled {
-  background: #111111;
-  color: #ffffff;
+  background: var(--color-neutral-950);
+  color: var(--color-white);
 }
 
 .pick-slot__submit:disabled {
-  border-color: #c9cfcf;
-  color: #9aa1a1;
+  border-color: var(--color-neutral-300);
+  color: var(--color-neutral-400);
   cursor: not-allowed;
 }
 
@@ -244,20 +244,20 @@
   gap: 8px;
   margin: 0;
   padding-left: 18px;
-  color: #4d5555;
-  font-size: 0.9rem;
+  color: var(--color-neutral-700);
+  font-size: var(--font-size-md);
 }
 
 .pick-slot__panel p {
   margin: 0;
-  color: #4d5555;
-  font-size: 0.9rem;
+  color: var(--color-neutral-700);
+  font-size: var(--font-size-md);
   line-height: 1.5;
 }
 
 .pick-slot__panel--tip {
-  border-color: #f5d27a;
-  background: #fffaf0;
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-surface-soft);
 }
 
 /* States */
@@ -270,10 +270,10 @@
 .pick-slot__error {
   margin: 0;
   padding: 12px 16px;
-  border: 1px solid #fecdca;
+  border: 1px solid var(--color-danger-border);
   border-radius: 8px;
-  background: #fef3f2;
-  color: #b42318;
+  background: var(--color-danger-surface);
+  color: var(--color-danger-text);
 }
 
 /* Success popup */
@@ -297,7 +297,7 @@
   gap: 8px 24px;
   padding: 32px 36px 20px;
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--color-white);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
   animation: pick-slot-pop-in 0.3s ease;
 }
@@ -313,7 +313,7 @@
 }
 
 .success-dialog__title strong {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .success-dialog__image {
@@ -324,7 +324,7 @@
   grid-column: 1 / -1;
   margin: 6px 0 0;
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-align: center;
 }
 
@@ -352,7 +352,8 @@
 
 @media (max-width: 960px) {
   .pick-slot__layout {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): the row of days scrolls inside its card instead of widening the page (#372). */
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

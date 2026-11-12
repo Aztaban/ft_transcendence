@@ -3,11 +3,12 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import Notice from "../components/ui/Notice";
+import ProgressBar from "../components/ui/ProgressBar";
 import { ApiError } from "../api/client";
 import { createEvaluationRequest } from "../api/evaluationRequests";
 import i18n from "../i18n";
 import ProjectSelect from "../features/projects/ProjectSelect";
-import InfoNotice from "../features/requests/InfoNotice";
 import RequestSuccessDialog from "../features/requests/RequestSuccessDialog";
 import MyRequests from "../features/student/MyRequests";
 import type { ProjectRef } from "../types/project";
@@ -155,16 +156,13 @@ function CreateRequestPage() {
         </div>
       </header>
 
-      <div
+      <ProgressBar
         className="create-request__progress"
-        role="progressbar"
-        aria-label={t("createRequest.progress")}
-        aria-valuemin={1}
-        aria-valuemax={steps.length}
-        aria-valuenow={stepIndex + 1}
-      >
-        <span style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }} />
-      </div>
+        label={t("createRequest.progress")}
+        min={1}
+        max={steps.length}
+        value={stepIndex + 1}
+      />
 
       <div className="create-request__layout">
         <div className="create-request__body" key={stepId}>
@@ -189,15 +187,15 @@ function CreateRequestPage() {
                     onChange={(event) => setNote(event.target.value)}
                   />
                   <span className="create-request__note-count" aria-live="polite">
-                    {note.length} / {NOTE_MAX_LENGTH}
+                    {Array.from(note).length} / {NOTE_MAX_LENGTH}
                   </span>
                 </div>
               </div>
 
-              <InfoNotice>
+              <Notice tone="warning" icon="i" className="info-notice">
                 <p>{t("createRequest.lastEvaluation")}</p>
                 <p>{t("createRequest.failWarning")}</p>
-              </InfoNotice>
+              </Notice>
 
               <div className="create-request__actions">
                 <button
@@ -238,9 +236,9 @@ function CreateRequestPage() {
                 </button>
               </article>
 
-              <InfoNotice>
+              <Notice tone="warning" icon="i" className="info-notice">
                 <p>{t("createRequest.visible")}</p>
-              </InfoNotice>
+              </Notice>
 
               {submitError && (
                 <p className="create-request__error" role="alert">

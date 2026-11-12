@@ -1,13 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
+import { Link, Navigate } from "react-router";
 
 import type { ListEvaluationRequestsParams } from "../api/evaluationRequests";
-import historyIcon from "../assets/figma/history.svg";
-import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
-import pendingIcon from "../assets/figma/pending.svg";
-import requestIcon from "../assets/figma/request.svg";
 import usePageTitle from "../components/layout/usePageTitle";
+import Icon, { type IconName } from "../components/ui/Icon";
 import AwaitingConfirmation from "../features/hitchhiker/AwaitingConfirmation";
 import EvaluationHistory from "../features/hitchhiker/EvaluationHistory";
 import OpenRequestQueue from "../features/hitchhiker/OpenRequestQueue";
@@ -19,16 +16,19 @@ import { useCouncilOverview } from "../features/home/useCouncilOverview";
 import { useRequestOverview } from "../features/home/useRequestOverview";
 import OpenRequests from "../features/student/OpenRequests";
 import { useStudentRequests } from "../features/student/useStudentRequests";
-import { useRole, type AppRole } from "../store/RoleContext";
+import { useCurrentUser } from "../store/CurrentUserContext";
+import { useRole, workspacesFor, type AppRole } from "../store/RoleContext";
 import { formatSlotStart } from "../utils/dateTime";
 import { EVALUATION_EVENTS, OPEN_QUEUE_EVENTS } from "../websocket/events";
+import Skeleton from "../components/ui/Skeleton";
+import EmptyState from "../components/ui/EmptyState";
 import "../styles/dashboard.css";
 
 // A box of the overview row. `label` is a key of the "home" texts in src/i18n/locales.
 interface OverviewItem {
   value: string;
   label: string;
-  icon: string;
+  icon: IconName;
   tone: "teal" | "violet" | "blue" | "amber";
 }
 
@@ -73,13 +73,14 @@ const studentQueries = {
   upcoming: { scope: "mine", status: ["confirmed"], history: false, ordering: "starts_at" },
 } satisfies Record<string, ListEvaluationRequestsParams>;
 
+// The open queue's count comes with the queue itself (`useHitchhikerRequests`).
 const hitchhikerQueries = {
-  open: { scope: "open" },
   awaiting: { scope: "picked", status: ["awaiting_confirmation"] },
   done: { scope: "picked", status: ["confirmed"], history: true },
 } satisfies Record<string, ListEvaluationRequestsParams>;
 
-const subtitles: Record<AppRole, string> = {
+// No Administration banner: HomePage sends that workspace to Users before it is shown.
+const subtitles: Record<Exclude<AppRole, "ADMIN">, string> = {
   STUDENT: "home.bannerStudent",
   HITCHHIKER: "home.bannerHitchhiker",
   COUNCIL: "home.bannerCouncil",
@@ -124,7 +125,7 @@ function Dashboard({ overview, action, children }: DashboardProps) {
               className={`dashboard-overview__card dashboard-overview__card--${item.tone}`}
               key={item.label}
             >
-              <img src={item.icon} alt="" aria-hidden="true" />
+              <Icon name={item.icon} />
 
               <div>
                 <strong>{item.value}</strong>
@@ -157,7 +158,8 @@ function Dashboard({ overview, action, children }: DashboardProps) {
 function StudentDashboard() {
   const { t } = useTranslation();
   const { requests, isLoading, hasError } = useStudentRequests();
-  const counts = useRequestOverview(studentQueries, EVALUATION_EVENTS);
+  // Every account is a student: the numbers need no role, so they do not wait for /users/me/.
+  const counts = useRequestOverview(studentQueries, EVALUATION_EVENTS, true);
   const now = useCurrentMinute();
   const next = counts.upcoming?.results.find(
     (request) => request.ends_at !== null && Date.parse(request.ends_at) > now,
@@ -172,25 +174,25 @@ function StudentDashboard() {
     {
       value: countText(counts.open?.count),
       label: "home.openRequests",
-      icon: pendingIcon,
+      icon: "pending",
       tone: "teal",
     },
     {
       value: countText(counts.completed?.count),
       label: "home.completed",
-      icon: historyIcon,
+      icon: "history",
       tone: "violet",
     },
     {
       value: nextText,
       label: "home.nextEvaluation",
-      icon: requestIcon,
+      icon: "request",
       tone: "blue",
     },
     {
       value: t("home.workspaceStudent"),
       label: "home.workspace",
-      icon: hitchhikersIcon,
+      icon: "hitchhikers",
       tone: "amber",
     },
   ];
@@ -216,32 +218,36 @@ function StudentDashboard() {
 // Skeletons during the first load, only the error when it fails (#258).
 function HitchhikerDashboard() {
   const { t } = useTranslation();
-  const { openRequests, pickedRequests, isLoading, hasError } = useHitchhikerRequests();
-  const counts = useRequestOverview(hitchhikerQueries, OPEN_QUEUE_EVENTS);
+  // Both wait until /users/me/ confirms the role of the restored workspace, so no 403s.
+  const { roles, isLoaded } = useCurrentUser();
+  const enabled = isLoaded && workspacesFor(roles).includes("HITCHHIKER");
+  const { openRequests, openCount, pickedRequests, isLoading, hasError } =
+    useHitchhikerRequests(enabled);
+  const counts = useRequestOverview(hitchhikerQueries, OPEN_QUEUE_EVENTS, enabled);
 
   const overview: OverviewItem[] = [
     {
-      value: countText(counts.open?.count),
+      value: countText(openCount),
       label: "home.openRequests",
-      icon: requestIcon,
+      icon: "request",
       tone: "teal",
     },
     {
       value: countText(counts.awaiting?.count),
       label: "home.awaitingConfirmation",
-      icon: pendingIcon,
+      icon: "pending",
       tone: "amber",
     },
     {
       value: countText(counts.done?.count),
       label: "home.evaluationsDone",
-      icon: historyIcon,
+      icon: "history",
       tone: "violet",
     },
     {
       value: t("home.workspaceHitchhiker"),
       label: "home.workspace",
-      icon: hitchhikersIcon,
+      icon: "hitchhikers",
       tone: "blue",
     },
   ];
@@ -279,25 +285,25 @@ function CouncilDashboard() {
     {
       value: countText(isKnown ? unreadCount : null),
       label: "home.newMessages",
-      icon: requestIcon,
+      icon: "request",
       tone: "teal",
     },
     {
       value: countText(isKnown ? totalCount : null),
       label: "home.history",
-      icon: historyIcon,
+      icon: "history",
       tone: "violet",
     },
     {
       value: countText(hitchhikerCount),
       label: "home.hitchhikers",
-      icon: hitchhikersIcon,
+      icon: "hitchhikers",
       tone: "blue",
     },
     {
       value: t("home.workspaceCouncil"),
       label: "home.workspace",
-      icon: pendingIcon,
+      icon: "pending",
       tone: "amber",
     },
   ];
@@ -316,19 +322,19 @@ function CouncilDashboard() {
           <h2 id="council-messages-title">{t("home.messages")}</h2>
 
           {isLoading ? (
-            <div className="dashboard-requests" aria-busy="true">
-              <div className="dashboard-requests__skeleton" />
-              <div className="dashboard-requests__skeleton" />
-              <span className="dashboard-requests__sr-only">{t("council.loadingMessages")}</span>
-            </div>
+            <Skeleton
+              className="dashboard-requests"
+              itemClassName="dashboard-requests__skeleton"
+              label={t("council.loadingMessages")}
+            />
           ) : unread.length === 0 ? (
-            <div className="dashboard-empty">
-              <div className="dashboard-empty__history-mark" aria-hidden="true">
-                —
-              </div>
-              <h3>{t(totalCount > 0 ? "council.caughtUp" : "home.noMessages")}</h3>
-              <p>{t(totalCount > 0 ? "council.caughtUpText" : "home.messagesText")}</p>
-            </div>
+            <EmptyState
+              className="dashboard-empty"
+              iconClassName="dashboard-empty__history-mark"
+              icon="—"
+              title={t(totalCount > 0 ? "council.caughtUp" : "home.noMessages")}
+              text={t(totalCount > 0 ? "council.caughtUpText" : "home.messagesText")}
+            />
           ) : (
             <ScrollableList labelledBy="council-messages-title">
               {unread.map((message) => (
@@ -368,6 +374,12 @@ function HomePage() {
 
   usePageTitle(t("nav.home"));
   const { activeRole } = useRole();
+
+  // The Administration workspace has no Home of its own and opens on Users. `replace` keeps the
+  // Back button from returning here and being sent forward again.
+  if (activeRole === "ADMIN") {
+    return <Navigate to="/manage/users" replace />;
+  }
 
   return (
     <section className="dashboard">

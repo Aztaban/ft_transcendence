@@ -65,7 +65,12 @@ def assign_role(request, user_id):
                 target_id=target.pk,
                 metadata={"role": role.name},
             )
-            notify_role_changed(target.pk, role.name, "assigned")
+            notify_role_changed(
+                target.pk,
+                role.name,
+                "assigned",
+                store_notification=target.pk != request.user.pk,
+            )
     return Response(
         RoleAssignmentResultSerializer(target).data,
         status=status.HTTP_200_OK,
@@ -107,6 +112,7 @@ def revoke_role(request, user_id, role_id):
             "cannot_modify_self", _("You cannot change your own roles."), status.HTTP_409_CONFLICT
         )
     with transaction.atomic():
+        lock_users(request.user.pk, target.pk)
         deleted, _per_model = UserRole.objects.filter(user=target, role=role).delete()
         if deleted:
             record_audit(

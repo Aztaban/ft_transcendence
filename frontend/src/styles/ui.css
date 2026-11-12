@@ -4,7 +4,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
@@ -26,11 +26,11 @@
 .ui-button--primary {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
 }
 
 .ui-button--primary:hover:not(:disabled) {
-  background: var(--color-accent-dark);
+  background: var(--color-accent-hover);
   filter: brightness(0.96);
 }
 
@@ -60,8 +60,8 @@
 }
 
 .ui-field__label {
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
 }
 
 .ui-input {
@@ -85,7 +85,7 @@
 
 .ui-field__error {
   color: #c62828;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .ui-checkbox {
@@ -121,7 +121,7 @@
 .ui-checkbox__input:checked + .ui-checkbox__control::after {
   width: 5px;
   height: 10px;
-  border: solid #ffffff;
+  border: solid var(--color-white);
   border-width: 0 2px 2px 0;
   content: "";
   transform: rotate(45deg);
@@ -137,8 +137,8 @@
   align-items: center;
   padding: var(--space-1) var(--space-3);
   border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .ui-badge--neutral {
@@ -158,4 +158,279 @@
 .ui-badge--warning {
   background: #fff4d6;
   color: #8a6500;
+}
+
+/* Design system B (#730): the look of Dialog, Notice, Avatar, StatusPill and Skeleton when a page
+   passes no classes of its own. Pages that pass their classes keep exactly their old look. */
+
+.ui-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Dialog */
+.ui-dialog {
+  position: fixed;
+  z-index: 100;
+  display: grid;
+  inset: 0;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.ui-dialog__card {
+  width: min(100%, 440px);
+  /* A tall popup scrolls inside the card on a small screen. */
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow-y: auto;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.ui-dialog__card:focus-visible {
+  outline: 3px solid var(--color-accent-text);
+  outline-offset: 2px;
+}
+
+/* Notice */
+.ui-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-neutral-50);
+  color: var(--color-text-primary);
+}
+
+.ui-notice--success {
+  border-color: var(--color-success-surface);
+  background: var(--color-success-surface);
+  color: var(--color-success-text);
+}
+
+.ui-notice--warning {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-surface);
+  color: var(--color-warning-text);
+}
+
+.ui-notice--error {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-surface);
+  color: var(--color-danger-text);
+}
+
+.ui-notice__icon {
+  flex-shrink: 0;
+  font-weight: var(--font-weight-bold);
+}
+
+/* Avatar */
+.ui-avatar {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-accent-surface);
+  color: var(--color-accent-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Status pill */
+.ui-status-pill {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.ui-status-pill--neutral {
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+}
+
+.ui-status-pill--accent {
+  background: var(--color-accent-surface);
+  color: var(--color-accent-text);
+}
+
+.ui-status-pill--success {
+  background: var(--color-success-surface);
+  color: var(--color-success-text);
+}
+
+.ui-status-pill--warning {
+  background: var(--color-warning-surface);
+  color: var(--color-warning-text);
+}
+
+.ui-status-pill--danger {
+  background: var(--color-danger-surface);
+  color: var(--color-danger-text);
+}
+
+.ui-status-pill--info {
+  background: var(--color-info-surface);
+  color: var(--color-info-text);
+}
+
+/* Skeleton */
+.ui-skeleton {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ui-skeleton__item {
+  height: 64px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100),
+    var(--color-neutral-50),
+    var(--color-neutral-100)
+  );
+  background-size: 200% 100%;
+  animation: ui-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes ui-skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton__item {
+    animation: none;
+  }
+}
+
+/* Design system C (#730): the look of EmptyState, Tabs, TextArea and ProgressBar when a page
+   passes no classes of its own. */
+
+/* EmptyState */
+.ui-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.ui-empty-state h2,
+.ui-empty-state h3,
+.ui-empty-state h4 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.ui-empty-state p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-empty-state__icon {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-2xl);
+}
+
+/* Tabs */
+.ui-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ui-tabs__tab {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-neutral-250);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font: inherit;
+}
+
+.ui-tabs__tab--selected {
+  border-color: var(--color-accent-text);
+  background: var(--color-accent-surface);
+  color: var(--color-accent-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ui-tabs__tab:focus-visible {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 2px;
+}
+
+/* TextArea */
+.ui-textarea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-medium);
+}
+
+.ui-textarea textarea {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: var(--font-weight-regular);
+  resize: vertical;
+}
+
+.ui-textarea textarea:focus-visible {
+  border-color: var(--color-accent-text);
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 1px;
+}
+
+.ui-textarea__count {
+  align-self: flex-end;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+/* ProgressBar */
+.ui-progress {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-neutral-150);
+}
+
+.ui-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-progress span {
+    transition: none;
+  }
 }
