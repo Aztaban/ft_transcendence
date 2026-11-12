@@ -255,6 +255,10 @@ msgstr "ID projektů se nesmí opakovat."
 msgid "Select at most %(max)s projects."
 msgstr "Vyberte nejvýše %(max)s projektů."
 
+#: apps/evaluations/serializers/requests.py:124
+msgid "This project is not available any more."
+msgstr "Tento projekt už není k dispozici."
+
 #: apps/evaluations/serializers/requests.py:91
 msgid "Datetime must include a timezone (Z or an offset)."
 msgstr "Datum a čas musí obsahovat časové pásmo (Z nebo posun)."

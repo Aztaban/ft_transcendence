@@ -5,20 +5,15 @@ import SuccessDialog from "./SuccessDialog";
 
 afterEach(cleanup);
 
+// Focus, Escape and a click inside come from the shared Dialog, tested in Dialog.test.tsx.
 describe("SuccessDialog", () => {
-  it("is named by its message and closes on a click outside or Escape, not inside", () => {
+  it("is named by its message and closes on a click outside", () => {
     const onClose = vi.fn();
     render(<SuccessDialog onClose={onClose}>Slot sent to the student!</SuccessDialog>);
 
-    const dialog = screen.getByRole("dialog", { name: "Slot sent to the student!" });
-
-    expect(document.activeElement).toBe(dialog);
-
-    fireEvent.click(dialog);
-    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Slot sent to the student!" })).toBeTruthy();
 
     fireEvent.click(screen.getByTestId("success-dialog-backdrop"));
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
