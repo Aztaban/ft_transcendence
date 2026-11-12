@@ -47,6 +47,18 @@ describe("LanguageSwitcher", () => {
     ).toEqual(["true", "false", "false"]);
   });
 
+  it("does nothing for the language already shown", () => {
+    current.user = lenka;
+    render(<LanguageSwitcher />);
+
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+
+    // Switching stores the choice for this browser; nothing was switched.
+    expect(window.localStorage.getItem("language")).toBeNull();
+    expect(i18n.language).toBe("en");
+    expect(current.update).not.toHaveBeenCalled();
+  });
+
   it("switches the page and saves the language of a logged-in user", async () => {
     current.user = lenka;
     current.update.mockResolvedValue(undefined);

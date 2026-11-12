@@ -215,6 +215,26 @@ describe("NotificationPanel", () => {
     ).toBeNull();
   });
 
+  it("marks only the clicked notification read, the others stay unread", async () => {
+    const unreadNoTarget: Notification = { ...noTarget, read_at: null };
+
+    vi.mocked(listNotifications).mockResolvedValue(page([created, unreadNoTarget]));
+    vi.mocked(markNotificationRead).mockResolvedValue(noTarget);
+    renderPanel();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /An administrator updated your account/ }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("listitem").map((item) => item.className)).toEqual([
+        "notification-panel__item notification-panel__item--unread",
+        "notification-panel__item",
+      ]),
+    );
+    expect(markNotificationRead).toHaveBeenCalledTimes(1);
+  });
+
   it("sends nothing for a notification that is already read", async () => {
     vi.mocked(listNotifications).mockResolvedValue(
       page([{ ...created, read_at: noTarget.read_at }]),

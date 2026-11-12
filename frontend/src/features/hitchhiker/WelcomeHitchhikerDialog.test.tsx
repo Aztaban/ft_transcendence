@@ -29,6 +29,67 @@ function getButton(name: string) {
 }
 
 describe("WelcomeHitchhikerDialog", () => {
+  it("says when the projects cannot be loaded, with Submit disabled", async () => {
+    vi.mocked(listProjects).mockRejectedValue(new Error("network"));
+    render(<WelcomeHitchhikerDialog onClose={() => {}} />);
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Could not load the projects. Please try again later.",
+    );
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(getButton("Submit").disabled).toBe(true);
+  });
+
+  it("unmarks a project on a second click and sends only the marked ones", async () => {
+    vi.mocked(createEligibilityRequest).mockResolvedValue({
+      id: 9,
+      requester: { id: 2, display_name: "dkolarov", avatar_url: null },
+      projects: [projects[1]],
+      status: "pending",
+      reviewed_by: null,
+      reviewed_at: null,
+      review_note: "",
+      created_at: "2026-10-13T08:00:00Z",
+    });
+    render(<WelcomeHitchhikerDialog onClose={() => {}} />);
+
+    const pushSwap = (await screen.findByRole("checkbox", {
+      name: "push_swap",
+    })) as HTMLInputElement;
+
+    fireEvent.click(pushSwap);
+    fireEvent.click(pushSwap);
+    expect(pushSwap.checked).toBe(false);
+    expect(getButton("Submit").disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "minishell" }));
+    fireEvent.click(getButton("Submit"));
+
+    expect(await screen.findByRole("dialog", { name: "Form sent!" })).toBeTruthy();
+    expect(createEligibilityRequest).toHaveBeenCalledWith({ project_ids: [2] });
+  });
+
+  it("keeps Form sent! open on a click inside it", async () => {
+    vi.mocked(createEligibilityRequest).mockResolvedValue({
+      id: 9,
+      requester: { id: 2, display_name: "dkolarov", avatar_url: null },
+      projects: [projects[2]],
+      status: "pending",
+      reviewed_by: null,
+      reviewed_at: null,
+      review_note: "",
+      created_at: "2026-10-13T08:00:00Z",
+    });
+    const onClose = vi.fn();
+    render(<WelcomeHitchhikerDialog onClose={onClose} />);
+
+    fireEvent.click(await screen.findByRole("checkbox", { name: "push_swap" }));
+    fireEvent.click(getButton("Submit"));
+    fireEvent.click(await screen.findByRole("dialog", { name: "Form sent!" }));
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("asks to mark the projects, with Submit disabled until one is marked", async () => {
     render(<WelcomeHitchhikerDialog onClose={() => {}} />);
 

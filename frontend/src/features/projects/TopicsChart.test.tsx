@@ -11,7 +11,35 @@ function labelLines() {
   );
 }
 
+function shares() {
+  return Array.from(document.querySelectorAll(".topics-chart__share")).map(
+    (share) => share.textContent,
+  );
+}
+
 describe("TopicsChart", () => {
+  it("draws a single topic as a whole circle of 100%", () => {
+    render(<TopicsChart projectName="Libft" topics={[{ label: "C basics", icon: "" }]} />);
+
+    const wedge = document.querySelector(".topics-chart__wedge path")?.getAttribute("d") ?? "";
+
+    // Two half-circle arcs ("a"), not a slice from the centre ("L ... A ... Z").
+    expect(wedge.match(/ a /g)).toHaveLength(2);
+    expect(wedge).not.toContain("Z");
+    expect(shares()).toEqual(["100%"]);
+  });
+
+  it("shows equal shares, with one decimal when they are not whole", () => {
+    const topic = (label: string) => ({ label, icon: "" });
+
+    render(<TopicsChart projectName="push_swap" topics={["A", "B", "C"].map(topic)} />);
+    expect(shares()).toEqual(["33.3%", "33.3%", "33.3%"]);
+
+    cleanup();
+    render(<TopicsChart projectName="push_swap" topics={["A", "B", "C", "D"].map(topic)} />);
+    expect(shares()).toEqual(["25%", "25%", "25%", "25%"]);
+  });
+
   // The Spanish labels that were cut off at the right edge (#729): 8 topics, the second one
   // beside the chart with about 160px of room.
   it("puts a label that is too wide for its side on two lines", () => {

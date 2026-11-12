@@ -102,6 +102,34 @@ describe("useDialog", () => {
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "First" }));
   });
 
+  it("brings the focus back to the last button on Shift+Tab from the page behind", () => {
+    render(<Page />);
+    openDialog();
+
+    screen.getByRole("button", { name: "Behind the popup" }).focus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Last" }));
+  });
+
+  it("leaves Tab between the buttons inside to the browser and ignores other keys", () => {
+    render(<Page />);
+    openDialog();
+
+    screen.getByRole("button", { name: "First" }).focus();
+
+    // `fireEvent` answers false when the handler cancelled the browser's own move.
+    expect(fireEvent.keyDown(document, { key: "Tab" })).toBe(true);
+
+    // On the last button an arrow key must not wrap around like Tab does.
+    const last = screen.getByRole("button", { name: "Last" });
+    last.focus();
+
+    expect(fireEvent.keyDown(document, { key: "ArrowDown" })).toBe(true);
+    expect(document.activeElement).toBe(last);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
   it("keeps the focus on the card when the popup has nothing to tab to", () => {
     render(<Page empty />);
     openDialog();

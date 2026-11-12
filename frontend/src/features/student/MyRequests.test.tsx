@@ -228,6 +228,36 @@ describe("MyRequests live", () => {
       page: 1,
     });
   });
+
+  it("keeps both lists when a live re-fetch fails", async () => {
+    mockLists(
+      page([makeRequest(1, "push_swap", "pending")]),
+      page([pastConfirmed(7, "libft", "passed")]),
+    );
+
+    render(
+      <LiveContext.Provider value={openLiveSocket()}>
+        <MyRequests />
+      </LiveContext.Provider>,
+    );
+    await screen.findByRole("heading", { name: "libft" });
+
+    vi.mocked(listEvaluationRequests).mockRejectedValue(new Error("network"));
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.slot_picked",
+        data: { id: 1, status: "awaiting_confirmation" },
+      }),
+    );
+
+    // Two lists loaded first, then both asked for again; then let the failures be handled.
+    await vi.waitFor(() => expect(listEvaluationRequests).toHaveBeenCalledTimes(4));
+    await act(async () => {});
+
+    expect(rowStatuses("Active")).toEqual([["push_swap", "Waiting for a Hitchhiker"]]);
+    expect(rowStatuses("Past")).toEqual([["libft", "Passed"]]);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });
 
 describe("MyRequests cancel (#595)", () => {
