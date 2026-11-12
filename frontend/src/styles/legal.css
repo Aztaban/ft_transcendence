@@ -34,7 +34,8 @@
 
 .legal-page__article h1 {
   margin: 0 0 var(--space-2);
-  font-size: 32px;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-medium);
   line-height: 1.2;
 }
 

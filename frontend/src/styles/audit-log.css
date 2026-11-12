@@ -257,6 +257,18 @@
 
 /* Narrow screens: each entry becomes a small card, with the column name before each value. */
 @media (max-width: 760px) {
+  /* The filters stack, each as wide as the screen (#372). */
+  .audit-log__field {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .audit-log__field select,
+  .audit-log__field input {
+    width: 100%;
+    min-width: 0;
+  }
+
   .audit-log__table thead {
     display: none;
   }
