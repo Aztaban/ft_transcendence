@@ -62,6 +62,7 @@ Before opening a PR, run what CI runs and make it pass:
 | --- | --- |
 | Backend lint and format | `cd backend && ruff check . && black --check . && isort --check .` |
 | Backend tests | `make test` with the stack running (or `cd backend && pytest` against a reachable MySQL) |
+| OpenAPI schema | `cd backend && python manage.py spectacular --validate --fail-on-warn --file /dev/null` |
 | Frontend | `cd frontend && npm run format && npx tsc --noEmit && npm test` |
 | Images | `docker compose build` |
 
