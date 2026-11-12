@@ -228,8 +228,8 @@ describe("CreateRequestPage", () => {
     // A project that was turned off while the form was open.
     [
       "project",
-      { project_id: ['Invalid pk "2" - object does not exist.'] },
-      'Invalid pk "2" - object does not exist.',
+      { project_id: ["This project is not available any more."] },
+      "This project is not available any more.",
     ],
     [
       "note",
