@@ -207,6 +207,31 @@ describe("EligibilityReviewPage", () => {
     expect(within(screen.getByRole("dialog")).getByRole("alert")).toBe(alert);
   });
 
+  // Form validation (#358): the backend's message about the note (api-plan §10.3, §5.6).
+  it("shows the backend's message about the note inside the dialog and keeps the note", async () => {
+    vi.mocked(listEligibilityRequests).mockResolvedValue(page([request(9, "dkolarov")]));
+    vi.mocked(reviewEligibilityRequest).mockRejectedValue(
+      new ApiError(400, "Please correct the highlighted fields.", "validation_error", {
+        review_note: ["Ensure this field has no more than 500 characters."],
+      }),
+    );
+
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Approve dkolarov's request" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Approve dkolarov's request?" });
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "Welcome!" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Approve" }));
+
+    expect((await within(dialog).findByRole("alert")).textContent).toBe(
+      "Ensure this field has no more than 500 characters.",
+    );
+    expect((within(dialog).getByRole("textbox") as HTMLTextAreaElement).value).toBe("Welcome!");
+    expect(
+      (within(dialog).getByRole("button", { name: "Approve" }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+  });
+
   it("shows the generic error for an answer without a code, such as an HTML 502", async () => {
     vi.mocked(listEligibilityRequests).mockResolvedValue(page([request(9, "dkolarov")]));
     vi.mocked(reviewEligibilityRequest).mockRejectedValue(

@@ -149,6 +149,22 @@ describe("ProfilePage", () => {
     expect(current.update).not.toHaveBeenCalled();
   });
 
+  // Form validation (#358): 1–64 characters (api-plan §10.2).
+  it("does not save a display name over 64 characters", async () => {
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit profile" }));
+    fireEvent.change(screen.getByLabelText("Display name"), {
+      target: { value: "a".repeat(65) },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Display name must be 64 characters or fewer.",
+    );
+    expect(current.update).not.toHaveBeenCalled();
+  });
+
   it("saves the chosen language", async () => {
     await renderPage();
     const languages = screen.getByRole("group", { name: "Language" });
@@ -162,6 +178,26 @@ describe("ProfilePage", () => {
 
     expect(await screen.findByText("Settings updated.")).toBeTruthy();
     expect(current.update).toHaveBeenCalledWith({ language: "cs" });
+  });
+
+  // Form validation (#358): the backend's message about the language (api-plan §10.2).
+  it("shows the backend's message about the language", async () => {
+    current.update.mockRejectedValue(
+      new ApiError(400, "Please correct the highlighted fields.", "validation_error", {
+        language: ['"cs" is not a valid choice.'],
+      }),
+    );
+    await renderPage();
+
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "Language" })).getByRole("radio", {
+        name: /Czech/,
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect((await screen.findByRole("alert")).textContent).toBe('"cs" is not a valid choice.');
+    expect(screen.queryByText("Settings updated.")).toBeNull();
   });
 
   it("follows a language saved from the top bar, dropping an unsaved pick", async () => {

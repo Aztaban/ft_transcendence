@@ -222,6 +222,52 @@ describe("CreateRequestPage", () => {
     );
     expect(screen.queryByRole("dialog")).toBeNull();
   });
+
+  // Form validation (#358): the backend's field messages (api-plan §10.4, §5.6).
+  it.each([
+    // A project that was turned off while the form was open.
+    [
+      "project",
+      { project_id: ['Invalid pk "2" - object does not exist.'] },
+      'Invalid pk "2" - object does not exist.',
+    ],
+    [
+      "note",
+      { note: ["Ensure this field has no more than 500 characters."] },
+      "Ensure this field has no more than 500 characters.",
+    ],
+  ])(
+    "shows the backend's message about the %s and lets the student try again",
+    async (_field, fields, message) => {
+      vi.mocked(createEvaluationRequest).mockRejectedValue(
+        new ApiError(400, "Please correct the highlighted fields.", "validation_error", fields),
+      );
+      renderPage();
+      await chooseProject("push_swap");
+      fireEvent.click(getButton("Next"));
+
+      fireEvent.click(getButton("Submit"));
+
+      expect((await screen.findByRole("alert")).textContent).toBe(message);
+      // Still on the confirmation step, with Submit available again.
+      expect(screen.getByRole("heading", { name: "push_swap" })).toBeTruthy();
+      expect(getButton("Submit").disabled).toBe(false);
+      expect(screen.queryByRole("dialog")).toBeNull();
+    },
+  );
+
+  it("shows the generic error when the server cannot be reached", async () => {
+    vi.mocked(createEvaluationRequest).mockRejectedValue(new TypeError("Failed to fetch"));
+    renderPage();
+    await chooseProject("push_swap");
+    fireEvent.click(getButton("Next"));
+
+    fireEvent.click(getButton("Submit"));
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Could not send your request. Please try again.",
+    );
+  });
 });
 
 describe("CreateRequestPage in another language", () => {
