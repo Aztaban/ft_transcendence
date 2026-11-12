@@ -204,7 +204,9 @@ describe("logged in", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: title })).toBeDefined();
     expect(screen.queryByText("ACCESS RESTRICTED")).toBeNull();
-    expect(sessionStorage.getItem("active-role")).toBe("HITCHHIKER");
+    // RoleProvider saves the workspace in an effect, which React may run just after the heading
+    // is drawn: wait for it rather than reading it once.
+    await waitFor(() => expect(sessionStorage.getItem("active-role")).toBe("HITCHHIKER"));
   });
 
   test("keeps /eligibility-requests/new for the request form, not as a request id", async () => {
