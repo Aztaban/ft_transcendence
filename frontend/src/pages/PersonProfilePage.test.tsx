@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { BrowserRouter, MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
@@ -80,18 +80,32 @@ afterEach(() => {
   me.roles = [{ id: 1, name: "student" }];
   cleanup();
   vi.resetAllMocks();
+  window.history.replaceState(null, "", "/");
 });
+
+const routes = (
+  <Routes>
+    <Route path="/people/:id" element={<PersonProfilePage />} />
+    <Route path="/hitchhikers" element={<div>Hitchhikers page</div>} />
+    <Route path="/login" element={<div>Login page</div>} />
+  </Routes>
+);
 
 function renderPage(entries = ["/people/7"]) {
   return render(
     <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
-      <Routes>
-        <Route path="/people/:id" element={<PersonProfilePage />} />
-        <Route path="/hitchhikers" element={<div>Hitchhikers page</div>} />
-        <Route path="/login" element={<div>Login page</div>} />
-      </Routes>
+      {routes}
     </MemoryRouter>,
   );
+}
+
+// The Back button reads the tab's history, which React Router records in `history.state.idx`
+// (0 for the first page of the app): open the Hitchhikers, then the profile.
+function renderFromHitchhikers() {
+  window.history.replaceState({ usr: null, key: "list", idx: 0 }, "", "/hitchhikers");
+  window.history.pushState({ usr: null, key: "profile", idx: 1 }, "", "/people/7");
+
+  return render(<BrowserRouter>{routes}</BrowserRouter>);
 }
 
 async function findProfile() {
@@ -439,7 +453,7 @@ describe("PersonProfilePage", () => {
   });
 
   it("goes back to the page it was opened from", async () => {
-    renderPage(["/hitchhikers", "/people/7"]);
+    renderFromHitchhikers();
     await findProfile();
 
     fireEvent.click(screen.getByRole("button", { name: /Back/ }));

@@ -2,6 +2,8 @@ import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router";
 
+import { canGoBackInApp } from "../../utils/history";
+
 interface BackLinkProps {
   className: string;
 }
@@ -13,8 +15,9 @@ interface BackLinkProps {
 function BackLink({ className }: BackLinkProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  // React Router gives the first page of the app the key "default".
-  const cameFromApp = useLocation().key !== "default";
+  // Read on every navigation: the same page can be reached with or without one before it.
+  useLocation();
+  const cameFromApp = canGoBackInApp();
 
   function goBack(event: MouseEvent<HTMLAnchorElement>) {
     if (cameFromApp && !event.metaKey && !event.ctrlKey && !event.shiftKey) {

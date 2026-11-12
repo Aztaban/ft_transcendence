@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { NavLink, useLocation, useNavigate } from "react-router";
+import { Link, NavLink, useLocation, useNavigate } from "react-router";
 
 import logo42 from "../../assets/figma/42.svg";
 import sidebarLine from "../../assets/figma/sidebar-line.svg";
@@ -18,8 +18,6 @@ interface NavigationItem {
   labelKey: string;
   to: string;
   icon: IconName;
-  // Other pages that belong to this item, by path prefix: it stays highlighted on them (#374).
-  alsoActiveOn?: string[];
 }
 
 const navigationByRole: Record<AppRole, NavigationItem[]> = {
@@ -28,13 +26,7 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
     { labelKey: "nav.request", to: "/requests", icon: "request" },
     { labelKey: "nav.pending", to: "/pending", icon: "pending" },
     { labelKey: "nav.history", to: "/history", icon: "history" },
-    {
-      labelKey: "nav.hitchhikers",
-      to: "/hitchhikers",
-      icon: "hitchhikers",
-      // A person's profile is opened from the Hitchhikers list or the people search.
-      alsoActiveOn: ["/people/"],
-    },
+    { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: "hitchhikers" },
     { labelKey: "nav.profile", to: "/profile", icon: "profile" },
     { labelKey: "nav.studentCouncil", to: "/council", icon: "studentCouncil" },
   ],
@@ -52,13 +44,7 @@ const navigationByRole: Record<AppRole, NavigationItem[]> = {
     { labelKey: "nav.home", to: "/", icon: "home" },
     { labelKey: "nav.messages", to: "/council/inbox", icon: "studentCouncil" },
     { labelKey: "nav.history", to: "/council/history", icon: "history" },
-    {
-      labelKey: "nav.hitchhikers",
-      to: "/hitchhikers",
-      icon: "hitchhikers",
-      // A person's profile is opened from the Hitchhikers list or the people search.
-      alsoActiveOn: ["/people/"],
-    },
+    { labelKey: "nav.hitchhikers", to: "/hitchhikers", icon: "hitchhikers" },
   ],
 
   // The Admin pages live under /manage/ (/admin/ belongs to the Django admin). No Home: in this
@@ -92,7 +78,7 @@ function Sidebar({ isOpen = false }: SidebarProps) {
   const { activeRole, setActiveRole, availableRoles } = useRole();
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
@@ -111,6 +97,15 @@ function Sidebar({ isOpen = false }: SidebarProps) {
           ...(canSeeEvaluationExceptions(userRoles) ? [exceptionsItem] : []),
         ]
       : navigationByRole[activeRole];
+
+  // A person's profile has no item of its own (#374). It keeps the item it was opened from
+  // highlighted (a sender's profile from a council message: `state.from`), otherwise the
+  // Hitchhikers, where profiles are found (the list and the top bar's people search).
+  const openedFrom = (state as { from?: string } | null)?.from;
+  const profileOwner = pathname.startsWith("/people/")
+    ? (visibleNavigation.find((item) => item.to === openedFrom) ??
+      visibleNavigation.find((item) => item.to === "/hitchhikers"))
+    : undefined;
 
   // Opening the drawer moves the focus to its first link.
   useEffect(() => {
@@ -196,34 +191,52 @@ function Sidebar({ isOpen = false }: SidebarProps) {
 
       <div className="sidebar__middle">
         <nav ref={navRef} className="sidebar__nav" aria-label={t("nav.primary")}>
-          {visibleNavigation.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              // An item with another item below its path (e.g. /council and /council/inbox)
-              // is active only on its own page, so one item is highlighted at a time.
-              end={
-                item.to === "/" ||
-                visibleNavigation.some((other) => other.to.startsWith(`${item.to}/`))
-              }
-              className={({ isActive }) =>
-                [
-                  "sidebar__nav-link",
-                  isActive || item.alsoActiveOn?.some((path) => pathname.startsWith(path))
-                    ? "sidebar__nav-link--active"
-                    : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")
-              }
-            >
-              <span className="sidebar__nav-icon">
-                <Icon name={item.icon} />
-              </span>
+          {visibleNavigation.map((item) => {
+            const content = (
+              <>
+                <span className="sidebar__nav-icon">
+                  <Icon name={item.icon} />
+                </span>
 
-              <span>{t(item.labelKey)}</span>
-            </NavLink>
-          ))}
+                <span>{t(item.labelKey)}</span>
+              </>
+            );
+
+            // NavLink only marks its own pages as current: the profile's item is marked here,
+            // for screen readers too.
+            if (item === profileOwner) {
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="sidebar__nav-link sidebar__nav-link--active"
+                  aria-current="page"
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                // An item with another item below its path (e.g. /council and /council/inbox)
+                // is active only on its own page, so one item is highlighted at a time.
+                end={
+                  item.to === "/" ||
+                  visibleNavigation.some((other) => other.to.startsWith(`${item.to}/`))
+                }
+                className={({ isActive }) =>
+                  ["sidebar__nav-link", isActive ? "sidebar__nav-link--active" : ""]
+                    .filter(Boolean)
+                    .join(" ")
+                }
+              >
+                {content}
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="sidebar__role">
