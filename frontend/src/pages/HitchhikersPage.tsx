@@ -3,7 +3,12 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
 import { ApiError } from "../api/client";
-import { countPeople, searchPeople, type PeopleOrdering } from "../api/people";
+import {
+  countPeople,
+  PEOPLE_QUERY_MAX_LENGTH,
+  searchPeople,
+  type PeopleOrdering,
+} from "../api/people";
 import { listProjects } from "../api/projects";
 import usePageTitle from "../components/layout/usePageTitle";
 import Avatar from "../components/ui/Avatar";
@@ -24,11 +29,24 @@ interface Overview {
 
 // api-plan §10.8: `q` is 2–64 characters.
 const MIN_QUERY_LENGTH = 2;
-const MAX_QUERY_LENGTH = 64;
 // Waits for a pause in typing, so a search is not sent for every letter (60 a minute, §5.9).
 const SEARCH_DELAY_MS = 300;
 
 // The label is a key of the "hitchhikers" texts.
+// "Who" to search (§10.8): `tutor` (also matches Head Tutors), `sc_member`, or "all" for no
+// `role`, which finds everyone the search can return.
+type Who = "tutor" | "sc_member" | "all";
+
+const whoOptions: { value: Who; label: string }[] = [
+  { value: "tutor", label: "whoHitchhikers" },
+  { value: "sc_member", label: "whoCouncil" },
+  { value: "all", label: "whoEveryone" },
+];
+
+function isWho(value: string | null): value is Who {
+  return whoOptions.some((option) => option.value === value);
+}
+
 const orderings: { value: PeopleOrdering; label: string }[] = [
   { value: "display_name", label: "sortAz" },
   { value: "-display_name", label: "sortZa" },
@@ -48,19 +66,25 @@ function searchErrorMessage(error: unknown) {
 
 // Sidebar "Hitchhikers" (#45, Figma "Hitchhikers"): find a Hitchhiker for an evaluation with
 // GET /search/people/?role=tutor (§10.8), by name and project, sorted by name, 20 at a time.
-// The filters live in the URL (?q=&project=&ordering=).
+// "Who" also finds the Student Council, or everyone searchable (no `role`): the top bar's search
+// opens this page with `role=all`. The filters live in the URL (?q=&project=&ordering=&role=).
 function HitchhikersPage() {
   const { t } = useTranslation();
   usePageTitle(t("nav.hitchhikers"));
   const { activeRole } = useRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("q") ?? "";
-  const project = searchParams.get("project") ?? "";
+  const who: Who = isWho(searchParams.get("role")) ? (searchParams.get("role") as Who) : "tutor";
+  // Only Hitchhikers are eligible for projects (§10.8): with the Student Council a project could
+  // never match, so it is not offered and a shared link's `project` is ignored.
+  const project = who === "sc_member" ? "" : (searchParams.get("project") ?? "");
   const ordering: PeopleOrdering =
     searchParams.get("ordering") === "-display_name" ? "-display_name" : "display_name";
   const searchTerm = query.length >= MIN_QUERY_LENGTH ? query : undefined;
+  const isHitchhikers = who === "tutor";
 
   const [text, setText] = useState(query);
+
   // `null` until loaded (or when the list could not be loaded).
   const [projects, setProjects] = useState<ProjectRef[] | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -77,6 +101,15 @@ function HitchhikersPage() {
   // "Show more" failed: the next click loads the same page again.
   const [moreFailed, setMoreFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+
+  // The top bar's search can change `q` while this page is open: show the new name in the box,
+  // or the timer below would write the old one back into the URL. A new name also starts again
+  // from the first page, or "Show more" would add the new search's next page to the old list.
+  useEffect(() => {
+    setText((current) => (current.trim() === query ? current : query));
+    setPage(1);
+    setMoreFailed(false);
+  }, [query]);
 
   useEffect(() => {
     let active = true;
@@ -116,7 +149,7 @@ function HitchhikersPage() {
     }
 
     searchPeople({
-      role: "tutor",
+      role: who === "all" ? undefined : who,
       q: searchTerm,
       project: project || undefined,
       ordering,
@@ -150,7 +183,7 @@ function HitchhikersPage() {
     return () => {
       active = false;
     };
-  }, [searchTerm, project, ordering, page, retryKey]);
+  }, [searchTerm, who, project, ordering, page, retryKey]);
 
   // Changes the filters in the URL and starts again from the first page.
   function applyFilters(changes: Record<string, string>) {
@@ -186,11 +219,12 @@ function HitchhikersPage() {
     const timeout = window.setTimeout(() => applyFilters({ q: value }), SEARCH_DELAY_MS);
 
     return () => window.clearTimeout(timeout);
-  }, [text, query, project, ordering]);
+  }, [text, query, who, project, ordering]);
 
+  // Back to the page's heading: the Hitchhikers, with no name or project.
   function clearFilters() {
     setText("");
-    applyFilters({ q: "", project: "" });
+    applyFilters({ q: "", project: "", role: "" });
   }
 
   function retry() {
@@ -277,28 +311,54 @@ function HitchhikersPage() {
           <input
             type="search"
             value={text}
-            maxLength={MAX_QUERY_LENGTH}
+            maxLength={PEOPLE_QUERY_MAX_LENGTH}
             placeholder={t("hitchhikers.searchPlaceholder")}
-            aria-label={t("hitchhikers.searchAria")}
+            aria-label={t(
+              isHitchhikers ? "hitchhikers.searchAria" : "hitchhikers.searchPeopleAria",
+            )}
             aria-describedby="hitchhikers-search-hint"
             onChange={(event) => setText(event.target.value)}
           />
         </label>
 
         <label className="hitchhikers__select">
-          <span>{t("hitchhikers.project")}</span>
+          <span>{t("hitchhikers.who")}</span>
           <select
-            value={project}
-            onChange={(event) => applyFilters({ project: event.target.value })}
+            value={who}
+            onChange={(event) => {
+              const value = event.target.value;
+
+              applyFilters({
+                role: value === "tutor" ? "" : value,
+                // The Student Council is never eligible for a project.
+                ...(value === "sc_member" ? { project: "" } : {}),
+              });
+            }}
           >
-            <option value="">{t("hitchhikers.allProjects")}</option>
-            {(projects ?? []).map((item) => (
-              <option key={item.id} value={item.slug}>
-                {item.name}
+            {whoOptions.map((item) => (
+              <option key={item.value} value={item.value}>
+                {t(`hitchhikers.${item.label}`)}
               </option>
             ))}
           </select>
         </label>
+
+        {who !== "sc_member" && (
+          <label className="hitchhikers__select">
+            <span>{t("hitchhikers.project")}</span>
+            <select
+              value={project}
+              onChange={(event) => applyFilters({ project: event.target.value })}
+            >
+              <option value="">{t("hitchhikers.allProjects")}</option>
+              {(projects ?? []).map((item) => (
+                <option key={item.id} value={item.slug}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label className="hitchhikers__select">
           <span>{t("hitchhikers.sort")}</span>
@@ -327,7 +387,7 @@ function HitchhikersPage() {
             !isSearching &&
             loadState === "ready" &&
             total > 0 &&
-            t("hitchhikers.total", { count: total })}
+            t(isHitchhikers ? "hitchhikers.total" : "hitchhikers.totalPeople", { count: total })}
         </p>
 
         {searchTerm && (
@@ -376,8 +436,16 @@ function HitchhikersPage() {
 
       {loadState === "ready" && people.length === 0 && (
         <div className="hitchhikers__empty">
-          <h2>{isFiltered ? t("hitchhikers.emptyFilteredTitle") : t("hitchhikers.emptyTitle")}</h2>
-          <p>{isFiltered ? t("hitchhikers.emptyFilteredText") : t("hitchhikers.emptyText")}</p>
+          <h2>
+            {isFiltered
+              ? t(isHitchhikers ? "hitchhikers.emptyFilteredTitle" : "hitchhikers.nobodyFound")
+              : t(isHitchhikers ? "hitchhikers.emptyTitle" : "hitchhikers.nobodyYet")}
+          </h2>
+          <p>
+            {isFiltered
+              ? t("hitchhikers.emptyFilteredText")
+              : t(isHitchhikers ? "hitchhikers.emptyText" : "hitchhikers.nobodyYetText")}
+          </p>
           {isFiltered && (
             <button type="button" onClick={clearFilters}>
               {t("hitchhikers.clearFilters")}

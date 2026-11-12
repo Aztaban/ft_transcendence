@@ -7,6 +7,9 @@ export type PeopleSearchRole = "tutor" | "head_tutor" | "sc_member";
 
 export type PeopleOrdering = "display_name" | "-display_name";
 
+// Longest `q` the search accepts (§10.8): the search fields stop typing there.
+export const PEOPLE_QUERY_MAX_LENGTH = 64;
+
 export interface SearchPeopleParams {
   // 2–64 characters, matched against the display name (and the 42 login, never returned).
   q?: string;

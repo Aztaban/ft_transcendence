@@ -41,8 +41,8 @@
   "topbar": {
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "search": "Search",
-    "searchPlaceholder": "search",
+    "search": "Search people",
+    "searchPlaceholder": "search people",
     "notifications": "Notifications",
     "notificationsUnread_one": "Notifications, {{count}} unread",
     "notificationsUnread_other": "Notifications, {{count}} unread",
@@ -935,7 +935,17 @@
     "total_one": "{{count}} Hitchhiker",
     "total_other": "{{count}} Hitchhikers",
     "projectCount_one": "{{count}} project",
-    "projectCount_other": "{{count}} projects"
+    "projectCount_other": "{{count}} projects",
+    "who": "Who",
+    "whoHitchhikers": "Hitchhikers",
+    "whoCouncil": "Student Council",
+    "whoEveryone": "Everyone",
+    "searchPeopleAria": "Search people by name",
+    "totalPeople_one": "{{count}} person",
+    "totalPeople_other": "{{count}} people",
+    "nobodyFound": "Nobody found",
+    "nobodyYet": "Nobody here yet",
+    "nobodyYetText": "People appear here once they get the Hitchhiker or Student Council role."
   },
   "person": {
     "headTutorText": "Evaluates students, and reviews which projects each Hitchhiker can evaluate.",

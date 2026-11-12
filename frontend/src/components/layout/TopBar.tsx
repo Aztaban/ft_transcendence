@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
 
+import { PEOPLE_QUERY_MAX_LENGTH } from "../../api/people";
 import NotificationPanel from "../../features/notifications/NotificationPanel";
 import { useCurrentUser } from "../../store/CurrentUserContext";
 import { useNotificationCount } from "../../store/NotificationCountContext";
@@ -17,6 +19,20 @@ interface TopBarProps {
 }
 
 function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps) {
+  const navigate = useNavigate();
+  const [searchText, setSearchText] = useState("");
+
+  function searchPeople(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const q = searchText.trim();
+
+    if (q) {
+      navigate(`/hitchhikers?${new URLSearchParams({ q, role: "all" })}`);
+      setSearchText("");
+    }
+  }
+
   // The logged-in user from GET /users/me/ (§8.2); `null` until it has answered.
   const { user } = useCurrentUser();
   const { t } = useTranslation();
@@ -72,15 +88,21 @@ function TopBar({ isMenuOpen = false, menuButtonRef, onMenuClick }: TopBarProps)
         </svg>
       </button>
 
-      <label className="topbar__search">
+      {/* People search from anywhere, like on intra: Enter opens the Hitchhikers page with
+          everyone who can be found, council members too (api-plan §10.8, R11). */}
+      <form className="topbar__search" role="search" onSubmit={searchPeople}>
         <Icon className="topbar__search-icon" name="search" />
 
         <input
           type="search"
+          name="q"
+          value={searchText}
+          maxLength={PEOPLE_QUERY_MAX_LENGTH}
           placeholder={t("topbar.searchPlaceholder")}
           aria-label={t("topbar.search")}
+          onChange={(event) => setSearchText(event.target.value)}
         />
-      </label>
+      </form>
 
       <div className="topbar__user">
         <ConnectionStatus />
