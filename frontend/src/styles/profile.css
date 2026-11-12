@@ -1,9 +1,15 @@
+/* Edge to edge under the top bar, like Home: the page padding (layout.css) is taken back. */
+.profile-layout {
+  margin: -48px -32px;
+}
+
 .profile-page {
   display: flex;
-  width: min(100%, 1040px);
+  width: min(100%, 1104px);
   flex-direction: column;
   gap: 20px;
   margin: 0 auto;
+  padding: 28px 32px 48px;
 }
 
 .profile-page__eyebrow {
@@ -24,58 +30,85 @@
   white-space: nowrap;
 }
 
-/* Profile card: white with the teal top border, like the Home overview and the public profile */
+/* Banner: dark, edge to edge, the pixel scene behind and who you are on the left (as on Home) */
 
-.profile-hero {
-  border: 1px solid var(--color-neutral-200);
-  border-top: 5px solid var(--color-accent);
-  border-radius: 16px;
-  background: var(--color-surface);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
-  animation: profile-rise 0.45s ease both;
+.profile-banner {
+  display: grid;
+  overflow: hidden;
+  background: #141a22;
 }
 
-.profile-hero--loading {
-  height: 220px;
-  background: linear-gradient(
-    90deg,
-    var(--color-neutral-150) 0%,
-    #f7f8f8 50%,
-    var(--color-neutral-150) 100%
-  );
-  background-size: 200% 100%;
-  animation: profile-shimmer 1.2s ease-in-out infinite;
+/* In the same cell, and in normal flow: larger text makes the banner taller, not cut off. */
+.profile-banner > * {
+  grid-area: 1 / 1;
 }
 
-.profile-hero__body {
+.profile-banner__text {
+  position: relative;
+  z-index: 1;
   display: flex;
+  width: min(60%, 680px);
+  min-height: 180px;
   align-items: center;
-  gap: 28px;
-  padding: 30px 32px;
+  gap: 24px;
+  padding: 28px 40px;
+  background: linear-gradient(90deg, #141a22 78%, rgba(20, 26, 34, 0));
+  color: var(--color-white);
 }
 
-.profile-card__avatar {
+.profile-banner__loading {
+  min-height: 132px;
+}
+
+/* The details in the scene's look: its wall colour, a frame drawn in steps like its window, and
+   its pixel font. Each stepped border is four shadows that leave the corners out. */
+.profile-banner__panel {
   display: flex;
-  width: 132px;
-  height: 132px;
+  max-width: 100%;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 24px;
+  background: #1d2530;
+  box-shadow:
+    0 -4px 0 0 #5b6363,
+    0 4px 0 0 #5b6363,
+    -4px 0 0 0 #5b6363,
+    4px 0 0 0 #5b6363,
+    8px 8px 0 0 #0b0e12;
+  font-family: "Pixelify Sans", "Inter", "Helvetica Neue", Arial, sans-serif;
+  animation: profile-panel-in 0.4s steps(4) both;
+}
+
+/* Square, like the photo on the scene's ID card. */
+.profile-banner__avatar {
+  display: flex;
+  width: 128px;
+  height: 128px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border: 4px solid var(--color-white);
-  border-radius: 50%;
+  box-shadow:
+    0 -4px 0 0 #cfd6d6,
+    0 4px 0 0 #cfd6d6,
+    -4px 0 0 0 #cfd6d6,
+    4px 0 0 0 #cfd6d6;
   object-fit: cover;
-  animation:
-    profile-pop 0.5s ease 0.1s both,
-    profile-halo 2.8s ease-in-out 0.8s infinite;
+  image-rendering: pixelated;
 }
 
-/* No avatar yet: the user's initials. */
-.profile-card__avatar--initials {
-  background: linear-gradient(135deg, var(--color-accent), #1f1f1f);
+.profile-banner__avatar--initials {
+  background: #3b7cf6;
   color: var(--color-white);
-  font-size: 2.6rem;
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.04em;
+  font-size: 3rem;
+  font-weight: 600;
+}
+
+.profile-banner__eyebrow {
+  margin: 0 0 4px;
+  color: var(--color-accent);
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .profile-hero__identity {
@@ -84,38 +117,98 @@
 }
 
 .profile-hero__identity h1 {
-  margin: 0 0 12px;
-  font-size: var(--font-size-4xl);
-  font-weight: var(--font-weight-semibold);
-  line-height: 1.15;
+  margin: 0 0 14px;
+  color: var(--color-white);
+  font-size: clamp(2rem, 3vw, 3rem);
+  font-weight: 600;
+  line-height: 1.05;
   overflow-wrap: anywhere;
 }
 
 .profile-hero__roles {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
-  padding: 0;
+  padding: 2px;
   list-style: none;
 }
 
+/* A badge per role, in the colours of the scene's badges; dark text on each (4.5:1 or more). */
 .profile-role {
-  padding: 5px 14px;
-  border: 1.5px solid #3f4646;
-  border-radius: 999px;
-  background: var(--color-white);
-  color: #222222;
-  font-size: var(--font-size-2xs);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  background: #cfd6d6;
+  box-shadow:
+    0 -2px 0 0 #cfd6d6,
+    0 2px 0 0 #cfd6d6,
+    -2px 0 0 0 #cfd6d6,
+    2px 0 0 0 #cfd6d6;
+  color: #111414;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  animation: profile-pop 0.35s ease both;
-  animation-delay: calc(var(--index, 0) * 70ms + 0.25s);
+  animation: profile-role-in 0.3s steps(3) both;
+  animation-delay: calc(var(--index, 0) * 0.12s + 0.3s);
 }
 
-.profile-hero__edit {
-  flex: none;
+.profile-role--tutor {
+  --badge: #00babc;
+}
+
+.profile-role--head_tutor {
+  --badge: #f5b301;
+}
+
+.profile-role--sc_member {
+  --badge: #8a6cd1;
+}
+
+.profile-role--admin {
+  --badge: #e5484d;
+}
+
+.profile-role[class*="profile-role--"] {
+  background: var(--badge, #cfd6d6);
+  box-shadow:
+    0 -2px 0 0 var(--badge, #cfd6d6),
+    0 2px 0 0 var(--badge, #cfd6d6),
+    -2px 0 0 0 var(--badge, #cfd6d6),
+    2px 0 0 0 var(--badge, #cfd6d6);
+}
+
+/* A pixel button: light, with a darker bottom edge, teal on hover. */
+.profile-hero__edit.ui-button {
+  min-height: 44px;
+  margin-top: 20px;
+  margin-left: 4px;
+  padding: 0 14px 4px;
+  border: none;
+  border-radius: 0;
+  background: #f4f6f6;
+  box-shadow:
+    0 -4px 0 0 #f4f6f6,
+    0 4px 0 0 #f4f6f6,
+    -4px 0 0 0 #f4f6f6,
+    4px 0 0 0 #f4f6f6,
+    inset 0 -4px 0 0 #8a9090;
+  color: #111414;
+  font-family: inherit;
+  font-size: 1.15rem;
+}
+
+.profile-hero__edit.ui-button:hover {
+  background: var(--color-accent);
+  box-shadow:
+    0 -4px 0 0 var(--color-accent),
+    0 4px 0 0 var(--color-accent),
+    -4px 0 0 0 var(--color-accent),
+    4px 0 0 0 var(--color-accent),
+    inset 0 -4px 0 0 #00797b;
+}
+
+.profile-hero__edit.ui-button:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 8px;
 }
 
 /* Edit form */
@@ -344,10 +437,6 @@
   animation: profile-pop 0.3s ease both;
 }
 
-.profile-hero > .profile-page__success {
-  margin: 0 32px 24px;
-}
-
 .profile-page__message {
   padding: 32px;
   border: 1px dashed #f3b8b2;
@@ -383,45 +472,50 @@
   }
 }
 
-@keyframes profile-halo {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 3px var(--color-accent),
-      0 8px 20px rgba(0, 0, 0, 0.12);
-  }
-
-  50% {
-    box-shadow:
-      0 0 0 3px var(--color-accent),
-      0 0 0 10px rgba(0, 186, 188, 0.18),
-      0 8px 20px rgba(0, 0, 0, 0.12);
-  }
-}
-
-@keyframes profile-shimmer {
+/* In steps, like the scene: the panel opens, the badges pop in one after the other. */
+@keyframes profile-panel-in {
   from {
-    background-position: 200% 0;
+    clip-path: inset(0 100% 0 0);
   }
 
   to {
-    background-position: -200% 0;
+    clip-path: inset(-4px -12px -12px -4px);
+  }
+}
+
+@keyframes profile-role-in {
+  from {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
 @media (max-width: 760px) {
-  .profile-hero__body {
+  /* The text above the scene, as on Home. */
+  .profile-banner {
+    display: block;
+  }
+
+  .profile-banner__text {
+    width: auto;
+    min-height: 0;
+    padding: 24px 24px 12px;
+    background: none;
+  }
+
+  .profile-banner__panel {
+    width: 100%;
     flex-direction: column;
-    padding: 24px 20px;
     text-align: center;
   }
 
   .profile-hero__roles {
     justify-content: center;
-  }
-
-  .profile-hero > .profile-page__success {
-    margin: 0 20px 20px;
   }
 
   .profile-settings {
@@ -431,9 +525,17 @@
 }
 
 @media (max-width: 680px) {
-  .profile-card__avatar {
-    width: 112px;
-    height: 112px;
+  .profile-layout {
+    margin: -28px -20px;
+  }
+
+  .profile-page {
+    padding: 24px 20px 28px;
+  }
+
+  .profile-banner__avatar {
+    width: 88px;
+    height: 88px;
   }
 
   .profile-hero__identity h1 {
@@ -446,19 +548,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .profile-hero,
-  .profile-hero--loading,
-  .profile-card__avatar,
+  .profile-banner__panel,
   .profile-role,
   .profile-edit,
   .profile-tile,
   .profile-settings,
   .profile-page__success {
     animation: none;
-  }
-
-  .profile-card__avatar {
-    box-shadow: 0 0 0 3px var(--color-accent);
   }
 
   .profile-tile:hover {
