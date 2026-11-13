@@ -18,11 +18,6 @@ pytestmark = pytest.mark.django_db
 User = get_user_model()
 
 
-@pytest.fixture
-def api_client():
-    return APIClient()
-
-
 def iso(dt):
     return DateTimeField().to_representation(dt)
 

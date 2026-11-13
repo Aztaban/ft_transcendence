@@ -232,7 +232,12 @@ function EligibilityRequestDetailPage() {
                 <span className="eligibility-detail__label">
                   {t("eligibilityDetail.requestedBy")}
                 </span>
-                <Link to={`/people/${request.requester.id}`}>{request.requester.display_name}</Link>
+                <Link
+                  to={`/people/${request.requester.id}`}
+                  state={{ from: "/eligibility-requests" }}
+                >
+                  {request.requester.display_name}
+                </Link>
               </span>
             </span>
             <span

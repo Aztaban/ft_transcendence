@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import logo42 from "../assets/figma/42.svg";
+import BackLink from "../components/layout/BackLink";
 import LanguageSwitcher from "../components/layout/LanguageSwitcher";
 import type { LegalDocument } from "../components/layout/legalPages";
 import usePageTitle from "../components/layout/usePageTitle";
@@ -50,6 +51,9 @@ function LegalPage({ kind, standalone = false }: LegalPageProps) {
           <span>EVALS</span>
         </Link>
       )}
+
+      {/* Inside the app: back to the page the user came from, like the other pages (#374). */}
+      {!standalone && <BackLink className="legal-page__return" />}
 
       <h1>{t(`legal.${kind}.title`)}</h1>
       <p className="legal-page__updated">{t("legal.lastUpdated", { date: lastUpdated })}</p>

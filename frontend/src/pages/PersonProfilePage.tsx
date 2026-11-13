@@ -22,6 +22,7 @@ import type { PublicUser } from "../types/people";
 import type { ProjectRef } from "../types/project";
 import type { UserRole } from "../types/user";
 import { formatSlot } from "../utils/dateTime";
+import { canGoBackInApp } from "../utils/history";
 import "../styles/person-profile.css";
 
 type LoadState = "loading" | "ready" | "not-found" | "error" | "logged-out";
@@ -114,7 +115,8 @@ function PersonProfilePage() {
   const { t } = useTranslation();
   const { id } = useParams();
   const personId = Number(id);
-  const location = useLocation();
+  // Read on every navigation, for the Back button below.
+  useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading: isSessionLoading } = useAuth();
   const { user } = useCurrentUser();
@@ -283,7 +285,7 @@ function PersonProfilePage() {
   }
 
   // Opened from another page of the app: go back there (the Hitchhikers search keeps its filters).
-  const canGoBack = location.key !== "default";
+  const canGoBack = canGoBackInApp();
   const canCopy = typeof navigator !== "undefined" && Boolean(navigator.clipboard);
   const eligibleSlugs = new Set((eligible ?? []).map((project) => project.slug));
   const strip = allProjects ?? eligible ?? [];

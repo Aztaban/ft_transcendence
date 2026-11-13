@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../api/client";
@@ -11,7 +11,11 @@ import HitchhikersPage from "./HitchhikersPage";
 
 const workspace = vi.hoisted(() => ({ activeRole: "STUDENT" }));
 
-vi.mock("../api/people", () => ({ countPeople: vi.fn(), searchPeople: vi.fn() }));
+vi.mock("../api/people", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/people")>()),
+  countPeople: vi.fn(),
+  searchPeople: vi.fn(),
+}));
 vi.mock("../api/projects", () => ({ listProjects: vi.fn() }));
 vi.mock("../store/RoleContext", () => ({ useRole: () => workspace }));
 
@@ -339,6 +343,176 @@ describe("HitchhikersPage", () => {
     expect(vi.mocked(searchPeople).mock.calls.map(([params]) => params?.page)).toEqual([1, 2, 2]);
     expect(screen.queryByRole("button", { name: /Show more/ })).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+// "Who" and the top bar's search (api-plan §10.8): Hitchhikers, the Student Council, or everyone.
+describe("HitchhikersPage people search", () => {
+  function LocationProbe() {
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    return (
+      <>
+        <output data-testid="url">{location.search}</output>
+        <button type="button" onClick={() => navigate("/hitchhikers?q=mjusta&role=all")}>
+          Top bar search
+        </button>
+      </>
+    );
+  }
+
+  function renderWithUrl(path = "/hitchhikers") {
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route
+            path="/hitchhikers"
+            element={
+              <>
+                <HitchhikersPage />
+                <LocationProbe />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  function who() {
+    return screen.getByRole("combobox", { name: "Who" }) as HTMLSelectElement;
+  }
+
+  it("finds the Student Council or everyone with Who, and keeps it in the URL", async () => {
+    renderWithUrl();
+    await findCard("Psimcak");
+
+    expect(who().value).toBe("tutor");
+
+    fireEvent.change(who(), { target: { value: "sc_member" } });
+
+    await waitFor(() => expect(searchedWith()?.role).toBe("sc_member"));
+    expect(screen.getByTestId("url").textContent).toBe("?role=sc_member");
+
+    fireEvent.change(who(), { target: { value: "all" } });
+
+    await waitFor(() => expect(screen.getByTestId("url").textContent).toBe("?role=all"));
+    expect(searchedWith()).toEqual({
+      role: undefined,
+      q: undefined,
+      project: undefined,
+      ordering: "display_name",
+      page: 1,
+    });
+    await waitFor(() =>
+      expect(document.getElementById("hitchhikers-search-hint")?.textContent).toBe("2 people"),
+    );
+  });
+
+  it("reads the top bar's search from the URL: a name, for everyone", async () => {
+    renderWithUrl("/hitchhikers?q=lenka&role=all");
+    await findCard("Psimcak");
+
+    expect(searchedWith()).toMatchObject({ role: undefined, q: "lenka" });
+    expect(who().value).toBe("all");
+    expect(
+      (screen.getByRole("searchbox", { name: "Search people by name" }) as HTMLInputElement).value,
+    ).toBe("lenka");
+  });
+
+  it("takes a new name from the top bar while the page is open", async () => {
+    renderWithUrl("/hitchhikers?q=lenka&role=all");
+    await findCard("Psimcak");
+
+    fireEvent.click(screen.getByRole("button", { name: "Top bar search" }));
+
+    await waitFor(() => expect(searchedWith()?.q).toBe("mjusta"));
+    expect(
+      (screen.getByRole("searchbox", { name: "Search people by name" }) as HTMLInputElement).value,
+    ).toBe("mjusta");
+
+    // After the search box's pause, the URL still has the new name, not the old one.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(screen.getByTestId("url").textContent).toBe("?q=mjusta&role=all");
+  });
+
+  it("keeps Who when it changes right after typing a name", async () => {
+    renderWithUrl();
+    await findCard("Psimcak");
+
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "ps" } });
+    fireEvent.change(who(), { target: { value: "sc_member" } });
+
+    // The name's timer fires after Who changed: it must not write the old URL back.
+    await waitFor(() => expect(searchedWith()).toMatchObject({ role: "sc_member", q: "ps" }));
+    expect(who().value).toBe("sc_member");
+    expect(screen.getByTestId("url").textContent).toBe("?role=sc_member&q=ps");
+  });
+
+  it("starts a top bar search from the first page after Show more", async () => {
+    vi.mocked(searchPeople)
+      .mockResolvedValueOnce(resultPage([psimcak, lenka], 3, "/api/v1/search/people/?page=2"))
+      .mockResolvedValueOnce(resultPage([mjusta], 3))
+      .mockResolvedValue(resultPage([lenka]));
+    renderWithUrl("/hitchhikers?role=all");
+    await findCard("Psimcak");
+    fireEvent.click(screen.getByRole("button", { name: "Show more (1 left)" }));
+    await findCard("Mjusta");
+
+    fireEvent.click(screen.getByRole("button", { name: "Top bar search" }));
+
+    // Only the new search's first page: nothing of the old list is kept.
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Psimcak" })).toBeNull());
+    expect(searchedWith()).toMatchObject({ q: "mjusta", page: 1 });
+    expect(screen.queryByRole("heading", { name: "Mjusta" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Lenka Husarova" })).toBeTruthy();
+  });
+
+  it("says nobody was found, not no Hitchhikers, outside the Hitchhikers", async () => {
+    vi.mocked(searchPeople).mockResolvedValue(resultPage([]));
+    renderPage("/hitchhikers?q=zz&role=sc_member");
+
+    expect(await screen.findByRole("heading", { name: "Nobody found" })).toBeTruthy();
+  });
+
+  // Only Hitchhikers are eligible for projects, so the Student Council and a project never match.
+  it("offers no project for the Student Council and drops the chosen one", async () => {
+    renderWithUrl("/hitchhikers?project=born2beroot");
+    await findCard("Psimcak");
+
+    expect(searchedWith()?.project).toBe("born2beroot");
+
+    fireEvent.change(who(), { target: { value: "sc_member" } });
+
+    await waitFor(() => expect(screen.getByTestId("url").textContent).toBe("?role=sc_member"));
+    expect(searchedWith()).toMatchObject({ role: "sc_member", project: undefined });
+    expect(screen.queryByRole("combobox", { name: /Project/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /born2beroot/ })).toBeNull();
+
+    fireEvent.change(who(), { target: { value: "all" } });
+
+    expect(await screen.findByRole("combobox", { name: /Project/ })).toBeTruthy();
+  });
+
+  it("ignores a project in a shared link for the Student Council", async () => {
+    renderWithUrl("/hitchhikers?role=sc_member&project=born2beroot");
+    await findCard("Psimcak");
+
+    expect(searchedWith()).toMatchObject({ role: "sc_member", project: undefined });
+  });
+
+  it("goes back to the Hitchhikers on Clear filters after a top bar search", async () => {
+    vi.mocked(searchPeople).mockResolvedValue(resultPage([]));
+    renderWithUrl("/hitchhikers?q=zz&role=all");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Clear filters" }));
+
+    await waitFor(() => expect(screen.getByTestId("url").textContent).toBe(""));
+    expect(who().value).toBe("tutor");
+    await waitFor(() =>
+      expect(searchedWith()).toMatchObject({ role: "tutor", q: undefined, project: undefined }),
+    );
   });
 });
 

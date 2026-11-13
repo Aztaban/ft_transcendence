@@ -41,9 +41,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function renderSidebar(path = "/") {
+// `state` is what the link that opened the page passed along (e.g. `{ from: "/council/inbox" }`).
+function renderSidebar(path = "/", state?: unknown) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter initialEntries={[{ pathname: path, state }]}>
       <RoleProvider>
         <Routes>
           <Route path="*" element={<Sidebar />} />
@@ -52,6 +53,13 @@ function renderSidebar(path = "/") {
       </RoleProvider>
     </MemoryRouter>,
   );
+}
+
+function activeItems() {
+  return screen
+    .getAllByRole("link")
+    .filter((link) => link.className.includes("sidebar__nav-link--active"))
+    .map((link) => link.textContent);
 }
 
 describe("Sidebar logout", () => {
@@ -191,13 +199,6 @@ describe("Sidebar language", () => {
 });
 
 describe("Sidebar active item", () => {
-  function activeItems() {
-    return screen
-      .getAllByRole("link")
-      .filter((link) => link.className.includes("sidebar__nav-link--active"))
-      .map((link) => link.textContent);
-  }
-
   test("highlights only Messages on a council message", () => {
     currentUser.roles = ["student", "sc_member"];
     currentUser.isLoaded = true;
@@ -354,5 +355,33 @@ describe("Sidebar role menu keyboard", () => {
     expect(screen.queryByRole("listbox")).toBeNull();
     expect(button.textContent).toBe("HITCHHIKER");
     expect(document.activeElement).toBe(button);
+  });
+
+  // #374: a person's profile belongs to the Hitchhikers item.
+  test("keeps Hitchhikers highlighted on a person's profile", () => {
+    renderSidebar("/people/2");
+
+    const hitchhikers = screen.getByRole("link", { name: "Hitchhikers" });
+
+    expect(hitchhikers.classList.contains("sidebar__nav-link--active")).toBe(true);
+    // Screen readers hear it as the current page too.
+    expect(hitchhikers.getAttribute("aria-current")).toBe("page");
+    expect(
+      screen.getByRole("link", { name: "Home" }).classList.contains("sidebar__nav-link--active"),
+    ).toBe(false);
+  });
+
+  test("keeps Messages highlighted on a sender's profile opened from a council message", () => {
+    currentUser.roles = ["student", "sc_member"];
+    currentUser.isLoaded = true;
+
+    renderSidebar("/people/7", { from: "/council/inbox" });
+    fireEvent.click(screen.getByRole("button", { name: /STUDENT/ }));
+    fireEvent.click(screen.getByRole("option", { name: "COUNCIL" }));
+
+    expect(activeItems()).toEqual(["Messages"]);
+    expect(screen.getByRole("link", { name: "Messages" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
   });
 });

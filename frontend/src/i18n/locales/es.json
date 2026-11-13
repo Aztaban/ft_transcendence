@@ -41,8 +41,8 @@
   "topbar": {
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
-    "search": "Buscar",
-    "searchPlaceholder": "buscar",
+    "search": "Buscar personas",
+    "searchPlaceholder": "buscar personas",
     "notifications": "Notificaciones",
     "notificationsUnread_one": "Notificaciones, {{count}} sin leer",
     "notificationsUnread_other": "Notificaciones, {{count}} sin leer",
@@ -56,6 +56,7 @@
   },
   "common": {
     "backToHome": "Volver al inicio",
+    "back": "Volver",
     "clickToClose": "Haz clic en cualquier sitio para cerrar",
     "close": "Cerrar",
     "cancel": "Cancelar",
@@ -954,7 +955,18 @@
     "total_one": "{{count}} Hitchhiker",
     "total_other": "{{count}} Hitchhikers",
     "projectCount_one": "{{count}} proyecto",
-    "projectCount_other": "{{count}} proyectos"
+    "projectCount_other": "{{count}} proyectos",
+    "who": "Quién",
+    "whoHitchhikers": "Hitchhikers",
+    "whoCouncil": "Consejo estudiantil",
+    "whoEveryone": "Todos",
+    "searchPeopleAria": "Buscar personas por nombre",
+    "totalPeople_one": "{{count}} persona",
+    "totalPeople_many": "{{count}} personas",
+    "totalPeople_other": "{{count}} personas",
+    "nobodyFound": "No se encontró a nadie",
+    "nobodyYet": "Todavía no hay nadie",
+    "nobodyYetText": "Las personas aparecen aquí cuando reciben el rol de Hitchhiker o de Consejo estudiantil."
   },
   "person": {
     "headTutorText": "Evalúa a los estudiantes y revisa qué proyectos puede evaluar cada Hitchhiker.",

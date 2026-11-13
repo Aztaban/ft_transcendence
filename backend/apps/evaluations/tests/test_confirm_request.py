@@ -3,8 +3,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from threading import Barrier
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, call
+from unittest.mock import call
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -18,7 +17,10 @@ from apps.evaluations.models import EvaluationRequest, Project, TutorEligibility
 from apps.evaluations.services import InvalidStateTransition, confirm_request
 from apps.notifications.models import Notification
 
-pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
+pytestmark = [
+    pytest.mark.django_db,
+    pytest.mark.usefixtures("empty_project_catalog", "user_event_sender"),
+]
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
 START = datetime(2026, 10, 12, 15, tzinfo=timezone.utc)
 PASSWORD = "RequestPassword123!"
@@ -37,22 +39,6 @@ def confirm_url(pk=17):
 @pytest.fixture(autouse=True)
 def fixed_time(monkeypatch):
     monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
-
-
-@pytest.fixture(autouse=True)
-def event_sender(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
-
-
-@pytest.fixture
-def seeded_roles():
-    # Transaction tests flush migration seed data between tests.
-    for name in Role.Name.values:
-        Role.objects.get_or_create(name=name)
 
 
 @pytest.fixture
@@ -107,38 +93,24 @@ def expected():
     }
 
 
-def session_client(student):
-    client = APIClient(enforce_csrf_checks=True)
-    client.get(reverse("api:session"), HTTP_HOST="localhost")
-    response = client.post(
-        reverse("api:login"),
-        {"email": student.email, "password": PASSWORD},
-        format="json",
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
-    assert response.status_code == 200
-    return client
-
-
 def test_confirm_with_real_session_and_no_body(
-    student, evaluation, expected, event_sender, django_capture_on_commit_callbacks
+    student, evaluation, expected, user_event_sender, django_capture_on_commit_callbacks, api_login
 ):
     other = get_user_model().objects.create_user(id=43, email="other-tutor@example.com")
     other.roles.add(Role.objects.get(name="head_tutor"))
     TutorEligibility.objects.create(tutor=other, project=evaluation.project)
-    client = session_client(student)
+    client = api_login(student, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(
             confirm_url(),
             HTTP_HOST="localhost",
             HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
         )
-        event_sender.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
     assert response.status_code == 200
     assert response.json() == expected
     assert len(callbacks) == 2
-    assert event_sender.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call(
             "user_7",
             {
@@ -206,8 +178,10 @@ def test_authentication_required():
     }
 
 
-def test_confirmation_updates_both_participants_pending_lists(student, tutor, evaluation, expected):
-    student_client = session_client(student)
+def test_confirmation_updates_both_participants_pending_lists(
+    student, tutor, evaluation, expected, api_login
+):
+    student_client = api_login(student, PASSWORD)
     tutor_client = APIClient()
     tutor_client.force_authenticate(tutor)
     list_url = reverse("api:evaluation-request-list")
@@ -327,8 +301,8 @@ def test_confirmed_slot_stays_pending_until_its_end_passes(
     assert evaluation.result is None
 
 
-def test_csrf_required(student, evaluation):
-    response = session_client(student).post(confirm_url(), HTTP_HOST="localhost")
+def test_csrf_required(student, evaluation, api_login):
+    response = api_login(student, PASSWORD).post(confirm_url(), HTTP_HOST="localhost")
     assert response.status_code == 403
     assert response.json() == {
         "error": {
@@ -342,7 +316,7 @@ def test_csrf_required(student, evaluation):
 
 @pytest.mark.parametrize("role", ["tutor", "head_tutor", "admin"])
 def test_visible_non_owner_cannot_confirm(
-    tutor, evaluation, role, event_sender, django_capture_on_commit_callbacks
+    tutor, evaluation, role, user_event_sender, django_capture_on_commit_callbacks
 ):
     tutor.roles.add(Role.objects.get(name=role))
     client = APIClient()
@@ -351,7 +325,7 @@ def test_visible_non_owner_cannot_confirm(
         response = client.post(confirm_url())
     assert callbacks == []
     assert not Notification.objects.exists()
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert response.status_code == 403
     assert response.json() == {
         "error": {
@@ -375,7 +349,7 @@ def test_hidden_or_missing_request_returns_404(evaluation, pk):
 
 @pytest.mark.parametrize("status", ["pending", "confirmed", "cancelled", "expired"])
 def test_other_states_rejected(
-    student, evaluation, status, event_sender, django_capture_on_commit_callbacks
+    student, evaluation, status, user_event_sender, django_capture_on_commit_callbacks
 ):
     changes = {"status": status}
     if status in ("pending", "expired"):
@@ -391,7 +365,7 @@ def test_other_states_rejected(
         response = client.post(confirm_url())
     assert callbacks == []
     assert not Notification.objects.exists()
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == INVALID_STATE
     evaluation.refresh_from_db()
@@ -400,7 +374,7 @@ def test_other_states_rejected(
 
 @pytest.mark.parametrize("offset", [timedelta(0), timedelta(microseconds=1)])
 def test_start_boundary_rejected(
-    student, evaluation, monkeypatch, offset, event_sender, django_capture_on_commit_callbacks
+    student, evaluation, monkeypatch, offset, user_event_sender, django_capture_on_commit_callbacks
 ):
     monkeypatch.setattr("django.utils.timezone.now", lambda: START + offset)
     client = APIClient()
@@ -409,7 +383,7 @@ def test_start_boundary_rejected(
         response = client.post(confirm_url())
     assert callbacks == []
     assert not Notification.objects.exists()
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == {
         "error": {
@@ -442,7 +416,7 @@ def test_stale_instance_cannot_confirm_released_pick(evaluation):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_confirmation_has_one_winner(student, evaluation, expected, event_sender):
+def test_concurrent_confirmation_has_one_winner(student, evaluation, expected, user_event_sender):
     barrier = Barrier(2)
 
     def submit(_):
@@ -461,7 +435,7 @@ def test_concurrent_confirmation_has_one_winner(student, evaluation, expected, e
     assert responses == [(200, expected), (409, INVALID_STATE)]
     evaluation.refresh_from_db()
     assert evaluation.status == "confirmed"
-    assert event_sender.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call(
             "user_7",
             {
@@ -490,7 +464,7 @@ def test_concurrent_confirmation_has_one_winner(student, evaluation, expected, e
 
 
 def test_rolled_back_confirmation_sends_no_event(
-    evaluation, event_sender, django_capture_on_commit_callbacks
+    evaluation, user_event_sender, django_capture_on_commit_callbacks
 ):
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         with pytest.raises(RuntimeError, match="rollback"):
@@ -499,21 +473,21 @@ def test_rolled_back_confirmation_sends_no_event(
                 raise RuntimeError("rollback")
     assert callbacks == []
     assert not Notification.objects.exists()
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
 
 
 def test_confirmation_event_waits_for_outer_transaction(
-    evaluation, event_sender, django_capture_on_commit_callbacks
+    evaluation, user_event_sender, django_capture_on_commit_callbacks
 ):
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         with transaction.atomic():
             confirm_request(evaluation)
-            event_sender.assert_not_awaited()
-        event_sender.assert_not_awaited()
+            user_event_sender.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
     assert len(callbacks) == 2
-    assert event_sender.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call(
             "user_7",
             {
@@ -542,7 +516,12 @@ def test_confirmation_event_waits_for_outer_transaction(
 
 
 def test_notification_creation_failure_rolls_back_transition(
-    student, evaluation, event_sender, monkeypatch, django_capture_on_commit_callbacks
+    student,
+    evaluation,
+    user_event_sender,
+    monkeypatch,
+    django_capture_on_commit_callbacks,
+    api_login,
 ):
     from apps.notifications.services import create_notification
 
@@ -551,7 +530,7 @@ def test_notification_creation_failure_rolls_back_transition(
         raise RuntimeError("Injected notification failure")
 
     monkeypatch.setattr("apps.evaluations.notifications.create_notification", fail_after_write)
-    client = session_client(student)
+    client = api_login(student, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(
             confirm_url(),
@@ -569,7 +548,7 @@ def test_notification_creation_failure_rolls_back_transition(
     assert evaluation.ends_at == START + timedelta(minutes=45)
     assert not Notification.objects.exists()
     assert callbacks == []
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 @override_settings(TIME_ZONE="Europe/Prague")
