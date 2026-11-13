@@ -227,6 +227,7 @@
   },
   "evaluation": {
     "loadError": "No se pudo cargar esta evaluación.",
+    "loading": "Cargando la evaluación…",
     "gone": "Esta evaluación ya no está disponible. Puede que se haya cancelado o rechazado.",
     "takenTitle": "Un <strong>HITCHHIKER</strong> ha tomado tu solicitud",
     "proposedByYou": "Has propuesto un horario",
@@ -342,6 +343,7 @@
   "project": {
     "notFound": "Este proyecto no existe o no está abierto a evaluaciones.",
     "error": "No se pudo cargar el proyecto. Inténtalo más tarde.",
+    "loading": "Cargando el proyecto…",
     "subtitle": "Evaluación de Hitchhiker",
     "noTopics": "Todavía no se han añadido los temas de este proyecto.",
     "info": "Información del proyecto",

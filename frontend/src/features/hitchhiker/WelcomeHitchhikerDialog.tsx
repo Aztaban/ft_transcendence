@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { createEligibilityRequest } from "../../api/eligibility";
 import { listProjects } from "../../api/projects";
 import hitchhikersIcon from "../../assets/figma/hitchhikers.svg";
+import Skeleton from "../../components/ui/Skeleton";
 import useDialog from "../../hooks/useDialog";
 import type { ProjectRef } from "../../types/project";
 import { projectInitials } from "../projects/ProjectOverview";
@@ -27,6 +28,8 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
   const cardRef = useDialog<HTMLDivElement>(onClose);
   const [view, setView] = useState<View>("form");
   const [projects, setProjects] = useState<ProjectRef[]>([]);
+  // Until GET /projects/ answers (#369): placeholders instead of an empty box.
+  const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,11 +43,13 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
       .then((result) => {
         if (active) {
           setProjects(result);
+          setIsLoading(false);
         }
       })
       .catch(() => {
         if (active) {
           setLoadError(true);
+          setIsLoading(false);
         }
       });
 
@@ -134,8 +139,16 @@ function WelcomeHitchhikerDialog({ onClose }: WelcomeHitchhikerDialogProps) {
             {t("projectSelect.error")}
           </p>
         ) : (
-          <fieldset className="welcome-dialog__projects" aria-busy={projects.length === 0}>
+          <fieldset className="welcome-dialog__projects" aria-busy={isLoading}>
             <legend className="welcome-dialog__sr-only">{t("welcome.projects")}</legend>
+            {isLoading && (
+              <Skeleton
+                label={t("projectSelect.loading")}
+                count={3}
+                className="welcome-dialog__loading"
+                itemClassName="ui-skeleton__item welcome-dialog__skeleton"
+              />
+            )}
             {projects.map((project, index) => (
               <label
                 className={

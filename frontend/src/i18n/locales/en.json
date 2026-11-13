@@ -224,6 +224,7 @@
   },
   "evaluation": {
     "loadError": "This evaluation could not be loaded.",
+    "loading": "Loading the evaluation…",
     "gone": "This evaluation is no longer available. It may have been cancelled or declined.",
     "takenTitle": "A <strong>HITCHHIKER</strong> has taken your request",
     "proposedByYou": "You proposed a slot",
@@ -339,6 +340,7 @@
   "project": {
     "notFound": "This project does not exist or is not open for evaluations.",
     "error": "Could not load the project. Please try again later.",
+    "loading": "Loading the project…",
     "subtitle": "Hitchhiker evaluation",
     "noTopics": "Topics for this project haven't been added yet.",
     "info": "Project Info",

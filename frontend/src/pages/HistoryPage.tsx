@@ -201,6 +201,9 @@ function HistoryPage() {
   }, [viewer, filter, project, page, reloadKey]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Another page or filter keeps the cards shown, greyed out, until the new ones arrive: the
+  // Previous / Next button just used stays in place and keeps the focus (#369).
+  const isRefreshing = loadState === "loading" && requests.length > 0;
   const isFiltered = filter !== "all" || project !== "";
 
   return (
@@ -253,7 +256,7 @@ function HistoryPage() {
         </label>
       </div>
 
-      {loadState === "loading" && (
+      {loadState === "loading" && !isRefreshing && (
         <div className="history-page__list" aria-busy="true">
           {[1, 2, 3].map((placeholder) => (
             <div className="history-page__skeleton" key={placeholder} />
@@ -275,9 +278,9 @@ function HistoryPage() {
         </div>
       )}
 
-      {loadState === "ready" && requests.length > 0 && (
+      {(loadState === "ready" || isRefreshing) && requests.length > 0 && (
         <>
-          <ul className="history-page__list">
+          <ul className="history-page__list" aria-busy={isRefreshing}>
             {requests.map((request) => {
               const result = outcome(request);
               const person = otherPerson(request, viewer);
@@ -334,7 +337,9 @@ function HistoryPage() {
               <span aria-live="polite">{t("history.page", { page, count: pageCount })}</span>
               <button
                 type="button"
-                disabled={!hasNext}
+                // `hasNext` is the shown page's until the next one arrives: a second quick click
+                // must not ask for a page past the last one.
+                disabled={!hasNext || page >= pageCount}
                 onClick={() => setPage((current) => current + 1)}
               >
                 {t("common.next")} <span aria-hidden="true">›</span>

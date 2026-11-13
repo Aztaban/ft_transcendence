@@ -231,6 +231,7 @@
   },
   "evaluation": {
     "loadError": "Toto hodnocení se nepodařilo načíst.",
+    "loading": "Načítám hodnocení…",
     "gone": "Toto hodnocení už není k dispozici. Možná bylo zrušeno nebo odmítnuto.",
     "takenTitle": "<strong>HITCHHIKER</strong> si vzal vaši žádost",
     "proposedByYou": "Navrhli jste termín",
@@ -346,6 +347,7 @@
   "project": {
     "notFound": "Tento projekt neexistuje nebo není otevřený pro hodnocení.",
     "error": "Projekt se nepodařilo načíst. Zkuste to prosím později.",
+    "loading": "Načítám projekt…",
     "subtitle": "Hodnocení Hitchhikerem",
     "noTopics": "Témata tohoto projektu zatím nebyla přidána.",
     "info": "Informace o projektu",

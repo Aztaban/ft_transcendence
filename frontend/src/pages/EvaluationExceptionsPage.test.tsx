@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -124,6 +124,44 @@ describe("EvaluationExceptionsPage", () => {
     expect(await screen.findByRole("link", { name: "cub3d" })).toBeTruthy();
     expect(screen.getByText("Page 2 of 2")).toBeTruthy();
     expect(vi.mocked(listEvaluationExceptions).mock.calls).toEqual([[1], [2]]);
+  });
+
+  // #369: the rows stay until the next page arrives, so the button just used keeps the focus.
+  it("keeps the exceptions and the focus on Next while the next page loads", async () => {
+    let answer: (value: ReturnType<typeof page>) => void = () => {};
+
+    vi.mocked(listEvaluationExceptions)
+      .mockResolvedValueOnce(page([exception(1, "libft", "confirmed", "result_missing")], 41, "2"))
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      .mockResolvedValueOnce(page([exception(3, "minirt", "confirmed", "result_missing")], 41));
+
+    renderPage();
+
+    const next = await screen.findByRole("button", { name: /Next/ });
+
+    next.focus();
+    fireEvent.click(next);
+
+    expect(screen.getByRole("link", { name: "libft" })).toBeTruthy();
+    expect(screen.getByText("Page 2 of 3")).toBeTruthy();
+    expect(screen.getByRole("table").parentElement?.getAttribute("aria-busy")).toBe("true");
+    expect(document.activeElement).toBe(next);
+
+    await act(async () =>
+      answer(page([exception(2, "cub3d", "confirmed", "result_missing")], 41, "3")),
+    );
+
+    expect(screen.queryByRole("link", { name: "libft" })).toBeNull();
+    expect(screen.getByRole("link", { name: "cub3d" })).toBeTruthy();
+    expect(screen.getByRole("table").parentElement?.getAttribute("aria-busy")).toBe("false");
+    expect(document.activeElement).toBe(next);
+
+    // A quick second click on the last page asks for nothing past it.
+    fireEvent.click(next);
+    fireEvent.click(next);
+
+    expect(await screen.findByRole("link", { name: "minirt" })).toBeTruthy();
+    expect(vi.mocked(listEvaluationExceptions).mock.calls).toEqual([[1], [2], [3]]);
   });
 
   it("says so when nothing needs a decision", async () => {

@@ -55,6 +55,14 @@ function AdminUserRoute() {
   return <AdminUserDetailPage key={id} />;
 }
 
+// The same for each evaluation (#369): another one opened from a notification shows its loading
+// state, never the previous evaluation, its messages or its error in the meantime.
+function EvaluationRoute() {
+  const { id } = useParams();
+
+  return <EvaluationPage key={id} />;
+}
+
 // Back from the 42 login, which always lands on "/" (api-plan §10.1): opens the page the user
 // wanted before logging in, kept by the Login page (#328).
 function ReturnAfterLogin() {
@@ -107,7 +115,7 @@ function AuthenticatedApp() {
             </RoleGuard>
           }
         />
-        <Route path="/evaluations/:id" element={<EvaluationPage />} />
+        <Route path="/evaluations/:id" element={<EvaluationRoute />} />
         <Route
           path="/requests/:id"
           element={

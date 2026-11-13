@@ -42,6 +42,17 @@ describe("ProjectDetailsPage", () => {
     expect(screen.getByText("42 Prague")).toBeTruthy();
   });
 
+  // #369: screen readers hear what is loading, not only an empty busy block.
+  it("says that the project is loading", () => {
+    vi.mocked(getProject).mockReturnValue(new Promise(() => {}));
+
+    renderPage();
+
+    const label = screen.getByText("Loading the project…");
+
+    expect(label.closest("[aria-busy='true']")).toBeTruthy();
+  });
+
   it("explains a missing or inactive project (404)", async () => {
     vi.mocked(getProject).mockRejectedValue(new ApiError(404, "Not found.", "not_found"));
 

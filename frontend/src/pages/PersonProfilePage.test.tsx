@@ -358,6 +358,26 @@ describe("PersonProfilePage", () => {
     expect(texts(screen.getByRole("list", { name: "Roles" }), "listitem")).toEqual(["Head Tutor"]);
   });
 
+  // #369: the new roles replace the person, but the projects and the evaluations stay shown.
+  it("keeps the projects and the evaluations after a role change, without loading them again", async () => {
+    me.roles = [
+      { id: 1, name: "student" },
+      { id: 5, name: "admin" },
+    ];
+    vi.mocked(revokeRole).mockResolvedValue(undefined);
+    renderPage();
+    await findProfile();
+    await waitFor(() => expect(listEvaluationRequests).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove the role Student Council" }));
+
+    expect(await screen.findByText("Role Student Council removed.")).toBeTruthy();
+    expect(document.querySelector("[aria-busy='true']")).toBeNull();
+    expect(getTutorEligibility).toHaveBeenCalledTimes(1);
+    expect(listProjects).toHaveBeenCalledTimes(1);
+    expect(listEvaluationRequests).toHaveBeenCalledTimes(2);
+  });
+
   it("lets a Head Tutor make a student a Hitchhiker", async () => {
     const student: PublicUser = { ...lenka, roles: [{ id: 1, name: "student" }] };
 

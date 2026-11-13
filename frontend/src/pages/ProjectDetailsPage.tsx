@@ -4,6 +4,7 @@ import { useParams } from "react-router";
 
 import BackLink from "../components/layout/BackLink";
 import usePageTitle from "../components/layout/usePageTitle";
+import Skeleton from "../components/ui/Skeleton";
 import { ApiError } from "../api/client";
 import { getProject } from "../api/projects";
 import ProjectOverview, { projectInitials } from "../features/projects/ProjectOverview";
@@ -49,7 +50,14 @@ function ProjectDetailsPage() {
     <section className="project-details">
       <BackLink className="project-details__back" />
 
-      {loadState === "loading" && <div className="project-details__skeleton" aria-busy="true" />}
+      {loadState === "loading" && (
+        <Skeleton
+          label={t("project.loading")}
+          count={1}
+          className="project-details__loading"
+          itemClassName="project-details__skeleton"
+        />
+      )}
 
       {loadState === "not-found" && (
         <p className="project-details__error" role="alert">
