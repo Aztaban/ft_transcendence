@@ -3,8 +3,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from threading import Barrier
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, call
+from unittest.mock import call
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -17,22 +16,16 @@ from apps.evaluations.tasks import expire_evaluation_requests
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 
-pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
+pytestmark = [
+    pytest.mark.django_db,
+    pytest.mark.usefixtures("empty_project_catalog", "user_event_sender"),
+]
 NOW = datetime(2026, 10, 22, 12, tzinfo=timezone.utc)
 
 
 @pytest.fixture(autouse=True)
 def fixed_time(monkeypatch):
     monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
-
-
-@pytest.fixture(autouse=True)
-def send(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
 
 
 @pytest.fixture
@@ -120,23 +113,29 @@ def test_ttl_is_configurable(evaluation_factory, settings):
         ("expired", None),
     ],
 )
-def test_confirmed_and_final_requests_are_unchanged(evaluation_factory, status, result, send):
+def test_confirmed_and_final_requests_are_unchanged(
+    evaluation_factory, status, result, user_event_sender
+):
     evaluation = evaluation_factory(status, start=NOW - timedelta(hours=2), result=result)
     before = EvaluationRequest.objects.values().get(pk=evaluation.pk)
     assert expire_evaluation_requests() == 0
     assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == before
     assert not Notification.objects.exists()
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 @pytest.mark.parametrize("previous_status", ["pending", "awaiting_confirmation"])
 def test_expiry_stores_exact_facts_and_delivers_after_commit(
-    evaluation_factory, send, django_capture_on_commit_callbacks, previous_status, monkeypatch
+    evaluation_factory,
+    user_event_sender,
+    django_capture_on_commit_callbacks,
+    previous_status,
+    monkeypatch,
 ):
     evaluation = evaluation_factory(previous_status)
     with django_capture_on_commit_callbacks(execute=True):
         assert expire_evaluation_requests() == 1
-        send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
         # Only the student is notified. The Hitchhiker of an expired proposal gets the event
         # below but no notification, because expiry hides the request from them (R17).
         assert list(
@@ -161,7 +160,7 @@ def test_expiry_stores_exact_facts_and_delivers_after_commit(
         "event": "evaluation.expired",
         "data": {"id": 17, "status": "expired"},
     }
-    assert send.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call("user_7", event),
         call("user_43" if previous_status == "pending" else "user_42", event),
         call(
@@ -191,7 +190,7 @@ def test_expiry_stores_exact_facts_and_delivers_after_commit(
 
 @pytest.mark.parametrize("previous_status", ["pending", "awaiting_confirmation"])
 def test_outer_rollback_preserves_request_and_discards_notifications(
-    evaluation_factory, send, django_capture_on_commit_callbacks, previous_status
+    evaluation_factory, user_event_sender, django_capture_on_commit_callbacks, previous_status
 ):
     evaluation = evaluation_factory(previous_status)
     before = EvaluationRequest.objects.values().get(pk=evaluation.pk)
@@ -203,11 +202,11 @@ def test_outer_rollback_preserves_request_and_discards_notifications(
     assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == before
     assert not Notification.objects.exists()
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 def test_notification_failure_rolls_back_expiry(
-    evaluation_factory, send, monkeypatch, django_capture_on_commit_callbacks
+    evaluation_factory, user_event_sender, monkeypatch, django_capture_on_commit_callbacks
 ):
     evaluation = evaluation_factory("awaiting_confirmation")
     before = EvaluationRequest.objects.values().get(pk=evaluation.pk)
@@ -223,10 +222,12 @@ def test_notification_failure_rolls_back_expiry(
     assert EvaluationRequest.objects.values().get(pk=evaluation.pk) == before
     assert not Notification.objects.exists()
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
-def test_request_changed_after_candidate_scan_is_not_expired(evaluation_factory, monkeypatch, send):
+def test_request_changed_after_candidate_scan_is_not_expired(
+    evaluation_factory, monkeypatch, user_event_sender
+):
     from apps.evaluations.services import lock_participants
 
     evaluation_factory()
@@ -244,10 +245,12 @@ def test_request_changed_after_candidate_scan_is_not_expired(evaluation_factory,
     assert expire_evaluation_requests() == 0
     assert EvaluationRequest.objects.get(pk=17).status == "confirmed"
     assert not Notification.objects.exists()
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
-def test_lost_conditional_update_creates_no_side_effects(evaluation_factory, monkeypatch, send):
+def test_lost_conditional_update_creates_no_side_effects(
+    evaluation_factory, monkeypatch, user_event_sender
+):
     evaluation_factory()
     original = QuerySet.update
 
@@ -260,7 +263,7 @@ def test_lost_conditional_update_creates_no_side_effects(evaluation_factory, mon
     assert expire_evaluation_requests() == 0
     assert EvaluationRequest.objects.get(pk=17).status == "pending"
     assert not Notification.objects.exists()
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 @pytest.mark.django_db(transaction=True)

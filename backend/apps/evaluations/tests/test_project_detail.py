@@ -16,16 +16,6 @@ def project():
     return Project.objects.create(id=4, slug="push_swap", name="push_swap")
 
 
-@pytest.fixture
-def session_client():
-    user = get_user_model().objects.create_user(
-        email="student@example.com", password="test-password", display_name="Student"
-    )
-    client = APIClient(enforce_csrf_checks=True)
-    client.force_login(user)
-    return client
-
-
 def create_tutor(user_id, display_name, project, roles, status="active"):
     user = get_user_model().objects.create_user(
         id=user_id,

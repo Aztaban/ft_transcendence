@@ -10,16 +10,6 @@ from apps.evaluations.models import Project
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
 
 
-@pytest.fixture
-def session_client():
-    user = get_user_model().objects.create_user(
-        email="student@example.com", password="test-password", display_name="Student"
-    )
-    client = APIClient(enforce_csrf_checks=True)
-    client.force_login(user)
-    return client
-
-
 def test_project_list_requires_authentication():
     response = APIClient().get(reverse("api:project-list"))
 

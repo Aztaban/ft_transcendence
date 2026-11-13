@@ -4,8 +4,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from threading import Barrier
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, call
+from unittest.mock import call
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -65,19 +64,6 @@ def grant(tutor, project):
     return TutorEligibility.objects.create(tutor=tutor, project=project)
 
 
-def browser_for(user):
-    client = APIClient(enforce_csrf_checks=True)
-    client.get(reverse("api:session"))
-    response = client.post(
-        reverse("api:login"),
-        {"email": user.email, "password": PASSWORD},
-        format="json",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
-    assert response.status_code == 200
-    return client
-
-
 def revoke(client, slug, tutor_id, body=None):
     kwargs = {
         "format": "json",
@@ -87,15 +73,6 @@ def revoke(client, slug, tutor_id, body=None):
     if body is None:
         return client.delete(url, **kwargs)
     return client.delete(url, body, **kwargs)
-
-
-@pytest.fixture
-def send(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
 
 
 def test_revoke_requires_authentication(make_user, project):
@@ -153,18 +130,24 @@ def test_missing_eligibility_is_not_found(make_user, project, other_project, mis
 
 @pytest.mark.parametrize("reviewer_role", REVIEWERS)
 def test_reviewer_revokes_one_project_and_keeps_the_other(
-    make_user, project, other_project, reviewer_role, send, django_capture_on_commit_callbacks
+    make_user,
+    project,
+    other_project,
+    reviewer_role,
+    user_event_sender,
+    django_capture_on_commit_callbacks,
+    api_login,
 ):
     tutor = make_user("tutor@example.com", display_name="Tutor", roles=(Role.Name.TUTOR,))
     reviewer = make_user(f"{reviewer_role}@example.com", roles=(reviewer_role,))
     removed = grant(tutor, project)
     kept = grant(tutor, other_project)
-    client = browser_for(reviewer)
+    client = api_login(reviewer, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True):
         response = revoke(client, project.slug, tutor.pk, {"reason": "No longer teaching it."})
         assert response.status_code == 204
         assert response.content == b""
-        send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
     assert not TutorEligibility.objects.filter(tutor=tutor, project=project).exists()
     assert TutorEligibility.objects.filter(pk=kept.pk).exists()
     notification = Notification.objects.get()
@@ -181,7 +164,7 @@ def test_reviewer_revokes_one_project_and_keeps_the_other(
         "target_url": "/profile",
         "read_at": None,
     }
-    assert send.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call(
             f"user_{tutor.pk}",
             {
@@ -215,7 +198,7 @@ def test_reviewer_revokes_one_project_and_keeps_the_other(
     ]
 
 
-def test_inactive_project_eligibility_can_be_revoked(make_user, send):
+def test_inactive_project_eligibility_can_be_revoked(make_user, user_event_sender):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     head = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
     project = Project.objects.create(slug="retired", name="Retired", is_active=False)
@@ -283,11 +266,13 @@ def test_reason_over_500_characters_is_rejected(make_user, project):
     assert not AuditLog.objects.exists()
 
 
-def test_session_revoke_requires_csrf(make_user, project, send, django_capture_on_commit_callbacks):
+def test_session_revoke_requires_csrf(
+    make_user, project, user_event_sender, django_capture_on_commit_callbacks, api_login
+):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     head = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
     grant(tutor, project)
-    client = browser_for(head)
+    client = api_login(head, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         denied = client.delete(revoke_url(tutor_id=tutor.pk), {"reason": "overlap"}, format="json")
     assert denied.status_code == 403
@@ -300,7 +285,7 @@ def test_session_revoke_requires_csrf(make_user, project, send, django_capture_o
     assert TutorEligibility.objects.filter(tutor=tutor, project=project).exists()
     assert not Notification.objects.exists()
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
     accepted = revoke(client, project.slug, tutor.pk)
     assert accepted.status_code == 204
@@ -308,12 +293,12 @@ def test_session_revoke_requires_csrf(make_user, project, send, django_capture_o
 
 
 def test_repeated_revoke_does_not_repeat_side_effects(
-    make_user, project, send, django_capture_on_commit_callbacks
+    make_user, project, user_event_sender, django_capture_on_commit_callbacks, api_login
 ):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     head = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
     grant(tutor, project)
-    client = browser_for(head)
+    client = api_login(head, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True):
         assert revoke(client, project.slug, tutor.pk).status_code == 204
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
@@ -323,7 +308,7 @@ def test_repeated_revoke_does_not_repeat_side_effects(
     assert Notification.objects.count() == 1
     assert AuditLog.objects.count() == 1
     assert callbacks == []
-    assert send.await_count == 2
+    assert user_event_sender.await_count == 2
 
 
 def test_existing_picks_stay_and_future_picks_are_refused(make_user, project, monkeypatch):
@@ -373,12 +358,12 @@ def test_existing_picks_stay_and_future_picks_are_refused(make_user, project, mo
 
 
 def test_outer_rollback_discards_revocation(
-    make_user, project, send, django_capture_on_commit_callbacks
+    make_user, project, user_event_sender, django_capture_on_commit_callbacks, api_login
 ):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     head = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
     grant(tutor, project)
-    client = browser_for(head)
+    client = api_login(head, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         with pytest.raises(RuntimeError, match="rollback"):
             with transaction.atomic():
@@ -387,13 +372,18 @@ def test_outer_rollback_discards_revocation(
                 assert Notification.objects.filter(type="eligibility.revoked").exists()
                 raise RuntimeError("rollback")
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert TutorEligibility.objects.filter(tutor=tutor, project=project).exists()
     assert not Notification.objects.exists()
 
 
 def test_notification_failure_rolls_back_the_revocation(
-    make_user, project, send, monkeypatch, django_capture_on_commit_callbacks
+    make_user,
+    project,
+    user_event_sender,
+    monkeypatch,
+    django_capture_on_commit_callbacks,
+    api_login,
 ):
     tutor = make_user("tutor@example.com", roles=(Role.Name.TUTOR,))
     head = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
@@ -406,7 +396,7 @@ def test_notification_failure_rolls_back_the_revocation(
     monkeypatch.setattr(
         "apps.evaluations.notifications.create_notification", fail_after_notification
     )
-    client = browser_for(head)
+    client = api_login(head, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = revoke(client, project.slug, tutor.pk)
     assert response.status_code == 500
@@ -419,25 +409,21 @@ def test_notification_failure_rolls_back_the_revocation(
     assert TutorEligibility.objects.filter(tutor=tutor, project=project).exists()
     assert not Notification.objects.exists()
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 @pytest.mark.django_db(transaction=True)
-def test_competing_revokes_have_one_winner(make_user, monkeypatch):
+def test_competing_revokes_have_one_winner(make_user, monkeypatch, api_login, user_event_sender):
     assert connection.vendor == "mysql", "This test requires real MySQL row locking."
     # transaction=True flushes seeded roles left by an earlier test in the same run.
     for name in Role.Name.values:
         Role.objects.get_or_create(name=name)
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer",
-        lambda: SimpleNamespace(group_send=AsyncMock()),
-    )
     tutor = make_user("tutor@example.com", display_name="Tutor", roles=(Role.Name.TUTOR,))
     head = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
     admin = make_user("admin@example.com", roles=(Role.Name.ADMIN,))
     project = Project.objects.create(id=801, slug="libft", name="Libft")
     TutorEligibility.objects.create(tutor=tutor, project=project)
-    browsers = [browser_for(head), browser_for(admin)]
+    browsers = [api_login(head, PASSWORD), api_login(admin, PASSWORD)]
     barrier = Barrier(2)
     original_fetch = QuerySet._fetch_all
     lock_seen = threading.local()
@@ -540,7 +526,7 @@ def eligibility_lock_is_held(tutor_id, project_id):
 
 @pytest.mark.django_db(transaction=True)
 def test_revocation_between_permission_check_and_write_refuses_the_pick(
-    make_user, send, monkeypatch
+    make_user, user_event_sender, monkeypatch, api_login
 ):
     """CanPickSlot passes, revocation commits, and only then does the pick write."""
     monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
@@ -569,7 +555,7 @@ def test_revocation_between_permission_check_and_write_refuses_the_pick(
 
     monkeypatch.setattr(QuerySet, "_fetch_all", fetch)
     monkeypatch.setattr("apps.evaluations.views.requests.pick_slot", pick_after_revocation)
-    head_browser = browser_for(head)
+    head_browser = api_login(head, PASSWORD)
     with ThreadPoolExecutor(max_workers=1) as executor:
         pick_future = executor.submit(post_pick, tutor.pk, pending.pk)
         try:
@@ -599,11 +585,13 @@ def test_revocation_between_permission_check_and_write_refuses_the_pick(
     assert list(Notification.objects.values("recipient_id", "type")) == [
         {"recipient_id": tutor.pk, "type": "eligibility.revoked"}
     ]
-    send.assert_awaited()
+    user_event_sender.assert_awaited()
 
 
 @pytest.mark.django_db(transaction=True)
-def test_pick_holds_the_eligibility_lock_until_commit(make_user, send, monkeypatch):
+def test_pick_holds_the_eligibility_lock_until_commit(
+    make_user, user_event_sender, monkeypatch, api_login
+):
     """Revocation waits on the grant row while the pick transaction is still open."""
     monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
     tutor, head, project, pending = open_pick(make_user)
@@ -637,7 +625,7 @@ def test_pick_holds_the_eligibility_lock_until_commit(make_user, send, monkeypat
             connections.close_all()
 
     monkeypatch.setattr(QuerySet, "_fetch_all", fetch)
-    head_browser = browser_for(head)
+    head_browser = api_login(head, PASSWORD)
     with ThreadPoolExecutor(max_workers=2) as executor:
         pick_future = executor.submit(submit_pick, tutor.pk, pending.pk)
         try:
@@ -666,4 +654,4 @@ def test_pick_holds_the_eligibility_lock_until_commit(make_user, send, monkeypat
         (pending.student_id, "evaluation.slot_picked"),
         (tutor.pk, "eligibility.revoked"),
     ]
-    send.assert_awaited()
+    user_event_sender.assert_awaited()

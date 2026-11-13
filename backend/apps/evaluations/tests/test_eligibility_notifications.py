@@ -1,20 +1,18 @@
 """Eligibility notifications are stored with the workflow and pushed after commit."""
 
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, call
+from unittest.mock import call
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.urls import reverse
-from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("user_event_sender")]
 
 
 @pytest.fixture
@@ -37,28 +35,6 @@ def actors(empty_project_catalog):
     Project.objects.create(id=801, slug="libft", name="Libft")
     Project.objects.create(id=802, slug="minishell", name="Minishell")
     return users
-
-
-@pytest.fixture(autouse=True)
-def send(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
-
-
-def browser_for(user):
-    client = APIClient(enforce_csrf_checks=True)
-    client.get(reverse("api:session"))
-    response = client.post(
-        reverse("api:login"),
-        {"email": user.email, "password": "secret"},
-        format="json",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
-    assert response.status_code == 200
-    return client
 
 
 def submit(client):
@@ -86,15 +62,15 @@ def review(client, pending, decision="approved", review_note="Welcome"):
 
 
 def test_submission_notifies_only_head_tutors_with_exact_facts_and_events(
-    actors, send, django_capture_on_commit_callbacks
+    actors, user_event_sender, django_capture_on_commit_callbacks, api_login
 ):
     # Multiple roles do not duplicate a Head Tutor's notification.
     actors[1].roles.add(Role.objects.get(name=Role.Name.ADMIN))
-    client = browser_for(actors[0])
+    client = api_login(actors[0])
     with django_capture_on_commit_callbacks(execute=True):
         response = submit(client)
         assert response.status_code == 201
-        send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
         pending_id = response.json()["id"]
         assert list(
             Notification.objects.order_by("recipient_id").values(
@@ -131,7 +107,7 @@ def test_submission_notifies_only_head_tutors_with_exact_facts_and_events(
             },
         ]
     notifications = list(Notification.objects.order_by("recipient_id"))
-    assert send.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call(
             "user_702",
             {
@@ -160,9 +136,9 @@ def test_submission_notifies_only_head_tutors_with_exact_facts_and_events(
 
 
 def test_head_tutor_requester_gets_queue_event_but_no_self_notification(
-    actors, send, django_capture_on_commit_callbacks
+    actors, user_event_sender, django_capture_on_commit_callbacks, api_login
 ):
-    client = browser_for(actors[1])
+    client = api_login(actors[1])
     with django_capture_on_commit_callbacks(execute=True):
         response = submit(client)
     assert response.status_code == 201
@@ -176,36 +152,41 @@ def test_head_tutor_requester_gets_queue_event_but_no_self_notification(
                 "data": {"id": response.json()["id"]},
             },
         )
-        in send.await_args_list
+        in user_event_sender.await_args_list
     )
-    assert len(send.await_args_list) == 3
+    assert len(user_event_sender.await_args_list) == 3
 
 
 def test_submission_without_head_tutors_still_succeeds(
-    actors, send, django_capture_on_commit_callbacks
+    actors, user_event_sender, django_capture_on_commit_callbacks, api_login
 ):
     for user in actors[1:3]:
         user.roles.remove(Role.objects.get(name=Role.Name.HEAD_TUTOR))
-    client = browser_for(actors[0])
+    client = api_login(actors[0])
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = submit(client)
     assert response.status_code == 201
     assert not Notification.objects.exists()
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 @pytest.mark.parametrize("decision", ["approved", "declined"])
 @pytest.mark.parametrize("reviewer_index", [1, 3])
 def test_decision_notifies_only_requester_after_commit(
-    actors, send, django_capture_on_commit_callbacks, decision, reviewer_index
+    actors,
+    user_event_sender,
+    django_capture_on_commit_callbacks,
+    decision,
+    reviewer_index,
+    api_login,
 ):
     pending = pending_request()
-    client = browser_for(actors[reviewer_index])
+    client = api_login(actors[reviewer_index])
     with django_capture_on_commit_callbacks(execute=True):
         response = review(client, pending, decision)
         assert response.status_code == 200
-        send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
         assert list(
             Notification.objects.values("recipient_id", "type", "payload", "target_url", "read_at")
         ) == [
@@ -222,7 +203,7 @@ def test_decision_notifies_only_requester_after_commit(
             }
         ]
     notification = Notification.objects.get()
-    assert send.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call(
             "user_701",
             {
@@ -255,15 +236,15 @@ def test_decision_notifies_only_requester_after_commit(
     }
     assert Notification.objects.count() == 1
     assert callbacks == []
-    assert send.await_count == 2
+    assert user_event_sender.await_count == 2
 
 
 @pytest.mark.parametrize("action", ["submit", "review"])
 def test_outer_rollback_discards_workflow_notifications_and_events(
-    actors, send, django_capture_on_commit_callbacks, action
+    actors, user_event_sender, django_capture_on_commit_callbacks, action, api_login
 ):
     pending = pending_request() if action == "review" else None
-    client = browser_for(actors[1] if action == "review" else actors[0])
+    client = api_login(actors[1] if action == "review" else actors[0])
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         with pytest.raises(RuntimeError, match="rollback"):
             with transaction.atomic():
@@ -272,7 +253,7 @@ def test_outer_rollback_discards_workflow_notifications_and_events(
                 assert Notification.objects.exists()
                 raise RuntimeError("rollback")
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert not Notification.objects.exists()
     assert not TutorEligibility.objects.exists()
     if pending:
@@ -284,10 +265,10 @@ def test_outer_rollback_discards_workflow_notifications_and_events(
 
 @pytest.mark.parametrize("action", ["submit", "review"])
 def test_notification_failure_rolls_back_the_whole_action(
-    actors, send, monkeypatch, django_capture_on_commit_callbacks, action
+    actors, user_event_sender, monkeypatch, django_capture_on_commit_callbacks, action, api_login
 ):
     pending = pending_request() if action == "review" else None
-    client = browser_for(actors[1] if pending else actors[0])
+    client = api_login(actors[1] if pending else actors[0])
 
     def fail_after_notification(**kwargs):
         create_notification(**kwargs)
@@ -308,7 +289,7 @@ def test_notification_failure_rolls_back_the_whole_action(
     assert not Notification.objects.exists()
     assert not TutorEligibility.objects.exists()
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     if pending:
         pending.refresh_from_db()
         assert pending.status == "pending"
@@ -319,10 +300,10 @@ def test_notification_failure_rolls_back_the_whole_action(
 
 @pytest.mark.parametrize("action", ["submit", "review"])
 def test_missing_csrf_creates_no_notification_or_event(
-    actors, send, django_capture_on_commit_callbacks, action
+    actors, user_event_sender, django_capture_on_commit_callbacks, action, api_login
 ):
     pending = pending_request() if action == "review" else None
-    client = browser_for(actors[1] if pending else actors[0])
+    client = api_login(actors[1] if pending else actors[0])
     url = (
         reverse("api:tutor-eligibility-requests-review", kwargs={"request_id": pending.pk})
         if pending
@@ -340,4 +321,4 @@ def test_missing_csrf_creates_no_notification_or_event(
     }
     assert not Notification.objects.exists()
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
