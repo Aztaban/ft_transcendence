@@ -153,9 +153,9 @@ def deletion_url(user_id):
 def test_creation_does_not_discover_new_recipients_after_user_locking(
     make_user, seeded_roles, user_event_sender, monkeypatch, workflow
 ):
-    from apps.council import views as council_views
+    from apps.council import services as council_services
+    from apps.evaluations import eligibility_services
     from apps.evaluations import services as evaluation_services
-    from apps.evaluations.views import eligibility as eligibility_views
 
     recipient = make_user("new-recipient@example.com")
     creator = make_user("creator@example.com", roles=("tutor",))
@@ -168,12 +168,12 @@ def test_creation_does_not_discover_new_recipients_after_user_locking(
             "tutor",
         ),
         "eligibility": (
-            eligibility_views,
+            eligibility_services,
             "tutor-eligibility-requests-list",
             {"project_ids": [project.pk]},
             "head_tutor",
         ),
-        "council": (council_views, "sc-message-list", {"body": "Snapshot message"}, "sc_member"),
+        "council": (council_services, "sc-message-list", {"body": "Snapshot message"}, "sc_member"),
     }[workflow]
     original_lock = module.lock_users
 

@@ -94,16 +94,16 @@ def test_competing_submissions_create_only_one_pending_request(actors, monkeypat
     tutor, _, _ = actors
     browsers = [browser_for(tutor), browser_for(tutor)]
     barrier = Barrier(2)
-    from apps.evaluations.views import eligibility as eligibility_views
+    from apps.evaluations import eligibility_services
 
-    original_lock = eligibility_views.lock_users
+    original_lock = eligibility_services.lock_users
 
     def lock_after_both_reach_requester(*user_ids):
         # Rendezvous before locking the requester together with notification recipients.
         barrier.wait(timeout=10)
         return original_lock(*user_ids)
 
-    monkeypatch.setattr(eligibility_views, "lock_users", lock_after_both_reach_requester)
+    monkeypatch.setattr(eligibility_services, "lock_users", lock_after_both_reach_requester)
     responses = compete(
         browsers,
         reverse("api:tutor-eligibility-requests-list"),
@@ -154,9 +154,9 @@ def test_competing_reviews_have_one_winner_and_consistent_grants(actors, monkeyp
     existing = TutorEligibility.objects.create(tutor=tutor, project_id=801)
     browsers = [browser_for(head), browser_for(admin)]
     barrier = Barrier(2)
-    from apps.evaluations.views import eligibility as eligibility_views
+    from apps.evaluations import eligibility_services
 
-    original_lock = eligibility_views.lock_users
+    original_lock = eligibility_services.lock_users
 
     def lock_after_both_reviewers_arrive(*user_ids):
         # Reviews now serialize with account deletion on the requester row.
@@ -164,7 +164,7 @@ def test_competing_reviews_have_one_winner_and_consistent_grants(actors, monkeyp
         barrier.wait(timeout=10)
         return original_lock(*user_ids)
 
-    monkeypatch.setattr(eligibility_views, "lock_users", lock_after_both_reviewers_arrive)
+    monkeypatch.setattr(eligibility_services, "lock_users", lock_after_both_reviewers_arrive)
     responses = compete(
         browsers,
         reverse("api:tutor-eligibility-requests-review", kwargs={"request_id": pending.id}),
