@@ -103,6 +103,25 @@ describe("EligibilityReviewPage", () => {
     expect(within(row).getByRole("button", { name: "Approve dkolarov's request" })).toBeTruthy();
   });
 
+  // #370: every tab says what will appear there, not only the pending one.
+  it("says what each empty tab will show", async () => {
+    vi.mocked(listEligibilityRequests).mockResolvedValue(page([]));
+
+    renderPage();
+
+    expect(await screen.findByText("New requests from Hitchhikers will appear here.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Approved" }));
+
+    expect(await screen.findByText("No approved requests")).toBeTruthy();
+    expect(screen.getByText("Approved requests will appear here.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Declined" }));
+
+    expect(await screen.findByText("No declined requests")).toBeTruthy();
+    expect(screen.getByText("Declined requests will appear here.")).toBeTruthy();
+  });
+
   it("shows the restricted page without the head_tutor or admin role", async () => {
     logIn(["tutor"]);
 

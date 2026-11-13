@@ -4,6 +4,7 @@ import { Link } from "react-router";
 
 import { listAdminUsers } from "../api/admin";
 import usePageTitle from "../components/layout/usePageTitle";
+import EmptyState from "../components/ui/EmptyState";
 import UserStatusBadge, { rolesText } from "../features/admin/UserStatusBadge";
 import type { AdminUser, UserStatus } from "../types/adminUser";
 import type { RoleName } from "../types/user";
@@ -72,6 +73,15 @@ function AdminUsersPage() {
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setQuery(text.trim());
+    setPage(1);
+  }
+
+  // Back to every user, from the first page (#370).
+  function clearFilters() {
+    setText("");
+    setQuery("");
+    setRole("");
+    setStatus("");
     setPage(1);
   }
 
@@ -157,9 +167,19 @@ function AdminUsersPage() {
       )}
 
       {loadState === "ready" && users.length === 0 && (
-        <div className="admin-users__empty">
-          <h2>{isFiltered ? t("adminUsers.emptyFilteredTitle") : t("adminUsers.emptyTitle")}</h2>
-        </div>
+        <EmptyState
+          headingLevel={2}
+          className="admin-users__empty"
+          title={isFiltered ? t("adminUsers.emptyFilteredTitle") : t("adminUsers.emptyTitle")}
+          text={isFiltered ? t("adminUsers.emptyFilteredText") : t("adminUsers.emptyText")}
+          action={
+            isFiltered && (
+              <button type="button" onClick={clearFilters}>
+                {t("adminUsers.clearFilters")}
+              </button>
+            )
+          }
+        />
       )}
 
       {(loadState === "ready" || isRefreshing) && users.length > 0 && (

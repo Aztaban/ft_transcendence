@@ -99,6 +99,8 @@ describe("AdminUsersPage", () => {
   it("searches only when the form is submitted", async () => {
     renderPage();
     await screen.findByText("No users yet");
+    expect(screen.getByText("People appear here once they have an account.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Search"), { target: { value: "  ann  " } });
 
@@ -111,6 +113,32 @@ describe("AdminUsersPage", () => {
       { ...noFilters, page: 1 },
       { ...noFilters, q: "ann", page: 1 },
     ]);
+  });
+
+  // #370: an empty filtered list says how to get the users back.
+  it("clears every filter from the empty result", async () => {
+    vi.mocked(listAdminUsers).mockImplementation(async (params) =>
+      params?.q || params?.role || params?.status ? page([]) : page([adminUser(1, "Anna")]),
+    );
+
+    renderPage();
+    await screen.findByText("Anna");
+
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "zzz" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    fireEvent.change(screen.getByLabelText("Role"), { target: { value: "tutor" } });
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "suspended" } });
+
+    expect(await screen.findByText("No users match these filters")).toBeTruthy();
+    expect(screen.getByText("Try another email, name, role or status.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    expect(await screen.findByText("Anna")).toBeTruthy();
+    expect(vi.mocked(listAdminUsers).mock.lastCall?.[0]).toEqual({ ...noFilters, page: 1 });
+    expect((screen.getByLabelText("Search") as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText("Role") as HTMLSelectElement).value).toBe("");
+    expect((screen.getByLabelText("Status") as HTMLSelectElement).value).toBe("");
   });
 
   it("filters by role and status, starting again from the first page", async () => {
