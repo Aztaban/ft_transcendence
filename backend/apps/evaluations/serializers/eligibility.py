@@ -6,6 +6,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.references import UserRefSerializer
+from apps.core.pagination import APIPageSerializer
 from apps.evaluations.models import TutorEligibilityRequest
 from apps.evaluations.references import ProjectRefSerializer
 
@@ -37,12 +38,9 @@ class EligibilityRequestSerializer(serializers.ModelSerializer):
         return ProjectRefSerializer(projects, many=True).data
 
 
-class EligibilityRequestPageSerializer(serializers.Serializer):
+class EligibilityRequestPageSerializer(APIPageSerializer):
     """Paginated eligibility-request list (api-plan §5.7 wrapping §8.9)."""
 
-    count = serializers.IntegerField()
-    next = serializers.CharField(allow_null=True)
-    previous = serializers.CharField(allow_null=True)
     results = EligibilityRequestSerializer(many=True)
 
 
