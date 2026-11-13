@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render as renderInDom, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "../../i18n";
@@ -41,13 +41,20 @@ const lenka: UserProfile = {
   intra_login: null,
 };
 
-// The user menu navigates to the login page after logging out.
+function PeoplePage() {
+  const location = useLocation();
+
+  return <p>People page {location.search}</p>;
+}
+
+// The user menu navigates to the login page after logging out, the search to the people search.
 function render(ui: ReactElement) {
   return renderInDom(
     <MemoryRouter initialEntries={["/"]}>
       <Routes>
         <Route path="/" element={ui} />
         <Route path="/login" element={<p>Login page</p>} />
+        <Route path="/hitchhikers" element={<PeoplePage />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -263,5 +270,28 @@ describe("TopBar user menu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Otevřít uživatelské menu" }));
 
     expect(screen.getByRole("button", { name: "Odhlásit se" })).toBeTruthy();
+  });
+});
+
+describe("TopBar search", () => {
+  it("opens the people search for everyone with the typed name", () => {
+    render(<TopBar />);
+    const box = screen.getByRole("searchbox", { name: "Search people" });
+
+    fireEvent.change(box, { target: { value: "  Lenka H " } });
+    fireEvent.submit(screen.getByRole("search"));
+
+    expect(screen.getByText("People page ?q=Lenka+H&role=all")).toBeTruthy();
+  });
+
+  it("does nothing without a name", () => {
+    render(<TopBar />);
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search people" }), {
+      target: { value: "   " },
+    });
+    fireEvent.submit(screen.getByRole("search"));
+
+    expect(screen.queryByText(/People page/)).toBeNull();
   });
 });

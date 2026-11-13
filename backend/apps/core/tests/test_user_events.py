@@ -1,7 +1,6 @@
 """User-group delivery preserves session isolation and the public event envelope."""
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 from asgiref.sync import async_to_sync
@@ -68,11 +67,7 @@ def test_user_event_reaches_all_recipient_tabs_and_devices_only(layer):
     async_to_sync(connect)()
 
 
-def test_shared_delivery_snapshots_payload(monkeypatch):
-    send = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=send)
-    )
+def test_shared_delivery_snapshots_payload(monkeypatch, user_event_sender):
     callbacks = []
     monkeypatch.setattr(
         "apps.core.events.transaction.on_commit",
@@ -81,26 +76,23 @@ def test_shared_delivery_snapshots_payload(monkeypatch):
     data = {"id": 17}
     publish_user_event(event="notification.created", data=data, user_ids=[7])
     data["id"] = 99
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert len(callbacks) == 1
     callbacks[0]()
-    send.assert_awaited_once_with(
+    user_event_sender.assert_awaited_once_with(
         "user_7", {"type": "user.event", "event": "notification.created", "data": {"id": 17}}
     )
 
 
 @pytest.mark.django_db(transaction=True)
-def test_failed_event_delivery_does_not_skip_later_commit_callbacks(monkeypatch, caplog):
+def test_failed_event_delivery_does_not_skip_later_commit_callbacks(caplog, user_event_sender):
     from django.db import transaction
 
-    send = AsyncMock(side_effect=ConnectionError("Redis unavailable"))
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=send)
-    )
+    user_event_sender.side_effect = ConnectionError("Redis unavailable")
     completed = []
     with transaction.atomic():
         publish_user_event(event="evaluation.confirmed", data={"id": 17}, user_ids=[7])
         transaction.on_commit(lambda: completed.append(True))
-        send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
     assert completed == [True]
     assert "Redis unavailable" in caplog.text

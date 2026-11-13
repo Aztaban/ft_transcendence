@@ -276,7 +276,10 @@ function MyRequests() {
 
   return (
     <section className="my-requests" aria-labelledby="my-requests-title">
-      <h2 id="my-requests-title">{t("myRequests.title")}</h2>
+      {/* Focusable, so the "Your requests ↓" link at the top of the page can move the focus here. */}
+      <h2 id="my-requests-title" tabIndex={-1}>
+        {t("myRequests.title")}
+      </h2>
 
       {notice && (
         <p className="my-requests__notice" role="status">

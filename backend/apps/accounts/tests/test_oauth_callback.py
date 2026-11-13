@@ -1,9 +1,11 @@
 """42 OAuth callback browser-redirect tests; no external provider requests."""
 
+from http.client import IncompleteRead
+from unittest.mock import MagicMock, Mock
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from django.contrib.auth import SESSION_KEY
+from django.contrib.auth import SESSION_KEY, get_user_model
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
@@ -151,3 +153,48 @@ def test_callback_only_accepts_get():
     response = client.post(reverse(CALLBACK_URL), {}, format="json", HTTP_HOST="localhost")
 
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+
+@pytest.mark.parametrize(
+    "read_error",
+    [ConnectionResetError("Connection lost during read"), IncompleteRead(b"partial", 100)],
+    ids=["connection_reset", "incomplete_read"],
+)
+@pytest.mark.parametrize(
+    "stage,expected_code",
+    [
+        ("token", "oauth_token_exchange_failed"),
+        ("profile", "oauth_profile_retrieval_failed"),
+    ],
+)
+@override_settings(
+    FT_OAUTH_CLIENT_ID="test-client-id",
+    FT_OAUTH_CLIENT_SECRET="test-client-secret",
+    FT_OAUTH_REDIRECT_URI="https://localhost/api/v1/auth/42/callback/",
+)
+def test_callback_redirects_when_provider_response_read_fails(
+    monkeypatch, read_error, stage, expected_code
+):
+    failed_response = MagicMock()
+    failed_response.__enter__.return_value = failed_response
+    failed_response.__exit__.return_value = False
+    failed_response.read.side_effect = read_error
+    responses = [failed_response]
+    if stage == "profile":
+        token_response = MagicMock()
+        token_response.__enter__.return_value = token_response
+        token_response.read.return_value = b'{"access_token": "temporary-provider-token"}'
+        responses.insert(0, token_response)
+    provider = Mock(side_effect=responses)
+    monkeypatch.setattr("apps.accounts.services.oauth.urlopen", provider)
+    client = client_with_state()
+
+    response = callback(client, code="secret-authorization-code", state=STATE)
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert response["Location"] == f"/login?oauth={expected_code}"
+    assert provider.call_count == (1 if stage == "token" else 2)
+    failed_response.read.assert_called_once_with()
+    assert SESSION_KEY not in client.session
+    assert OAUTH_42_STATE_SESSION_KEY not in client.session
+    assert not get_user_model().objects.exists()

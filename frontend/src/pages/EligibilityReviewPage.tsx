@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import usePageTitle from "../components/layout/usePageTitle";
 import LoadError from "../components/ui/LoadError";
 import { initials } from "../components/ui/Avatar";
+import EmptyState from "../components/ui/EmptyState";
 import StatusPill, { type StatusTone } from "../components/ui/StatusPill";
 import Tabs from "../components/ui/Tabs";
 import { ApiError } from "../api/client";
@@ -291,10 +292,12 @@ function EligibilityReviewPage() {
       )}
 
       {loadState === "ready" && requests.length === 0 && (
-        <div className="eligibility-review__empty">
-          <h2>{t(statusTexts[status].emptyKey)}</h2>
-          <p>{t(statusTexts[status].emptyTextKey)}</p>
-        </div>
+        <EmptyState
+          headingLevel={2}
+          className="eligibility-review__empty"
+          title={t(statusTexts[status].emptyKey)}
+          text={t(statusTexts[status].emptyTextKey)}
+        />
       )}
 
       {loadState === "ready" && requests.length > 0 && (

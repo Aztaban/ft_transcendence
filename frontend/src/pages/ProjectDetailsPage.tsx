@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 
+import BackLink from "../components/layout/BackLink";
 import usePageTitle from "../components/layout/usePageTitle";
 import LoadError from "../components/ui/LoadError";
 import Skeleton from "../components/ui/Skeleton";
@@ -49,9 +50,7 @@ function ProjectDetailsPage() {
 
   return (
     <section className="project-details">
-      <Link className="project-details__back" to="/">
-        <span aria-hidden="true">‹</span> {t("common.backToHome")}
-      </Link>
+      <BackLink className="project-details__back" />
 
       {loadState === "loading" && (
         <Skeleton

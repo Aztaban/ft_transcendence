@@ -195,10 +195,7 @@
   font-weight: 500;
 }
 
-.admin-users__empty p {
-  margin: 8px 0 0;
-  color: var(--color-text-secondary);
-}
+/* Its text (`.admin-users__empty p`) is styled once, further down with the Exceptions page's. */
 
 /* "Clear filters" (#370), like the audit log's. */
 .admin-users__empty button {

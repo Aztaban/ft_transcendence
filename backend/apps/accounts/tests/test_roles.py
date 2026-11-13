@@ -1,17 +1,11 @@
 """Tests for Role / UserRole models and has_role."""
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 
 from apps.accounts.models import Role, UserRole
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def user_model():
-    return get_user_model()
 
 
 @pytest.fixture

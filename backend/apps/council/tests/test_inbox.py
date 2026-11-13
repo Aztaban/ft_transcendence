@@ -5,7 +5,6 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.fields import DateTimeField
-from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.council.models import SCMessage
@@ -15,20 +14,6 @@ pytestmark = pytest.mark.django_db
 LIST = "api:sc-message-list"
 DETAIL = "api:sc-message-detail"
 NOT_FOUND = {"error": {"code": "not_found", "message": "Not found."}}
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
-
-
-@pytest.fixture
-def council(api_client, make_user):
-    """An API client logged in as an SC Member."""
-    api_client.force_authenticate(
-        user=make_user("council@example.com", roles=(Role.Name.SC_MEMBER,))
-    )
-    return api_client
 
 
 def iso(dt):

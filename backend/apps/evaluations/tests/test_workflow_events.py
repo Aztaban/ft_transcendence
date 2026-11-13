@@ -1,8 +1,7 @@
 """Create, note edits and releases publish to the contract's recipients (§9.3)."""
 
 from datetime import timedelta
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, call
+from unittest.mock import call
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -59,18 +58,14 @@ def test_eligible_hitchhikers_query_returns_each_active_hitchhiker_once(particip
 @pytest.mark.parametrize("rollback", [False, True])
 def test_workflow_event_is_deferred_and_discarded_on_rollback(
     participants,
-    monkeypatch,
     django_capture_on_commit_callbacks,
     action,
     event,
     recipients,
     rollback,
+    user_event_sender,
 ):
     project, users = participants
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
     at = timezone.now()
     evaluation = None
     if action != "create":
@@ -92,13 +87,13 @@ def test_workflow_event_is_deferred_and_discarded_on_rollback(
                 edit_note(evaluation, {"note": "Changed note"})
             else:
                 release_slot(evaluation, users[42])
-            sender.assert_not_awaited()
+            user_event_sender.assert_not_awaited()
             if rollback:
                 transaction.set_rollback(True)
     if rollback:
         assert callbacks == []
         assert not Notification.objects.exists()
-        sender.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
     else:
         assert len(callbacks) == (1 if action == "edit" else 2)
         expected_events = [
@@ -124,7 +119,7 @@ def test_workflow_event_is_deferred_and_discarded_on_rollback(
                     },
                 )
             )
-        assert sender.await_args_list == expected_events
+        assert user_event_sender.await_args_list == expected_events
 
 
 def test_created_notification_filters_recipients_and_preserves_anonymity(participants):
@@ -181,7 +176,7 @@ def test_release_uses_locked_picker_facts_after_clearing_pick(participants):
 
 @pytest.mark.parametrize("action", ["create", "release"])
 def test_notification_failure_rolls_back_lifecycle_action(
-    participants, monkeypatch, django_capture_on_commit_callbacks, action
+    participants, monkeypatch, django_capture_on_commit_callbacks, action, user_event_sender
 ):
     project, users = participants
     evaluation = None
@@ -195,10 +190,6 @@ def test_notification_failure_rolls_back_lifecycle_action(
             starts_at=timezone.now() + timedelta(days=1),
             ends_at=timezone.now() + timedelta(days=1, minutes=45),
         )
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
 
     def fail_after_write(**kwargs):
         create_notification(**kwargs)
@@ -213,7 +204,7 @@ def test_notification_failure_rolls_back_lifecycle_action(
                 release_slot(evaluation, users[42])
     assert callbacks == []
     assert not Notification.objects.exists()
-    sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     if evaluation is None:
         assert not EvaluationRequest.objects.exists()
     else:
