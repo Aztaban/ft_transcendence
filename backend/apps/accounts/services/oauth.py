@@ -29,6 +29,14 @@ OAUTH_42_USER_AGENT = "ft-transcendence/1.0"
 OAUTH_42_HTTP_TIMEOUT_SECONDS = 5
 
 
+def _request_42_json(request):
+    try:
+        with urlopen(request, timeout=OAUTH_42_HTTP_TIMEOUT_SECONDS) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except (HTTPError, OSError, HTTPException, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+
+
 def exchange_42_code_for_access_token(code):
     payload = urlencode(
         {
@@ -50,12 +58,7 @@ def exchange_42_code_for_access_token(code):
         method="POST",
     )
 
-    try:
-        with urlopen(token_request, timeout=OAUTH_42_HTTP_TIMEOUT_SECONDS) as response:
-            token_data = json.loads(response.read().decode("utf-8"))
-    except (HTTPError, OSError, HTTPException, UnicodeDecodeError, json.JSONDecodeError):
-        return None
-
+    token_data = _request_42_json(token_request)
     access_token = token_data.get("access_token") if isinstance(token_data, dict) else None
     if not isinstance(access_token, str) or not access_token:
         return None
@@ -74,10 +77,8 @@ def retrieve_42_account_information(access_token):
         method="GET",
     )
 
-    try:
-        with urlopen(profile_request, timeout=OAUTH_42_HTTP_TIMEOUT_SECONDS) as response:
-            profile_data = json.loads(response.read().decode("utf-8"))
-    except (HTTPError, OSError, HTTPException, UnicodeDecodeError, json.JSONDecodeError):
+    profile_data = _request_42_json(profile_request)
+    if profile_data is None:
         return None
 
     serializer = OAuth42ProfileSerializer(data=profile_data)
