@@ -135,8 +135,16 @@ def test_empty_search_returns_the_pagination_envelope(admin_user_directory):
     assert response.json() == {"count": 0, "next": None, "previous": None, "results": []}
 
 
+@pytest.mark.parametrize(
+    "role_filter,status_filter",
+    [
+        ("tutor,sc_member", "suspended,deleted"),
+        (" tutor,sc_member ", " suspended,deleted "),
+        ("tutor,tutor,sc_member", "suspended,suspended,deleted"),
+    ],
+)
 def test_role_and_status_filters_combine_without_duplicates(
-    admin_user_directory, admin_user_bodies, make_user
+    admin_user_directory, admin_user_bodies, make_user, role_filter, status_filter
 ):
     client, _, target = admin_user_directory
     target.roles.add(*Role.objects.filter(name__in=["tutor", "sc_member"]))
@@ -146,8 +154,8 @@ def test_role_and_status_filters_combine_without_duplicates(
     response = client.get(
         reverse("api:admin-users-list"),
         {
-            "role": "tutor,sc_member",
-            "status": "suspended,deleted",
+            "role": role_filter,
+            "status": status_filter,
             "q": "alice",
         },
     )
@@ -221,6 +229,15 @@ def test_pagination_and_default_ordering(admin_user_directory, admin_user_bodies
     "params,field,message",
     [
         ({"role": "tutor,unknown"}, "role", '"unknown" is not a valid choice.'),
+        ({"role": "tutor, admin"}, "role", '" admin" is not a valid choice.'),
+        ({"role": "tutor,,admin"}, "role", '"" is not a valid choice.'),
+        ({"role": ",tutor"}, "role", '"" is not a valid choice.'),
+        ({"role": "tutor,"}, "role", '"" is not a valid choice.'),
+        ({"role": "unknown,other"}, "role", '"unknown" is not a valid choice.'),
+        ({"role": "  "}, "role", "This field may not be blank."),
+        ({"status": "active, suspended"}, "status", '" suspended" is not a valid choice.'),
+        ({"status": "active,,deleted"}, "status", '"" is not a valid choice.'),
+        ({"status": "  "}, "status", "This field may not be blank."),
         ({"status": "pending"}, "status", '"pending" is not a valid choice.'),
         ({"ordering": "status"}, "ordering", '"status" is not a valid choice.'),
         ({"role": ""}, "role", "This field may not be blank."),

@@ -128,7 +128,10 @@ def test_head_tutor_sees_all_requests(api_client, make_user):
     assert results[-1] == expected_eligibility_request(requests[7])
 
 
-def test_filter_status_pending(api_client, make_user):
+@pytest.mark.parametrize(
+    "value", ["pending", " pending ", "pending,pending", ",pending,,", " pending, ,pending, "]
+)
+def test_filter_status_pending(api_client, make_user, value):
     tutor = make_user("tutor@example.com", display_name="Bob", roles=(Role.Name.TUTOR,))
     reviewer = make_user("head@example.com", roles=(Role.Name.HEAD_TUTOR,))
     libft = Project.objects.create(slug="libft", name="Libft")
@@ -145,7 +148,7 @@ def test_filter_status_pending(api_client, make_user):
     api_client.force_authenticate(user=tutor)
     response = api_client.get(
         reverse("api:tutor-eligibility-requests-list"),
-        {"status": "pending"},
+        {"status": value},
     )
 
     assert response.status_code == status.HTTP_200_OK
@@ -342,3 +345,42 @@ def test_create_through_session_needs_csrf(api_client, make_user):
     assert without.status_code == status.HTTP_403_FORBIDDEN
     assert without.json()["error"]["code"] == "csrf_failed"
     assert with_token.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.parametrize(
+    "params,field,message",
+    [
+        ({"status": ""}, "status", "This field may not be blank."),
+        ({"status": "  "}, "status", "This field may not be blank."),
+        ({"status": " , , "}, "status", "This field may not be blank."),
+        ({"status": "zzz,aaa,zzz"}, "status", "Unknown status: aaa, zzz."),
+        ({"status": "pending, unknown "}, "status", "Unknown status: unknown."),
+        ({"status": "pending\x00"}, "status", "Unknown status: pending\x00."),
+        ({"ordering": ""}, "ordering", "Ordering must be one of: created_at, -created_at."),
+        (
+            {"ordering": " created_at"},
+            "ordering",
+            "Ordering must be one of: created_at, -created_at.",
+        ),
+        (
+            {"ordering": "created_at "},
+            "ordering",
+            "Ordering must be one of: created_at, -created_at.",
+        ),
+        ({"status": "bad", "ordering": "bad"}, "status", "Unknown status: bad."),
+        ({"status": "", "ordering": "bad"}, "status", "This field may not be blank."),
+    ],
+)
+def test_list_query_errors_preserve_messages_and_precedence(
+    api_client, make_user, params, field, message
+):
+    api_client.force_authenticate(user=make_user("query@example.com", roles=(Role.Name.TUTOR,)))
+    response = api_client.get(reverse(URL), params)
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "Please correct the highlighted fields.",
+            "fields": {field: [message]},
+        }
+    }
