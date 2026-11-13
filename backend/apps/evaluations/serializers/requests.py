@@ -9,7 +9,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.references import UserRefSerializer
-from apps.core.serializers import ReasonSerializer
+from apps.core.serializers import ReasonSerializer, validate_comma_separated_choices
 from apps.evaluations.models import EvaluationRequest, Project
 from apps.evaluations.permissions import OVERRIDE_ROLES
 from apps.evaluations.references import ProjectRefSerializer
@@ -249,8 +249,7 @@ class EvaluationRequestQuerySerializer(serializers.Serializer):
     )
 
     def validate_status(self, value):
-        field = serializers.ChoiceField(choices=EvaluationRequest.Status.choices)
-        return [field.run_validation(item) for item in value.split(",")]
+        return validate_comma_separated_choices(value, EvaluationRequest.Status.choices)
 
     def validate_project(self, value):
         # Inactive projects remain valid filters for existing requests (schema §3.1).
@@ -260,5 +259,4 @@ class EvaluationRequestQuerySerializer(serializers.Serializer):
 
     def validate_result(self, value):
         # `none` is requests without a result (api-plan 10.4)
-        field = serializers.ChoiceField(choices=(*EvaluationRequest.Result.values, "none"))
-        return [field.run_validation(item) for item in value.split(",")]
+        return validate_comma_separated_choices(value, (*EvaluationRequest.Result.values, "none"))

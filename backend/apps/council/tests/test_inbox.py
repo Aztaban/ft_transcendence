@@ -94,7 +94,9 @@ def test_list_keeps_only_unread_messages_when_asked(council):
     }
 
 
-@pytest.mark.parametrize("value", ["false", "yes", ""], ids=["false", "yes", "empty"])
+@pytest.mark.parametrize(
+    "value", ["false", "yes", "", " ", " true", "true ", "True", "1", "true,false", "true\x00"]
+)
 def test_list_rejects_an_unknown_unread_value(council, value):
     response = council.get(reverse(LIST), {"unread": value})
 

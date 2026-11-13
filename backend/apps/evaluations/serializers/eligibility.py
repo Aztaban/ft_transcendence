@@ -86,3 +86,41 @@ class EligibilityRequestReviewSerializer(serializers.Serializer):
         max_length=500,
         default="",
     )
+
+
+_ELIGIBILITY_REQUEST_ORDERINGS = frozenset({"created_at", "-created_at"})
+
+_ELIGIBILITY_REQUEST_STATUSES = frozenset(TutorEligibilityRequest.Status.values)
+
+
+class EligibilityRequestQuerySerializer(serializers.BaseSerializer):
+    """Parse list filters in order, preserving the view's first-error behavior.
+
+    Unlike the other comma-separated filters, status trims individual entries,
+    ignores empty entries and reports all unknown statuses together. Ordering is
+    checked verbatim only after status succeeds.
+    """
+
+    def to_internal_value(self, data):
+        filters = {}
+        status_param = data.get("status")
+        if status_param is not None:
+            statuses = [part.strip() for part in status_param.split(",") if part.strip()]
+            if not statuses:
+                raise serializers.ValidationError({"status": [_("This field may not be blank.")]})
+            unknown = sorted(
+                {value for value in statuses if value not in _ELIGIBILITY_REQUEST_STATUSES}
+            )
+            if unknown:
+                raise serializers.ValidationError(
+                    {"status": [_("Unknown status: %(value)s.") % {"value": ", ".join(unknown)}]}
+                )
+            filters["status"] = statuses
+
+        ordering = data.get("ordering", "created_at")
+        if ordering not in _ELIGIBILITY_REQUEST_ORDERINGS:
+            raise serializers.ValidationError(
+                {"ordering": [_("Ordering must be one of: created_at, -created_at.")]}
+            )
+        filters["ordering"] = ordering
+        return filters

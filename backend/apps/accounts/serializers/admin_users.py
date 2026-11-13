@@ -5,7 +5,7 @@ from rest_framework import serializers
 from apps.accounts.exceptions import EmailAlreadyExists
 from apps.accounts.models import Role, User
 from apps.accounts.serializers.profiles import ProfileSerializer, ProfileUpdateSerializer
-from apps.core.serializers import ReasonSerializer
+from apps.core.serializers import ReasonSerializer, validate_comma_separated_choices
 
 ADMIN_USER_ORDERINGS = tuple(
     prefix + field
@@ -46,9 +46,7 @@ class AdminUserQuerySerializer(serializers.Serializer):
     ordering = serializers.ChoiceField(choices=ADMIN_USER_ORDERINGS, default="display_name")
 
     def validate_role(self, value):
-        field = serializers.ChoiceField(choices=Role.Name.choices)
-        return [field.run_validation(item) for item in value.split(",")]
+        return validate_comma_separated_choices(value, Role.Name.choices)
 
     def validate_status(self, value):
-        field = serializers.ChoiceField(choices=User.Status.choices)
-        return [field.run_validation(item) for item in value.split(",")]
+        return validate_comma_separated_choices(value, User.Status.choices)
