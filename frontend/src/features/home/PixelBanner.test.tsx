@@ -5,12 +5,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { confettiPieces, planetPixels, spritePixels, textPixels } from "./pixelArt";
 import PixelBanner from "./PixelBanner";
+import ProfileScene from "./ProfileScene";
 
 const rocket =
   "Pixel animation: a rocket dodges a space rock, passes a coffee mug and a duck astronaut, and reaches planet 42.";
 const road = "Pixel animation: two cars ignore a hitchhiker, then a flying saucer picks them up.";
 const desk =
   "Pixel animation: a student's program crashes with a segfault, then passes with 125 out of 100.";
+const profile =
+  "Pixel animation: a student's 42 ID card gets stamped with three badges, and the student cheers.";
 
 afterEach(() => {
   cleanup();
@@ -86,6 +89,24 @@ describe("PixelBanner", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Play animation" }));
     expect(banner.className).toBe("pixel-banner");
+  });
+
+  // The Profile banner passes its own scene (#57).
+  it("plays the scenes it is given, and one scene in a loop", () => {
+    const { container } = render(
+      <PixelBanner scenes={[{ Art: ProfileScene, label: "profile.animation", seconds: 12 }]} />,
+    );
+
+    expect(screen.getByRole("img", { name: profile })).toBeTruthy();
+    expect(
+      (container.querySelector(".pixel-banner") as HTMLElement).style.getPropertyValue(
+        "--scene-length",
+      ),
+    ).toBe("12s");
+
+    finishScene();
+    expect(screen.getByRole("img", { name: profile })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Pause animation" })).toBeTruthy();
   });
 });
 

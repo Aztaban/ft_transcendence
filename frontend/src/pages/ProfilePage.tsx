@@ -5,9 +5,12 @@ import usePageTitle from "../components/layout/usePageTitle";
 import i18n from "../i18n";
 import { ApiError } from "../api/client";
 import { Avatar, Button, Input } from "../components/ui";
+import PixelBanner, { type Scene } from "../features/home/PixelBanner";
+import ProfileScene from "../features/home/ProfileScene";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { Language, UserRole } from "../types/user";
 import { DISPLAY_NAME_MAX_LENGTH } from "../utils/validation";
+import "../styles/pixel-font.css";
 import "../styles/profile.css";
 
 const languages: Language[] = ["en", "cs", "es"];
@@ -46,6 +49,9 @@ interface InfoTile {
   value: string;
   icon: keyof typeof icons;
 }
+
+// The Profile banner's one scene: the student's 42 ID card gets its badges.
+const profileScenes: Scene[] = [{ Art: ProfileScene, label: "profile.animation", seconds: 12 }];
 
 function ProfilePage() {
   const { t } = useTranslation();
@@ -178,31 +184,27 @@ function ProfilePage() {
     : [];
 
   return (
-    <section className="profile-page">
-      {isLoading && (
-        <div className="profile-hero profile-hero--loading" aria-busy="true">
-          <span className="profile-page__sr-only">{t("profile.loading")}</span>
-        </div>
-      )}
+    <section className="profile-layout">
+      {/* Edge to edge, like the Home banner: who you are on the left, in the pixel scene's look
+          (its font, colours and stepped borders), and the scene behind. */}
+      <header className="profile-banner">
+        <div className="profile-banner__text">
+          {isLoading && (
+            <div className="profile-banner__loading" aria-busy="true">
+              <span className="profile-page__sr-only">{t("profile.loading")}</span>
+            </div>
+          )}
 
-      {!isLoading && !profile && (
-        <div className="profile-page__message" role="alert">
-          {t("profile.unavailable")}
-        </div>
-      )}
-
-      {!isLoading && profile && (
-        <>
-          <section className="profile-hero" aria-labelledby="profile-name">
-            <div className="profile-hero__body">
+          {!isLoading && profile && (
+            <div className="profile-banner__panel">
               <Avatar
-                className="profile-card__avatar"
+                className="profile-banner__avatar"
                 name={profile.display_name}
                 avatarUrl={profile.avatar_url ?? null}
               />
 
               <div className="profile-hero__identity">
-                <p className="profile-page__eyebrow">{t("profile.eyebrow")}</p>
+                <p className="profile-banner__eyebrow">{t("profile.eyebrow")}</p>
                 <h1 id="profile-name">{profile.display_name}</h1>
                 <ul className="profile-hero__roles" aria-label={t("profile.rolesAria")}>
                   {profile.roles.map((role, index) => (
@@ -215,127 +217,141 @@ function ProfilePage() {
                     </li>
                   ))}
                 </ul>
+
+                {!isEditing && (
+                  <Button className="profile-hero__edit" variant="secondary" onClick={startEditing}>
+                    {t("profile.edit")}
+                  </Button>
+                )}
               </div>
-
-              {!isEditing && (
-                <Button className="profile-hero__edit" variant="secondary" onClick={startEditing}>
-                  {t("profile.edit")}
-                </Button>
-              )}
             </div>
+          )}
+        </div>
 
+        <PixelBanner scenes={profileScenes} />
+      </header>
+
+      <div className="profile-page">
+        {!isLoading && !profile && (
+          <div className="profile-page__message" role="alert">
+            {t("profile.unavailable")}
+          </div>
+        )}
+
+        {!isLoading && profile && (
+          <>
             {saveMessage && (
               <p className="profile-page__success" role="status">
                 <span aria-hidden="true">✓</span> {saveMessage}
               </p>
             )}
-          </section>
 
-          {isEditing && (
-            <form className="profile-edit" onSubmit={handleProfileSubmit}>
-              <h2>{t("profile.editTitle")}</h2>
-              <Input
-                id="profile-display-name"
-                label={t("profile.displayName")}
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                maxLength={DISPLAY_NAME_MAX_LENGTH}
-                autoComplete="username"
-              />
+            {isEditing && (
+              <form className="profile-edit" onSubmit={handleProfileSubmit}>
+                <h2>{t("profile.editTitle")}</h2>
+                <Input
+                  id="profile-display-name"
+                  label={t("profile.displayName")}
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  maxLength={DISPLAY_NAME_MAX_LENGTH}
+                  autoComplete="username"
+                />
 
-              {formError && (
-                <p className="profile-page__error" role="alert">
-                  {formError}
-                </p>
-              )}
+                {formError && (
+                  <p className="profile-page__error" role="alert">
+                    {formError}
+                  </p>
+                )}
 
-              <div className="profile-page__actions">
-                <Button type="button" variant="ghost" onClick={cancelEditing} disabled={isSaving}>
-                  {t("common.cancel")}
-                </Button>
+                <div className="profile-page__actions">
+                  <Button type="button" variant="ghost" onClick={cancelEditing} disabled={isSaving}>
+                    {t("common.cancel")}
+                  </Button>
 
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving ? t("profile.saving") : t("profile.saveChanges")}
-                </Button>
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? t("profile.saving") : t("profile.saveChanges")}
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            <ul className="profile-tiles" aria-label={t("profile.accountDetails")}>
+              {tiles.map((tile, index) => (
+                <li
+                  key={tile.key}
+                  className="profile-tile"
+                  style={{ "--index": index } as CSSProperties}
+                >
+                  <span className="profile-tile__icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      {icons[tile.icon]}
+                    </svg>
+                  </span>
+                  <span className="profile-tile__label">{tile.label}</span>
+                  <span className="profile-tile__value">{tile.value}</span>
+                </li>
+              ))}
+            </ul>
+
+            <section className="profile-settings" aria-labelledby="profile-settings-title">
+              <div className="profile-settings__header">
+                <div>
+                  <p className="profile-page__eyebrow">{t("profile.preferences")}</p>
+                  <h2 id="profile-settings-title">{t("profile.language")}</h2>
+                  <p className="profile-settings__hint">{t("profile.languageHint")}</p>
+                </div>
               </div>
-            </form>
-          )}
 
-          <ul className="profile-tiles" aria-label={t("profile.accountDetails")}>
-            {tiles.map((tile, index) => (
-              <li
-                key={tile.key}
-                className="profile-tile"
-                style={{ "--index": index } as CSSProperties}
-              >
-                <span className="profile-tile__icon">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    {icons[tile.icon]}
-                  </svg>
-                </span>
-                <span className="profile-tile__label">{tile.label}</span>
-                <span className="profile-tile__value">{tile.value}</span>
-              </li>
-            ))}
-          </ul>
+              <form className="profile-settings__form" onSubmit={handleSettingsSubmit}>
+                <fieldset className="profile-languages">
+                  <legend className="profile-page__sr-only">{t("profile.language")}</legend>
+                  {languages.map((language) => (
+                    <label
+                      key={language}
+                      className={
+                        settingsLanguage === language
+                          ? "profile-language profile-language--active"
+                          : "profile-language"
+                      }
+                    >
+                      <input
+                        type="radio"
+                        name="profile-language"
+                        value={language}
+                        checked={settingsLanguage === language}
+                        onChange={() => setDraftLanguage(language)}
+                      />
+                      <span className="profile-language__code" aria-hidden="true">
+                        {language.toUpperCase()}
+                      </span>
+                      {languageLabel(language)}
+                    </label>
+                  ))}
+                </fieldset>
 
-          <section className="profile-settings" aria-labelledby="profile-settings-title">
-            <div className="profile-settings__header">
-              <div>
-                <p className="profile-page__eyebrow">{t("profile.preferences")}</p>
-                <h2 id="profile-settings-title">{t("profile.language")}</h2>
-                <p className="profile-settings__hint">{t("profile.languageHint")}</p>
-              </div>
-            </div>
+                {settingsError && (
+                  <p className="profile-page__error" role="alert">
+                    {settingsError}
+                  </p>
+                )}
 
-            <form className="profile-settings__form" onSubmit={handleSettingsSubmit}>
-              <fieldset className="profile-languages">
-                <legend className="profile-page__sr-only">{t("profile.language")}</legend>
-                {languages.map((language) => (
-                  <label
-                    key={language}
-                    className={
-                      settingsLanguage === language
-                        ? "profile-language profile-language--active"
-                        : "profile-language"
-                    }
-                  >
-                    <input
-                      type="radio"
-                      name="profile-language"
-                      value={language}
-                      checked={settingsLanguage === language}
-                      onChange={() => setDraftLanguage(language)}
-                    />
-                    <span className="profile-language__code" aria-hidden="true">
-                      {language.toUpperCase()}
-                    </span>
-                    {languageLabel(language)}
-                  </label>
-                ))}
-              </fieldset>
+                {settingsMessage && (
+                  <p className="profile-page__success" role="status">
+                    <span aria-hidden="true">✓</span> {settingsMessage}
+                  </p>
+                )}
 
-              {settingsError && (
-                <p className="profile-page__error" role="alert">
-                  {settingsError}
-                </p>
-              )}
-
-              {settingsMessage && (
-                <p className="profile-page__success" role="status">
-                  <span aria-hidden="true">✓</span> {settingsMessage}
-                </p>
-              )}
-
-              <div className="profile-page__actions">
-                <Button type="submit" disabled={isSavingSettings}>
-                  {isSavingSettings ? t("profile.saving") : t("profile.saveSettings")}
-                </Button>
-              </div>
-            </form>
-          </section>
-        </>
-      )}
+                <div className="profile-page__actions">
+                  <Button type="submit" disabled={isSavingSettings}>
+                    {isSavingSettings ? t("profile.saving") : t("profile.saveSettings")}
+                  </Button>
+                </div>
+              </form>
+            </section>
+          </>
+        )}
+      </div>
     </section>
   );
 }

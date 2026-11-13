@@ -61,18 +61,37 @@ function texts(name: string, selector: string) {
 }
 
 describe("ProfilePage", () => {
+  // #57: the banner is edge to edge like Home's, with the user's name, roles and Edit on it.
+  it("shows the name, the roles and Edit on the banner, over its own pixel scene", async () => {
+    await renderPage();
+
+    const banner = screen
+      .getByRole("heading", { name: "Lenka Husarova", level: 1 })
+      .closest("header") as HTMLElement;
+
+    expect(banner.className).toBe("profile-banner");
+    expect(within(banner).getByRole("list", { name: "Roles" })).toBeTruthy();
+    expect(within(banner).getByRole("button", { name: "Edit profile" })).toBeTruthy();
+    expect(
+      within(banner).getByRole("img", {
+        name: "Pixel animation: a student's 42 ID card gets stamped with three badges, and the student cheers.",
+      }),
+    ).toBeTruthy();
+    expect(within(banner).getByRole("button", { name: "Pause animation" })).toBeTruthy();
+  });
+
   it("shows the user's initials when they have no avatar", async () => {
     const { container } = await renderPage();
 
     expect(screen.getByText("LH")).toBeTruthy();
-    expect(container.querySelector("img.profile-card__avatar")).toBeNull();
+    expect(container.querySelector("img.profile-banner__avatar")).toBeNull();
   });
 
   it("shows the user's avatar when there is one", async () => {
     current.user = { ...lenka, avatar_url: "/avatar.png" };
     const { container } = await renderPage();
 
-    expect(container.querySelector("img.profile-card__avatar")?.getAttribute("src")).toBe(
+    expect(container.querySelector("img.profile-banner__avatar")?.getAttribute("src")).toBe(
       "/avatar.png",
     );
   });
