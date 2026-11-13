@@ -1,36 +1,29 @@
 """Tutor eligibility endpoints."""
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import NotAuthenticated, PermissionDenied, ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.models import Role
 from apps.accounts.permissions import HITCHHIKER_ROLES
-from apps.accounts.services.locking import lock_users
-from apps.audit.models import AuditLog
-from apps.audit.services import record_audit
-from apps.core.exceptions import error_response
 from apps.core.pagination import APIPageNumberPagination
 from apps.core.schema import CSRF_HEADER, error_responses
 from apps.evaluations.eligibility import (
     list_approved_projects_for_tutor,
     visible_eligibility_requests,
 )
-from apps.evaluations.models import Project, TutorEligibility, TutorEligibilityRequest
-from apps.evaluations.notifications import (
-    notify_eligibility_decided,
-    notify_eligibility_requested,
-    notify_eligibility_revoked,
+from apps.evaluations.eligibility_services import (
+    review_eligibility_request,
+    revoke_eligibility,
+    submit_eligibility_request,
 )
+from apps.evaluations.models import TutorEligibilityRequest
 from apps.evaluations.permissions import OVERRIDE_ROLES
 from apps.evaluations.references import ProjectRefSerializer
 from apps.evaluations.serializers.eligibility import (
@@ -106,53 +99,9 @@ def _create_eligibility_request(request):
 
     serializer = EligibilityRequestCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    project_ids = serializer.validated_data["project_ids"]
-
-    projects = list(Project.objects.filter(pk__in=project_ids, is_active=True))
-    found_ids = {project.pk for project in projects}
-    missing = sorted(set(project_ids) - found_ids)
-    if missing:
-        raise ValidationError(
-            {
-                "project_ids": [
-                    _("Unknown or inactive project id(s): %(ids)s.")
-                    % {"ids": ", ".join(str(pk) for pk in missing)}
-                ]
-            }
-        )
-
-    already_eligible = list(
-        TutorEligibility.objects.filter(tutor=request.user, project_id__in=project_ids)
-        .select_related("project")
-        .order_by("project__name")
+    eligibility_request = submit_eligibility_request(
+        requester=request.user, project_ids=serializer.validated_data["project_ids"]
     )
-    if already_eligible:
-        names = ", ".join(row.project.name for row in already_eligible)
-        raise ValidationError(
-            {"project_ids": [_("Already eligible for: %(names)s.") % {"names": names}]}
-        )
-
-    with transaction.atomic():
-        heads = User.objects.filter(roles__name=Role.Name.HEAD_TUTOR)
-        head_ids = list(heads.values_list("pk", flat=True).distinct())
-        # Notification recipients belong in the same ordered lock set as the requester.
-        lock_users(request.user.pk, *head_ids)
-        current = User.objects.get(pk=request.user.pk)
-        if not current.is_active:
-            raise NotAuthenticated()
-        head_ids = list(heads.filter(pk__in=head_ids).values_list("pk", flat=True).distinct())
-        if TutorEligibilityRequest.objects.filter(
-            requester=request.user,
-            status=TutorEligibilityRequest.Status.PENDING,
-        ).exists():
-            return error_response(
-                "eligibility_request_pending",
-                _("You already have a pending eligibility request."),
-                status.HTTP_409_CONFLICT,
-            )
-        eligibility_request = TutorEligibilityRequest.objects.create(requester=request.user)
-        eligibility_request.projects.set(projects)
-        notify_eligibility_requested(eligibility_request, head_ids=head_ids)
 
     return Response(
         EligibilityRequestSerializer(eligibility_request).data,
@@ -285,53 +234,11 @@ def tutor_eligibility_request_review(request, request_id):
 
     serializer = EligibilityRequestReviewSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    decision = serializer.validated_data["decision"]
-    review_note = serializer.validated_data["review_note"]
-    reviewed_at = timezone.now()
-
-    with transaction.atomic():
-        # Deletion declines pending reviews and removes grants while holding
-        # these user rows. A late reviewer must not recreate eligibility.
-        lock_users(request.user.pk, eligibility_request.requester_id)
-        updated = TutorEligibilityRequest.objects.filter(
-            pk=request_id,
-            status=TutorEligibilityRequest.Status.PENDING,
-        ).update(
-            status=decision,
-            reviewed_by=request.user,
-            reviewed_at=reviewed_at,
-            review_note=review_note,
-        )
-        if updated != 1:
-            return error_response(
-                "eligibility_request_already_reviewed",
-                _("This eligibility request has already been reviewed."),
-                status.HTTP_409_CONFLICT,
-            )
-
-        if decision == TutorEligibilityRequest.Status.APPROVED:
-            projects = list(eligibility_request.projects.all())
-            TutorEligibility.objects.bulk_create(
-                [
-                    TutorEligibility(
-                        tutor_id=eligibility_request.requester_id,
-                        project=project,
-                        granted_by_request_id=eligibility_request.pk,
-                    )
-                    for project in projects
-                ],
-                ignore_conflicts=True,
-            )
-
-        eligibility_request.refresh_from_db()
-        record_audit(
-            actor=request.user,
-            action=AuditLog.Action.ELIGIBILITY_REVIEWED,
-            target_type=AuditLog.TargetType.TUTOR_ELIGIBILITY_REQUEST,
-            target_id=eligibility_request.pk,
-            metadata={"decision": decision},
-        )
-        notify_eligibility_decided(eligibility_request)
+    eligibility_request = review_eligibility_request(
+        reviewer=request.user,
+        eligibility_request=eligibility_request,
+        **serializer.validated_data,
+    )
 
     return Response(EligibilityRequestSerializer(eligibility_request).data)
 
@@ -366,28 +273,8 @@ def revoke_tutor_eligibility(request, slug, tutor_id):
     serializer = EligibilityRevokeSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    with transaction.atomic():
-        # The notification insert locks the tutor. Pick already holds that user
-        # before it locks the grant, so revocation takes the same order (schema §4.2).
-        if User.objects.select_for_update().filter(pk=tutor_id).first() is None:
-            return error_response("not_found", _("Not found."), status.HTTP_404_NOT_FOUND)
-        eligibility = (
-            TutorEligibility.objects.select_for_update()
-            .select_related("project")
-            .filter(project__slug=slug, tutor_id=tutor_id)
-            .first()
-        )
-        if eligibility is None:
-            return error_response("not_found", _("Not found."), status.HTTP_404_NOT_FOUND)
-        project = eligibility.project
-        record_audit(
-            actor=request.user,
-            action=AuditLog.Action.ELIGIBILITY_REVOKED,
-            target_type=AuditLog.TargetType.TUTOR_ELIGIBILITY,
-            target_id=eligibility.pk,
-            reason=serializer.validated_data["reason"],
-        )
-        eligibility.delete()
-        notify_eligibility_revoked(project, tutor_id)
+    revoke_eligibility(
+        actor=request.user, slug=slug, tutor_id=tutor_id, reason=serializer.validated_data["reason"]
+    )
 
     return Response(status=status.HTTP_204_NO_CONTENT)

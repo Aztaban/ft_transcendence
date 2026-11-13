@@ -302,10 +302,11 @@ def test_council_member_cannot_moderate(api_client, make_user, call):
 
 
 @pytest.mark.parametrize("call", [delete, reveal], ids=["delete", "reveal"])
-def test_admin_gets_not_found_for_a_missing_message(api_client, make_user, call):
+@pytest.mark.parametrize("reason", ["Investigating abuse.", ""])
+def test_admin_gets_not_found_for_a_missing_message(api_client, make_user, call, reason):
     api_client.force_authenticate(user=make_user("admin@example.com", "Admin", (Role.Name.ADMIN,)))
 
-    response = call(api_client, 999)
+    response = call(api_client, 999, reason=reason)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == NOT_FOUND
