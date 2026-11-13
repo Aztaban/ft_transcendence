@@ -5,8 +5,8 @@ The subject's minor module "Support for additional browsers" (#683). The applica
 | Browser | Engine | Status |
 |---|---|---|
 | Google Chrome | Blink | Main development browser |
-| Mozilla Firefox | Gecko | Supported, tested with the checklist below |
-| Microsoft Edge | Blink (same as Chrome) | Supported, tested with the checklist below |
+| Mozilla Firefox | Gecko | Supported, tested with the checklist below (Firefox 154) |
+| Microsoft Edge | Blink (same as Chrome) | Supported, tested with the checklist below (Edge 157) |
 
 ## How it was checked
 
@@ -36,32 +36,34 @@ Fixed after the audit:
 
 **Firefox 154 (13 November 2026):** every row ✅, no JavaScript errors or warnings in the console. The Student, Hitchhiker, Head Tutor, Student Council, live update, accessibility and phone rows were also run automatically in headless Firefox over WebDriver BiDi, with separate student, Hitchhiker and admin accounts; the creation steps of a request, the slot choice and keyboard activation were then checked by hand. Two layout problems found on the way are fixed in #822 (the Hitchhikers page at 200 % zoom, the page scrollbar and the top bar on small phones).
 
+**Microsoft Edge 157 (Linux, 13 November 2026):** every row ✅, tested the same way: the rows before login and the layout by hand, the logged-in rows also automatically in headless Edge over the DevTools protocol. Keyboard activation (Enter on a button) was covered by the automatic run here. The console showed only the expected WebSocket lines while the backend restarted ("Error during WebSocket handshake: Unexpected response code: 502").
+
 Each row is tested in each browser. Mark ✅ (works), ❌ (bug, with a link to the issue) or — (not applicable). Keep the browser console open during the whole run: no JavaScript errors or warnings may appear (only the expected network lines above).
 
 | Area | What to check | Chrome | Firefox | Edge | Who |
 |---|---|---|---|---|---|
-| **Before login** | Login: wrong password shows "Invalid email or password"; empty fields show the app's own message | | ✅ | | Diana (Firefox) |
-| | Register: field messages next to the inputs; then login with the email filled in | | ✅ | | Diana (Firefox) |
-| | "Log in with 42" reaches the 42 page | | ✅ | | Diana (Firefox) |
-| | Privacy Policy and Terms open in a new tab from Login and Register | | ✅ | | Diana (Firefox) |
-| | Language switcher EN / CS / ES before login | | ✅ | | Diana (Firefox) |
-| **Layout** | Sidebar, role switcher (also with ↓ ↑ Enter Escape), skip link (first Tab) | | ✅ | | Diana (Firefox) |
-| | Top bar: search opens the people search, bell and panel, user menu with Logout | | ✅ | | Diana (Firefox) |
-| | Footer links, every page opens at its top | | ✅ | | Diana (Firefox) |
-| **Student** | Home: banner plays and pauses, the four numbers, the three boxes | | ✅ | | Diana (Firefox) |
-| | Create a request (all steps), the success popup | | ✅ | | Diana (Firefox) |
-| | Evaluation page: accept and decline a proposed slot | | ✅ | | Diana (Firefox) |
-| | Pending: preview and cancel popups; History | | ✅ | | Diana (Firefox) |
-| | Hitchhikers: name search, Who, project, sort, Show more | | ✅ | | Diana (Firefox) |
-| | Profile: display name, language | | ✅ | | Diana (Firefox) |
-| **Hitchhiker** | Welcome popup, eligibility request, open queue | | ✅ | | Diana (Firefox) |
-| | Pick a slot (date and time choice), awaiting confirmation | | ✅ | | Diana (Firefox) |
-| **Head Tutor** | Eligibility table and request page: approve and decline | | ✅ | | Diana (Firefox) |
-| | Roles on a profile: assign and revoke | | ✅ | | Diana (Firefox) |
-| **Student Council** | Send a message; inbox, a message, mark read and unread, the shared note | | ✅ | | Diana (Firefox) |
-| | History; Admin: reveal sender and delete | | ✅ | | Diana (Firefox) |
-| **Live updates** | Two browsers side by side: a Hitchhiker picks a slot, the student's page updates without reload | | ✅ | | Diana (Firefox) |
-| | Restart the backend: the app reconnects and loads again | | ✅ | | Diana (Firefox) |
-| **Accessibility** | Keyboard only through a whole workflow; popups keep the focus inside | | ✅ | | Diana (Firefox) |
-| | Zoom 200 %: nothing cut off; reduced motion: still banner | | ✅ | | Diana (Firefox) |
-| **Phone width** | Narrow window (about 400 px): sidebar as drawer, pages readable | | ✅ | | Diana (Firefox) |
+| **Before login** | Login: wrong password shows "Invalid email or password"; empty fields show the app's own message | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Register: field messages next to the inputs; then login with the email filled in | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | "Log in with 42" reaches the 42 page | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Privacy Policy and Terms open in a new tab from Login and Register | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Language switcher EN / CS / ES before login | | ✅ | ✅ | Diana (Firefox, Edge) |
+| **Layout** | Sidebar, role switcher (also with ↓ ↑ Enter Escape), skip link (first Tab) | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Top bar: search opens the people search, bell and panel, user menu with Logout | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Footer links, every page opens at its top | | ✅ | ✅ | Diana (Firefox, Edge) |
+| **Student** | Home: banner plays and pauses, the four numbers, the three boxes | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Create a request (all steps), the success popup | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Evaluation page: accept and decline a proposed slot | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Pending: preview and cancel popups; History | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Hitchhikers: name search, Who, project, sort, Show more | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Profile: display name, language | | ✅ | ✅ | Diana (Firefox, Edge) |
+| **Hitchhiker** | Welcome popup, eligibility request, open queue | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Pick a slot (date and time choice), awaiting confirmation | | ✅ | ✅ | Diana (Firefox, Edge) |
+| **Head Tutor** | Eligibility table and request page: approve and decline | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Roles on a profile: assign and revoke | | ✅ | ✅ | Diana (Firefox, Edge) |
+| **Student Council** | Send a message; inbox, a message, mark read and unread, the shared note | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | History; Admin: reveal sender and delete | | ✅ | ✅ | Diana (Firefox, Edge) |
+| **Live updates** | Two browsers side by side: a Hitchhiker picks a slot, the student's page updates without reload | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Restart the backend: the app reconnects and loads again | | ✅ | ✅ | Diana (Firefox, Edge) |
+| **Accessibility** | Keyboard only through a whole workflow; popups keep the focus inside | | ✅ | ✅ | Diana (Firefox, Edge) |
+| | Zoom 200 %: nothing cut off; reduced motion: still banner | | ✅ | ✅ | Diana (Firefox, Edge) |
+| **Phone width** | Narrow window (about 400 px): sidebar as drawer, pages readable | | ✅ | ✅ | Diana (Firefox, Edge) |
