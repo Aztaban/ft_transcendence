@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import { listEvaluationRequests, type EvaluationResultFilter } from "../api/evaluationRequests";
 import { listProjects } from "../api/projects";
 import { projectInitials } from "../features/projects/ProjectOverview";
@@ -266,9 +267,9 @@ function HistoryPage() {
       )}
 
       {loadState === "error" && (
-        <p className="history-page__error" role="alert">
+        <LoadError className="history-page__error" onRetry={() => setReloadKey((key) => key + 1)}>
           {t("history.error")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && requests.length === 0 && (

@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
 import CouncilTabs from "../features/council/CouncilTabs";
@@ -22,7 +23,7 @@ function CouncilInboxPage() {
   const { t } = useTranslation();
   usePageTitle(t("council.messages"));
   const navigate = useNavigate();
-  const { messages, total, hasMore, isLoadingMore, moreFailed, loadState, showMore } =
+  const { messages, total, hasMore, isLoadingMore, moreFailed, loadState, showMore, retry } =
     useCouncilMessages(true);
 
   const now = new Date();
@@ -63,9 +64,9 @@ function CouncilInboxPage() {
           )}
 
           {loadState === "error" && (
-            <p className="council-error" role="alert">
+            <LoadError className="council-error" onRetry={retry}>
               {t("council.loadMessagesError")}
-            </p>
+            </LoadError>
           )}
 
           {loadState === "ready" && messages.length === 0 && (

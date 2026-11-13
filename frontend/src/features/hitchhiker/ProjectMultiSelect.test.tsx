@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -106,14 +106,21 @@ describe("ProjectMultiSelect", () => {
     expect(screen.queryByRole("checkbox")).toBeNull();
   });
 
-  it("shows an error when the projects cannot be loaded", async () => {
-    vi.mocked(listProjects).mockRejectedValue(new Error("network"));
+  it("shows an error when the projects cannot be loaded, and loads again on Try again", async () => {
+    vi.mocked(listProjects).mockRejectedValueOnce(new Error("network"));
+    vi.mocked(listProjects).mockResolvedValueOnce(projects);
 
     renderInRouter(<ProjectMultiSelect value={[]} onChange={() => {}} />);
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "Could not load the projects. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load the projects. Please try again.")).toBeTruthy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(screen.getByText("Loading projects…")).toBeTruthy();
+    expect(await screen.findByRole("checkbox", { name: "minishell" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 

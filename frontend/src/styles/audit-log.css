@@ -199,6 +199,11 @@
   color: #b42318;
 }
 
+/* The account error (#371) keeps its text and "Try again" centred, like the log's own error. */
+.audit-log__error.ui-load-error {
+  justify-content: center;
+}
+
 .audit-log__empty h2 {
   margin: 0 0 8px;
   font-size: 1.15rem;

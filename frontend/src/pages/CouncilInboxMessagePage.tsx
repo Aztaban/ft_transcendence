@@ -12,6 +12,7 @@ import {
   setSCMessageRead,
 } from "../api/scMessages";
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
 import MarkedReadDialog from "../features/council/MarkedReadDialog";
@@ -68,6 +69,7 @@ function CouncilInboxMessagePage() {
       : "/council/inbox";
   const [message, setMessage] = useState<SCMessage | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [retryKey, setRetryKey] = useState(0);
   const [isUpdatingRead, setIsUpdatingRead] = useState(false);
   const [readError, setReadError] = useState("");
   const [isMarkedRead, setIsMarkedRead] = useState(false);
@@ -109,7 +111,7 @@ function CouncilInboxMessagePage() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, retryKey]);
 
   async function updateRead(isRead: boolean) {
     if (!message) {
@@ -257,9 +259,9 @@ function CouncilInboxMessagePage() {
       )}
 
       {loadState === "error" && (
-        <p className="council-error" role="alert">
+        <LoadError className="council-error" onRetry={() => setRetryKey((key) => key + 1)}>
           {t("council.loadMessageError")}
-        </p>
+        </LoadError>
       )}
 
       {isDeleted && (

@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { EligibilityDecision } from "../../api/eligibility";
@@ -30,12 +30,25 @@ function ReviewDialog({
 }: ReviewDialogProps) {
   const { t } = useTranslation();
   const name = request.requester.display_name;
-  const cardRef = useDialog<HTMLDivElement>(onClose);
+  // Nothing closes the popup while the decision is on its way: an error would come back with
+  // nothing open to show it (#371). Both pages that open it rely on this.
+  function close() {
+    if (!isSubmitting) {
+      onClose();
+    }
+  }
+
+  const cardRef = useDialog<HTMLDivElement>(close);
   const [note, setNote] = useState("");
   const isApproval = decision === "approved";
 
+  // Sending disables the focused button, which drops the focus to the page: put it back.
+  useEffect(() => {
+    cardRef.current?.focus();
+  }, [cardRef, isSubmitting]);
+
   return createPortal(
-    <div className="review-dialog" data-testid="review-dialog-backdrop" onClick={onClose}>
+    <div className="review-dialog" data-testid="review-dialog-backdrop" onClick={close}>
       <div
         ref={cardRef}
         className={`review-dialog__card review-dialog__card--${decision}`}
@@ -79,7 +92,12 @@ function ReviewDialog({
         )}
 
         <div className="review-dialog__actions">
-          <button className="review-dialog__cancel" type="button" onClick={onClose}>
+          <button
+            className="review-dialog__cancel"
+            type="button"
+            disabled={isSubmitting}
+            onClick={close}
+          >
             {t("common.cancel")}
           </button>
           <button

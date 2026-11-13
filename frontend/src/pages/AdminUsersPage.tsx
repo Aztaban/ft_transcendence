@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { listAdminUsers } from "../api/admin";
 import usePageTitle from "../components/layout/usePageTitle";
 import EmptyState from "../components/ui/EmptyState";
+import LoadError from "../components/ui/LoadError";
 import UserStatusBadge, { rolesText } from "../features/admin/UserStatusBadge";
 import type { AdminUser, UserStatus } from "../types/adminUser";
 import type { RoleName } from "../types/user";
@@ -37,6 +38,7 @@ function AdminUsersPage() {
   const [total, setTotal] = useState(0);
   const [hasNext, setHasNext] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     // An answer that arrives after the filters changed again is dropped.
@@ -67,7 +69,7 @@ function AdminUsersPage() {
     return () => {
       active = false;
     };
-  }, [query, role, status, page]);
+  }, [query, role, status, page, retryKey]);
 
   // A search starts on submit (button or Enter), not on every key, so no timer can send an old one.
   function search(event: FormEvent<HTMLFormElement>) {
@@ -161,9 +163,9 @@ function AdminUsersPage() {
       )}
 
       {loadState === "error" && (
-        <p className="admin-users__error" role="alert">
+        <LoadError className="admin-users__error" onRetry={() => setRetryKey((key) => key + 1)}>
           {t("adminUsers.error")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && users.length === 0 && (

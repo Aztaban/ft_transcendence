@@ -315,14 +315,20 @@ describe("HistoryPage", () => {
     ).toEqual([1]);
   });
 
-  it("shows an error when the history cannot be loaded", async () => {
+  it("shows an error and loads again on Try again", async () => {
     vi.mocked(listEvaluationRequests).mockRejectedValue(new Error("network"));
 
     renderPage();
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "Could not load your history. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load your history. Please try again.")).toBeTruthy();
+
+    vi.mocked(listEvaluationRequests).mockResolvedValue(page([past(1, "push_swap")]));
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByRole("heading", { name: "push_swap" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 

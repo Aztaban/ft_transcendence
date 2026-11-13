@@ -5,6 +5,7 @@ import { Link, Navigate } from "react-router";
 import type { ListEvaluationRequestsParams } from "../api/evaluationRequests";
 import usePageTitle from "../components/layout/usePageTitle";
 import Icon, { type IconName } from "../components/ui/Icon";
+import LoadError from "../components/ui/LoadError";
 import AwaitingConfirmation from "../features/hitchhiker/AwaitingConfirmation";
 import EvaluationHistory from "../features/hitchhiker/EvaluationHistory";
 import OpenRequestQueue from "../features/hitchhiker/OpenRequestQueue";
@@ -157,7 +158,7 @@ function Dashboard({ overview, action, children }: DashboardProps) {
 // and only the error when it fails, never empty states that may not be true (#258).
 function StudentDashboard() {
   const { t } = useTranslation();
-  const { requests, isLoading, hasError } = useStudentRequests();
+  const { requests, isLoading, hasError, retry } = useStudentRequests();
   // Every account is a student: the numbers need no role, so they do not wait for /users/me/.
   const counts = useRequestOverview(studentQueries, EVALUATION_EVENTS, true);
   const now = useCurrentMinute();
@@ -200,9 +201,9 @@ function StudentDashboard() {
   return (
     <Dashboard overview={overview} action={studentAction}>
       {hasError ? (
-        <p className="dashboard__load-error" role="alert">
+        <LoadError className="dashboard__load-error" onRetry={retry}>
           {t("myRequests.error")}
-        </p>
+        </LoadError>
       ) : (
         <>
           <OpenRequests requests={requests} isLoading={isLoading} />
@@ -219,9 +220,9 @@ function StudentDashboard() {
 function HitchhikerDashboard() {
   const { t } = useTranslation();
   // Both wait until /users/me/ confirms the role of the restored workspace, so no 403s.
-  const { roles, isLoaded } = useCurrentUser();
+  const { roles, isLoaded, loadFailed, refresh } = useCurrentUser();
   const enabled = isLoaded && workspacesFor(roles).includes("HITCHHIKER");
-  const { openRequests, openCount, pickedRequests, isLoading, hasError } =
+  const { openRequests, openCount, pickedRequests, isLoading, hasError, retry } =
     useHitchhikerRequests(enabled);
   const counts = useRequestOverview(hitchhikerQueries, OPEN_QUEUE_EVENTS, enabled);
 
@@ -254,10 +255,15 @@ function HitchhikerDashboard() {
 
   return (
     <Dashboard overview={overview} action={hitchhikerAction}>
-      {hasError ? (
-        <p className="dashboard__load-error" role="alert">
+      {!isLoaded && loadFailed ? (
+        // Without the roles nothing is asked: say so instead of placeholders forever (#371).
+        <LoadError className="dashboard__load-error" onRetry={refresh}>
+          {t("common.userLoadError")}
+        </LoadError>
+      ) : hasError ? (
+        <LoadError className="dashboard__load-error" onRetry={retry}>
           {t("myRequests.error")}
-        </p>
+        </LoadError>
       ) : (
         <>
           <OpenRequestQueue requests={openRequests} isLoading={isLoading} />
@@ -277,7 +283,8 @@ function HitchhikerDashboard() {
 // The Council's box: the newest messages nobody has read yet.
 function CouncilDashboard() {
   const { t } = useTranslation();
-  const { unread, unreadCount, totalCount, hitchhikerCount, isLoading, hasError } =
+  const { isLoaded, loadFailed, refresh } = useCurrentUser();
+  const { unread, unreadCount, totalCount, hitchhikerCount, isLoading, hasError, retry } =
     useCouncilOverview();
   const isKnown = !isLoading && !hasError;
 
@@ -310,10 +317,15 @@ function CouncilDashboard() {
 
   return (
     <Dashboard overview={overview} action={councilAction}>
-      {hasError ? (
-        <p className="dashboard__load-error" role="alert">
+      {!isLoaded && loadFailed ? (
+        // Without the roles nothing is asked: say so instead of placeholders forever (#371).
+        <LoadError className="dashboard__load-error" onRetry={refresh}>
+          {t("common.userLoadError")}
+        </LoadError>
+      ) : hasError ? (
+        <LoadError className="dashboard__load-error" onRetry={retry}>
           {t("council.loadMessagesError")}
-        </p>
+        </LoadError>
       ) : (
         <section
           className="dashboard__section dashboard__section--teal"

@@ -146,14 +146,21 @@ describe("CouncilInboxPage", () => {
     expect(listSCMessages).toHaveBeenCalledTimes(2);
   });
 
-  it("shows an error when the messages cannot be loaded", async () => {
-    vi.mocked(listSCMessages).mockRejectedValue(new Error("network"));
+  it("shows an error when the messages cannot be loaded, and loads again on Try again", async () => {
+    vi.mocked(listSCMessages).mockRejectedValueOnce(new Error("network"));
+    vi.mocked(listSCMessages).mockResolvedValueOnce(page([scMessage(4, "Quiet study areas.")]));
 
     renderPage();
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "Could not load the messages. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load the messages. Please try again.")).toBeTruthy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(screen.getByText("Loading messages…")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Message #4" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("loads older messages with Show more", async () => {

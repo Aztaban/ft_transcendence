@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import AnonymousIcon from "../features/council/AnonymousIcon";
 import ClockIcon from "../features/council/ClockIcon";
 import CouncilTabs from "../features/council/CouncilTabs";
@@ -18,7 +19,7 @@ function CouncilHistoryPage() {
   const { t } = useTranslation();
   usePageTitle(t("council.historyTitle"));
   const navigate = useNavigate();
-  const { messages, total, hasMore, isLoadingMore, moreFailed, loadState, showMore } =
+  const { messages, total, hasMore, isLoadingMore, moreFailed, loadState, showMore, retry } =
     useCouncilMessages(false);
 
   const now = new Date();
@@ -59,9 +60,9 @@ function CouncilHistoryPage() {
           )}
 
           {loadState === "error" && (
-            <p className="council-error" role="alert">
+            <LoadError className="council-error" onRetry={retry}>
               {t("council.loadMessagesError")}
-            </p>
+            </LoadError>
           )}
 
           {loadState === "ready" && messages.length === 0 && (

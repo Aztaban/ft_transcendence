@@ -14,7 +14,14 @@ import HomePage from "./HomePage";
 // What the mocked hooks report; each test may change it before rendering.
 const load = vi.hoisted(() => ({ isLoading: false, hasError: false }));
 // The real roles from /users/me/, and the `enabled` each list hook was last called with.
-const currentUser = vi.hoisted(() => ({ roles: [] as string[], isLoaded: false }));
+const currentUser = vi.hoisted(() => ({
+  roles: [] as string[],
+  isLoaded: false,
+  loadFailed: false,
+  refresh: vi.fn(),
+}));
+// "Try again" of whichever list hook the dashboard uses.
+const retry = vi.hoisted(() => vi.fn());
 const enabledWith = vi.hoisted(() => ({
   hitchhiker: undefined as boolean | undefined,
   overview: undefined as boolean | undefined,
@@ -35,7 +42,7 @@ const data = vi.hoisted(() => ({
 
 // The student boxes load data from the API; that is tested in OpenRequests and the hook itself.
 vi.mock("../store/CurrentUserContext", () => ({
-  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+  useCurrentUser: () => ({ ...currentUser, user: null }),
 }));
 vi.mock("../features/hitchhiker/useHitchhikerRequests", () => ({
   useHitchhikerRequests: (enabled?: boolean) => {
@@ -46,11 +53,12 @@ vi.mock("../features/hitchhiker/useHitchhikerRequests", () => ({
       openCount: data.openCount,
       pickedRequests: data.pickedRequests,
       ...load,
+      retry,
     };
   },
 }));
 vi.mock("../features/student/useStudentRequests", () => ({
-  useStudentRequests: () => ({ requests: data.studentRequests, ...load, reload: vi.fn() }),
+  useStudentRequests: () => ({ requests: data.studentRequests, ...load, reload: vi.fn(), retry }),
 }));
 vi.mock("../features/home/useRequestOverview", () => ({
   useRequestOverview: (_queries: unknown, _events: unknown, enabled: boolean) => {
@@ -66,6 +74,7 @@ vi.mock("../features/home/useCouncilOverview", () => ({
     totalCount: data.totalCount,
     hitchhikerCount: data.hitchhikerCount,
     ...load,
+    retry,
   }),
 }));
 
@@ -87,6 +96,8 @@ afterEach(() => {
   vi.useRealTimers();
   currentUser.roles = [];
   currentUser.isLoaded = false;
+  currentUser.loadFailed = false;
+  vi.clearAllMocks();
   enabledWith.hitchhiker = undefined;
   enabledWith.overview = undefined;
 });
@@ -221,25 +232,55 @@ describe("HomePage", () => {
     load.hasError = true;
     renderHomeAs("HITCHHIKER");
 
-    expect(screen.getByRole("alert").textContent).toBe(
-      "Could not load your requests. Please try again later.",
-    );
+    const alert = screen.getByRole("alert");
+
+    expect(within(alert).getByText("Could not load your requests. Please try again.")).toBeTruthy();
     expect(screen.queryByText("No open requests")).toBeNull();
     expect(screen.queryByText("No history yet")).toBeNull();
+
+    // #371: the boxes load again.
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(retry).toHaveBeenCalledTimes(1);
   });
+
+  // #371: without the roles nothing is asked, so a failed /users/me/ is said, not placeholders.
+  it.each(["HITCHHIKER", "COUNCIL"] as const)(
+    "says when the account cannot be loaded in the %s workspace",
+    (role) => {
+      currentUser.loadFailed = true;
+      renderHomeAs(role);
+
+      const alert = screen.getByRole("alert");
+
+      expect(
+        within(alert).getByText("Could not load your account. Please try again."),
+      ).toBeTruthy();
+      expect(screen.queryByRole("region", { name: "Messages" })).toBeNull();
+
+      fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+      expect(currentUser.refresh).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it("shows only the error when a student's requests cannot be loaded", () => {
     load.hasError = true;
     renderHomeAs("STUDENT");
 
-    expect(screen.getByRole("alert").textContent).toBe(
-      "Could not load your requests. Please try again later.",
-    );
+    const alert = screen.getByRole("alert");
+
+    expect(within(alert).getByText("Could not load your requests. Please try again.")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Open Requests" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Pending Evaluations" })).toBeNull();
     expect(screen.queryByRole("region", { name: "History" })).toBeNull();
     // The way on stays: the call to action does not need the list.
     expect(screen.getByText("Need an evaluation?")).toBeTruthy();
+
+    // #371: the boxes load again.
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 });
 

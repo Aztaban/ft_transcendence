@@ -89,6 +89,24 @@ function noteBox() {
 }
 
 describe("CouncilInboxMessagePage", () => {
+  // #371: a failed load says so and offers to load again.
+  it("shows an error when the message cannot be loaded, and loads again on Try again", async () => {
+    vi.mocked(getSCMessage).mockRejectedValueOnce(new Error("network"));
+    vi.mocked(getSCMessage).mockResolvedValueOnce(unread);
+
+    renderPage();
+
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load the message. Please try again.")).toBeTruthy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText(unread.body)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(getSCMessage).toHaveBeenCalledTimes(2);
+  });
+
   it("shows the whole anonymous message without marking it read", async () => {
     vi.mocked(getSCMessage).mockResolvedValue(unread);
 

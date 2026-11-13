@@ -12,6 +12,7 @@ import {
 } from "../api/admin";
 import { ApiError } from "../api/client";
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import AccountActionDialog, { type AccountAction } from "../features/admin/AccountActionDialog";
 import UserStatusBadge, { rolesText } from "../features/admin/UserStatusBadge";
 import { useCurrentUser } from "../store/CurrentUserContext";
@@ -292,9 +293,15 @@ function AdminUserDetailPage() {
       )}
 
       {loadState === "error" && (
-        <p className="admin-users__error" role="alert">
+        <LoadError
+          className="admin-users__error"
+          onRetry={() => {
+            setLoadState("loading");
+            setReloadKey((key) => key + 1);
+          }}
+        >
           {t("adminUser.loadError")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && user && (

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 
@@ -32,8 +33,21 @@ function CancelDialog({
   onClose,
 }: CancelDialogProps) {
   const { t } = useTranslation();
-  const cardRef = useDialog<HTMLDivElement>(onClose);
+  // Nothing closes the popup while the cancel or release is on its way: its answer (an error or
+  // the "released" popup) would come with nothing open to show it (#371).
+  function close() {
+    if (!isSubmitting) {
+      onClose();
+    }
+  }
+
+  const cardRef = useDialog<HTMLDivElement>(close);
   const { starts_at: startsAt, ends_at: endsAt } = evaluation;
+
+  // Sending disables the focused button, which drops the focus to the page: put it back.
+  useEffect(() => {
+    cardRef.current?.focus();
+  }, [cardRef, isSubmitting]);
 
   if (isDone) {
     return createPortal(
@@ -62,7 +76,7 @@ function CancelDialog({
   }
 
   return createPortal(
-    <div className="pending-dialog" data-testid="cancel-dialog-backdrop" onClick={onClose}>
+    <div className="pending-dialog" data-testid="cancel-dialog-backdrop" onClick={close}>
       <div
         ref={cardRef}
         className="pending-dialog__card pending-dialog__card--cancel"
@@ -96,7 +110,12 @@ function CancelDialog({
         )}
 
         <div className="pending-cancel__actions">
-          <button className="pending-cancel__keep" type="button" onClick={onClose}>
+          <button
+            className="pending-cancel__keep"
+            type="button"
+            disabled={isSubmitting}
+            onClick={close}
+          >
             {t("pending.keep")}
           </button>
           <button

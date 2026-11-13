@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cancelEvaluationRequest, listEvaluationRequests } from "../../api/evaluationRequests";
+import LoadError from "../../components/ui/LoadError";
 import i18n from "../../i18n";
 import type { EvaluationRequest } from "../../types/evaluation";
 import { formatSlot, formatTimeAgo } from "../../utils/dateTime";
@@ -94,9 +95,13 @@ interface RequestList {
   hasMore: boolean;
   loadState: LoadState;
   isLoadingMore: boolean;
+  // "Show more" failed (#371): said next to the button, whose next click asks for the same page.
+  moreFailed: boolean;
   loadMore: () => void;
   // Loads the list again from its first page, e.g. after a cancel.
   reload: () => void;
+  // "Try again" after the first page failed: the placeholders show until the answer.
+  retry: () => void;
 }
 
 // One paginated list of the student's requests (§5.7): the first page on mount, then
@@ -109,6 +114,7 @@ function useRequestList(history: boolean): RequestList {
   const [hasMore, setHasMore] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [moreFailed, setMoreFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   // Set by a live refresh: a failure then keeps the requests already shown.
   const isLiveRefresh = useRef(false);
@@ -116,6 +122,7 @@ function useRequestList(history: boolean): RequestList {
   useLiveRefresh(EVALUATION_EVENTS, () => {
     isLiveRefresh.current = true;
     setPage(1);
+    setMoreFailed(false);
     setReloadKey((key) => key + 1);
   });
 
@@ -131,12 +138,19 @@ function useRequestList(history: boolean): RequestList {
           setRequests((current) => (page === 1 ? result.results : [...current, ...result.results]));
           setTotal(result.count);
           setHasMore(result.next !== null);
+          setMoreFailed(false);
           setLoadState("ready");
         }
       })
       .catch(() => {
-        if (active && page === 1) {
+        if (!active) {
+          return;
+        }
+
+        if (page === 1) {
           setLoadState((current) => (inBackground && current === "ready" ? current : "error"));
+        } else {
+          setMoreFailed(true);
         }
       })
       .finally(() => {
@@ -156,12 +170,27 @@ function useRequestList(history: boolean): RequestList {
     hasMore,
     loadState,
     isLoadingMore,
+    moreFailed,
     loadMore: () => {
       setIsLoadingMore(true);
-      setPage((current) => current + 1);
+
+      // The failed page again, not the one after it: its requests would be skipped.
+      if (moreFailed) {
+        setMoreFailed(false);
+        setReloadKey((key) => key + 1);
+      } else {
+        setPage((current) => current + 1);
+      }
     },
     reload: () => {
       setPage(1);
+      setMoreFailed(false);
+      setReloadKey((key) => key + 1);
+    },
+    retry: () => {
+      setLoadState("loading");
+      setPage(1);
+      setMoreFailed(false);
       setReloadKey((key) => key + 1);
     },
   };
@@ -176,16 +205,23 @@ function ShowMore({ list, label }: { list: RequestList; label: string }) {
   }
 
   return (
-    <button
-      className="my-requests__more"
-      type="button"
-      disabled={list.isLoadingMore}
-      onClick={list.loadMore}
-    >
-      {list.isLoadingMore
-        ? t("myRequests.loadingMore")
-        : t(label, { count: list.total - list.requests.length })}
-    </button>
+    <>
+      {list.moreFailed && (
+        <p className="my-requests__error" role="alert">
+          {t("myRequests.moreError")}
+        </p>
+      )}
+      <button
+        className="my-requests__more"
+        type="button"
+        disabled={list.isLoadingMore}
+        onClick={list.loadMore}
+      >
+        {list.isLoadingMore
+          ? t("myRequests.loadingMore")
+          : t(label, { count: list.total - list.requests.length })}
+      </button>
+    </>
   );
 }
 
@@ -261,9 +297,15 @@ function MyRequests() {
       )}
 
       {loadState === "error" && (
-        <p className="my-requests__error" role="alert">
+        <LoadError
+          className="my-requests__error"
+          onRetry={() => {
+            active.retry();
+            past.retry();
+          }}
+        >
           {t("myRequests.error")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && isEmpty && (

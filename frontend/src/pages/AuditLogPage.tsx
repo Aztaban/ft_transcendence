@@ -4,6 +4,7 @@ import { Link, useSearchParams } from "react-router";
 
 import { listAuditLog } from "../api/audit";
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { AuditAction, AuditEntry, AuditTargetType } from "../types/audit";
 import type { Paginated } from "../types/pagination";
@@ -69,7 +70,7 @@ function AuditLogPage() {
   const { t } = useTranslation();
   usePageTitle(t("auditLog.title"));
   // The real roles from /users/me/; the backend checks them again (§10.9).
-  const { roles, isLoaded } = useCurrentUser();
+  const { roles, isLoaded, loadFailed, refresh } = useCurrentUser();
   const allowed = canViewAuditLog(roles);
   const [searchParams, setSearchParams] = useSearchParams();
   const action = ACTIONS.find((item) => item === searchParams.get("action"));
@@ -176,7 +177,14 @@ function AuditLogPage() {
   }
 
   if (!isLoaded) {
-    return (
+    // /users/me/ failed: the roles stay unknown until it loads, so say so instead of waiting (#371).
+    return loadFailed ? (
+      <section className="audit-log">
+        <LoadError className="audit-log__error" onRetry={refresh}>
+          {t("common.userLoadError")}
+        </LoadError>
+      </section>
+    ) : (
       <section className="audit-log" aria-busy="true">
         <span className="audit-log__sr-only">{t("auditLog.loading")}</span>
       </section>

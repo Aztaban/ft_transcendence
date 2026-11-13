@@ -9,10 +9,15 @@ import type { AuditEntry } from "../types/audit";
 import AuditLogPage from "./AuditLogPage";
 
 // The user's real roles from /users/me/: an Admin unless a test says otherwise.
-const currentUser = vi.hoisted(() => ({ roles: ["student", "admin"], isLoaded: true }));
+const currentUser = vi.hoisted(() => ({
+  roles: ["student", "admin"],
+  isLoaded: true,
+  loadFailed: false,
+  refresh: vi.fn(),
+}));
 
 vi.mock("../store/CurrentUserContext", () => ({
-  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+  useCurrentUser: () => ({ ...currentUser, user: null }),
 }));
 vi.mock("../api/audit", () => ({ listAuditLog: vi.fn() }));
 
@@ -66,6 +71,7 @@ afterEach(async () => {
   vi.resetAllMocks();
   currentUser.roles = ["student", "admin"];
   currentUser.isLoaded = true;
+  currentUser.loadFailed = false;
 });
 
 function Url() {
@@ -140,6 +146,24 @@ describe("AuditLogPage", () => {
       to: undefined,
       page: 1,
     });
+  });
+
+  // #371: without the roles nothing is asked, so a failed /users/me/ is said, not a blank page.
+  it("says when the account cannot be loaded and loads it again on Try again", () => {
+    currentUser.roles = [];
+    currentUser.isLoaded = false;
+    currentUser.loadFailed = true;
+
+    renderPage();
+
+    const alert = screen.getByRole("alert");
+
+    expect(within(alert).getByText("Could not load your account. Please try again.")).toBeTruthy();
+    expect(listAuditLog).not.toHaveBeenCalled();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(currentUser.refresh).toHaveBeenCalledTimes(1);
   });
 
   it("is only for Admins and asks the API nothing for anyone else", async () => {
