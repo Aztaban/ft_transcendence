@@ -897,6 +897,19 @@
   }
 }
 
+/* The smallest phones: the menu, the search icon and the user block need 294px, so the padding
+   gives up a few pixels and the avatar stays inside the top bar. */
+@media (max-width: 360px) {
+  .topbar {
+    padding: 0 6px;
+  }
+
+  .topbar__search {
+    min-width: 36px;
+    padding: 0 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sidebar,
   .sidebar--open {
