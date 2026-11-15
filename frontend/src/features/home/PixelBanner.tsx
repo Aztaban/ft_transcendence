@@ -7,7 +7,7 @@ import RoadScene from "./RoadScene";
 import RocketScene from "./RocketScene";
 import "../../styles/pixel-banner.css";
 
-interface Scene {
+export interface Scene {
   Art: ComponentType;
   // A key of the "home" texts in src/i18n/locales.
   label: string;
@@ -15,7 +15,7 @@ interface Scene {
   seconds: number;
 }
 
-const scenes: Scene[] = [
+const homeScenes: Scene[] = [
   { Art: RocketScene, label: "home.animationRocket", seconds: 16 },
   { Art: RoadScene, label: "home.animationRoad", seconds: 14 },
   { Art: DeskScene, label: "home.animationDesk", seconds: 14 },
@@ -35,12 +35,14 @@ function isReducedMotion() {
   return window.matchMedia?.(REDUCED_MOTION).matches ?? false;
 }
 
-// The Home banner's animation: one pixel scene after the other, in a loop. It is decorative, and
-// a pause button stops it, because moving content longer than 5 seconds needs one (WCAG 2.2.2).
+// The Home banner's animation (also the Profile's, with its own `scenes`): one pixel scene after
+// the other, in a loop. It is decorative, and a pause button stops it, because moving content
+// longer than 5 seconds needs one (WCAG 2.2.2).
 // The clock is a CSS animation as long as the scene, so pausing stops the change of scene too.
-// With "reduce motion" on, also when it is turned on later, it shows a still rocket: no clock,
-// no change of scene, and the CSS stops the movement and hides the button.
-function PixelBanner() {
+// With "reduce motion" on, also when it is turned on later, it shows the first scene still (the
+// rocket on Home): no clock, no change of scene, and the CSS stops the movement and hides the
+// button.
+function PixelBanner({ scenes = homeScenes }: { scenes?: Scene[] }) {
   const { t } = useTranslation();
   const [isPaused, setIsPaused] = useState(false);
   const [sceneIndex, setSceneIndex] = useState(0);

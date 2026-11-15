@@ -1,4 +1,4 @@
-// Hand-drawn pixel art for the Home banner: one character is one pixel, "." is transparent.
+// Hand-drawn pixel art for the Home and Profile banners: one character is one pixel, "." is transparent.
 // Every scene is night, so the welcome text stays readable over it.
 
 export const SCENE_WIDTH = 190;
@@ -180,6 +180,25 @@ export const RUBBER_DUCK = `
 .YYYYYOO
 YYYYYYY.
 .YYYYY..`;
+
+// The Profile scene: the photo on the 42 ID card, and the stamp that stamps a badge on it.
+export const ID_PHOTO = `
+..KKKK..
+.KKKKKK.
+.KSSSSK.
+.SKSSKS.
+.SSSSSS.
+..SSSS..
+.TTTTTT.
+TTTTTTTT`;
+
+export const STAMP = `
+..NNN..
+..NNN..
+..NNN..
+.NNNNN.
+AAAAAAA
+GGGGGGG`;
 
 // A 3×5 font, read row by row, for the few letters the scenes write.
 const font: Record<string, string> = {

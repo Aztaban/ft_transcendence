@@ -562,6 +562,143 @@
 }
 
 /* One still frame: the rocket beside planet 42. Without the clock the scene stays. */
+/* Profile: the stamp stamps three badges on the ID card, then the student cheers. */
+
+.pixel-profile__stamp {
+  animation: pixel-profile-stamp var(--scene-length) step-end infinite;
+}
+
+@keyframes pixel-profile-stamp {
+  0% {
+    transform: translate(0, -30px);
+  }
+
+  6% {
+    transform: translate(0, -20px);
+  }
+
+  10% {
+    transform: translate(0, -12px);
+  }
+
+  14% {
+    transform: translate(0, 0);
+  }
+
+  18% {
+    transform: translate(0, -12px);
+  }
+
+  24% {
+    transform: translate(10px, -12px);
+  }
+
+  30% {
+    transform: translate(10px, 0);
+  }
+
+  34% {
+    transform: translate(10px, -12px);
+  }
+
+  40% {
+    transform: translate(20px, -12px);
+  }
+
+  46% {
+    transform: translate(20px, 0);
+  }
+
+  50% {
+    transform: translate(20px, -12px);
+  }
+
+  54% {
+    transform: translate(20px, -20px);
+  }
+
+  58% {
+    transform: translate(20px, -30px);
+  }
+}
+
+.pixel-profile__seal {
+  opacity: 0;
+  animation: pixel-profile-seal-1 var(--scene-length) step-end infinite;
+}
+
+.pixel-profile__seal--2 {
+  animation-name: pixel-profile-seal-2;
+}
+
+.pixel-profile__seal--3 {
+  animation-name: pixel-profile-seal-3;
+}
+
+@keyframes pixel-profile-seal-1 {
+  0% {
+    opacity: 0;
+  }
+
+  16% {
+    opacity: 1;
+  }
+}
+
+@keyframes pixel-profile-seal-2 {
+  0% {
+    opacity: 0;
+  }
+
+  32% {
+    opacity: 1;
+  }
+}
+
+@keyframes pixel-profile-seal-3 {
+  0% {
+    opacity: 0;
+  }
+
+  48% {
+    opacity: 1;
+  }
+}
+
+.pixel-profile__standing {
+  animation: pixel-profile-standing var(--scene-length) step-end infinite;
+}
+
+@keyframes pixel-profile-standing {
+  0% {
+    opacity: 1;
+  }
+
+  62% {
+    opacity: 0;
+  }
+}
+
+.pixel-profile__cheering,
+.pixel-profile__confetti {
+  opacity: 0;
+  animation: pixel-profile-cheering var(--scene-length) step-end infinite;
+}
+
+@keyframes pixel-profile-cheering {
+  0% {
+    opacity: 0;
+  }
+
+  62% {
+    opacity: 1;
+  }
+}
+
+.pixel-profile__confetti rect {
+  animation: pixel-desk-fall 1.4s steps(14) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pixel-banner * {
     animation: none;
@@ -573,5 +710,14 @@
 
   .pixel-banner__pause {
     display: none;
+  }
+
+  /* The Profile scene stands still once stamped: every badge on the card, no stamp. */
+  .pixel-profile__seal {
+    opacity: 1;
+  }
+
+  .pixel-profile__stamp {
+    opacity: 0;
   }
 }
