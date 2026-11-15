@@ -22,6 +22,7 @@ Subject module: *Major: complete accessibility compliance (WCAG 2.1 AA) with scr
 ### Automated, on every `npm test` (CI)
 
 - **axe-core on the pages** (`frontend/src/test/accessibility.test.tsx`, #359): 22 logged-in pages in their workspaces, the 404 page, Login and Register (25 scans), each checked against the WCAG 2.1 A and AA rules. Not in the list yet: the eligibility request page (`/eligibility-requests/:id`) and the Admin pages. A route only counts once its own heading is shown, no loading placeholder or error is left and the user's roles are loaded, so an error or Unauthorized page cannot pass in its place. Result: **0 violations**.
+- **axe-core on every popup** (`frontend/src/test/accessibilityDialogs.test.tsx`, #784): the 13 popups (cancel request, request sent, evaluation preview, cancel evaluation, slot sent, eligibility sent, the welcome popup with its project list, the Head Tutor's review, message sent, marked as read, reveal sender, delete message, the Admin's account actions), opened, with their error where they have one: 19 scans with the same rules. Result: **0 violations**.
 - **Palette contrast** (`frontend/src/styles/tokens.test.ts`, #731): the 13 text/surface token pairs the pages use are at least 4.5:1. The 3:1 of focus rings and icons is not tested automatically.
 - **Clean console** (`frontend/src/test/setup.ts`, #778): a test fails if it writes a React warning or error to the console.
 - **Component tests**: the reusable components test their own roles and keyboard behaviour (`frontend/src/components/ui/*.test.tsx`, design system #730).
@@ -48,5 +49,5 @@ Chrome on Ubuntu, logged in with every role, all three languages, on main with t
 
 ## Known limits
 
-- The axe scan opens each page as it first loads; dialogs, menus and some states are covered by their own tests and the manual checks, and a scan of those states is planned (#784).
+- The page scan opens each page as it first loads, and the popups are scanned on their own (#784). The menus (role switcher, user menu, notification panel) and a few states the mock data does not reach (Accept/Decline on the evaluation page, a read council message) are covered by their component tests and the manual keyboard and screen reader checks, not by axe.
 - The external links in the sidebar (42 Intra, Notion, Slack) are named links; their logos are brand marks, not icons of the design system.
