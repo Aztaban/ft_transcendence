@@ -5,7 +5,7 @@ HOW TO FILL THIS README (issue #375, plan in its first comment)
 - Write ONLY in the sections marked with your name. Replace the TODO comment with your text.
 - Edit on GitHub: this branch (issue-58/375-readme) → README.md → ✏️, or locally, then commit:
   docs: <your section> in the README (#375)
-- Deadline: 17.11 at 16:00 (our meeting). Written in English, honest, and every one of us must be able to explain it.
+- Deadline: 18.11 at 16:00 (our meeting and pre-evaluation). Written in English, honest, and every one of us must be able to explain it.
 - The subject's requirements for each section are quoted in its TODO.
 -->
 
