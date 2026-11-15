@@ -12,6 +12,17 @@ body,
   min-height: 100%;
 }
 
+/* No page scrollbar: it took a strip of the screen beside the content (shown in the browser's own
+   colours, on phones too). The page still scrolls with the wheel, touch and the keyboard; the
+   sidebar and other inner lists keep their thin scrollbars. */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   margin: 0;
   font-family: var(--font-family-base);
