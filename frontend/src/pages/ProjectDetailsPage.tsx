@@ -4,6 +4,8 @@ import { useParams } from "react-router";
 
 import BackLink from "../components/layout/BackLink";
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
+import Skeleton from "../components/ui/Skeleton";
 import { ApiError } from "../api/client";
 import { getProject } from "../api/projects";
 import ProjectOverview, { projectInitials } from "../features/projects/ProjectOverview";
@@ -20,6 +22,7 @@ function ProjectDetailsPage() {
   const { slug = "" } = useParams();
   const [project, setProject] = useState<Project | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [retryKey, setRetryKey] = useState(0);
 
   usePageTitle(project?.name ?? t("pageTitle.project"));
 
@@ -43,13 +46,20 @@ function ProjectDetailsPage() {
     return () => {
       active = false;
     };
-  }, [slug]);
+  }, [slug, retryKey]);
 
   return (
     <section className="project-details">
       <BackLink className="project-details__back" />
 
-      {loadState === "loading" && <div className="project-details__skeleton" aria-busy="true" />}
+      {loadState === "loading" && (
+        <Skeleton
+          label={t("project.loading")}
+          count={1}
+          className="project-details__loading"
+          itemClassName="project-details__skeleton"
+        />
+      )}
 
       {loadState === "not-found" && (
         <p className="project-details__error" role="alert">
@@ -58,9 +68,9 @@ function ProjectDetailsPage() {
       )}
 
       {loadState === "error" && (
-        <p className="project-details__error" role="alert">
+        <LoadError className="project-details__error" onRetry={() => setRetryKey((key) => key + 1)}>
           {t("project.error")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && project && (

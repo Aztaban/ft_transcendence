@@ -1,14 +1,12 @@
 """Sending a council message notifies every SC Member (api-plan §8.8, §10.6)."""
 
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, call
+from unittest.mock import call
 
 import pytest
 from django.db import transaction
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.fields import DateTimeField
-from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.council.models import SCMessage
@@ -17,20 +15,6 @@ from apps.notifications.models import Notification
 pytestmark = pytest.mark.django_db
 
 SEND = "api:sc-message-list"
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
-
-
-@pytest.fixture
-def group_send(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
 
 
 def send(client, body="The fridge is broken again."):
@@ -42,7 +26,7 @@ def iso(dt):
 
 
 def test_send_notifies_every_sc_member_once_and_nobody_else(
-    api_client, make_user, group_send, django_capture_on_commit_callbacks
+    api_client, make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     anna = make_user("anna@example.com")
     first = make_user("ada@example.com", roles=(Role.Name.SC_MEMBER, Role.Name.ADMIN))
@@ -54,7 +38,7 @@ def test_send_notifies_every_sc_member_once_and_nobody_else(
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = send(api_client)
         assert response.status_code == status.HTTP_201_CREATED
-        group_send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
         message_id = response.json()["id"]
         stored = list(
             Notification.objects.order_by("recipient_id").values(
@@ -79,9 +63,9 @@ def test_send_notifies_every_sc_member_once_and_nobody_else(
         },
     ]
     assert len(callbacks) == 2
-    assert group_send.await_count == 2
+    assert user_event_sender.await_count == 2
     notifications = list(Notification.objects.order_by("recipient_id"))
-    group_send.assert_has_awaits(
+    user_event_sender.assert_has_awaits(
         [
             call(
                 f"user_{first.id}",
@@ -104,7 +88,7 @@ def test_send_notifies_every_sc_member_once_and_nobody_else(
 
 
 def test_an_sc_member_who_sends_is_notified_without_being_named(
-    api_client, make_user, group_send, django_capture_on_commit_callbacks
+    api_client, make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     member = make_user("ada@example.com", roles=(Role.Name.SC_MEMBER,))
     api_client.force_authenticate(user=member)
@@ -129,7 +113,7 @@ def test_an_sc_member_who_sends_is_notified_without_being_named(
 
 
 def test_send_with_no_council_stores_the_message_and_no_notification(
-    api_client, make_user, group_send, django_capture_on_commit_callbacks
+    api_client, make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     api_client.force_authenticate(user=make_user("anna@example.com"))
 
@@ -140,10 +124,12 @@ def test_send_with_no_council_stores_the_message_and_no_notification(
     assert SCMessage.objects.count() == 1
     assert not Notification.objects.exists()
     assert callbacks == []
-    group_send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
-def test_invalid_send_creates_no_message_and_no_notification(api_client, make_user, group_send):
+def test_invalid_send_creates_no_message_and_no_notification(
+    api_client, make_user, user_event_sender
+):
     make_user("ada@example.com", roles=(Role.Name.SC_MEMBER,))
     api_client.force_authenticate(user=make_user("anna@example.com"))
 
@@ -152,11 +138,11 @@ def test_invalid_send_creates_no_message_and_no_notification(api_client, make_us
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert not SCMessage.objects.exists()
     assert not Notification.objects.exists()
-    group_send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 def test_outer_rollback_discards_the_message_and_its_notifications(
-    api_client, make_user, group_send, django_capture_on_commit_callbacks
+    api_client, make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     make_user("ada@example.com", roles=(Role.Name.SC_MEMBER,))
     api_client.force_authenticate(user=make_user("anna@example.com"))
@@ -172,4 +158,4 @@ def test_outer_rollback_discards_the_message_and_its_notifications(
     assert not SCMessage.objects.exists()
     assert not Notification.objects.exists()
     assert callbacks == []
-    group_send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()

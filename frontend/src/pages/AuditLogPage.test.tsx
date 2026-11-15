@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,10 +9,15 @@ import type { AuditEntry } from "../types/audit";
 import AuditLogPage from "./AuditLogPage";
 
 // The user's real roles from /users/me/: an Admin unless a test says otherwise.
-const currentUser = vi.hoisted(() => ({ roles: ["student", "admin"], isLoaded: true }));
+const currentUser = vi.hoisted(() => ({
+  roles: ["student", "admin"],
+  isLoaded: true,
+  loadFailed: false,
+  refresh: vi.fn(),
+}));
 
 vi.mock("../store/CurrentUserContext", () => ({
-  useCurrentUser: () => ({ ...currentUser, user: null, refresh: () => {} }),
+  useCurrentUser: () => ({ ...currentUser, user: null }),
 }));
 vi.mock("../api/audit", () => ({ listAuditLog: vi.fn() }));
 
@@ -66,6 +71,7 @@ afterEach(async () => {
   vi.resetAllMocks();
   currentUser.roles = ["student", "admin"];
   currentUser.isLoaded = true;
+  currentUser.loadFailed = false;
 });
 
 function Url() {
@@ -142,6 +148,24 @@ describe("AuditLogPage", () => {
     });
   });
 
+  // #371: without the roles nothing is asked, so a failed /users/me/ is said, not a blank page.
+  it("says when the account cannot be loaded and loads it again on Try again", () => {
+    currentUser.roles = [];
+    currentUser.isLoaded = false;
+    currentUser.loadFailed = true;
+
+    renderPage();
+
+    const alert = screen.getByRole("alert");
+
+    expect(within(alert).getByText("Could not load your account. Please try again.")).toBeTruthy();
+    expect(listAuditLog).not.toHaveBeenCalled();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(currentUser.refresh).toHaveBeenCalledTimes(1);
+  });
+
   it("is only for Admins and asks the API nothing for anyone else", async () => {
     currentUser.roles = ["student", "head_tutor"];
     renderPage();
@@ -212,6 +236,45 @@ describe("AuditLogPage", () => {
       target: { value: "user.deleted" },
     });
     await waitFor(() => expect(lastQuery()).toMatchObject({ action: "user.deleted", page: 1 }));
+  });
+
+  // #369: the entries stay until the next page arrives, so the button just used keeps the focus.
+  it("keeps the entries and the focus on Next while the next page loads", async () => {
+    let answer: (value: ReturnType<typeof page>) => void = () => {};
+
+    vi.mocked(listAuditLog)
+      .mockResolvedValueOnce(page([roleAssigned], 41, "next"))
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      .mockResolvedValueOnce(page([messageDeleted], 41));
+    renderPage();
+
+    const next = await screen.findByRole("button", { name: /Next/ });
+
+    next.focus();
+    fireEvent.click(next);
+
+    await waitFor(() => expect(lastQuery()?.page).toBe(2));
+    expect(rows()).toHaveLength(1);
+    expect(screen.getByText("Page 2 of 3")).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Audit entries" }).getAttribute("aria-busy")).toBe(
+      "true",
+    );
+    expect(document.activeElement).toBe(next);
+
+    await act(async () => answer(page([userEdited], 41, "next")));
+
+    expect(within(rows()[0]).getByText("A deleted account")).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Audit entries" }).getAttribute("aria-busy")).toBe(
+      "false",
+    );
+    expect(document.activeElement).toBe(next);
+
+    // A quick second click on the last page asks for nothing past it.
+    fireEvent.click(next);
+    fireEvent.click(next);
+
+    await waitFor(() => expect(within(rows()[0]).getByText("Insults.")).toBeTruthy());
+    expect(vi.mocked(listAuditLog).mock.calls.map(([query]) => query?.page)).toEqual([1, 2, 3]);
   });
 
   it("says when nothing matches and clears the filters", async () => {

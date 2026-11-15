@@ -15,11 +15,6 @@ SEND = "api:sc-message-list"
 INVALID = "Please correct the highlighted fields."
 
 
-@pytest.fixture
-def api_client():
-    return APIClient()
-
-
 def iso(dt):
     return DateTimeField().to_representation(dt)
 

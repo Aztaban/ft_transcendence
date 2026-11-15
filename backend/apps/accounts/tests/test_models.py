@@ -1,16 +1,11 @@
 """Database-backed tests for the custom User model (isolated MySQL test DB)."""
 
 import pytest
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def user_model():
-    return get_user_model()
 
 
 def test_user_identity_configuration(user_model):

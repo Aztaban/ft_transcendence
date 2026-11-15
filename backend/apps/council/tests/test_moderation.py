@@ -2,8 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, call
+from unittest.mock import call
 
 import pytest
 from django.db import close_old_connections, connection
@@ -32,20 +31,6 @@ FORBIDDEN = {
 }
 UNAUTHENTICATED = {"error": {"code": "not_authenticated", "message": "Authentication required."}}
 INVALID = "Please correct the highlighted fields."
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
-
-
-@pytest.fixture
-def group_send(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
 
 
 def message_from(sender, body="The fridge is broken."):
@@ -372,7 +357,7 @@ def test_moderation_through_a_session_needs_csrf(make_user):
 
 
 def test_delete_through_a_session_removes_its_notifications(
-    make_user, group_send, django_capture_on_commit_callbacks
+    make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     alice = make_user("alice@example.com", "Alice")
     admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
@@ -410,7 +395,7 @@ def test_delete_through_a_session_removes_its_notifications(
             HTTP_X_CSRFTOKEN=browser.cookies["csrftoken"].value,
         )
         assert response.status_code == status.HTTP_204_NO_CONTENT
-        group_send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
 
     assert response.content == b""
     assert not SCMessage.objects.filter(pk=message.id).exists()
@@ -435,8 +420,8 @@ def test_delete_through_a_session_removes_its_notifications(
         },
     ]
     assert len(callbacks) == 1
-    assert group_send.await_count == 2
-    group_send.assert_has_awaits(
+    assert user_event_sender.await_count == 2
+    user_event_sender.assert_has_awaits(
         [
             call(
                 f"user_{user_id}",
@@ -448,7 +433,7 @@ def test_delete_through_a_session_removes_its_notifications(
 
 
 def test_a_bad_reason_keeps_the_message_notifications(
-    api_client, make_user, group_send, django_capture_on_commit_callbacks
+    api_client, make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     alice = make_user("alice@example.com", "Alice")
     admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
@@ -473,11 +458,11 @@ def test_a_bad_reason_keeps_the_message_notifications(
     assert notification_rows() == before
     assert audit_rows() == []
     assert callbacks == []
-    group_send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 def test_a_missing_message_keeps_the_notifications(
-    api_client, make_user, group_send, django_capture_on_commit_callbacks
+    api_client, make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     alice = make_user("alice@example.com", "Alice")
     admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
@@ -496,11 +481,11 @@ def test_a_missing_message_keeps_the_notifications(
     assert notification_rows() == before
     assert audit_rows() == []
     assert callbacks == []
-    group_send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 def test_a_rolled_back_delete_keeps_the_notifications(
-    api_client, make_user, group_send, django_capture_on_commit_callbacks, monkeypatch
+    api_client, make_user, user_event_sender, django_capture_on_commit_callbacks, monkeypatch
 ):
     alice = make_user("alice@example.com", "Alice")
     admin = make_user("admin@example.com", "Admin", (Role.Name.ADMIN,))
@@ -525,7 +510,7 @@ def test_a_rolled_back_delete_keeps_the_notifications(
     assert notification_rows() == before
     assert audit_rows() == []
     assert callbacks == []
-    group_send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 @pytest.mark.django_db(transaction=True)

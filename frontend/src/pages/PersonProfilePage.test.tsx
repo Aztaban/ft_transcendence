@@ -212,12 +212,22 @@ describe("PersonProfilePage", () => {
     expect(await screen.findByText("No projects yet.")).toBeTruthy();
   });
 
-  it("keeps the profile when the projects cannot be loaded", async () => {
-    vi.mocked(getTutorEligibility).mockRejectedValue(new ApiError(500, "Server error"));
+  it("keeps the profile when the projects cannot be loaded, and loads them again", async () => {
+    vi.mocked(getTutorEligibility).mockRejectedValueOnce(new ApiError(500, "Server error"));
     renderPage();
 
-    expect(await screen.findByText("Could not load the projects.")).toBeTruthy();
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load the projects.")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Lenka Husarova", level: 1 })).toBeTruthy();
+
+    // #371: only the projects load again.
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    await waitFor(() => expect(getTutorEligibility).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("2 of 4 projects")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(getPublicUser).toHaveBeenCalledTimes(1);
   });
 
   it("shows only their projects, without the bar, when the project list fails", async () => {
@@ -302,11 +312,21 @@ describe("PersonProfilePage", () => {
     expect(await screen.findByText("No evaluations with Lenka Husarova yet.")).toBeTruthy();
   });
 
-  it("keeps the profile when the student's evaluations cannot be loaded", async () => {
+  it("keeps the profile when the student's evaluations cannot be loaded, and loads them again", async () => {
     vi.mocked(listEvaluationRequests).mockRejectedValue(new ApiError(500, "Server error"));
     renderPage();
 
-    expect(await screen.findByText("Could not load your evaluations.")).toBeTruthy();
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load your evaluations.")).toBeTruthy();
+
+    // #371: only the evaluations load again.
+    vi.mocked(listEvaluationRequests).mockResolvedValue(page([]));
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText(/no evaluations with/i)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(getPublicUser).toHaveBeenCalledTimes(1);
   });
 
   it("offers a new request to students", async () => {
@@ -356,6 +376,26 @@ describe("PersonProfilePage", () => {
     expect(await screen.findByText("Role Student Council removed.")).toBeTruthy();
     expect(revokeRole).toHaveBeenCalledWith(7, 4);
     expect(texts(screen.getByRole("list", { name: "Roles" }), "listitem")).toEqual(["Head Tutor"]);
+  });
+
+  // #369: the new roles replace the person, but the projects and the evaluations stay shown.
+  it("keeps the projects and the evaluations after a role change, without loading them again", async () => {
+    me.roles = [
+      { id: 1, name: "student" },
+      { id: 5, name: "admin" },
+    ];
+    vi.mocked(revokeRole).mockResolvedValue(undefined);
+    renderPage();
+    await findProfile();
+    await waitFor(() => expect(listEvaluationRequests).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove the role Student Council" }));
+
+    expect(await screen.findByText("Role Student Council removed.")).toBeTruthy();
+    expect(document.querySelector("[aria-busy='true']")).toBeNull();
+    expect(getTutorEligibility).toHaveBeenCalledTimes(1);
+    expect(listProjects).toHaveBeenCalledTimes(1);
+    expect(listEvaluationRequests).toHaveBeenCalledTimes(2);
   });
 
   it("lets a Head Tutor make a student a Hitchhiker", async () => {

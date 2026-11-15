@@ -142,13 +142,23 @@ describe("PickSlotPage", () => {
     expect(screen.queryByRole("heading", { name: /Choose a slot/ })).toBeNull();
   });
 
-  it("explains when the open requests cannot be loaded", async () => {
-    vi.mocked(findOpenRequest).mockRejectedValue(new ApiError(500, "Server error"));
+  it("explains when the open requests cannot be loaded, and loads again on Try again", async () => {
+    vi.mocked(findOpenRequest).mockRejectedValueOnce(new ApiError(500, "Server error"));
     renderPage();
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "This request could not be loaded. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(
+      within(alert).getByText("This request could not be loaded. Please try again."),
+    ).toBeTruthy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(screen.getByText("Loading the request…")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "Choose a slot for push_swap" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 

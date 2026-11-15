@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -223,6 +223,29 @@ describe("HitchhikerRequestsPage", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  // #371: a live event during the first load used to leave the skeleton forever on a failure.
+  it("shows the error when the load restarted by a live event fails", async () => {
+    vi.mocked(listEvaluationRequests)
+      .mockReturnValueOnce(new Promise(() => {}))
+      .mockRejectedValueOnce(new Error("network"));
+
+    renderLive();
+
+    act(() =>
+      FakeSocket.latest().serverSend({
+        event: "evaluation.created",
+        data: { id: 5, status: "pending" },
+      }),
+    );
+
+    expect(
+      within(await screen.findByRole("alert")).getByText(
+        "Could not load the requests. Please try again.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("Loading requests…")).toBeNull();
+  });
+
   it("drops the project filter when its last request leaves the queue", async () => {
     vi.mocked(listEvaluationRequests)
       .mockResolvedValueOnce(
@@ -256,13 +279,20 @@ describe("HitchhikerRequestsPage", () => {
     );
   });
 
-  it("shows an error when the requests cannot be loaded", async () => {
+  it("shows an error and loads again on Try again", async () => {
     vi.mocked(listEvaluationRequests).mockRejectedValue(new Error("network"));
 
     renderPage();
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "Could not load the requests. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load the requests. Please try again.")).toBeTruthy();
+
+    vi.mocked(listEvaluationRequests).mockResolvedValue(page([]));
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(screen.getByText("Loading requests…")).toBeTruthy();
+    expect(await screen.findByText("No open requests")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

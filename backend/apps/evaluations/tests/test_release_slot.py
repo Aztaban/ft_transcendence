@@ -36,12 +36,6 @@ def fixed_time(monkeypatch):
 
 
 @pytest.fixture
-def seeded_roles():
-    for name in Role.Name.values:
-        Role.objects.get_or_create(name=name)
-
-
-@pytest.fixture
 def student(seeded_roles):
     return get_user_model().objects.create_user(
         id=7, email="alice@example.com", display_name="Alice"
@@ -96,24 +90,12 @@ def expected():
     }
 
 
-def session_client(tutor):
-    client = APIClient(enforce_csrf_checks=True)
-    client.get(reverse("api:session"), HTTP_HOST="localhost")
-    response = client.post(
-        reverse("api:login"),
-        {"email": tutor.email, "password": PASSWORD},
-        format="json",
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
-    assert response.status_code == 200
-    return client
-
-
 @pytest.mark.parametrize("state", ["awaiting_confirmation", "confirmed"])
-def test_release_with_real_session_returns_to_queue(student, tutor, evaluation, expected, state):
+def test_release_with_real_session_returns_to_queue(
+    student, tutor, evaluation, expected, state, api_login
+):
     EvaluationRequest.objects.filter(pk=17).update(status=state)
-    client = session_client(tutor)
+    client = api_login(tutor, PASSWORD)
     response = client.post(
         release_url(),
         HTTP_HOST="localhost",
@@ -154,8 +136,8 @@ def test_authentication_required():
     }
 
 
-def test_csrf_required(tutor, evaluation):
-    response = session_client(tutor).post(release_url(), HTTP_HOST="localhost")
+def test_csrf_required(tutor, evaluation, api_login):
+    response = api_login(tutor, PASSWORD).post(release_url(), HTTP_HOST="localhost")
     assert response.status_code == 403
     assert response.json() == {
         "error": {
@@ -186,7 +168,9 @@ def test_visible_non_picker_cannot_release(student, evaluation, role):
 
 @pytest.mark.parametrize("state", ["awaiting_confirmation", "confirmed"])
 @pytest.mark.parametrize("role", ["student", "tutor", "head_tutor", "sc_member", "admin"])
-def test_unrelated_users_cannot_release_with_real_session(evaluation, expected, state, role):
+def test_unrelated_users_cannot_release_with_real_session(
+    evaluation, expected, state, role, api_login
+):
     EvaluationRequest.objects.filter(pk=17).update(status=state)
     outsider = get_user_model().objects.create_user(
         id=43, email="outsider@example.com", display_name="Outsider", password=PASSWORD
@@ -195,7 +179,7 @@ def test_unrelated_users_cannot_release_with_real_session(evaluation, expected, 
     if role == "tutor":
         # Eligibility for future picks does not grant access to an existing pick.
         TutorEligibility.objects.create(tutor=outsider, project=evaluation.project)
-    client = session_client(outsider)
+    client = api_login(outsider, PASSWORD)
     response = client.post(
         release_url(),
         HTTP_HOST="localhost",
@@ -248,8 +232,8 @@ def test_lost_eligibility_does_not_prevent_releasing_existing_pick(tutor, evalua
     assert response.json() == expected
 
 
-def test_picker_must_still_hold_hitchhiker_role(tutor, evaluation):
-    client = session_client(tutor)
+def test_picker_must_still_hold_hitchhiker_role(tutor, evaluation, api_login):
+    client = api_login(tutor, PASSWORD)
     tutor.roles.remove(Role.objects.get(name="tutor"))
     response = client.post(
         release_url(),

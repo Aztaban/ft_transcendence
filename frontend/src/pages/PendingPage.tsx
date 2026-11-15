@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import { ApiError } from "../api/client";
 import {
   cancelEvaluationRequest,
@@ -203,9 +204,9 @@ function PendingPage() {
       )}
 
       {loadState === "error" && (
-        <p className="pending-page__error" role="alert">
+        <LoadError className="pending-page__error" onRetry={() => setReloadKey((key) => key + 1)}>
           {t("pending.error")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && groups.length === 0 && (

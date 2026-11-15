@@ -4,6 +4,7 @@ import { Link, useSearchParams } from "react-router";
 
 import { listAuditLog } from "../api/audit";
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { AuditAction, AuditEntry, AuditTargetType } from "../types/audit";
 import type { Paginated } from "../types/pagination";
@@ -69,7 +70,7 @@ function AuditLogPage() {
   const { t } = useTranslation();
   usePageTitle(t("auditLog.title"));
   // The real roles from /users/me/; the backend checks them again (§10.9).
-  const { roles, isLoaded } = useCurrentUser();
+  const { roles, isLoaded, loadFailed, refresh } = useCurrentUser();
   const allowed = canViewAuditLog(roles);
   const [searchParams, setSearchParams] = useSearchParams();
   const action = ACTIONS.find((item) => item === searchParams.get("action"));
@@ -176,7 +177,14 @@ function AuditLogPage() {
   }
 
   if (!isLoaded) {
-    return (
+    // /users/me/ failed: the roles stay unknown until it loads, so say so instead of waiting (#371).
+    return loadFailed ? (
+      <section className="audit-log">
+        <LoadError className="audit-log__error" onRetry={refresh}>
+          {t("common.userLoadError")}
+        </LoadError>
+      </section>
+    ) : (
       <section className="audit-log" aria-busy="true">
         <span className="audit-log__sr-only">{t("auditLog.loading")}</span>
       </section>
@@ -191,6 +199,9 @@ function AuditLogPage() {
   const total = result?.count ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const isFiltered = Boolean(action || targetType || actor || fromDay || toDay);
+  // Another page or filter keeps the entries shown, greyed out, until the new ones arrive: the
+  // Previous / Next button just used stays in place and keeps the focus (#369).
+  const isRefreshing = loadState === "loading" && entries.length > 0;
   const actorName =
     actor !== undefined
       ? (entries.find((entry) => entry.actor?.id === actor)?.actor?.display_name ?? `#${actor}`)
@@ -282,7 +293,7 @@ function AuditLogPage() {
         </div>
       )}
 
-      {loadState === "loading" && (
+      {loadState === "loading" && !isRefreshing && (
         <div className="audit-log__skeletons" aria-busy="true">
           {[1, 2, 3, 4].map((placeholder) => (
             <div className="audit-log__skeleton" key={placeholder} />
@@ -320,11 +331,15 @@ function AuditLogPage() {
         </div>
       )}
 
-      {loadState === "ready" && entries.length > 0 && (
+      {(loadState === "ready" || isRefreshing) && entries.length > 0 && (
         <>
           <p className="audit-log__total">{t("auditLog.total", { count: total })}</p>
 
-          <table className="audit-log__table" aria-label={t("auditLog.tableAria")}>
+          <table
+            className="audit-log__table"
+            aria-label={t("auditLog.tableAria")}
+            aria-busy={isRefreshing}
+          >
             <thead>
               <tr>
                 <th scope="col">{t("auditLog.when")}</th>
@@ -411,7 +426,9 @@ function AuditLogPage() {
               <span aria-live="polite">{t("auditLog.page", { page, pages: pageCount })}</span>
               <button
                 type="button"
-                disabled={!result?.next}
+                // `next` is the shown page's until the next one arrives: a second quick click
+                // must not ask for a page past the last one.
+                disabled={!result?.next || page >= pageCount}
                 onClick={() => applyFilters({ page: String(page + 1) })}
               >
                 {t("common.next")} <span aria-hidden="true">›</span>

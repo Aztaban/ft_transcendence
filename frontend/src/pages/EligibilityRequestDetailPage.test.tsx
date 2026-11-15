@@ -316,14 +316,20 @@ describe("EligibilityRequestDetailPage", () => {
     expect(getEligibilityRequest).not.toHaveBeenCalled();
   });
 
-  it("shows an error when the request cannot be loaded", async () => {
-    vi.mocked(getEligibilityRequest).mockRejectedValue(new Error("network"));
+  it("shows an error when the request cannot be loaded, and loads again on Try again", async () => {
+    vi.mocked(getEligibilityRequest).mockRejectedValueOnce(new Error("network"));
+    vi.mocked(getEligibilityRequest).mockResolvedValueOnce(eligibilityRequest());
 
     renderPage();
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "Could not load the request. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load the request. Please try again.")).toBeTruthy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByRole("link", { name: "Bob" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   // Another Head Tutor's decision sends this one no event (§9.3), so the tab being shown does.

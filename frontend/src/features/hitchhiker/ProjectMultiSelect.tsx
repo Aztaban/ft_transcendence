@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { listProjects } from "../../api/projects";
+import LoadError from "../../components/ui/LoadError";
 import type { ProjectRef } from "../../types/project";
 import { projectInitials } from "../projects/ProjectOverview";
 
@@ -20,6 +21,7 @@ function ProjectMultiSelect({ value, onChange }: ProjectMultiSelectProps) {
   const { t } = useTranslation();
   const [projects, setProjects] = useState<ProjectRef[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -40,7 +42,7 @@ function ProjectMultiSelect({ value, onChange }: ProjectMultiSelectProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [retryKey]);
 
   const selectedIds = new Set(value.map((project) => project.id));
   const allSelected = projects.length > 0 && selectedIds.size === projects.length;
@@ -71,9 +73,15 @@ function ProjectMultiSelect({ value, onChange }: ProjectMultiSelectProps) {
       )}
 
       {loadState === "error" && (
-        <p className="project-multi__error" role="alert">
+        <LoadError
+          className="project-multi__error"
+          onRetry={() => {
+            setLoadState("loading");
+            setRetryKey((key) => key + 1);
+          }}
+        >
           {t("projectSelect.error")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && projects.length === 0 && (

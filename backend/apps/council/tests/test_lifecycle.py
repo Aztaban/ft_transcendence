@@ -4,9 +4,6 @@ Keeps the pieces several people edit on one path: sending, the council notificat
 who may see the inbox, read state, the note version, revealing the sender, and deletion.
 """
 
-from types import SimpleNamespace
-from unittest.mock import AsyncMock
-
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -39,15 +36,6 @@ CONFLICT = {
 }
 
 
-@pytest.fixture
-def group_send(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
-
-
 def client_for(user):
     client = APIClient()
     client.force_authenticate(user=user)
@@ -75,7 +63,7 @@ def page(message):
 
 
 def test_a_message_moves_from_send_through_moderation(
-    make_user, group_send, django_capture_on_commit_callbacks
+    make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     anna = make_user("anna@example.com")
     ada = make_user("ada@example.com", roles=(Role.Name.SC_MEMBER,))
@@ -87,7 +75,7 @@ def test_a_message_moves_from_send_through_moderation(
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         sent = student.post(reverse(LIST), {"body": f"  {BODY}  "}, format="json")
         assert sent.status_code == status.HTTP_201_CREATED
-        group_send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
 
     message = SCMessage.objects.get()
     assert sent.json() == {"id": message.id, "created_at": iso(message.created_at)}
@@ -109,7 +97,7 @@ def test_a_message_moves_from_send_through_moderation(
     ]
     assert len(callbacks) == 1
     notification = Notification.objects.get()
-    group_send.assert_awaited_once_with(
+    user_event_sender.assert_awaited_once_with(
         f"user_{ada.id}",
         {
             "type": "user.event",
@@ -215,14 +203,14 @@ def test_a_message_moves_from_send_through_moderation(
     assert council_delete.json() == FORBIDDEN
     assert student_delete.status_code == status.HTTP_404_NOT_FOUND
     assert student_delete.json() == NOT_FOUND
-    assert group_send.await_count == 1
+    assert user_event_sender.await_count == 1
 
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         removed = admin_client.delete(
             reverse(DETAIL, args=[message.id]), {"reason": "Abusive content."}, format="json"
         )
         assert removed.status_code == status.HTTP_204_NO_CONTENT
-        assert group_send.await_count == 1
+        assert user_event_sender.await_count == 1
 
     assert removed.content == b""
     assert not SCMessage.objects.filter(pk=message.id).exists()
@@ -234,8 +222,8 @@ def test_a_message_moves_from_send_through_moderation(
     }
     assert not Notification.objects.exists()
     assert len(callbacks) == 1
-    assert group_send.await_count == 2
-    group_send.assert_any_await(
+    assert user_event_sender.await_count == 2
+    user_event_sender.assert_any_await(
         f"user_{ada.id}",
         {"type": "user.event", "event": "notification.updated", "data": {}},
     )

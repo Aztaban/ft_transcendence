@@ -8,8 +8,7 @@ of the same request wins. The proposed slot must match the §7.1 timing rules.
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from threading import Barrier
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, call
+from unittest.mock import call
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -111,20 +110,6 @@ def hitchhiker(project):
     return user
 
 
-def logged_in_client(user):
-    client = APIClient(enforce_csrf_checks=True)
-    client.get(reverse("api:session"), HTTP_HOST="localhost")
-    response = client.post(
-        reverse("api:login"),
-        {"email": user.email, "password": PASSWORD},
-        format="json",
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
-    assert response.status_code == 200
-    return client
-
-
 def test_requires_authentication():
     response = APIClient().post(pick_url(), SLOT, format="json")
     assert response.status_code == 401
@@ -133,19 +118,15 @@ def test_requires_authentication():
     }
 
 
-@pytest.fixture
-def event_sender(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
-
-
 def test_pick_slot_real_session(
-    hitchhiker, evaluation, expected, event_sender, django_capture_on_commit_callbacks
+    hitchhiker,
+    evaluation,
+    expected,
+    user_event_sender,
+    django_capture_on_commit_callbacks,
+    api_login,
 ):
-    client = logged_in_client(hitchhiker)
+    client = api_login(hitchhiker, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(
             pick_url(),
@@ -154,11 +135,11 @@ def test_pick_slot_real_session(
             HTTP_HOST="localhost",
             HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
         )
-        event_sender.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
     assert response.status_code == 200
     assert response.json() == claim(expected)
     assert len(callbacks) == 2
-    assert event_sender.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call(
             "user_7",
             {
@@ -208,7 +189,7 @@ def test_pick_slot_real_session(
 
 
 def test_slot_picked_targets_only_participants_and_active_eligible_hitchhikers(
-    hitchhiker, evaluation, project, event_sender, django_capture_on_commit_callbacks
+    hitchhiker, evaluation, project, user_event_sender, django_capture_on_commit_callbacks
 ):
     elsewhere = Project.objects.create(slug="elsewhere", name="Elsewhere")
     for pk, roles, state, eligible_project in (
@@ -243,7 +224,7 @@ def test_slot_picked_targets_only_participants_and_active_eligible_hitchhikers(
         "event": "evaluation.slot_picked",
         "data": {"id": 17, "status": "awaiting_confirmation"},
     }
-    assert event_sender.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call("user_7", message),
         call("user_42", message),
         call("user_43", message),
@@ -260,7 +241,7 @@ def test_slot_picked_targets_only_participants_and_active_eligible_hitchhikers(
 
 
 def test_rolled_back_pick_sends_no_event(
-    hitchhiker, evaluation, event_sender, django_capture_on_commit_callbacks
+    hitchhiker, evaluation, user_event_sender, django_capture_on_commit_callbacks
 ):
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         with pytest.raises(RuntimeError, match="rollback"):
@@ -273,7 +254,7 @@ def test_rolled_back_pick_sends_no_event(
                 )
                 raise RuntimeError("rollback")
     assert callbacks == []
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     evaluation.refresh_from_db()
     assert evaluation.status == "pending"
     assert evaluation.picked_by_id is None
@@ -281,7 +262,7 @@ def test_rolled_back_pick_sends_no_event(
 
 
 def test_repeated_pick_does_not_schedule_another_event(
-    hitchhiker, evaluation, event_sender, django_capture_on_commit_callbacks
+    hitchhiker, evaluation, user_event_sender, django_capture_on_commit_callbacks
 ):
     starts_at = datetime(2026, 10, 12, 15, tzinfo=timezone.utc)
     ends_at = datetime(2026, 10, 12, 15, 45, tzinfo=timezone.utc)
@@ -290,12 +271,17 @@ def test_repeated_pick_does_not_schedule_another_event(
         with pytest.raises(RequestNotPending):
             claim_pending_request(evaluation, hitchhiker, starts_at, ends_at)
     assert len(callbacks) == 2
-    assert event_sender.await_count == 3
+    assert user_event_sender.await_count == 3
     assert Notification.objects.count() == 1
 
 
 def test_notification_failure_rolls_back_pick_and_all_events(
-    hitchhiker, evaluation, event_sender, monkeypatch, django_capture_on_commit_callbacks
+    hitchhiker,
+    evaluation,
+    user_event_sender,
+    monkeypatch,
+    django_capture_on_commit_callbacks,
+    api_login,
 ):
     from apps.notifications.services import create_notification
 
@@ -304,7 +290,7 @@ def test_notification_failure_rolls_back_pick_and_all_events(
         raise RuntimeError("Injected notification failure")
 
     monkeypatch.setattr("apps.evaluations.notifications.create_notification", fail_after_write)
-    client = logged_in_client(hitchhiker)
+    client = api_login(hitchhiker, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(
             pick_url(),
@@ -324,7 +310,7 @@ def test_notification_failure_rolls_back_pick_and_all_events(
     assert evaluation.ends_at is None
     assert not Notification.objects.exists()
     assert callbacks == []
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 @override_settings(TIME_ZONE="Europe/Prague")
@@ -343,8 +329,8 @@ def test_slot_notification_times_are_utc(hitchhiker, evaluation):
     }
 
 
-def test_csrf_required(student, evaluation):
-    client = logged_in_client(student)
+def test_csrf_required(student, evaluation, api_login):
+    client = api_login(student, PASSWORD)
     response = client.post(pick_url(), SLOT, format="json", HTTP_HOST="localhost")
     assert response.status_code == 403
     assert response.json() == {
@@ -787,7 +773,7 @@ def seeded_roles():
 
 @pytest.mark.django_db(transaction=True)
 def test_only_one_hitchhiker_wins(
-    seeded_roles, student, project, evaluation, monkeypatch, event_sender
+    seeded_roles, student, project, evaluation, monkeypatch, user_event_sender
 ):
     contenders = []
     for pk, email, name in ((42, "bob@example.com", "Bob"), (46, "fay@example.com", "Fay")):
@@ -828,7 +814,7 @@ def test_only_one_hitchhiker_wins(
         "event": "evaluation.slot_picked",
         "data": {"id": 17, "status": "awaiting_confirmation"},
     }
-    assert event_sender.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call("user_7", message),
         call("user_42", message),
         call("user_46", message),

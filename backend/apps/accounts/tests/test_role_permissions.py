@@ -1,11 +1,10 @@
 """Tests for DRF role permission classes and restricted endpoint protection."""
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APIClient, APIRequestFactory
+from rest_framework.test import APIRequestFactory
 
 from apps.accounts.models import Role
 from apps.accounts.permissions import (
@@ -20,16 +19,6 @@ from apps.accounts.permissions import (
 pytestmark = pytest.mark.django_db
 
 factory = APIRequestFactory()
-
-
-@pytest.fixture
-def user_model():
-    return get_user_model()
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
 
 
 def _allowed(permission, user) -> bool:

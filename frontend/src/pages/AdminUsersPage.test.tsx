@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -99,6 +99,8 @@ describe("AdminUsersPage", () => {
   it("searches only when the form is submitted", async () => {
     renderPage();
     await screen.findByText("No users yet");
+    expect(screen.getByText("People appear here once they have an account.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Search"), { target: { value: "  ann  " } });
 
@@ -111,6 +113,32 @@ describe("AdminUsersPage", () => {
       { ...noFilters, page: 1 },
       { ...noFilters, q: "ann", page: 1 },
     ]);
+  });
+
+  // #370: an empty filtered list says how to get the users back.
+  it("clears every filter from the empty result", async () => {
+    vi.mocked(listAdminUsers).mockImplementation(async (params) =>
+      params?.q || params?.role || params?.status ? page([]) : page([adminUser(1, "Anna")]),
+    );
+
+    renderPage();
+    await screen.findByText("Anna");
+
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "zzz" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    fireEvent.change(screen.getByLabelText("Role"), { target: { value: "tutor" } });
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "suspended" } });
+
+    expect(await screen.findByText("No users match these filters")).toBeTruthy();
+    expect(screen.getByText("Try another email, name, role or status.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    expect(await screen.findByText("Anna")).toBeTruthy();
+    expect(vi.mocked(listAdminUsers).mock.lastCall?.[0]).toEqual({ ...noFilters, page: 1 });
+    expect((screen.getByLabelText("Search") as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText("Role") as HTMLSelectElement).value).toBe("");
+    expect((screen.getByLabelText("Status") as HTMLSelectElement).value).toBe("");
   });
 
   it("filters by role and status, starting again from the first page", async () => {
@@ -161,6 +189,42 @@ describe("AdminUsersPage", () => {
     ]);
   });
 
+  // #369: the rows stay until the next page arrives, so the button just used keeps the focus.
+  it("keeps the users and the focus on Next while the next page loads", async () => {
+    let answer: (value: ReturnType<typeof page>) => void = () => {};
+
+    vi.mocked(listAdminUsers)
+      .mockResolvedValueOnce(page([adminUser(1, "Anna")], 41, "?page=2"))
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      .mockResolvedValueOnce(page([adminUser(41, "Zoe")], 41, null));
+
+    renderPage();
+
+    const next = await screen.findByRole("button", { name: /Next/ });
+
+    next.focus();
+    fireEvent.click(next);
+
+    expect(screen.getByText("Anna")).toBeTruthy();
+    expect(screen.getByText("Page 2 of 3")).toBeTruthy();
+    expect(screen.getByRole("table").parentElement?.getAttribute("aria-busy")).toBe("true");
+    expect(document.activeElement).toBe(next);
+
+    await act(async () => answer(page([adminUser(21, "Mia")], 41, "?page=3")));
+
+    expect(screen.queryByText("Anna")).toBeNull();
+    expect(screen.getByText("Mia")).toBeTruthy();
+    expect(screen.getByRole("table").parentElement?.getAttribute("aria-busy")).toBe("false");
+    expect(document.activeElement).toBe(next);
+
+    // A quick second click on the last page asks for nothing past it.
+    fireEvent.click(next);
+    fireEvent.click(next);
+
+    expect(await screen.findByText("Zoe")).toBeTruthy();
+    expect(requests().map((params) => params?.page)).toEqual([1, 2, 3]);
+  });
+
   it("shows no page buttons when everything fits on one page", async () => {
     vi.mocked(listAdminUsers).mockResolvedValue(page([adminUser(1, "Anna")]));
 
@@ -170,14 +234,24 @@ describe("AdminUsersPage", () => {
     expect(screen.queryByRole("navigation", { name: "User pages" })).toBeNull();
   });
 
-  it("shows an error when the users cannot be loaded", async () => {
-    vi.mocked(listAdminUsers).mockRejectedValue(new Error("network"));
+  it("shows an error when the users cannot be loaded, and loads again on Try again", async () => {
+    vi.mocked(listAdminUsers).mockRejectedValueOnce(new Error("network"));
+    vi.mocked(listAdminUsers).mockResolvedValueOnce(page([adminUser(1, "Anna")]));
 
     renderPage();
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "We couldn't load the users. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("We couldn't load the users. Please try again.")).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(await screen.findByText("Anna")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(requests()).toEqual([
+      { ...noFilters, page: 1 },
+      { ...noFilters, page: 1 },
+    ]);
   });
 });

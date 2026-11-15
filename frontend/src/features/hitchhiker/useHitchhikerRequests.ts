@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { listEvaluationRequests } from "../../api/evaluationRequests";
 import { useAuth } from "../../store/AuthContext";
@@ -29,6 +29,13 @@ export function useHitchhikerRequests(enabled = true) {
   const hasLoaded = useRef(false);
 
   useLiveRefresh(OPEN_QUEUE_EVENTS, () => setReloadKey((key) => key + 1));
+
+  // "Try again" after a failed first load (#371): the placeholders show until the answer.
+  const retry = useCallback(() => {
+    setHasError(false);
+    setIsFirstLoad(true);
+    setReloadKey((key) => key + 1);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated || !enabled) {
@@ -74,5 +81,5 @@ export function useHitchhikerRequests(enabled = true) {
   // nothing is loaded, so there is nothing to wait for.
   const isLoading = isCheckingSession || (isAuthenticated && isFirstLoad);
 
-  return { openRequests, openCount, pickedRequests, isLoading, hasError };
+  return { openRequests, openCount, pickedRequests, isLoading, hasError, retry };
 }

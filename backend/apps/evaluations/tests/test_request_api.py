@@ -91,20 +91,6 @@ def grant(user, role):
     user.roles.add(Role.objects.get(name=role))
 
 
-def logged_in_client(student):
-    client = APIClient(enforce_csrf_checks=True)
-    client.get(reverse("api:session"), HTTP_HOST="localhost")
-    response = client.post(
-        reverse("api:login"),
-        {"email": student.email, "password": PASSWORD},
-        format="json",
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
-    assert response.status_code == 200
-    return client
-
-
 @pytest.mark.parametrize(
     "method,detail", [("get", False), ("post", False), ("get", True), ("patch", True)]
 )
@@ -119,8 +105,8 @@ def test_requires_authentication(method, detail):
 
 
 @pytest.mark.parametrize("note", [None, "Parsing.", "x" * 500])
-def test_create_real_session(student, project, expected, note):
-    client = logged_in_client(student)
+def test_create_real_session(student, project, expected, note, api_login):
+    client = api_login(student, PASSWORD)
     payload = {"project_id": 4, "student": 42, "status": "cancelled"}
     if note is not None:
         payload["note"] = note
@@ -144,8 +130,8 @@ def test_create_real_session(student, project, expected, note):
 
 
 @pytest.mark.parametrize("method", ["post", "patch"])
-def test_csrf_required(student, evaluation, method):
-    client = logged_in_client(student)
+def test_csrf_required(student, evaluation, method, api_login):
+    client = api_login(student, PASSWORD)
     response = getattr(client, method)(
         list_url() if method == "post" else detail_url(),
         {"note": "Changed"},
@@ -302,8 +288,8 @@ def test_picker_detail_without_role(other, evaluation, expected):
     assert response.json() == expected
 
 
-def test_edit_real_session(student, evaluation, expected):
-    client = logged_in_client(student)
+def test_edit_real_session(student, evaluation, expected, api_login):
+    client = api_login(student, PASSWORD)
     response = client.patch(
         detail_url(),
         {"note": "Changed", "status": "confirmed", "project_id": 99},

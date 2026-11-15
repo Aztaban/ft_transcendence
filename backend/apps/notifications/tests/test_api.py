@@ -1,8 +1,6 @@
 """Notification API contracts, including idempotent read actions."""
 
 from datetime import datetime, timezone
-from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -62,15 +60,6 @@ def notifications(people):
     )
     Notification.objects.filter(pk__in=[41, 42]).update(created_at=CREATED)
     return first, second
-
-
-@pytest.fixture
-def event_sender(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
 
 
 @pytest.mark.parametrize(
@@ -446,7 +435,7 @@ def test_mutations_defer_exact_owner_event_until_commit_including_retries(
     client,
     people,
     notifications,
-    event_sender,
+    user_event_sender,
     django_capture_on_commit_callbacks,
     method,
     name,
@@ -454,13 +443,13 @@ def test_mutations_defer_exact_owner_event_until_commit_including_retries(
     repeats,
 ):
     for _ in range(repeats):
-        event_sender.reset_mock()
+        user_event_sender.reset_mock()
         with django_capture_on_commit_callbacks(execute=True) as callbacks:
             response = getattr(client, method)(reverse(f"api:{name}", kwargs=kwargs))
             assert response.status_code == (200 if name == "notification-read" else 204)
-            event_sender.assert_not_awaited()
+            user_event_sender.assert_not_awaited()
         assert len(callbacks) == 1
-        event_sender.assert_awaited_once_with(
+        user_event_sender.assert_awaited_once_with(
             f"user_{people[0].pk}",
             {"type": "user.event", "event": "notification.updated", "data": {}},
         )
@@ -468,14 +457,14 @@ def test_mutations_defer_exact_owner_event_until_commit_including_retries(
 
 
 def test_empty_read_all_still_sends_refresh_event(
-    client, people, event_sender, django_capture_on_commit_callbacks
+    client, people, user_event_sender, django_capture_on_commit_callbacks
 ):
     with django_capture_on_commit_callbacks(execute=True):
         response = client.post(reverse("api:notification-read-all"))
         assert response.status_code == 204
         assert response.content == b""
-        event_sender.assert_not_awaited()
-    event_sender.assert_awaited_once_with(
+        user_event_sender.assert_not_awaited()
+    user_event_sender.assert_awaited_once_with(
         f"user_{people[0].pk}",
         {"type": "user.event", "event": "notification.updated", "data": {}},
     )
@@ -486,14 +475,14 @@ def test_empty_read_all_still_sends_refresh_event(
 )
 @pytest.mark.parametrize("pk", [43, 999])
 def test_missing_or_private_notification_sends_no_event(
-    client, notifications, event_sender, django_capture_on_commit_callbacks, method, name, pk
+    client, notifications, user_event_sender, django_capture_on_commit_callbacks, method, name, pk
 ):
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = getattr(client, method)(reverse(f"api:{name}", kwargs={"pk": pk}))
     assert response.status_code == 404
     assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
     assert callbacks == []
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 @pytest.mark.parametrize(
@@ -505,7 +494,13 @@ def test_missing_or_private_notification_sends_no_event(
     ],
 )
 def test_mutation_rollback_discards_changes_and_event(
-    client, notifications, event_sender, django_capture_on_commit_callbacks, method, name, kwargs
+    client,
+    notifications,
+    user_event_sender,
+    django_capture_on_commit_callbacks,
+    method,
+    name,
+    kwargs,
 ):
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         with pytest.raises(RuntimeError, match="rollback"):
@@ -514,6 +509,6 @@ def test_mutation_rollback_discards_changes_and_event(
                 assert response.status_code == (200 if name == "notification-read" else 204)
                 raise RuntimeError("rollback")
     assert callbacks == []
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert Notification.objects.get(pk=42).read_at is None
     assert Notification.objects.count() == 3

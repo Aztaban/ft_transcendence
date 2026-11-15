@@ -23,6 +23,12 @@ export function useStudentRequests() {
   const hasLoaded = useRef(false);
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
+  // "Try again" after a failed first load (#371): the placeholders show until the answer.
+  const retry = useCallback(() => {
+    setHasError(false);
+    setIsFirstLoad(true);
+    setReloadKey((key) => key + 1);
+  }, []);
 
   useLiveRefresh(EVALUATION_EVENTS, reload);
 
@@ -58,5 +64,5 @@ export function useStudentRequests() {
   // nothing is loaded, so there is nothing to wait for.
   const isLoading = isCheckingSession || (isAuthenticated && isFirstLoad);
 
-  return { requests, isLoading, hasError, reload };
+  return { requests, isLoading, hasError, reload, retry };
 }

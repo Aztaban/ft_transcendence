@@ -220,28 +220,14 @@ def test_unknown_user_is_a_404_in_the_envelope():
 # --- through a real browser session, with CSRF enforced -------------------------------
 
 
-def logged_in_browser(user):
-    client = APIClient(enforce_csrf_checks=True)
-    client.get(reverse("api:session"), HTTP_HOST="localhost")
-    response = client.post(
-        reverse("api:login"),
-        {"email": user.email, "password": PASSWORD},
-        format="json",
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
-    assert response.status_code == status.HTTP_200_OK
-    return client
-
-
 def csrf_header(client):
     return {"HTTP_HOST": "localhost", "HTTP_X_CSRFTOKEN": client.cookies["csrftoken"].value}
 
 
-def test_assign_through_a_session_needs_the_csrf_token():
+def test_assign_through_a_session_needs_the_csrf_token(api_login):
     admin = make_user("admin@example.com", ADMIN)
     target = make_user("target@example.com")
-    browser = logged_in_browser(admin)
+    browser = api_login(admin, PASSWORD)
     url = reverse("api:users-assign-role", kwargs={"user_id": target.id})
 
     without = browser.post(url, {"role": TUTOR}, format="json", HTTP_HOST="localhost")
@@ -255,14 +241,14 @@ def test_assign_through_a_session_needs_the_csrf_token():
 
 
 @pytest.mark.parametrize("target_created_first", [False, True])
-def test_revoke_through_a_session_locks_users_before_deleting(target_created_first):
+def test_revoke_through_a_session_locks_users_before_deleting(target_created_first, api_login):
     if target_created_first:
         target = make_user("target@example.com", TUTOR)
         admin = make_user("admin@example.com", ADMIN)
     else:
         admin = make_user("admin@example.com", ADMIN)
         target = make_user("target@example.com", TUTOR)
-    browser = logged_in_browser(admin)
+    browser = api_login(admin, PASSWORD)
     role = Role.objects.get(name=TUTOR)
     url = reverse("api:users-revoke-role", kwargs={"user_id": target.id, "role_id": role.id})
 

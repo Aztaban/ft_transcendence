@@ -4,6 +4,7 @@ import { Link } from "react-router";
 
 import { listEvaluationExceptions } from "../api/admin";
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import i18n from "../i18n";
 import { useCurrentUser } from "../store/CurrentUserContext";
 import type { EvaluationException, EvaluationRequestStatus } from "../types/evaluation";
@@ -42,13 +43,14 @@ function EvaluationExceptionsPage() {
 
   usePageTitle(t("exceptions.title"));
   // The real roles from the shared /users/me/ store; the backend checks them again (§10.9).
-  const { roles, isLoaded } = useCurrentUser();
+  const { roles, isLoaded, loadFailed, refresh } = useCurrentUser();
   const allowed = canSeeEvaluationExceptions(roles);
   const [page, setPage] = useState(1);
   const [requests, setRequests] = useState<EvaluationException[]>([]);
   const [total, setTotal] = useState(0);
   const [hasNext, setHasNext] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     // Not called for anyone else: it would only answer 403 and log an error in the console.
@@ -79,7 +81,7 @@ function EvaluationExceptionsPage() {
     return () => {
       active = false;
     };
-  }, [allowed, page]);
+  }, [allowed, page, retryKey]);
 
   // Until /users/me/ has answered, the roles are unknown, so the page keeps loading.
   if (isLoaded && !allowed) {
@@ -87,6 +89,11 @@ function EvaluationExceptionsPage() {
   }
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Another page keeps the rows shown, greyed out, until the new ones arrive: the Previous / Next
+  // button just used stays in place and keeps the focus (#369).
+  const isRefreshing = loadState === "loading" && requests.length > 0;
+  // /users/me/ failed before the roles were known: nothing is asked until it is loaded (#371).
+  const userFailed = !isLoaded && loadFailed;
 
   return (
     <section className="admin-users">
@@ -95,7 +102,13 @@ function EvaluationExceptionsPage() {
         <p>{t("exceptions.subtitle")}</p>
       </header>
 
-      {loadState === "loading" && (
+      {userFailed && (
+        <LoadError className="admin-users__error" onRetry={refresh}>
+          {t("common.userLoadError")}
+        </LoadError>
+      )}
+
+      {loadState === "loading" && !isRefreshing && !userFailed && (
         <div className="admin-users__list" aria-busy="true">
           {[1, 2, 3].map((placeholder) => (
             <div className="admin-users__skeleton" key={placeholder} />
@@ -105,9 +118,9 @@ function EvaluationExceptionsPage() {
       )}
 
       {loadState === "error" && (
-        <p className="admin-users__error" role="alert">
+        <LoadError className="admin-users__error" onRetry={() => setRetryKey((key) => key + 1)}>
           {t("exceptions.error")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && requests.length === 0 && (
@@ -117,9 +130,9 @@ function EvaluationExceptionsPage() {
         </div>
       )}
 
-      {loadState === "ready" && requests.length > 0 && (
+      {(loadState === "ready" || isRefreshing) && requests.length > 0 && (
         <>
-          <div className="admin-users__table-wrap">
+          <div className="admin-users__table-wrap" aria-busy={isRefreshing}>
             <table className="admin-users__table" aria-labelledby="exceptions-title">
               <thead>
                 <tr>
@@ -180,7 +193,9 @@ function EvaluationExceptionsPage() {
               <span aria-live="polite">{t("exceptions.page", { page, count: pageCount })}</span>
               <button
                 type="button"
-                disabled={!hasNext}
+                // `hasNext` is the shown page's until the next one arrives: a second quick click
+                // must not ask for a page past the last one.
+                disabled={!hasNext || page >= pageCount}
                 onClick={() => setPage((current) => current + 1)}
               >
                 {t("common.next")} <span aria-hidden="true">›</span>

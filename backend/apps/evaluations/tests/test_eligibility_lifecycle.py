@@ -15,11 +15,6 @@ REVIEW = "api:tutor-eligibility-requests-review"
 ELIGIBILITY = "api:tutors-eligibility"
 
 
-@pytest.fixture
-def api_client():
-    return APIClient()
-
-
 def test_lifecycle_approve_grants_eligibility(api_client, make_user):
     """create → HT approve → GET eligibility lists the projects; no further approval."""
     tutor = make_user("tutor@example.com", display_name="Bob", roles=(Role.Name.TUTOR,))

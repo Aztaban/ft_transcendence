@@ -85,6 +85,17 @@ function getButton(name: RegExp | string) {
 }
 
 describe("EvaluationPage", () => {
+  // #369: screen readers hear what is loading, not only an empty busy block.
+  it("says that the evaluation is loading", () => {
+    vi.mocked(getEvaluationRequest).mockReturnValue(new Promise(() => {}));
+
+    renderPage();
+
+    const label = screen.getByText("Loading the evaluation…");
+
+    expect(label.closest("[aria-busy='true']")).toBeTruthy();
+  });
+
   it("shows the proposed slot and the tip, without the Hitchhiker (R18)", async () => {
     vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
 
@@ -252,9 +263,17 @@ describe("EvaluationPage", () => {
 
     renderPage();
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "This evaluation could not be loaded.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("This evaluation could not be loaded.")).toBeTruthy();
+
+    // #371: Try again shows the loading state, then the evaluation.
+    vi.mocked(getEvaluationRequest).mockResolvedValue(awaiting);
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(screen.getByText("Loading the evaluation…")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "push_swap" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 

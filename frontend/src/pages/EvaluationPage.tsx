@@ -5,7 +5,9 @@ import { Link, useNavigate, useParams } from "react-router";
 
 import BackLink from "../components/layout/BackLink";
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import ReasonDialog from "../components/ui/ReasonDialog";
+import Skeleton from "../components/ui/Skeleton";
 import hitchhikersIcon from "../assets/figma/hitchhikers.svg";
 import { ApiError } from "../api/client";
 import { getTutorEligibility } from "../api/eligibility";
@@ -461,12 +463,25 @@ function EvaluationPage() {
     <section className="evaluation">
       <BackLink className="evaluation__back" />
 
-      {loadState === "loading" && <div className="evaluation__skeleton" aria-busy="true" />}
+      {loadState === "loading" && (
+        <Skeleton
+          label={t("evaluation.loading")}
+          count={1}
+          className="evaluation__loading"
+          itemClassName="evaluation__skeleton"
+        />
+      )}
 
       {loadState === "error" && !isGone && (
-        <p className="evaluation__error" role="alert">
+        <LoadError
+          className="evaluation__error"
+          onRetry={() => {
+            setLoadState("loading");
+            setReloadKey((key) => key + 1);
+          }}
+        >
           {t("evaluation.loadError")}
-        </p>
+        </LoadError>
       )}
 
       {isGone && (

@@ -3,6 +3,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 
 import usePageTitle from "../components/layout/usePageTitle";
+import LoadError from "../components/ui/LoadError";
 import { ApiError } from "../api/client";
 import { pickSlot } from "../api/evaluationRequests";
 import SlotPicker, {
@@ -199,9 +200,15 @@ function PickSlotPage() {
       )}
 
       {loadState === "error" && (
-        <p className="pick-slot__error" role="alert">
+        <LoadError
+          className="pick-slot__error"
+          onRetry={() => {
+            setLoadState("loading");
+            setReloadKey((key) => key + 1);
+          }}
+        >
           {t("pickSlot.loadError")}
-        </p>
+        </LoadError>
       )}
 
       {loadState === "ready" && isGone && !request && (

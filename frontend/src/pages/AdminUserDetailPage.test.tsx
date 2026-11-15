@@ -262,13 +262,19 @@ describe("AdminUserDetailPage", () => {
     expect(getAdminUser).not.toHaveBeenCalled();
   });
 
-  it("shows an error when the account cannot be loaded", async () => {
-    vi.mocked(getAdminUser).mockRejectedValue(new Error("network"));
+  it("shows an error when the account cannot be loaded, and loads again on Try again", async () => {
+    vi.mocked(getAdminUser).mockRejectedValueOnce(new Error("network"));
     renderAt();
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "We couldn't load this user. Please try again later.",
-    );
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("We couldn't load this user. Please try again.")).toBeTruthy();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(screen.getByText("Loading the user…")).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 1, name: "Anna" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 

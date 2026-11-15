@@ -23,11 +23,6 @@ REVIEWERS = (Role.Name.HEAD_TUTOR, Role.Name.ADMIN)
 FORBIDDEN_REVIEWERS = (Role.Name.STUDENT, Role.Name.TUTOR)
 
 
-@pytest.fixture
-def api_client():
-    return APIClient()
-
-
 def iso(dt):
     return DateTimeField().to_representation(dt)
 

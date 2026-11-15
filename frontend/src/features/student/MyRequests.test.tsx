@@ -165,14 +165,63 @@ describe("MyRequests", () => {
     expect(screen.queryByRole("heading", { name: "Past" })).toBeNull();
   });
 
-  it("shows an error when the requests cannot be loaded", async () => {
+  it("shows an error when the requests cannot be loaded, and loads again on Try again", async () => {
     vi.mocked(listEvaluationRequests).mockRejectedValue(new Error("network"));
 
     render(<MyRequests />);
 
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "Could not load your requests. Please try again later.",
+    const alert = await screen.findByRole("alert");
+
+    expect(within(alert).getByText("Could not load your requests. Please try again.")).toBeTruthy();
+
+    mockLists(page([makeRequest(1, "push_swap", "pending")]), page([]));
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+
+    expect(screen.getByText("Loading your requests…")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "push_swap" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // #371: a failed "Show more" used to say nothing, and the next click skipped that page.
+  it("says when Show more fails and asks for the same page again", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) =>
+      makeRequest(100 + index, `past-${index}`, "cancelled"),
     );
+    let secondPageFails = true;
+
+    mockLists(page([]), (pageNumber) => {
+      if (pageNumber === 1) {
+        return page(firstPage, 21, "https://localhost/api/v1/evaluation-requests/?page=2");
+      }
+
+      if (secondPageFails) {
+        secondPageFails = false;
+        throw new Error("network");
+      }
+
+      return page([makeRequest(200, "oldest", "expired")], 21);
+    });
+
+    render(<MyRequests />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Show more past requests (1 left)" }),
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Could not load more requests. Please try again.",
+    );
+    expect(rowStatuses("Past")).toHaveLength(20);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show more past requests (1 left)" }));
+
+    expect(await screen.findByRole("heading", { name: "oldest" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      vi
+        .mocked(listEvaluationRequests)
+        .mock.calls.filter(([params]) => params?.history)
+        .map(([params]) => params?.page),
+    ).toEqual([1, 2, 2]);
   });
 });
 

@@ -96,6 +96,12 @@ export function useCouncilMessages(unread: boolean) {
 
   const refresh = useCallback(() => setReloadKey((key) => key + 1), []);
 
+  // "Try again" after the first load failed (#371): loading again until the answer.
+  const retry = useCallback(() => {
+    setLoadState("loading");
+    refresh();
+  }, [refresh]);
+
   useLiveRefresh(["notification.created"], refresh);
 
   useEffect(() => {
@@ -158,5 +164,6 @@ export function useCouncilMessages(unread: boolean) {
     moreFailed,
     loadState,
     showMore,
+    retry,
   };
 }

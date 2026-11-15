@@ -1,7 +1,6 @@
 """Assign and revoke send role.changed only when the membership actually changes."""
 
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, call
+from unittest.mock import call
 
 import pytest
 from django.urls import reverse
@@ -22,20 +21,6 @@ ADMIN = Role.Name.ADMIN
 def client_for(user):
     client = APIClient()
     client.force_authenticate(user=user)
-    return client
-
-
-def logged_in_browser(user):
-    client = APIClient(enforce_csrf_checks=True)
-    client.get(reverse("api:session"), HTTP_HOST="localhost")
-    response = client.post(
-        reverse("api:login"),
-        {"email": user.email, "password": "secret"},
-        format="json",
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
-    assert response.status_code == status.HTTP_200_OK
     return client
 
 
@@ -60,15 +45,6 @@ def revoke(client, target, role_name, **extra):
     )
 
 
-@pytest.fixture
-def send(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
-
-
 def assert_role_notification(target, role, action):
     notification = Notification.objects.get()
     assert {
@@ -87,10 +63,12 @@ def assert_role_notification(target, role, action):
     return notification
 
 
-def test_assign_notifies_the_user_after_commit(make_user, send, django_capture_on_commit_callbacks):
+def test_assign_notifies_the_user_after_commit(
+    make_user, user_event_sender, django_capture_on_commit_callbacks, api_login
+):
     admin = make_user("admin@example.com", roles=(ADMIN,))
     target = make_user("target@example.com")
-    browser = logged_in_browser(admin)
+    browser = api_login(admin)
 
     without = assign(browser, target, TUTOR, HTTP_HOST="localhost")
     assert without.status_code == status.HTTP_403_FORBIDDEN
@@ -106,10 +84,10 @@ def test_assign_notifies_the_user_after_commit(make_user, send, django_capture_o
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = assign(browser, target, TUTOR, **csrf_header(browser))
         assert response.status_code == status.HTTP_200_OK
-        send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
         notification = assert_role_notification(target, TUTOR, "assigned")
     assert len(callbacks) == 2
-    assert send.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call(
             f"user_{target.pk}",
             {
@@ -126,10 +104,10 @@ def test_assign_notifies_the_user_after_commit(make_user, send, django_capture_o
 
 
 def test_self_assignment_keeps_audit_and_event_without_notification(
-    make_user, send, django_capture_on_commit_callbacks
+    make_user, user_event_sender, django_capture_on_commit_callbacks, api_login
 ):
     admin = make_user("admin@example.com", roles=(ADMIN, Role.Name.STUDENT))
-    browser = logged_in_browser(admin)
+    browser = api_login(admin)
 
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = assign(browser, admin, TUTOR, **csrf_header(browser))
@@ -144,7 +122,7 @@ def test_self_assignment_keeps_audit_and_event_without_notification(
                 {"id": Role.objects.get(name=TUTOR).pk, "name": "tutor"},
             ],
         }
-        send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
         assert admin.has_role(TUTOR)
         assert not Notification.objects.exists()
         assert list(
@@ -162,12 +140,14 @@ def test_self_assignment_keeps_audit_and_event_without_notification(
             }
         ]
     assert len(callbacks) == 1
-    send.assert_awaited_once_with(
+    user_event_sender.assert_awaited_once_with(
         f"user_{admin.pk}", {"type": "user.event", "event": "role.changed", "data": {}}
     )
 
 
-def test_revoke_notifies_the_user_after_commit(make_user, send, django_capture_on_commit_callbacks):
+def test_revoke_notifies_the_user_after_commit(
+    make_user, user_event_sender, django_capture_on_commit_callbacks
+):
     admin = make_user("admin@example.com", roles=(ADMIN,))
     target = make_user("target@example.com", roles=(TUTOR,))
 
@@ -175,11 +155,11 @@ def test_revoke_notifies_the_user_after_commit(make_user, send, django_capture_o
         response = revoke(client_for(admin), target, TUTOR)
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert response.content == b""
-        send.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
         notification = assert_role_notification(target, TUTOR, "revoked")
     assert not target.has_role(TUTOR)
     assert len(callbacks) == 2
-    assert send.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call(
             f"user_{target.pk}",
             {
@@ -196,7 +176,7 @@ def test_revoke_notifies_the_user_after_commit(make_user, send, django_capture_o
 
 
 def test_assigning_a_role_already_held_sends_nothing(
-    make_user, send, django_capture_on_commit_callbacks
+    make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     admin = make_user("admin@example.com", roles=(ADMIN,))
     target = make_user("target@example.com", roles=(TUTOR,))
@@ -206,12 +186,12 @@ def test_assigning_a_role_already_held_sends_nothing(
     assert response.status_code == status.HTTP_200_OK
     assert target.roles.filter(name=TUTOR).count() == 1
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert not Notification.objects.exists()
 
 
 def test_revoking_a_role_not_held_sends_nothing(
-    make_user, send, django_capture_on_commit_callbacks
+    make_user, user_event_sender, django_capture_on_commit_callbacks
 ):
     admin = make_user("admin@example.com", roles=(ADMIN,))
     target = make_user("target@example.com")
@@ -220,12 +200,12 @@ def test_revoking_a_role_not_held_sends_nothing(
         response = revoke(client_for(admin), target, TUTOR)
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert not Notification.objects.exists()
 
 
 def test_notification_failure_rolls_back_the_assignment(
-    make_user, send, monkeypatch, django_capture_on_commit_callbacks
+    make_user, user_event_sender, monkeypatch, django_capture_on_commit_callbacks
 ):
     admin = make_user("admin@example.com", roles=(ADMIN,))
     target = make_user("target@example.com")
@@ -247,4 +227,4 @@ def test_notification_failure_rolls_back_the_assignment(
     assert not target.has_role(TUTOR)
     assert not Notification.objects.exists()
     assert callbacks == []
-    send.assert_not_awaited()
+    user_event_sender.assert_not_awaited()

@@ -27,6 +27,12 @@ export function useCouncilOverview() {
   const hasLoaded = useRef(false);
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
+  // "Try again" after a failed first load (#371): the placeholders show until the answer.
+  const retry = useCallback(() => {
+    setHasError(false);
+    setIsFirstLoad(true);
+    setReloadKey((key) => key + 1);
+  }, []);
 
   useLiveRefresh(["notification.created"], reload);
 
@@ -85,5 +91,13 @@ export function useCouncilOverview() {
     };
   }, [isMember, reloadKey, hitchhikerCount]);
 
-  return { unread, unreadCount, totalCount, hitchhikerCount, isLoading: isFirstLoad, hasError };
+  return {
+    unread,
+    unreadCount,
+    totalCount,
+    hitchhikerCount,
+    isLoading: isFirstLoad,
+    hasError,
+    retry,
+  };
 }

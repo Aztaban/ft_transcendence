@@ -3,8 +3,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from threading import Barrier
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, call
+from unittest.mock import call
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -18,7 +17,10 @@ from apps.evaluations.notifications import notify_evaluation_cancelled
 from apps.evaluations.services import InvalidStateTransition, cancel_request
 from apps.notifications.models import Notification
 
-pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("empty_project_catalog")]
+pytestmark = [
+    pytest.mark.django_db,
+    pytest.mark.usefixtures("empty_project_catalog", "user_event_sender"),
+]
 NOW = datetime(2026, 10, 10, 9, tzinfo=timezone.utc)
 START = datetime(2026, 10, 12, 15, tzinfo=timezone.utc)
 PASSWORD = "RequestPassword123!"
@@ -37,21 +39,6 @@ def cancel_url(pk=17):
 @pytest.fixture(autouse=True)
 def fixed_time(monkeypatch):
     monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
-
-
-@pytest.fixture(autouse=True)
-def event_sender(monkeypatch):
-    sender = AsyncMock()
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer", lambda: SimpleNamespace(group_send=sender)
-    )
-    return sender
-
-
-@pytest.fixture
-def seeded_roles():
-    for name in Role.Name.values:
-        Role.objects.get_or_create(name=name)
 
 
 @pytest.fixture
@@ -107,23 +94,16 @@ def expected():
     }
 
 
-def session_client(student):
-    client = APIClient(enforce_csrf_checks=True)
-    client.get(reverse("api:session"), HTTP_HOST="localhost")
-    response = client.post(
-        reverse("api:login"),
-        {"email": student.email, "password": PASSWORD},
-        format="json",
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
-    )
-    assert response.status_code == 200
-    return client
-
-
 @pytest.mark.parametrize("state", ["pending", "awaiting_confirmation", "confirmed"])
 def test_cancel_each_active_state_with_real_session(
-    student, tutor, evaluation, expected, state, event_sender, django_capture_on_commit_callbacks
+    student,
+    tutor,
+    evaluation,
+    expected,
+    state,
+    user_event_sender,
+    django_capture_on_commit_callbacks,
+    api_login,
 ):
     other = get_user_model().objects.create_user(id=43, email="eligible@example.com")
     other.roles.add(Role.objects.get(name="head_tutor"))
@@ -133,14 +113,14 @@ def test_cancel_each_active_state_with_real_session(
         changes.update(picked_by=None, starts_at=None, ends_at=None)
         expected.update(picked_by=None, starts_at=None, ends_at=None)
     EvaluationRequest.objects.filter(pk=17).update(**changes)
-    client = session_client(student)
+    client = api_login(student, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(
             cancel_url(),
             HTTP_HOST="localhost",
             HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
         )
-        event_sender.assert_not_awaited()
+        user_event_sender.assert_not_awaited()
     assert response.status_code == 200
     assert response.json() == expected
     assert len(callbacks) == (1 if state == "pending" else 2)
@@ -150,10 +130,13 @@ def test_cancel_each_active_state_with_real_session(
         "data": {"id": 17, "status": "cancelled"},
     }
     if state == "pending":
-        assert event_sender.await_args_list == [call("user_7", message), call("user_43", message)]
+        assert user_event_sender.await_args_list == [
+            call("user_7", message),
+            call("user_43", message),
+        ]
         assert not Notification.objects.exists()
     else:
-        assert event_sender.await_args_list == [
+        assert user_event_sender.await_args_list == [
             call("user_7", message),
             call("user_42", message),
             call(
@@ -224,9 +207,9 @@ def test_cancel_each_active_state_with_real_session(
     ],
 )
 def test_cancelled_request_stays_final_and_preserves_metadata(
-    student, tutor, evaluation, expected, monkeypatch, action, message
+    student, tutor, evaluation, expected, monkeypatch, action, message, api_login
 ):
-    client = session_client(student)
+    client = api_login(student, PASSWORD)
     response = client.post(
         cancel_url(),
         HTTP_HOST="localhost",
@@ -282,14 +265,14 @@ def test_cancelled_request_stays_final_and_preserves_metadata(
 
 @pytest.mark.parametrize("state", ["pending", "awaiting_confirmation", "confirmed"])
 def test_cancelled_request_does_not_block_new_request_for_same_project(
-    student, evaluation, expected, state
+    student, evaluation, expected, state, api_login
 ):
     changes = {"status": state}
     if state == "pending":
         changes.update(picked_by=None, starts_at=None, ends_at=None)
         expected.update(picked_by=None, starts_at=None, ends_at=None)
     EvaluationRequest.objects.filter(pk=17).update(**changes)
-    client = session_client(student)
+    client = api_login(student, PASSWORD)
     headers = {
         "HTTP_HOST": "localhost",
         "HTTP_X_CSRFTOKEN": client.cookies["csrftoken"].value,
@@ -374,8 +357,8 @@ def test_authentication_required():
     }
 
 
-def test_csrf_required(student, evaluation):
-    response = session_client(student).post(cancel_url(), HTTP_HOST="localhost")
+def test_csrf_required(student, evaluation, api_login):
+    response = api_login(student, PASSWORD).post(cancel_url(), HTTP_HOST="localhost")
     assert response.status_code == 403
     assert response.json() == {
         "error": {
@@ -419,7 +402,7 @@ def test_non_owner_cancellation_needs_override_permission_and_reason(tutor, eval
 @pytest.mark.parametrize("state", ["pending", "awaiting_confirmation", "confirmed"])
 @pytest.mark.parametrize("role", ["student", "tutor", "head_tutor", "sc_member", "admin"])
 def test_other_users_cannot_cancel_across_active_states_with_real_session(
-    student, evaluation, expected, state, role
+    student, evaluation, expected, state, role, api_login
 ):
     changes = {"status": state}
     if state == "pending":
@@ -431,7 +414,7 @@ def test_other_users_cannot_cancel_across_active_states_with_real_session(
     outsider.roles.add(Role.objects.get(name=role))
     if role == "tutor":
         TutorEligibility.objects.create(tutor=outsider, project=evaluation.project)
-    client = session_client(outsider)
+    client = api_login(outsider, PASSWORD)
     response = client.post(
         cancel_url(),
         HTTP_HOST="localhost",
@@ -467,7 +450,7 @@ def test_other_users_cannot_cancel_across_active_states_with_real_session(
         expected.update(picked_by=None, starts_at=None, ends_at=None)
     if state == "confirmed":
         expected.update(picked_by={"id": 42, "display_name": "Bob", "avatar_url": None})
-    owner_client = session_client(student)
+    owner_client = api_login(student, PASSWORD)
     response = owner_client.get(
         reverse("api:evaluation-request-detail", kwargs={"pk": 17}), HTTP_HOST="localhost"
     )
@@ -481,9 +464,11 @@ def test_other_users_cannot_cancel_across_active_states_with_real_session(
 
 
 @pytest.mark.parametrize("role", ["tutor", "head_tutor", "sc_member", "admin"])
-def test_additional_roles_do_not_prevent_owner_cancellation(student, evaluation, expected, role):
+def test_additional_roles_do_not_prevent_owner_cancellation(
+    student, evaluation, expected, role, api_login
+):
     student.roles.add(Role.objects.get(name=role))
-    client = session_client(student)
+    client = api_login(student, PASSWORD)
     response = client.post(
         cancel_url(),
         HTTP_HOST="localhost",
@@ -508,7 +493,7 @@ def test_hidden_or_missing_request_returns_404(evaluation, pk):
 
 @pytest.mark.parametrize("state", ["cancelled", "expired"])
 def test_terminal_states_rejected(
-    student, evaluation, state, event_sender, django_capture_on_commit_callbacks
+    student, evaluation, state, user_event_sender, django_capture_on_commit_callbacks
 ):
     changes = {"status": state}
     if state == "cancelled":
@@ -522,7 +507,7 @@ def test_terminal_states_rejected(
         response = client.post(cancel_url())
     assert callbacks == []
     assert not Notification.objects.exists()
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == INVALID_STATE
     evaluation.refresh_from_db()
@@ -537,7 +522,7 @@ def test_at_or_after_start_rejected(
     monkeypatch,
     state,
     offset,
-    event_sender,
+    user_event_sender,
     django_capture_on_commit_callbacks,
 ):
     EvaluationRequest.objects.filter(pk=17).update(status=state)
@@ -548,7 +533,7 @@ def test_at_or_after_start_rejected(
         response = client.post(cancel_url())
     assert callbacks == []
     assert not Notification.objects.exists()
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     assert response.status_code == 409
     assert response.json() == {
         "error": {
@@ -601,7 +586,7 @@ def test_recorded_result_cannot_be_cancelled(student, evaluation, monkeypatch, r
 
 
 def test_stale_cancellation_refuses_a_released_pick(
-    evaluation, event_sender, django_capture_on_commit_callbacks
+    evaluation, user_event_sender, django_capture_on_commit_callbacks
 ):
     EvaluationRequest.objects.filter(pk=17).update(
         status="pending", picked_by=None, starts_at=None, ends_at=None
@@ -613,11 +598,11 @@ def test_stale_cancellation_refuses_a_released_pick(
     assert EvaluationRequest.objects.values().get(pk=17) == before
     assert not Notification.objects.exists()
     assert callbacks == []
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_cancellations_have_one_winner(student, evaluation, expected, event_sender):
+def test_concurrent_cancellations_have_one_winner(student, evaluation, expected, user_event_sender):
     barrier = Barrier(2)
 
     def submit(_):
@@ -643,7 +628,7 @@ def test_concurrent_cancellations_have_one_winner(student, evaluation, expected,
         "event": "evaluation.cancelled",
         "data": {"id": 17, "status": "cancelled"},
     }
-    assert event_sender.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call("user_7", message),
         call("user_42", message),
         call(
@@ -658,7 +643,7 @@ def test_concurrent_cancellations_have_one_winner(student, evaluation, expected,
 
 
 def test_pending_cancellation_event_filters_and_deduplicates_queue_recipients(
-    student, evaluation, event_sender, django_capture_on_commit_callbacks
+    student, evaluation, user_event_sender, django_capture_on_commit_callbacks
 ):
     EvaluationRequest.objects.filter(pk=17).update(
         status="pending", picked_by=None, starts_at=None, ends_at=None
@@ -690,7 +675,7 @@ def test_pending_cancellation_event_filters_and_deduplicates_queue_recipients(
         "event": "evaluation.cancelled",
         "data": {"id": 17, "status": "cancelled"},
     }
-    assert event_sender.await_args_list == [
+    assert user_event_sender.await_args_list == [
         call("user_7", message),
         call("user_43", message),
         call("user_44", message),
@@ -698,7 +683,7 @@ def test_pending_cancellation_event_filters_and_deduplicates_queue_recipients(
 
 
 def test_stale_cancellation_refuses_a_new_pick(
-    evaluation, event_sender, django_capture_on_commit_callbacks
+    evaluation, user_event_sender, django_capture_on_commit_callbacks
 ):
     EvaluationRequest.objects.filter(pk=17).update(status="confirmed")
     # The caller fetched the request before it was picked and confirmed.
@@ -711,11 +696,11 @@ def test_stale_cancellation_refuses_a_new_pick(
     assert EvaluationRequest.objects.values().get(pk=17) == before
     assert not Notification.objects.exists()
     assert callbacks == []
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 def test_rolled_back_cancellation_sends_no_event(
-    evaluation, event_sender, django_capture_on_commit_callbacks
+    evaluation, user_event_sender, django_capture_on_commit_callbacks
 ):
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         with pytest.raises(RuntimeError, match="rollback"):
@@ -724,7 +709,7 @@ def test_rolled_back_cancellation_sends_no_event(
                 raise RuntimeError("rollback")
     assert callbacks == []
     assert not Notification.objects.exists()
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
     evaluation.refresh_from_db()
     assert evaluation.status == "awaiting_confirmation"
     assert evaluation.picked_by_id == 42
@@ -732,7 +717,12 @@ def test_rolled_back_cancellation_sends_no_event(
 
 
 def test_notification_failure_rolls_back_cancellation(
-    student, evaluation, event_sender, monkeypatch, django_capture_on_commit_callbacks
+    student,
+    evaluation,
+    user_event_sender,
+    monkeypatch,
+    django_capture_on_commit_callbacks,
+    api_login,
 ):
     from apps.notifications.services import create_notification
 
@@ -741,7 +731,7 @@ def test_notification_failure_rolls_back_cancellation(
         raise RuntimeError("Injected notification failure")
 
     monkeypatch.setattr("apps.evaluations.notifications.create_notification", fail_after_write)
-    client = session_client(student)
+    client = api_login(student, PASSWORD)
     with django_capture_on_commit_callbacks(execute=True) as callbacks:
         response = client.post(
             cancel_url(),
@@ -761,7 +751,7 @@ def test_notification_failure_rolls_back_cancellation(
     assert evaluation.cancelled_at is None
     assert not Notification.objects.exists()
     assert callbacks == []
-    event_sender.assert_not_awaited()
+    user_event_sender.assert_not_awaited()
 
 
 def test_repeated_cancellation_cannot_duplicate_notification(evaluation):
@@ -774,7 +764,7 @@ def test_repeated_cancellation_cannot_duplicate_notification(evaluation):
 @pytest.mark.parametrize("role", ["head_tutor", "admin"])
 @pytest.mark.parametrize("has_pick", [True, False])
 def test_cancellation_notification_helper_supports_override_recipients(
-    evaluation, role, has_pick, event_sender, django_capture_on_commit_callbacks
+    evaluation, role, has_pick, user_event_sender, django_capture_on_commit_callbacks
 ):
     # The override endpoint is pending; test the helper's documented recipient rules.
     actor = get_user_model().objects.create_user(
@@ -789,7 +779,7 @@ def test_cancellation_notification_helper_supports_override_recipients(
     with django_capture_on_commit_callbacks(execute=True):
         with transaction.atomic():
             notify_evaluation_cancelled(evaluation)
-            event_sender.assert_not_awaited()
+            user_event_sender.assert_not_awaited()
     expected = [
         {
             "recipient_id": 7,
@@ -847,7 +837,7 @@ def test_cancellation_notification_helper_supports_override_recipients(
                 },
             )
         )
-    assert event_sender.await_args_list == expected_events
+    assert user_event_sender.await_args_list == expected_events
 
 
 def test_cancellation_helper_does_not_notify_the_overriding_picker(evaluation, tutor):

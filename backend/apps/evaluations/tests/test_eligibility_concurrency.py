@@ -3,15 +3,12 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from threading import Barrier
-from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, close_old_connections, connection, connections
 from django.db.models.query import QuerySet
 from django.urls import reverse
-from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.audit.models import AuditLog
@@ -24,13 +21,9 @@ PASSWORD = "EligibilityPassword123!"
 
 
 @pytest.fixture
-def actors(monkeypatch, empty_project_catalog):
+def actors(monkeypatch, empty_project_catalog, user_event_sender):
     assert connection.vendor == "mysql", "These tests require real MySQL row locking."
     monkeypatch.setattr("django.utils.timezone.now", lambda: NOW)
-    monkeypatch.setattr(
-        "apps.core.events.get_channel_layer",
-        lambda: SimpleNamespace(group_send=AsyncMock()),
-    )
     for name in Role.Name.values:
         Role.objects.get_or_create(name=name)
     users = []
@@ -47,20 +40,6 @@ def actors(monkeypatch, empty_project_catalog):
     Project.objects.create(id=801, slug="libft", name="Libft")
     Project.objects.create(id=802, slug="minishell", name="Minishell")
     return users
-
-
-def browser_for(user):
-    browser = APIClient(enforce_csrf_checks=True)
-    browser.get(reverse("api:session"), HTTP_HOST="localhost")
-    response = browser.post(
-        reverse("api:login"),
-        {"email": user.email, "password": PASSWORD},
-        format="json",
-        HTTP_HOST="localhost",
-        HTTP_X_CSRFTOKEN=browser.cookies["csrftoken"].value,
-    )
-    assert response.status_code == 200
-    return browser
 
 
 def compete(browsers, url, bodies):
@@ -90,9 +69,9 @@ def compete(browsers, url, bodies):
     return [response for response, _ in results]
 
 
-def test_competing_submissions_create_only_one_pending_request(actors, monkeypatch):
+def test_competing_submissions_create_only_one_pending_request(actors, monkeypatch, api_login):
     tutor, _, _ = actors
-    browsers = [browser_for(tutor), browser_for(tutor)]
+    browsers = [api_login(tutor, PASSWORD), api_login(tutor, PASSWORD)]
     barrier = Barrier(2)
     from apps.evaluations.views import eligibility as eligibility_views
 
@@ -146,13 +125,15 @@ def test_competing_submissions_create_only_one_pending_request(actors, monkeypat
 @pytest.mark.parametrize(
     "decisions", [("approved", "approved"), ("approved", "declined"), ("declined", "declined")]
 )
-def test_competing_reviews_have_one_winner_and_consistent_grants(actors, monkeypatch, decisions):
+def test_competing_reviews_have_one_winner_and_consistent_grants(
+    actors, monkeypatch, decisions, api_login
+):
     tutor, head, admin = actors
     pending = TutorEligibilityRequest.objects.create(requester=tutor)
     pending.projects.set([801, 802])
     # Existing eligibility is retained without changing its provenance (schema §3.4).
     existing = TutorEligibility.objects.create(tutor=tutor, project_id=801)
-    browsers = [browser_for(head), browser_for(admin)]
+    browsers = [api_login(head, PASSWORD), api_login(admin, PASSWORD)]
     barrier = Barrier(2)
     from apps.evaluations.views import eligibility as eligibility_views
 
@@ -229,11 +210,11 @@ def test_competing_reviews_have_one_winner_and_consistent_grants(actors, monkeyp
         assert grants == [(701, 801, None)]
 
 
-def test_failed_grant_creation_rolls_back_review_and_partial_grants(actors, monkeypatch):
+def test_failed_grant_creation_rolls_back_review_and_partial_grants(actors, monkeypatch, api_login):
     tutor, head, _ = actors
     pending = TutorEligibilityRequest.objects.create(requester=tutor)
     pending.projects.set([801, 802])
-    browser = browser_for(head)
+    browser = api_login(head, PASSWORD)
     original_bulk_create = QuerySet.bulk_create
     partial_writes = []
 

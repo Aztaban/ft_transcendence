@@ -6,7 +6,6 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.fields import DateTimeField
-from rest_framework.test import APIClient
 
 from apps.accounts.models import Role
 from apps.evaluations.models import Project, TutorEligibilityRequest
@@ -16,11 +15,6 @@ pytestmark = pytest.mark.django_db
 URL = "api:tutor-eligibility-requests-detail"
 
 NOT_FOUND = {"error": {"code": "not_found", "message": "Not found."}}
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
 
 
 def iso(dt):

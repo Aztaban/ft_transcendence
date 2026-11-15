@@ -97,6 +97,11 @@
   font-size: 0.92rem;
 }
 
+/* The entries of the page shown while the next one loads (#369). */
+.audit-log__table[aria-busy="true"] {
+  opacity: 0.55;
+}
+
 .audit-log__table th {
   padding: 12px 14px;
   border-bottom: 1px solid #e3e7e7;
@@ -192,6 +197,11 @@
   border-color: #fecdca;
   background: #fef3f2;
   color: #b42318;
+}
+
+/* The account error (#371) keeps its text and "Try again" centred, like the log's own error. */
+.audit-log__error.ui-load-error {
+  justify-content: center;
 }
 
 .audit-log__empty h2 {
