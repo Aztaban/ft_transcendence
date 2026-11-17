@@ -237,7 +237,85 @@ Each milestone holds parent issues, broken down into small sub-issues with one o
 
 ## Database Schema
 
-<!-- ✍️ Lenka. Subject: a visual representation or description of the database structure, the tables/collections and their relationships, and the key fields and data types (docs/database-schema.md). A Mermaid erDiagram renders on GitHub. -->
+Application data is stored in MySQL 8.4 (InnoDB, `utf8mb4`). Application table names are explicitly defined in the Django models. The diagram below is the whole product schema. Login sessions sit in Django's own `django_session` table and are not part of it. Column-level detail, check constraints and the concurrency rules are in [docs/database-schema.md](docs/database-schema.md).
+
+The database contains 20 tables, including application-specific tables and tables automatically created by Django for authentication, permissions, sessions, and migrations.
+
+
+```mermaid
+erDiagram
+    user ||--o{ user_roles : "has"
+    role ||--o{ user_roles : "assigned through"
+    user ||--o{ tutor_eligibility_request : "submits"
+    tutor_eligibility_request ||--o{ tutor_eligibility_request_projects : "lists"
+    project ||--o{ tutor_eligibility_request_projects : "included in"
+    user ||--o{ tutor_eligibility : "may evaluate"
+    project ||--o{ tutor_eligibility : "covers"
+    tutor_eligibility_request |o--o{ tutor_eligibility : "grants"
+    user ||--o{ evaluation_request : "requests as student"
+    user |o--o{ evaluation_request : "picks as Hitchhiker"
+    project ||--o{ evaluation_request : "is for"
+    user ||--o{ notification : "receives"
+    user |o--o{ sc_message : "sends"
+    user |o--o{ audit_log : "is the actor"
+```
+
+`audit_log.actor_id` points at `user`. There is no administrator table, and no extra table per role. The five roles are rows in `role`, linked to a person through `user_roles`. A student or a Hitchhiker never writes an audit row. An administrator writes every kind. A Head Tutor writes eligibility decisions, evaluation overrides and the assignment of the Hitchhiker role. A Student Council member writes only the assignment of another council member. The column is nullable: when that account is removed, the log row stays and `actor_id` becomes NULL.
+
+| Table | Key columns |
+| --- | --- |
+| `user` | `email` varchar(254) unique, `password` varchar(128), `display_name` varchar(64), `intra_id` bigint unique, `language` varchar(2) (`en`, `cs`, `es`), `status` varchar(16) (`active`, `suspended`, `deleted`) |
+| `role` | `name` varchar(254) unique, seeded: `student`, `tutor`, `head_tutor`, `sc_member`, `admin` |
+| `user_roles` | `user_id`, `role_id`, unique together |
+| `project` | `slug` varchar(64) unique, `name` varchar(128), `is_active` bool |
+| `tutor_eligibility_request` | `requester_id`, `status` varchar(16) (`pending`, `approved`, `declined`), `reviewed_by_id`, `reviewed_at` datetime |
+| `tutor_eligibility_request_projects` | `request_id`, `project_id`, unique together |
+| `tutor_eligibility` | `tutor_id`, `project_id`, unique together; `granted_by_request_id` |
+| `evaluation_request` | `student_id`, `project_id`, `status` varchar(32) (`pending`, `awaiting_confirmation`, `confirmed`, `cancelled`, `expired`), `picked_by_id`, `starts_at` and `ends_at` datetime, `result` varchar(16) (`passed`, `failed`) |
+| `notification` | `recipient_id`, `type` varchar(64), `payload` json, `read_at` datetime |
+| `sc_message` | `sender_id` nullable, `body` text, `read_at` datetime, `discussion_note` text, `discussion_note_version` int |
+| `audit_log` | `actor_id`, `action` varchar(64), `target_type` varchar(32), `target_id` bigint, `reason` varchar(500), `metadata` json |
+
+### Django Framework Tables
+
+Additional tables are managed by Django and provide authentication, permissions, session management, administrative logs, and migration tracking.
+
+### How to inspect the database
+
+Connect to the MySQL container:
+
+```bash
+docker compose exec db mysql -u root -p
+```
+
+Select the application database and list its tables:
+
+```sql
+SHOW DATABASES;
+USE transcendence;
+SHOW TABLES;
+```
+
+Inspect the structure and contents of a table:
+
+```sql
+DESCRIBE user;
+SELECT * FROM user LIMIT 10;
+SHOW CREATE TABLE user\G
+```
+
+To inspect relationships between tables:
+
+```sql
+SELECT
+    TABLE_NAME,
+    COLUMN_NAME,
+    REFERENCED_TABLE_NAME,
+    REFERENCED_COLUMN_NAME
+FROM information_schema.KEY_COLUMN_USAGE
+WHERE TABLE_SCHEMA = 'transcendence'
+  AND REFERENCED_TABLE_NAME IS NOT NULL;
+```
 
 ## Features List
 
@@ -510,6 +588,25 @@ Scrum Master and frontend developer. I set up the frontend and built most of its
 
 ### Lenka (lhusarov)
 
+Backend developer, together with Mjusta. I built the server side of profiles and roles, Hitchhiker eligibility, slot picking, the audit log and Student Council moderation.
+I also worked closely with Mjusta on code reviews, testing, and getting our changes ready for merging into main.
+
+- **Accounts and roles:** the read-only profile API, role assignment with its ordering and error format, public profile visibility, and the permission checks that decide 401, 403 or 404.
+- **Eligibility:** the Hitchhiker onboarding flow on the backend: listing projects, creating an eligibility request, Head Tutor approval or decline, the approved eligibility rows, and the eligibility request detail endpoint. This is the first-time Hitchhiker activation.
+- **Evaluation scheduling (module):** `POST /api/v1/evaluation-requests/{id}/pick-slot/`. An eligible Hitchhiker proposes a slot; the endpoint checks project eligibility, blocks picking your own request, enforces the slot length and how far ahead it may be, and rejects overlaps for both people.
+- **Audit trail (module):** the append-only audit log (model, migration and admin list with filters). Eligibility reviews, revocations and role changes write an entry, and Student Council moderation (delete a message, reveal its sender) records the reason.
+- **Notifications:** a notification when an administrator changes someone's roles, and removal of the related notifications when an administrator deletes a council message.
+- **Multiple languages (module):** API messages translated from the `Accept-Language` header into English, Czech and Spanish (`backend/locale`).
+- **Database:** utf8mb4 so display names and council messages can store emoji, with a regression test that a name containing an emoji round-trips through MySQL.
+
+**Challenges and what I learned**
+
+- **Learning Django and Django REST Framework.** Most of the backend stack was new to me. I spent a lot of time reading documentation, looking up unfamiliar syntax and concepts, and understanding how models, serializers, views, permissions, and tests work together. As the project progressed, I became more comfortable navigating and modifying the backend.
+
+- **Working with a large, shared codebase.** Features were developed across many small issues and pull requests, which sometimes made it difficult to keep track of the bigger picture. Reading existing code, reviewing pull requests, and discussing implementation details with Mjusta helped me understand how the different parts fit together.
+
+- **Following the API contract.** Implementations had to match the agreed API specification, including permissions, validation, error responses, and status codes. I learned to compare my changes against the API plan and use tests to check that the expected behavior was preserved.
+
 ### Lada (lformankov)
 
 I joined the frontend work in M3 as Diana's review pair. Most of my work connects the React pages to the API: the notifications, the administration pages, and what every page shows while it loads, when it is empty and after an error. I also wrote the Student Council inbox API and a large part of the frontend tests. Of the modules, I built the frontend of the **Notification system** and the user and role management pages of the **Advanced permissions system**.
@@ -551,6 +648,27 @@ I joined the frontend work in M3 as Diana's review pair. Most of my work connect
 ### References
 
 <!-- ✍️ EVERYONE adds the documentation, articles and tutorials they used. -->
+<!-- lhusarov: one shared list is enough for documentation the whole team used. Add a link under your name only when it is not already here. -->
+
+Documentation the project is built with:
+
+- [Python 3](https://docs.python.org/3/)
+- [Django 5.1](https://docs.djangoproject.com/en/5.1/) — models, authentication, migrations, translations
+- [Django REST Framework](https://www.django-rest-framework.org/) — serializers, permissions, API views, tests
+- [drf-spectacular](https://drf-spectacular.readthedocs.io/) — OpenAPI schema
+- [pytest](https://docs.pytest.org/en/stable/)
+- [MySQL 8.4](https://dev.mysql.com/doc/refman/8.4/en/)
+- [Redis](https://redis.io/docs/latest/)
+- [Docker](https://docs.docker.com/) and [Docker Compose](https://docs.docker.com/compose/)
+- [Nginx](https://nginx.org/en/docs/)
+- [Git](https://git-scm.com/doc)
+- [GitHub Docs](https://docs.github.com/) — pull requests, reviews, Actions
+- [MDN Web Docs](https://developer.mozilla.org/)
+- [React](https://react.dev/)
+- [TypeScript](https://www.typescriptlang.org/docs/)
+- [Vite](https://vite.dev/guide/)
+
+Day-to-day questions were also answered on [Stack Overflow](https://stackoverflow.com/) and by web search.
 
 Lada:
 
@@ -568,6 +686,8 @@ Lada:
 <!-- ✍️ EVERYONE writes their own lines. Subject: how AI was used, for which tasks and which parts of the project. -->
 
 - **Diana:** I used Claude (Anthropic), through Claude Code in VS Code, as a coding assistant for my frontend work. From the issue and the API contract it drafted code, tests and pull request descriptions; it helped me review teammates' pull requests, find bugs, and run the accessibility and browser checks (axe-core scans, headless browser runs in Firefox and Edge).
+- **Lenka:** I used Cursor (mainly Grok). They checked work that had to match the written contract. They drafted and revised tests, helped isolate bugs, and compared endpoints with docs/api-plan.md and other project documentation. I reviewed each suggestion and accepted only changes that I understood, verified, and considered appropriate for the project.
+
 ## Known limitations
 
 <!-- Optional (the subject welcomes it). Anyone can add here. -->
