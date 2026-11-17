@@ -241,11 +241,104 @@ Each milestone holds parent issues, broken down into small sub-issues with one o
 
 ## Features List
 
-<!-- ✍️ Lada (#380). Subject: the complete list of implemented features, which member(s) worked on each, and a brief description of each feature's functionality. -->
+Every feature of the application, with who worked on it. The names come from the merged pull requests: **Backend** is the Django API, **Frontend** the React application. The exact rules of each feature are in `docs/api-plan.md`.
+
+### Accounts and roles
+
+| Feature | What it does | Who |
+|---|---|---|
+| Registration and login | Create an account with an email, a display name and a password, then log in. The session is a cookie, protected against CSRF. 42 Prague emails must use the 42 login. | Backend: Martin, Roman · Frontend: Diana |
+| 42 login (OAuth) | **Continue with 42** creates the account from the 42 profile, or logs in to it. The 42 token never reaches the browser. | Backend: Martin · Frontend: Diana |
+| Own profile | Your name, email, roles and how you sign in. You can change your display name and the language. | Backend: Lenka, Roman · Frontend: Diana |
+| Public profiles | The profile of a Hitchhiker or a Student Council member: roles, the projects they can evaluate, and your evaluations with them. | Backend: Lenka · Frontend: Diana |
+| Roles and workspaces | Five roles: Student, Hitchhiker, Head Tutor, Student Council and Admin. A user can hold several and switches between their workspaces. The server checks the role on every request. | Backend: Lenka, Roman · Frontend: Diana |
+| Role management | On a person's profile, a Head Tutor gives the Hitchhiker role, a Student Council member gives Student Council, and an Admin gives and removes Hitchhiker, Head Tutor and Student Council. The change applies at once, and the person is notified. | Backend: Lenka · Frontend: Lada |
+
+### Evaluations
+
+| Feature | What it does | Who |
+|---|---|---|
+| Projects | The Common Core projects that a Hitchhiker evaluates, each with a details page (topics and what is tested). | Backend: Martin, Roman · Frontend: Diana |
+| Becoming a Hitchhiker | A new Hitchhiker chooses the projects they want to evaluate. A Head Tutor approves or declines the whole request, and can later revoke one project. | Backend: Lenka · Frontend: Diana |
+| Evaluation requests | A student requests an evaluation for a project, with an optional note. One active request per project. Hitchhikers don't see who asked until they pick it. | Backend: Martin, Roman · Frontend: Diana |
+| Slot picking | An eligible Hitchhiker proposes a time slot: 15 to 120 minutes, 30 minutes to 14 days ahead, never overlapping another evaluation of either person. If two Hitchhikers pick the same request at the same moment, only one of them gets it. | Backend: Lenka · Frontend: Diana |
+| Confirm or decline | The student accepts the proposed time, or declines it and the request goes back to the queue. The student sees who the Hitchhiker is only after accepting. | Backend: Martin, Roman · Frontend: Diana |
+| Cancel and release | The student cancels until the evaluation starts. The Hitchhiker releases the slot, and the request goes back to the queue. | Backend: Martin · Frontend: Diana |
+| Expiry | A background job closes requests nobody picked within 14 days, and proposed slots that were not confirmed before they started. | Backend: Martin |
+| Dashboards | A Home page for each workspace with what is waiting, plus the upcoming evaluations on the Pending page. | Frontend: Diana, Lada |
+| History | Past evaluations and requests with the result and the feedback, filtered by outcome and project. | Frontend: Diana |
+| Results | After an evaluation, the team enters the result (passed or failed) and the feedback in the Django admin. | Backend: Martin |
+
+### Real time and notifications
+
+| Feature | What it does | Who |
+|---|---|---|
+| Live updates | Every open page updates by itself when something changes, over a WebSocket. A notice shows while the connection is lost. | Backend: Martin · Frontend: Diana |
+| Notifications | Each step of an evaluation, an eligibility decision or a role change notifies the people it concerns. A bell shows the unread count, and the notification list opens the related page. Read status stays in sync across tabs. | Backend: Martin; links: Lada, Roman · Frontend: Lada |
+
+### Student Council
+
+| Feature | What it does | Who |
+|---|---|---|
+| Anonymous messages | Anyone can send the Student Council a message. Council members don't see who sent it. | Backend: Lenka · Frontend: Diana |
+| Council inbox | Council members read the messages, mark them read or unread and keep an internal note. The history lists every message received. | Backend: Lada, Lenka · Frontend: Diana, Lada |
+| Moderation | An Admin deletes a message, or reveals its sender in case of abuse, with a written reason. | Backend: Lenka · Frontend: Diana |
+
+### Search
+
+| Feature | What it does | Who |
+|---|---|---|
+| People search | Finds Hitchhikers, Head Tutors and Student Council members by name or 42 login (the login itself is never shown), filtered by role and project, sorted by name and split into pages. On the Hitchhikers page and in the top bar. | Backend: Martin · Frontend: Diana |
+
+### Administration
+
+| Feature | What it does | Who |
+|---|---|---|
+| User management | Admins list, search and edit accounts, suspend and reactivate them, and delete them (the data is anonymized). | Backend: Martin · Frontend: Lada |
+| Evaluation exceptions | Head Tutors and Admins see the requests that need a decision: a Hitchhiker who lost the role, a suspended participant, a result still missing after 7 days. They release or cancel the request with a reason (an override). | Backend: Martin · Frontend: Lada |
+| Audit log | Role changes, account actions, eligibility decisions, overrides and moderation are recorded with who did them and why. Admins browse and filter the log. | Backend: Lenka · Frontend: Diana |
+
+### Quality of the interface
+
+| Feature | What it does | Who |
+|---|---|---|
+| Languages | The whole application in English, Czech and Spanish, including the server's messages. | Frontend: Diana · Backend: Lenka |
+| Accessibility | WCAG AA contrast, full keyboard use, a skip link, focus kept inside popups, and a title for every page in the browser tab. Checked by automated scans. | Diana |
+| Design system | Shared components and colour, type and icon tokens, shown on their own page. | Diana |
+| Responsive layout and browsers | Works on phones and tablets, and in Chrome, Firefox and Edge. | Diana |
+| Loading, empty and error states | Lists keep their place while loading, say what they will show when empty, and offer **Try again** when loading fails. | Lada |
+| Legal pages | Privacy Policy and Terms of Service. | Diana |
+
+### Infrastructure and security
+
+| Feature | What it does | Who |
+|---|---|---|
+| Docker stack | One command starts MySQL, Redis, Django, Celery, React and Nginx. A production profile serves the built frontend. | Roman · application setup: Martin, Lenka (backend), Diana (frontend) |
+| HTTPS and security | Nginx with TLS, security headers, secure cookies and rate limits. | Roman |
+| Automated tests | Backend tests (pytest), frontend tests (Vitest and Testing Library), accessibility scans and a smoke test of the running stack. | Roman (CI) · backend tests: everyone, with their feature · frontend tests: Lada, Diana |
 
 ### Development workflow
 
-<!-- ✍️ Lada (#380): branches, pull requests and reviews, CI, how to run the tests. -->
+How we work on the code day to day. How the work was organised (milestones, the contract first, reviews, the protected `main`) is in [Project Management](#project-management), and the full rules are in `CONTRIBUTING.md`.
+
+- **Branches.** One branch per sub-issue, from an up-to-date `main`, named `issue-<parent>/<sub-issue>-<short-description>`. Work that needs an unmerged branch is stacked on it, and the stack is merged from the bottom up.
+- **Commits.** `<type>: <short summary>`, with the type `feat`, `fix`, `refactor`, `docs`, `test` or `chore`.
+- **Pull requests.** The description follows a template: What, Why (`Closes #<issue>`), How to test, Stack context and what is intentionally not included. `CODEOWNERS` requests a reviewer automatically, and the usual pairs are Martin ↔ Lenka for the backend and Diana ↔ Lada for the frontend. Roman reviews architecture changes. A pull request is merged once it has an approval, every review conversation is resolved and the CI is green, and its branch is then deleted.
+- **CI** (GitHub Actions) jobs on every pull request:
+  - backend: ruff, black and isort, the pytest suite, OpenAPI schema validation and Django's deployment checks
+  - frontend: Prettier, the TypeScript check, the Vitest suite and the production build
+  - docker: builds the images, starts the stack in the development and the production profile, and runs `scripts/smoke-test.sh` through Nginx
+
+**Running the checks locally** before opening a pull request:
+
+```bash
+make test   # backend tests, with the stack running (make up)
+(cd backend && ruff check . && black --check . && isort --check .)
+(cd backend && python manage.py spectacular --validate --fail-on-warn --file /dev/null)
+(cd frontend && npm run format && npx tsc --noEmit && npm test)
+```
+
+A frontend test fails when it writes to `console.error` or `console.warn`, because the browser console must stay clean.
 
 ## Modules
 
@@ -290,7 +383,11 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 **Why we chose it.** A live page update is useful only while someone is looking at that page. Students and Hitchhikers also need a persistent record of actions that concern them, such as a proposed slot, a cancellation or a recorded result. A notification centre lets them catch up when they return and open the relevant information without checking every workspace separately.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+**How it was implemented.**
+
+- **Frontend (Lada):** A shared React context loads the unread count from `GET /notifications/unread-count/` once the user is logged in, and the bell in the top bar shows it as a badge. The notification center lists the newest notifications and builds each sentence in the user's language from its `type` and `payload`, so no raw status value is ever shown. Opening a notification marks it as read, and **Mark all as read** clears them all. On the `notification.created` and `notification.updated` WebSocket events, and after a reconnect, the count and the list are fetched again over REST, which keeps every open tab and device in sync. A link switches to the workspace that can open its page, and the backend sends an empty link once the recipient can no longer open the request (R17, Lada with Roman).
+
+<!-- ✍️ Martin: add the backend lines (model and types, the creation service, the API, the events). -->
 
 ### Custom-made design system — Minor, 1 point
 
@@ -332,7 +429,11 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 **Why we chose it.** Students, Hitchhikers, Head Tutors, Student Council members and Administrators have different responsibilities. Permissions protect private requests and council messages, restrict evaluations to eligible Hitchhikers, and reserve role management and moderation for authorised users. Server-side checks are essential because choosing a workspace in the interface must never grant access by itself.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+**How it was implemented.**
+
+- **Frontend, user and role management (Lada):** On a person's profile, **Manage roles** offers only what the user's real roles allow: a Head Tutor gives Hitchhiker, a Student Council member gives Student Council, and an Admin gives and removes Hitchhiker, Head Tutor and Student Council. The Admin's user management lists every account with search, role and status filters and pages, edits an account's name, email and language, and suspends, reactivates or deletes it with a reason for the audit log. Head Tutors and Admins see the evaluation exceptions, and release or cancel a request with a reason (an override). These pages call the API only for users who hold the role, so no 403 reaches the browser console, and a 409 (another Admin acted first) is explained and the data loaded again. The server still checks every request.
+
+<!-- ✍️ Module owner(s): add the backend and workspace lines and name the contributors. -->
 
 ### Evaluation scheduling — Custom Major, 2 points
 
@@ -411,11 +512,56 @@ Scrum Master and frontend developer. I set up the frontend and built most of its
 
 ### Lada (lformankov)
 
+I joined the frontend work in M3 as Diana's review pair. Most of my work connects the React pages to the API: the notifications, the administration pages, and what every page shows while it loads, when it is empty and after an error. I also wrote the Student Council inbox API and a large part of the frontend tests. Of the modules, I built the frontend of the **Notification system** and the user and role management pages of the **Advanced permissions system**.
+
+**What I built**
+
+- **Notifications (frontend):**
+  - the unread count on the bell, the notification center that opens from it, and marking notifications as read
+  - live updates of the count and the list over the WebSocket, in every open tab
+  - a sentence for every notification type in English, Czech and Spanish
+  - links that open the right page in the right workspace
+
+  (#643, #644, #645, #686, #689, #693, #814)
+- **Notification links (backend):** an evaluation notification no longer links to a request the recipient can't open any more (#740).
+- **A clear error message (backend):** when a project is turned off while a student has the request form open, the student now reads "This project is not available any more." in their language, instead of DRF's `Invalid pk "4"` (#815).
+- **Student Council inbox (backend):** sending an anonymous message with its rate limit, plus the inbox list and the message detail for council members, with read/unread and the internal note (#626, #632). On the frontend, the message history page (#706).
+- **Administration (frontend):** the Admin user management pages (#782), role management on a person's profile (#709), and the evaluation exceptions page with overrides (#787).
+- **Loading, empty and error states** on every page (#615, #817, #818, #819), and the four confirmation popups rebuilt on the shared Dialog (#816).
+- **Frontend tests:**
+  - tests fail on any console error or warning (#790)
+  - the form checks and the backend's field messages (#797)
+  - the shared components (#798)
+  - user flows for an evaluation and a council message (#799)
+  - the Home dashboards (#813)
+
+**Challenges and how I solved them**
+
+- **Building on a backend that was not merged yet.** The notification API was still in Martin's open pull request when I started the bell. I stacked my three PRs on his branch (count → center → read status) and merged them in order once his work reached `main`.
+- **Unread count in several tabs.** Marking a notification as read in one tab left the old count in the others. The backend sends a `notification.updated` event to all of the user's connections. Every tab then re-fetches the count from the API instead of trusting the event (api-plan §9).
+- **404s in the browser console.** The subject forbids console errors. But a notification could link to an evaluation that had since been picked by another Hitchhiker or had expired, and opening it gave a 404.
+  - Backend: the link of an evaluation notification is empty once the request is hidden from the recipient (R17).
+  - Frontend: a link switches to the workspace that can open it (Hitchhiker, Student Council) instead of showing "not available for your role".
+- **Two council members editing the same note.** The note carries a version number, and saving is a conditional update on that version. A save based on an old version gets 409 `edit_conflict` instead of overwriting the other person's text (schema §4.2).
+- **Console warnings that tests ignored.** `npm test` passed even when React logged an error. My first idea was a spy on `console.error`, but about 50 test files reset all mocks after each test, which would have wiped its calls before the check. So the test setup wraps the console methods directly, and any message fails the test.
+- **Pages jumping while loading.** Changing the page or a filter replaced the list with placeholders, and the button the user had just pressed disappeared along with the keyboard focus. Now the old rows stay, greyed out, until the new ones arrive.
+
 ## Resources
 
 ### References
 
 <!-- ✍️ EVERYONE adds the documentation, articles and tutorials they used. -->
+
+Lada:
+
+- [React documentation](https://react.dev/learn): state, effects and context
+- [React Router](https://reactrouter.com/): routes and navigation
+- [react-i18next](https://react.i18next.com/) and [i18next plurals and context](https://www.i18next.com/translation-function/plurals): the notification sentences
+- [Vitest](https://vitest.dev/guide/) and [Testing Library](https://testing-library.com/docs/react-testing-library/intro/): the frontend tests
+- [Django REST Framework](https://www.django-rest-framework.org/): permissions, throttling and serializers for the council inbox
+- [Django: updating with `update()` and conditional expressions](https://docs.djangoproject.com/en/5.1/ref/models/querysets/#update): the conditional update of the council note
+- [MDN: WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket): live notifications
+- [WAI-ARIA Authoring Practices: Dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/): the confirmation popups
 
 ### How AI was used
 
