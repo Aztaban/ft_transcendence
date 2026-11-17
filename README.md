@@ -249,7 +249,110 @@ Each milestone holds parent issues, broken down into small sub-issues with one o
 
 ## Modules
 
-<!-- ✍️ Martin writes the justifications; EVERY module's owner adds 3–5 lines on how it was implemented. Subject: all chosen modules (Major and Minor), the point calculation (Major = 2 pts, Minor = 1 pt), the justification of each choice (especially the custom "Modules of choice"), how each module was implemented, and which member(s) worked on it. -->
+We chose modules that support the campus evaluation workflow: coordinating students and Hitchhikers, keeping permissions clear, and making the application usable across languages, browsers and access needs. The selection below totals **18 points** against the subject's required 14: **5 Major × 2 + 8 Minor × 1 = 18**. These are the points we aim to demonstrate at evaluation; validation depends on each module meeting the subject's requirements, including acceptance of the two custom modules under §IV.10, "Modules of choice".
+
+| Category | Chosen module | Size | Points |
+| --- | --- | --- | ---: |
+| Web | Frameworks for both frontend and backend | Major | 2 |
+| Web | Real-time features | Major | 2 |
+| Web | ORM for the database | Minor | 1 |
+| Web | Notification system | Minor | 1 |
+| Web | Custom-made design system | Minor | 1 |
+| Web | Advanced search with filters, sorting and pagination | Minor | 1 |
+| Accessibility and Internationalization | WCAG 2.1 AA accessibility | Major | 2 |
+| Accessibility and Internationalization | Multiple languages | Minor | 1 |
+| Accessibility and Internationalization | Additional browsers | Minor | 1 |
+| User Management | Remote authentication with OAuth 2.0 | Minor | 1 |
+| User Management | Advanced permissions system | Major | 2 |
+| Modules of choice | Evaluation scheduling | Major | 2 |
+| Modules of choice | Audit trail for sensitive actions | Minor | 1 |
+| **Total** | **5 Major + 8 Minor** | | **18** |
+
+### Frameworks for both frontend and backend — Major, 2 points
+
+**Why we chose it.** The application has several workspaces but shares the same accounts, evaluation data and rules. React gives us reusable interfaces, while Django provides authentication, validation and database tools. Using established frameworks on both sides lets the team focus on the evaluation workflow and keep its behaviour consistent as the product grows.
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### Real-time features — Major, 2 points
+
+**Why we chose it.** Students and Hitchhikers act on the same requests, often from different browsers. A picked slot, confirmation or cancellation needs to reach the other person promptly, and an open queue should reflect requests that someone else has picked. Live updates reduce manual refreshing and help people act on current information. Reconnection matters because an interrupted connection should not leave a workspace permanently out of date.
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### ORM for the database — Minor, 1 point
+
+**Why we chose it.** Users, roles, projects, eligibility and evaluations have related data and constraints. Django's ORM gives the team a shared way to query those relationships and evolve the schema through migrations. Its transaction and locking tools also support the concurrency rules that prevent two Hitchhikers from picking the same request.
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### Notification system — Minor, 1 point
+
+**Why we chose it.** A live page update is useful only while someone is looking at that page. Students and Hitchhikers also need a persistent record of actions that concern them, such as a proposed slot, a cancellation or a recorded result. A notification centre lets them catch up when they return and open the relevant information without checking every workspace separately.
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### Custom-made design system — Minor, 1 point
+
+**Why we chose it.** The same forms, dialogs, status labels and loading states appear across several roles. Shared components, colours, typography and icons make those interactions familiar and reduce inconsistent behaviour between pages. They also let us fix accessibility and presentation in one place. This is the subject's listed design-system module, with a minimum of ten reusable components; its reference is [docs/design-system.md](docs/design-system.md).
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### Advanced search — Minor, 1 point
+
+**Why we chose it.** A student may need a Hitchhiker eligible for a particular project, or someone from the Student Council. Searching names alone does not answer those needs. Role and project filters make the results relevant, sorting makes them predictable, and pagination keeps the list manageable as the campus community grows.
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### WCAG 2.1 AA accessibility — Major, 2 points
+
+**Why we chose it.** Requesting and managing an evaluation is part of campus life, so the workflow needs to work for people using a keyboard, screen reader or other assistive tools. Clear structure, readable contrast, labelled controls and predictable focus help people complete the same tasks independently. We chose to address accessibility across the application; the checks and their limits are documented in [docs/accessibility.md](docs/accessibility.md).
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### Multiple languages — Minor, 1 point
+
+**Why we chose it.** The Prague campus brings together Czech and international students. English, Czech and Spanish make the workflow available to more of that community. Translating validation messages, notifications and status labels as well as page text helps users understand what happened and what action they need to take.
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### Additional browsers — Minor, 1 point
+
+**Why we chose it.** Students and tutors use their own computers and should be able to complete an evaluation workflow in their preferred browser. We selected Firefox and Edge alongside Chrome to check that forms, navigation, authentication and live updates behave consistently. Browser checks and known differences are documented in [docs/browser-support.md](docs/browser-support.md).
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### Remote authentication with OAuth 2.0 — Minor, 1 point
+
+**Why we chose it.** The intended users already have 42 intranet accounts. Signing in through 42 gives them a familiar entry point and avoids requiring another password for that login method. It authenticates their identity; local roles and approved project eligibility still determine what they may do in this application.
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### Advanced permissions system — Major, 2 points
+
+**Why we chose it.** Students, Hitchhikers, Head Tutors, Student Council members and Administrators have different responsibilities. Permissions protect private requests and council messages, restrict evaluations to eligible Hitchhikers, and reserve role management and moderation for authorised users. Server-side checks are essential because choosing a workspace in the interface must never grant access by itself.
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### Evaluation scheduling — Custom Major, 2 points
+
+**Why we chose it.** Coordinating an evaluation is the central problem this application solves. A student needs an eligible Hitchhiker, a proposed time that works for both people, and a clear confirmation before the evaluation takes place. Keeping the whole process in one workflow makes its current state visible and gives both participants a way to decline, release or cancel a booking.
+
+**Technical challenges and value.** The scheduler must enforce slot duration, advance notice and time boundaries, prevent overlapping bookings for either participant even when they act in different roles, and handle simultaneous attempts to pick the same request. Confirmation, release, cancellation and automatic expiry must preserve consistent state when actions race. These rules protect participants from double bookings and keep abandoned requests from blocking the queue. The lifecycle and concurrency rules are specified in [api-plan §7.1](docs/api-plan.md#71-evaluation-request-lifecycle) and [database schema §4](docs/database-schema.md).
+
+**Why Major.** This module combines a multi-step state machine, scheduling constraints, transactions, concurrency protection and background expiry across two participants. That scope supports a two-point claim. Its contribution is the booking logic and consistency guarantees; the separately claimed real-time module delivers updates about those bookings to connected browsers.
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+
+### Audit trail for sensitive actions — Custom Minor, 1 point
+
+**Why we chose it.** Campus administrators can change roles, suspend accounts, override evaluations and reveal the sender of an anonymous council message. Those actions need a record so the team can investigate a decision and explain who took it, what it affected and why.
+
+**Technical challenges and value.** Audit entries capture the actor, action, target, timestamp, reason and relevant metadata. Recording them within the transaction of the action keeps the history consistent with committed changes. Application-level guards reject edits and deletions of audit entries, while an Administrator-only view supports filtering and pagination. This makes sensitive activity traceable across accounts, eligibility, evaluations and council moderation; the audited actions and response fields are defined in [api-plan §10.9](docs/api-plan.md#109-administration).
+
+**Why Minor.** A shared recording service, protected records and a searchable review interface form a focused feature that supports a one-point claim. Its contribution is accountability after an action: the separately claimed permissions module determines whether that action is allowed. The audit trail preserves evidence for later review.
+
+<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
 
 ## Individual Contributions
 
