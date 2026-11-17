@@ -360,6 +360,26 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 ### Martin (mjusta)
 
+Product Owner and backend developer. I worked on the product definition and implemented backend features for accounts, evaluations, real-time updates, notifications, search and administration, together with the other backend contributors.
+
+- **Product ownership:** drafted the initial project vision, MVP scope, user workflows and role responsibilities, and revised the planning documents after the first team meeting. I worked on the product justification for the chosen modules and documented how they support the campus evaluation workflow.
+- **Backend foundation:** helped set up the Django project with Lenka, including settings, the MySQL connection, the REST API structure and Celery integration. I implemented the custom user model, email normalisation and validation, account status handling, password hashing configuration and the initial account migration and tests.
+- **Registration and 42 OAuth:** implemented registration validation and the backend 42 OAuth flow, including the callback, provider requests, external identity persistence and local account resolution. Later fixes covered provider response failures, password similarity checks using the display name, and logout succeeding even when WebSocket delivery fails.
+- **Evaluation workflow:** implemented project listing and detail endpoints, evaluation request creation, listing, filtering and note editing, student confirmation and decline, student cancellation and Hitchhiker slot release. I added permission, visibility, state-transition and concurrency tests, and later the scheduled expiry of old requests and unanswered slot proposals.
+- **Real time (module):** built the backend WebSocket infrastructure with Django Channels and Redis: routing, session authentication, user and session groups, and connection closure when sessions end. I integrated evaluation events and tested delivery to the intended users after database commits.
+- **Notifications (module):** implemented the notification model and types, the transactional creation service, list and unread-count APIs, read and delete actions, and retention cleanup. I integrated notifications into evaluation and eligibility workflows and tested updates across the owner's tabs and sessions.
+- **Advanced search (module):** implemented the people search API, with matching by display name or 42 login, role and project filters, sorting, pagination and tests. The 42 login can be used for matching without being exposed in the response.
+- **Administration and permissions:** implemented user listing, detail and editing, suspension and reactivation, account anonymisation and deletion cleanup, audited evaluation release and cancellation overrides, and the evaluation exceptions list. I strengthened Django admin account rules and manual result entry, including protection against stale result saves.
+- **API consistency and tests:** reorganised account views and serializers by responsibility, extracted OAuth services and shared reference serializers, consolidated error and pagination helpers, and improved OpenAPI coverage. My backend tests cover full response shapes, real sessions and CSRF, permission boundaries, rollback behaviour and concurrent actions against MySQL.
+- **Documentation:** wrote the README setup instructions, environment-variable reference, production-profile instructions and manual result-recording guide, plus the module justifications and point breakdown.
+
+**Challenges and how I solved them.**
+
+- *Concurrent actions on shared data.* Confirmation, decline, cancellation, account deletion and moderation can affect the same records. I used transactions, conditional updates and a consistent user-lock order, and added concurrency tests to check that competing actions preserve valid state. Manual result saves also compare the version loaded by the form so an older form cannot overwrite a newer edit.
+- *Database changes and live updates staying consistent.* A notification or WebSocket message must not describe a change that later rolls back. I kept notification creation in the workflow transaction and deferred WebSocket delivery until commit, with tests for rollback, duplicate actions and multiple connected sessions.
+- *Account deletion affecting several workflows.* An account can own requests, hold eligibility, have active sessions and be referenced by notifications. I implemented anonymisation and cleanup around those relationships, preserving started evaluations and closing sessions while handling future requests and slots according to the contract.
+- *Keeping the API predictable for the frontend.* Different error formats, inaccurate schemas and inconsistent validation make integration harder. I consolidated shared helpers, corrected OpenAPI descriptions and added regression tests for exact responses and failure cases.
+
 ### Roman (rkravche)
 
 ### Diana (dkolarov)
