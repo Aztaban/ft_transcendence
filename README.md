@@ -441,9 +441,12 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 ### Frameworks for both frontend and backend — Major, 2 points
 
-**Why we chose it.** The application has several workspaces but shares the same accounts, evaluation data and rules. React gives us reusable interfaces, while Django provides authentication, validation and database tools. Using established frameworks on both sides lets the team focus on the evaluation workflow and keep its behaviour consistent as the product grows.
+**Why we chose it.** The subject awards this Major for a framework on both sides, instead of the two separate Minors. The application has several workspaces but shares the same accounts, evaluation data and rules. React gives us reusable interfaces, while Django provides authentication, validation and database tools. Using established frameworks on both sides lets the team focus on the evaluation workflow and keep its behaviour consistent as the product grows.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+**How it was implemented.**
+
+- **Frontend (Diana):** React 18 with TypeScript, built by Vite and routed with React Router 7 (`frontend/`). Diana initialized the project. Pages are components, shared pieces live in `frontend/src/components/`, and every call to the API goes through one client, `apiRequest`.
+- **Backend (Martin):** Django 5.1 with Django REST Framework (`backend/`). Martin initialized the application. The API lives under `/api/v1/`, one Django app per area (`accounts`, `evaluations`, `notifications`, `council`, `audit`). Django REST Framework supplies the views, serializers, permissions and the error handling; Django supplies the ORM, sessions and migrations.
 
 ### Real-time features — Major, 2 points
 
@@ -453,13 +456,16 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 - **Frontend (Diana):** one WebSocket client (`frontend/src/websocket/`) per logged-in tab connects to `wss://…/ws/`, reconnects on its own with a growing delay, and shows "Reconnecting…" and "Back online" in the top bar. Pages subscribe to the events that concern them through a shared hook and, on each event, re-fetch their data over REST instead of trusting the message, so the dashboards, the Hitchhiker queue, Pending, History and the evaluation page update without a reload.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+- **Backend (Martin):** Django Channels with Redis. A tab connects to `/ws/` with the session cookie and joins the groups `user_<id>` and `session_<session key>`. A missing or inactive session is accepted and then closed with code 4401. Frames from the client are ignored. `publish_user_event` sends `{event, data}` with ids only, and only after the database commit, so a rollback never reaches a browser. Martin added the evaluation events and `notification.created` / `notification.updated` (api-plan §9.3). Logout sends `session.ended` to that session's tabs and closes them; suspending or deleting an account does the same for every connection of that user. Lenka added `role.changed` and the `notification.updated` sent when an administrator deletes a council message.
 
 ### ORM for the database — Minor, 1 point
 
 **Why we chose it.** Users, roles, projects, eligibility and evaluations have related data and constraints. Django's ORM gives the team a shared way to query those relationships and evolve the schema through migrations. Its transaction and locking tools also support the concurrency rules that prevent two Hitchhikers from picking the same request.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+**How it was implemented.**
+
+- **Backend (Roman, Martin, Lenka, Lada):** The Django models are the schema, and every change has a migration. Martin added the project setup, `TimeStampedModel` (`created_at` and `updated_at` on the product tables), the `user` model and `notification`. Lenka added `role`, `user_roles` and `audit_log`. Lada added `sc_message`. Roman added `project`, the eligibility tables and `evaluation_request`, including the check constraints that keep a request's pick, cancellation and result consistent with its status. Queries, `select_for_update()` and conditional `update()` all go through this ORM.
+- **Frontend:** The browser never uses the ORM. Pages call the API, and only Django reaches MySQL.
 
 ### Notification system — Minor, 1 point
 
@@ -469,7 +475,7 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 - **Frontend (Lada):** A shared React context loads the unread count from `GET /notifications/unread-count/` once the user is logged in, and the bell in the top bar shows it as a badge. The notification center lists the newest notifications and builds each sentence in the user's language from its `type` and `payload`, so no raw status value is ever shown. Opening a notification marks it as read, and **Mark all as read** clears them all. On the `notification.created` and `notification.updated` WebSocket events, and after a reconnect, the count and the list are fetched again over REST, which keeps every open tab and device in sync. A link switches to the workspace that can open its page, and the backend sends an empty link once the recipient can no longer open the request (R17, Lada with Roman).
 
-<!-- ✍️ Martin: add the backend lines (model and types, the creation service, the API, the events). -->
+- **Backend (Martin, Lenka):** `apps/notifications/` stores one row per recipient: a `type` from api-plan §8.8, a `payload` of facts and a `target_url`. The sentence is not stored. Martin added the model, `create_notification` inside the same transaction as the action, and the `notification.created` event pushed after commit. The owner can list notifications newest first (`unread=true`), read the unread count, mark one or all as read, and delete one. Someone else's notification is 404. Reading and deleting send `notification.updated`. A daily task deletes rows older than 90 days. Lenka added `role.changed` when an administrator changes someone's roles, and deletes the `sc_message.created` notifications in the same transaction when an administrator deletes that council message.
 
 ### Custom-made design system — Minor, 1 point
 
@@ -479,7 +485,7 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 - **Frontend (Diana):** design tokens for the palette, typography, spacing and icons (`frontend/src/styles/tokens.css`, with a test that every text colour on its surface reaches 4.5:1), and shared components in `frontend/src/components/ui/`: Button, Input, TextArea, Dialog, Notice, Avatar, StatusPill, Skeleton, EmptyState, Tabs, ProgressBar and Icon. Each component keeps a page's own look when the page passes its class, and every one of them is shown on the `/design-system` page.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+- **Backend:** The design system is the palette, type, icons and React components in the browser. The API does not serve it, and `/design-system` is a frontend route, so this module did not change the backend. Its description is in `docs/design-system.md`.
 
 ### Advanced search — Minor, 1 point
 
@@ -489,7 +495,7 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 - **Frontend (Diana):** the Hitchhikers page searches by name (after a short pause, from 2 characters), by role (Hitchhikers, Student Council or everyone), by project and in A–Z or Z–A order, 20 results at a time with "Show more". The filters live in the URL, so a search can be shared or reloaded, and the search box in the top bar opens the same page from anywhere.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+- **Backend (Martin):** `GET /api/v1/search/people/` follows api-plan §10.8. Any logged-in user may call it. `q` is optional, 2–64 characters, and matches the display name or the 42 login without regard to case. The 42 login is never in the response. `role` is `tutor`, `head_tutor` or `sc_member`, and `tutor` includes Head Tutors. `project` is a project slug and keeps only Hitchhikers eligible for it. `ordering` is `display_name` or `-display_name`. Only active Hitchhikers, Head Tutors and Student Council members are returned, 20 at a time, each as a public profile plus `eligible_projects`. A student with no such role never appears.
 
 ### WCAG 2.1 AA accessibility — Major, 2 points
 
@@ -499,7 +505,7 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 - **Frontend (Diana):** popups take the focus, keep Tab inside and give it back on close; a skip link and keyboard support for the menus; a title for every page and one main heading; landmarks; text contrast raised to AA; reduced motion respected. Checked automatically by axe-core scans of every page and every popup in the tests (`frontend/src/test/`), and by hand with the keyboard only and the Orca screen reader. Results and limits are in `docs/accessibility.md`.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+- **Backend:** WCAG applies to the pages a browser renders. The API returns JSON and has no markup, labels or focus, so this module did not change it. Keyboard support, the screen reader, contrast and the axe-core scans are the frontend work above, and the results are in `docs/accessibility.md`.
 
 ### Multiple languages — Minor, 1 point
 
@@ -509,7 +515,7 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 - **Frontend (Diana):** i18next with English, Czech and Spanish (`frontend/src/i18n/locales/`), including plural forms. Every page, notification text and validation message goes through it, the language switcher works before and after login, the chosen language is saved in the profile, and every API call sends `Accept-Language`, so the backend's messages come back in the same language.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+- **Backend (Lenka, Martin):** `LocaleMiddleware` reads `Accept-Language` and the API accepts `en`, `cs` and `es`. A regional tag such as `cs-CZ` still selects Czech. Any other language, or a missing header, falls back to English. User-facing strings are wrapped in `gettext` and translated in `backend/locale`, including the compiled `django.mo` files. The error `code` stays the stable English token the frontend branches on; `message` and `fields` come back in the requested language. A registration test checks the whole error body in each language. Later endpoint messages were added to the same catalogs.
 
 ### Additional browsers — Minor, 1 point
 
@@ -519,7 +525,7 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 - **Frontend (Diana):** a code audit for features that differ between browsers, two fixes (the login form's own validation message instead of the browser's, one search field style everywhere) and later a layout fix found while testing. The whole checklist in `docs/browser-support.md` was run in Firefox 154 and Edge 157: the rows before login by hand, the logged-in rows also automatically in headless Firefox and Edge, with no console errors.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+- **Backend:** The API is ordinary HTTPS, JSON, session cookies and WebSockets, so Firefox and Edge call the same endpoints as Chrome. The whole team ran the checklist in `docs/browser-support.md` in all three browsers, including login, 42 sign-in, an evaluation, the council inbox and a live update. That pass required no backend change. The fixes were in the frontend, and the browser-specific limits are written down in the same document.
 
 ### Remote authentication with OAuth 2.0 — Minor, 1 point
 
@@ -529,7 +535,7 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 - **Frontend (Diana):** the "Log in with 42" button on the Login page starts the flow, the app returns to the page the user wanted after the callback, and every error the callback reports is shown as a translated message on the Login page.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+- **Backend (Martin):** `GET /api/v1/auth/42/redirect/` stores a random `state` in the session and sends the browser to 42. The callback checks that `state`, exchanges the code for an access token and reads the 42 profile. The token and the client secret stay on the server. A returning user is recognized by `intra_id`, and the login is the same session cookie as a password login. A new 42 user gets a local account with the 42 login as the display name, an unusable password and the `student` role. If that email already belongs to a password account, the callback refuses with `oauth_account_exists` and does not link the two. Success returns the browser to `/`; a failure returns it to `/login?oauth=<code>`.
 
 ### Advanced permissions system — Major, 2 points
 
@@ -541,17 +547,24 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 - **Frontend workspaces (Diana):** the role switcher shows only the workspaces of the user's real roles, each workspace has its own navigation, and a route guard shows the Unauthorized page for a workspace the user does not hold. The active workspace is only interface state: the server checks the real roles on every request.
 
-<!-- ✍️ Module owner(s): add the backend and workspace lines and name the contributors. -->
+- **Backend (Lenka, Martin, Lada):** The caller's roles are read from the database on every request. The chosen workspace and Django's `is_staff` grant nothing. `head_tutor` includes every Hitchhiker permission, and `admin` does not include the other roles. Logged out is 401, an endpoint reserved for a role is 403, and a private object is 404. Lenka added these checks and the assignment rules: `student` is given at registration and is never revoked through the API, a Head Tutor or an Admin gives `tutor`, only an Admin gives or removes `head_tutor`, an SC Member or an Admin gives `sc_member`, and `admin` is given only in the Django admin. A Hitchhiker picks a slot only with a `tutor_eligibility` row for that project, and never on their own request. Martin limited each evaluation list to the caller's own requests, the slots they picked and the projects they may evaluate; a Head Tutor or an Admin releases or cancels someone else's request only with a reason. Lada opened the council inbox to SC Members and Admins. Lenka left deleting a message and revealing its sender to Admins: an SC Member gets 403, and anyone else gets 404.
 
 ### Evaluation scheduling — Custom Major, 2 points
 
+This is a module of choice (subject IV.10). The listed modules have no booking workflow, and arranging the evaluation is the product, so the claim stands on its own.
+
 **Why we chose it.** Coordinating an evaluation is the central problem this application solves. A student needs an eligible Hitchhiker, a proposed time that works for both people, and a clear confirmation before the evaluation takes place. Keeping the whole process in one workflow makes its current state visible and gives both participants a way to decline, release or cancel a booking.
 
-**Technical challenges and value.** The scheduler must enforce slot duration, advance notice and time boundaries, prevent overlapping bookings for either participant even when they act in different roles, and handle simultaneous attempts to pick the same request. Confirmation, release, cancellation and automatic expiry must preserve consistent state when actions race. These rules protect participants from double bookings and keep abandoned requests from blocking the queue. The lifecycle and concurrency rules are specified in [api-plan §7.1](docs/api-plan.md#71-evaluation-request-lifecycle) and [database schema §4](docs/database-schema.md).
+**Technical challenges.** The scheduler must enforce slot duration, advance notice and time boundaries, prevent overlapping bookings for either participant even when they act in different roles, and handle simultaneous attempts to pick the same request. Confirmation, release, cancellation and automatic expiry must preserve consistent state when actions race. These rules protect participants from double bookings and keep abandoned requests from blocking the queue. The lifecycle and concurrency rules are specified in api-plan §7.1 and database schema §4.
 
-**Why Major.** This module combines a multi-step state machine, scheduling constraints, transactions, concurrency protection and background expiry across two participants. That scope supports a two-point claim. Its contribution is the booking logic and consistency guarantees; the separately claimed real-time module delivers updates about those bookings to connected browsers.
+**How it adds value.** The campus problem is not storing a date. It is keeping two people from being booked twice and stopping a request nobody picks from sitting in the queue. Either participant can leave the booking, and a request that was never confirmed expires on its own.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+**Why Major (2 points).** The module is a state machine (`pending`, `awaiting_confirmation`, `confirmed`, `cancelled`, `expired`) together with the slot limits, transactions, concurrency protection and a background expiry job across two participants. That is the complexity the two points claim. Live updates about these bookings are the separate real-time module.
+
+**How it was implemented.**
+
+- **Backend (Martin, Lenka):** one `evaluation_request` row is the request, the slot and the later history. Martin built creating a request, listing and filtering it, editing the note, the student's confirm and decline, cancellation, the Hitchhiker's release, and the Celery task `expire_evaluation_requests` (every 5 minutes: a `pending` request older than 14 days, or an unconfirmed slot whose start has passed). Lenka built `POST /api/v1/evaluation-requests/{id}/pick-slot/`: eligibility for that project, no picking one's own request, the slot limits, the overlap checks and the conditional update.
+- **Frontend (Diana):** the student's create-request flow, the Hitchhiker queue and the slot picker, confirming or declining a proposed slot, Pending with preview and cancel, and History with filters and pagination.
 
 ### Audit trail for sensitive actions — Custom Minor, 1 point
 
@@ -565,7 +578,7 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 - **Frontend (Diana):** the Audit log page in the Admin workspace lists the entries with their actor, action, target, reason and time, with filters and pagination.
 
-<!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
+- **Backend (Lenka, Martin):** `apps/audit/` writes one append-only row per sensitive action through `record_audit`, in the same transaction as the change. The model rejects a later edit or delete. If the actor's account is removed, `actor_id` becomes NULL and the row stays, because `target_id` is not a foreign key. Lenka added the model, the admin-only list `GET /api/v1/admin/audit-log/` with filters for the actor, the action, the target and the time, and the entries for role changes, eligibility review and revocation, and for deleting a council message or revealing its sender. Martin added the entries for editing, suspending, reactivating and deleting an account, and for a Head Tutor or Admin releasing or cancelling someone else's evaluation.
 
 ## Individual Contributions
 
