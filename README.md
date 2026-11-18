@@ -449,6 +449,10 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 **Why we chose it.** Students and Hitchhikers act on the same requests, often from different browsers. A picked slot, confirmation or cancellation needs to reach the other person promptly, and an open queue should reflect requests that someone else has picked. Live updates reduce manual refreshing and help people act on current information. Reconnection matters because an interrupted connection should not leave a workspace permanently out of date.
 
+**How it was implemented.**
+
+- **Frontend (Diana):** one WebSocket client (`frontend/src/websocket/`) per logged-in tab connects to `wss://…/ws/`, reconnects on its own with a growing delay, and shows "Reconnecting…" and "Back online" in the top bar. Pages subscribe to the events that concern them through a shared hook and, on each event, re-fetch their data over REST instead of trusting the message, so the dashboards, the Hitchhiker queue, Pending, History and the evaluation page update without a reload.
+
 <!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
 
 ### ORM for the database — Minor, 1 point
@@ -471,11 +475,19 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 **Why we chose it.** The same forms, dialogs, status labels and loading states appear across several roles. Shared components, colours, typography and icons make those interactions familiar and reduce inconsistent behaviour between pages. They also let us fix accessibility and presentation in one place. This is the subject's listed design-system module, with a minimum of ten reusable components; its reference is [docs/design-system.md](docs/design-system.md).
 
+**How it was implemented.**
+
+- **Frontend (Diana):** design tokens for the palette, typography, spacing and icons (`frontend/src/styles/tokens.css`, with a test that every text colour on its surface reaches 4.5:1), and shared components in `frontend/src/components/ui/`: Button, Input, TextArea, Dialog, Notice, Avatar, StatusPill, Skeleton, EmptyState, Tabs, ProgressBar and Icon. Each component keeps a page's own look when the page passes its class, and every one of them is shown on the `/design-system` page.
+
 <!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
 
 ### Advanced search — Minor, 1 point
 
 **Why we chose it.** A student may need a Hitchhiker eligible for a particular project, or someone from the Student Council. Searching names alone does not answer those needs. Role and project filters make the results relevant, sorting makes them predictable, and pagination keeps the list manageable as the campus community grows.
+
+**How it was implemented.**
+
+- **Frontend (Diana):** the Hitchhikers page searches by name (after a short pause, from 2 characters), by role (Hitchhikers, Student Council or everyone), by project and in A–Z or Z–A order, 20 results at a time with "Show more". The filters live in the URL, so a search can be shared or reloaded, and the search box in the top bar opens the same page from anywhere.
 
 <!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
 
@@ -483,11 +495,19 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 **Why we chose it.** Requesting and managing an evaluation is part of campus life, so the workflow needs to work for people using a keyboard, screen reader or other assistive tools. Clear structure, readable contrast, labelled controls and predictable focus help people complete the same tasks independently. We chose to address accessibility across the application; the checks and their limits are documented in [docs/accessibility.md](docs/accessibility.md).
 
+**How it was implemented.**
+
+- **Frontend (Diana):** popups take the focus, keep Tab inside and give it back on close; a skip link and keyboard support for the menus; a title for every page and one main heading; landmarks; text contrast raised to AA; reduced motion respected. Checked automatically by axe-core scans of every page and every popup in the tests (`frontend/src/test/`), and by hand with the keyboard only and the Orca screen reader. Results and limits are in `docs/accessibility.md`.
+
 <!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
 
 ### Multiple languages — Minor, 1 point
 
 **Why we chose it.** The Prague campus brings together Czech and international students. English, Czech and Spanish make the workflow available to more of that community. Translating validation messages, notifications and status labels as well as page text helps users understand what happened and what action they need to take.
+
+**How it was implemented.**
+
+- **Frontend (Diana):** i18next with English, Czech and Spanish (`frontend/src/i18n/locales/`), including plural forms. Every page, notification text and validation message goes through it, the language switcher works before and after login, the chosen language is saved in the profile, and every API call sends `Accept-Language`, so the backend's messages come back in the same language.
 
 <!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
 
@@ -495,11 +515,19 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 
 **Why we chose it.** Students and tutors use their own computers and should be able to complete an evaluation workflow in their preferred browser. We selected Firefox and Edge alongside Chrome to check that forms, navigation, authentication and live updates behave consistently. Browser checks and known differences are documented in [docs/browser-support.md](docs/browser-support.md).
 
+**How it was implemented.**
+
+- **Frontend (Diana):** a code audit for features that differ between browsers, two fixes (the login form's own validation message instead of the browser's, one search field style everywhere) and later a layout fix found while testing. The whole checklist in `docs/browser-support.md` was run in Firefox 154 and Edge 157: the rows before login by hand, the logged-in rows also automatically in headless Firefox and Edge, with no console errors.
+
 <!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
 
 ### Remote authentication with OAuth 2.0 — Minor, 1 point
 
 **Why we chose it.** The intended users already have 42 intranet accounts. Signing in through 42 gives them a familiar entry point and avoids requiring another password for that login method. It authenticates their identity; local roles and approved project eligibility still determine what they may do in this application.
+
+**How it was implemented.**
+
+- **Frontend (Diana):** the "Log in with 42" button on the Login page starts the flow, the app returns to the page the user wanted after the callback, and every error the callback reports is shown as a translated message on the Login page.
 
 <!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
 
@@ -510,6 +538,8 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 **How it was implemented.**
 
 - **Frontend, user and role management (Lada):** On a person's profile, **Manage roles** offers only what the user's real roles allow: a Head Tutor gives Hitchhiker, a Student Council member gives Student Council, and an Admin gives and removes Hitchhiker, Head Tutor and Student Council. The Admin's user management lists every account with search, role and status filters and pages, edits an account's name, email and language, and suspends, reactivates or deletes it with a reason for the audit log. Head Tutors and Admins see the evaluation exceptions, and release or cancel a request with a reason (an override). These pages call the API only for users who hold the role, so no 403 reaches the browser console, and a 409 (another Admin acted first) is explained and the data loaded again. The server still checks every request.
+
+- **Frontend workspaces (Diana):** the role switcher shows only the workspaces of the user's real roles, each workspace has its own navigation, and a route guard shows the Unauthorized page for a workspace the user does not hold. The active workspace is only interface state: the server checks the real roles on every request.
 
 <!-- ✍️ Module owner(s): add the backend and workspace lines and name the contributors. -->
 
@@ -530,6 +560,10 @@ We chose modules that support the campus evaluation workflow: coordinating stude
 **Technical challenges and value.** Audit entries capture the actor, action, target, timestamp, reason and relevant metadata. Recording them within the transaction of the action keeps the history consistent with committed changes. Application-level guards reject edits and deletions of audit entries, while an Administrator-only view supports filtering and pagination. This makes sensitive activity traceable across accounts, eligibility, evaluations and council moderation; the audited actions and response fields are defined in [api-plan §10.9](docs/api-plan.md#109-administration).
 
 **Why Minor.** A shared recording service, protected records and a searchable review interface form a focused feature that supports a one-point claim. Its contribution is accountability after an action: the separately claimed permissions module determines whether that action is allowed. The audit trail preserves evidence for later review.
+
+**How it was implemented.**
+
+- **Frontend (Diana):** the Audit log page in the Admin workspace lists the entries with their actor, action, target, reason and time, with filters and pagination.
 
 <!-- ✍️ Module owner(s): add 3–5 lines on implementation and name the contributors. -->
 
