@@ -1,0 +1,45 @@
+# Student Council demo (#385): 3–5 minutes
+
+## Before you start
+
+- `make up` running, `https://localhost` open.
+- **Window 1 (normal):** Demo Student, `demo.student@example.com` / `Demo-2026!`, Student workspace.
+- **Window 2 (private, Ctrl+Shift+P):** your `dkolarova` account (Admin + Student Council), switch to the **COUNCIL** workspace.
+- Put the two windows side by side, then share the screen.
+
+## The story
+
+| # | What you do | What you say |
+|---|---|---|
+| 1 | Window 1: **Student Council** → write a message (e.g. "The 3rd floor fridge is broken again.") → **Send** → "Message Sent" popup | Any student or Hitchhiker can write to the council. The message is **anonymous**: the council never sees who sent it. |
+| 2 | Window 2: the **bell gets a badge** without reloading; open the panel | Real time + notifications: every council member is notified live over the WebSocket, and the notification stays in the notification center. |
+| 3 | **Messages** → the new message (unread) → open it | The inbox lists unread messages, newest first. Opening a message does not mark it read by itself. |
+| 4 | **Mark as read** → "Done…" popup; then **Mark as unread** | Read state is shared by the whole council. |
+| 5 | Write a **discussion note** → **Save note** | The note is shared by all council members. It is saved with a version number: if a colleague saved in between, you get a conflict instead of overwriting their text. |
+| 6 | **History** | The history lists every message the council has received, read or not, newest first, with its state. |
+| 7 | Back to the message → **Reveal sender** → reason ("Abuse investigation: threatening message") → the sender is shown | Only an **Admin** can do this, only with a reason (10–500 characters), and every reveal is written to the audit log. |
+| 8 | **Delete** an abusive message → reason → it disappears, also from the notifications | Deleting also needs a reason and removes the message's notifications for every council member. |
+| 9 | Admin workspace → **Audit log** → filter by action | Both actions are there: who, when, which message, and why. |
+
+Close with: "Anonymous for the council, accountable for the admins: only an admin can reveal a sender, never silently."
+
+## Where it is in the code
+
+| Step | Frontend | API | Backend |
+|---|---|---|---|
+| Send | `pages/CouncilMessagePage.tsx`, `features/council/MessageSentDialog.tsx`, `api/scMessages.ts` → `sendSCMessage` | `POST /api/v1/sc-messages/` (throttled) | `apps/council/views.py` → `sc_message_list`; the sender is stored but never serialized (`serializers.py`) |
+| Notification | `store/NotificationCountContext.tsx`, `features/notifications/NotificationPanel.tsx`, `websocket/` (re-fetch on event) | `GET /notifications/`, WebSocket `/ws/` | `apps/council/notifications.py` → `notify_sc_message_created` → `create_notification` + `publish_user_event` after commit |
+| Inbox / message | `pages/CouncilInboxPage.tsx`, `pages/CouncilInboxMessagePage.tsx` | `GET /sc-messages/?unread=true`, `GET /sc-messages/{id}/` | `sc_message_list`, `sc_message_detail`; permission `CanReadCouncilInbox` (sc_member or admin) |
+| Read / note | `CouncilInboxMessagePage.tsx` | `PATCH /sc-messages/{id}/` with `is_read` and/or `discussion_note` + `discussion_note_version` | atomic conditional update on the version (`filter(pk, version).update(version + 1)`) → 409 `edit_conflict` |
+| History | `pages/CouncilHistoryPage.tsx` (both lists through `features/council/useCouncilMessages.ts`) | `GET /sc-messages/` (no filter) | same list endpoint |
+| Reveal | `features/council/ModerationDialog.tsx` | `POST /sc-messages/{id}/reveal-sender/` `{reason}` | permission `CanModerateCouncilMessage` (admin only); `record_audit(...)` every time |
+| Delete | `ModerationDialog.tsx` | `DELETE /sc-messages/{id}/` `{reason}` | `select_for_update`, audit row, `delete_sc_message_created_notifications` |
+| Audit log | `pages/AuditLogPage.tsx`, `api/audit.ts` | `GET /api/v1/admin/audit-log/` with filters (action, target, dates) | `apps/audit/` (`record_audit`, `AuditLog`); admins only |
+
+Contract: `docs/api-plan.md` §8.10 (SCMessage), §10.6 (council endpoints), §10.9 (audit log).
+
+## Likely questions
+
+- **How is the sender anonymous if you can reveal them?** The sender is stored, so abuse can be investigated, but no council endpoint returns it. Only the admin-only reveal endpoint does, and it always writes an audit row.
+- **What if two members edit the note at once?** The second save sends an old version and gets 409 `edit_conflict`; nothing is overwritten.
+- **Who can see the inbox?** Only `sc_member` and `admin`, checked on the server on every request; a student gets 403.

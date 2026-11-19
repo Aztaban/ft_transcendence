@@ -1,0 +1,42 @@
+Podívat se, co v databázi je
+Nejčitelnější je Django shell v backendu. Zná modely, role i hesla, a nemusíš řešit název databáze.
+docker compose exec backend python manage.py shell
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+User.objects.count()
+for u in User.objects.order_by("id"):
+    roles = ", ".join(u.roles.values_list("name", flat=True))
+    print(u.id, u.email, u.display_name, u.status, roles)
+
+Shell skončíš přes exit() nebo Ctrl-D.
+
+SQL klient je v kontejneru db. Heslo a název databáze si vezme z proměnných, které už v kontejneru jsou (MYSQL_DATABASE z .env, v example je transcendence):
+docker compose exec db sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"'
+Tabulka uživatelů se jmenuje user, role jsou v role a user_roles:
+SELECT id, email, display_name, status FROM user;
+
+SELECT u.email, r.name
+FROM user u
+JOIN user_roles ur ON ur.user_id = u.id
+JOIN role r ON r.id = ur.role_id
+ORDER BY u.id, r.name;
+MySQL ukončíš příkazem exit. Port 127.0.0.1:3306 je taky otevřený na localhostu, takže se dá připojit i klientem z hosta. exec je jednodušší, protože heslo nemusíš opisovat.
+
+Přidat účet
+Účet zakládej přes Django, ne přes INSERT. create_user zahashuje heslo a rovnou přidá roli student. Každý účet ji má.
+docker compose exec backend python manage.py shell
+from django.contrib.auth import get_user_model
+User = get_user_model()
+user = User.objects.create_user(
+    email="nova@example.com",
+    password="Heslo42prague!",
+    display_name="Nova",
+    language="cs",
+)
+Další roli přidáš až potom. Jména rolí jsou tutor, head_tutor, sc_member a admin:
+from apps.accounts.models import Role
+user.roles.add(Role.objects.get(name="tutor"))
+Heslo v databázi neuvidíš. V sloupci password je hash. Ověření vypadá takto:
+user.check_password("Heslo42prague!")
