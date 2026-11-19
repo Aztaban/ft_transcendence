@@ -830,13 +830,33 @@ Lada:
 - [MDN: WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket): live notifications
 - [WAI-ARIA Authoring Practices: Dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/): the confirmation popups
 
+Roman:
+
+- [Django Channels](https://channels.readthedocs.io/en/stable/): consumers, groups and the Redis channel layer
+- [Celery](https://docs.celeryq.dev/en/stable/): the worker and periodic tasks with beat
+- [Django deployment checklist](https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/) and [Security in Django](https://docs.djangoproject.com/en/5.1/topics/security/): settings, cookies and CSRF
+- [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/): session management, CSRF prevention and HTTP headers
+- [MySQL 8.4: InnoDB locking](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html) and [Django: `select_for_update()`](https://docs.djangoproject.com/en/5.1/ref/models/querysets/#select-for-update): the concurrency rules
+- [42 API documentation](https://api.intra.42.fr/apidoc): the OAuth flow and the user profile
+- [Docker Compose: control startup order](https://docs.docker.com/compose/how-tos/startup-order/): health checks and `depends_on`
+- [OpenAPI Specification](https://spec.openapis.org/oas/latest.html): the schema format
+- [Mermaid](https://mermaid.js.org/): the diagrams in this README
+
 ### How AI was used
 
 <!-- ✍️ EVERYONE writes their own lines. Subject: how AI was used, for which tasks and which parts of the project. -->
 
 - **Diana:** I used Claude (Anthropic), through Claude Code in VS Code, as a coding assistant for my frontend work. From the issue and the API contract it drafted code, tests and pull request descriptions; it helped me review teammates' pull requests, find bugs, and run the accessibility and browser checks (axe-core scans, headless browser runs in Firefox and Edge).
 - **Lenka:** I used Cursor (mainly Grok). They checked work that had to match the written contract. They drafted and revised tests, helped isolate bugs, and compared endpoints with docs/api-plan.md and other project documentation. I reviewed each suggestion and accepted only changes that I understood, verified, and considered appropriate for the project.
+- **Roman:** I used Claude (Anthropic), through Claude Code in VS Code. It read teammates' backend and frontend pull requests against the contract before I reviewed them. I checked what it found and wrote the review comments myself. It ran audits of `main` before the defense (both test suites, and a headless browser through every page in every role and language with the console watched), which became issues and fixes. It helped word the contract documents from my decisions, and drafted code and tests in my pull requests; each pull request description says which parts. The architecture and the contract decisions are mine, and I reviewed every change and can explain it.
 
 ## Known limitations
 
 <!-- Optional (the subject welcomes it). Anyone can add here. -->
+
+- **No file uploads.** There are no avatars or attachments; profiles show the person's initials ([R19](docs/api-plan.md#31-resolved)).
+- **No email.** There is no password reset or change, no email verification and no email notifications. A team member can set a new password in the Django admin.
+- **42 and password accounts are not linked.** If a password account already uses the email of a 42 account, signing in with 42 is refused (`oauth_account_exists`) instead of merging the two.
+- **Eligibility and results are manual.** Nothing is synced with the 42 intranet: Head Tutors approve which projects a Hitchhiker may evaluate ([R1](docs/api-plan.md#31-resolved)), and the team enters each result in the Django admin ([Recording evaluation results](#recording-evaluation-results)).
+- **Missed live updates are not replayed.** After a reconnect, pages re-fetch what they show. Some shared views have no live event at all (the Head Tutor review table, the council inbox, the evaluation exceptions) and refresh when the browser tab becomes visible again ([api-plan §9.4](docs/api-plan.md#94-disconnects)).
+- **The frontend types are written by hand.** `frontend/src/types/` copies the contract and is checked in review. Generating them from the OpenAPI schema and failing CI when they drift is planned, not done ([api-plan §5.10](docs/api-plan.md#510-openapi-schema-and-frontend-types)).
