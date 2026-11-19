@@ -225,15 +225,100 @@ Each milestone holds parent issues, broken down into small sub-issues with one o
 
 ## Technical Stack
 
-<!-- ✍️ Roman (#376, #377). Subject: the frontend technologies and frameworks, the backend technologies and frameworks, the database system and why it was chosen, other significant technologies or libraries, and the justification of the major technical choices. -->
+| Layer | Technology | Why |
+|---|---|---|
+| Frontend | React 18, TypeScript 5, Vite 5 | React is one of the frameworks the subject names. TypeScript catches a wrong API field at compile time. Vite reloads instantly in development and builds a static bundle for production. |
+| Routing and languages | React Router 7, i18next with react-i18next | Client-side routes for each role's workspace; English, Czech and Spanish with plural forms. |
+| Styling | Plain CSS with design tokens (`frontend/src/styles/`) | The custom design system is our own components and tokens, not a UI library. |
+| Backend | Python 3.12, Django 5.1, Django REST Framework 3.15 | Django brings sessions, password hashing, the ORM, migrations, translations and an admin panel. DRF adds serializers, permission classes and rate limiting. |
+| Real time | Django Channels 4 on Daphne (ASGI), channels-redis | WebSockets in the same Django code, authenticated with the same session cookie as the REST API. |
+| Background jobs | Celery 5.4 with beat | Work no user triggers such as expiring requests every 5 minutes, deleting old notifications and sessions every day. |
+| Database | MySQL 8.4 LTS, InnoDB, `utf8mb4` | See below. |
+| Cache and broker | Redis 7 | One service for the WebSocket channel layer, the rate-limit counters and the Celery broker. |
+| API schema | drf-spectacular | The OpenAPI schema and Swagger UI, generated from the serializers. |
+| Passwords | Argon2 (`argon2-cffi`) | Salted and memory-hard, so stolen hashes are slow to crack. |
+| Reverse proxy | Nginx 1.27 | TLS, security headers, and one HTTPS origin for the app, the API, the WebSocket and the admin. |
+| Deployment | Docker Compose, Make | The whole stack starts with one command, `make up`; `make prod` runs the production profile. |
+| Tests and CI | pytest with pytest-django, Vitest with Testing Library and axe-core, GitHub Actions | Every pull request runs the linters, both test suites, the schema validation and a smoke test of the running stack. |
+
+**Why MySQL.** It is the database our IT Architect knew best, which mattered for designing constraints and debugging locks in the time we had. InnoDB gives transactions and row locks, and check constraints keep each evaluation request's fields consistent with its status. 8.4 is the long-term support release, Django supports MySQL as a first-class backend, and `utf8mb4` stores any text, emoji included.
+
+**The major choices.** Each one is explained in plain language in [docs/decisions.md](docs/decisions.md).
+
+- **A framework on both sides.** React and Django are both named by the subject, and Django's built-in login, password hashing and database layer meant we did not write our own.
+- **Sessions, not tokens.** The session cookie is `HttpOnly`, so JavaScript never sees it, and roles are read from the database on every request: a removed role or a suspended account takes effect on the very next request, with no token that stays valid until it expires. The price is CSRF protection, so every unsafe request carries an `X-CSRFToken` header.
+- **The contract before the code.** Every endpoint, response shape and error code was written in [docs/api-plan.md](docs/api-plan.md) before it was built, so the frontend and the backend could be built in parallel, and backend tests compare whole response bodies against it.
+- **The database is the truth, the WebSocket is only speed.** An event only says what changed; the page then re-fetches it over REST. A lost or late event can delay a page, but never show it wrong data.
+- **One Docker Compose stack.** The same services in development and production, started with one command, as the subject requires.
 
 ### Architecture
 
-<!-- ✍️ Roman (#376): an overview, ideally with a diagram (docs/architecture.md). -->
+```mermaid
+flowchart LR
+    browser["Browser<br/>React app"]
+    nginx["Nginx<br/>TLS, security headers"]
+    frontend["Frontend<br/>Vite dev server, or the built bundle in production"]
+    django["Django on Daphne (ASGI)<br/>REST API, WebSocket, admin"]
+    mysql[("MySQL 8.4<br/>all application data")]
+    redis[("Redis 7<br/>channel layer, cache, broker")]
+    worker["Celery worker"]
+    beat["Celery beat"]
+
+    browser -- "HTTPS and WSS" --> nginx
+    nginx -- "/" --> frontend
+    nginx -- "/api/ /ws/ /admin/ /static/ /health/" --> django
+    django --> mysql
+    django <--> redis
+    beat -- "schedule" --> redis
+    redis <--> worker
+    worker --> mysql
+```
+
+- **One entry point.** The browser talks only to Nginx over HTTPS. Nginx sends `/api/`, `/ws/`, `/admin/`, `/static/` and `/health/` to Django and everything else to the frontend. In production it serves the built frontend itself.
+- **The frontend holds no rules.** It renders pages and calls the API through one client, `apiRequest`, which adds the CSRF header and `Accept-Language`. Hiding a button is a convenience; the server checks the user's real roles on every request.
+- **The backend is one Django app per area:** `accounts` (users, roles, login, 42 OAuth), `evaluations` (projects, eligibility, evaluation requests), `notifications`, `council` and `audit`. `core` holds what they share: the base model, the error envelope, pagination and the WebSocket consumer.
+- **HTTP is the source of truth.** WebSocket messages are `{event, data}` with ids only, sent after the database commit (`transaction.on_commit`), so a rolled-back change never reaches a browser. The page then re-fetches over REST.
+- **Concurrent actions.** Shared rows change through one conditional update, `filter(pk=…, status=expected).update(…)`, and the row count says who won. When two Hitchhikers pick the same request at the same moment, one gets it and the other gets 409.
+- **Background work.** Celery beat schedules the jobs and the worker runs them: expiry every 5 minutes, deleting notifications older than 90 days and expired sessions every day, and a heartbeat every 10 seconds that `/health/` reports. Expiry pushes its WebSocket events through Redis like the API does.
+
+More detail: [docs/architecture.md](docs/architecture.md), [docs/security.md](docs/security.md) (what is protected and how) and [docs/decisions.md](docs/decisions.md).
 
 ### API
 
-<!-- ✍️ Roman (#377): where the API is documented (docs/api-plan.md, the OpenAPI schema) and how to read it. -->
+The API contract is [docs/api-plan.md](docs/api-plan.md). It is the source of truth: when the code and the document disagree, the document wins and the code is fixed. There are 49 endpoints in 8 areas ([§6](docs/api-plan.md#6-endpoint-summary)). Where to look:
+
+| Looking for | Section |
+|---|---|
+| URLs, JSON, dates, login and CSRF | [§5.1–5.4](docs/api-plan.md#5-conventions) |
+| The error format and every error code | [§5.5](docs/api-plan.md#55-errors), [§5.6](docs/api-plan.md#56-error-codes) |
+| Pagination, filters and sorting | [§5.7](docs/api-plan.md#57-lists-pagination-filtering-sorting) |
+| Who may do what | [§5.8](docs/api-plan.md#58-roles-and-permissions) and [docs/permissions.md](docs/permissions.md) |
+| Rate limits | [§5.9](docs/api-plan.md#59-rate-limits) |
+| Workflows: an evaluation request, becoming a Hitchhiker, the council inbox | [§7](docs/api-plan.md#7-workflows) |
+| The exact shape of every response | [§8](docs/api-plan.md#8-representations) |
+| WebSocket events | [§9](docs/api-plan.md#9-real-time-websocket) |
+| Every endpoint, by area | [§10](docs/api-plan.md#10-endpoints) |
+
+With the stack running, **https://localhost/api/schema/** returns the OpenAPI schema generated from the serializers, and **https://localhost/api/docs/** shows it in Swagger UI. CI validates the schema on every pull request. The schema lists fields and types; the contract adds what a schema cannot say: who may call an endpoint, when each error happens and which notifications and events follow.
+
+Reading any endpoint:
+
+- Everything is under `/api/v1/`, and every path ends with `/`.
+- Bodies are JSON with `snake_case` fields. Enum values are lowercase (`awaiting_confirmation`, `head_tutor`), and datetimes are ISO 8601 in UTC (`2026-10-12T15:00:00Z`). A nullable field is always present as `null`, a list as `[]`.
+- Login sets the `sessionid` cookie. Every `POST`, `PATCH` and `DELETE` sends the `X-CSRFToken` header with the value of the `csrftoken` cookie, which `GET /api/v1/auth/session/` sets.
+- No session is 401. Logged in without the right role is 403. Someone else's private object is 404, so its existence is not revealed.
+- Lists are paginated with `?page=` and `?page_size=` (20 by default, 100 at most) and return `{count, next, previous, results}`.
+- Every error has the same body. The frontend branches on `code`; `message` and `fields` come back in the user's language.
+
+  ```json
+  {
+    "error": {
+      "code": "validation_error",
+      "message": "Please correct the highlighted fields.",
+      "fields": { "display_name": ["Ensure this field has no more than 64 characters."] }
+    }
+  }
+  ```
 
 ## Database Schema
 
