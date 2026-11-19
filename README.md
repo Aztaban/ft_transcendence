@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by mjusta, rkravche, dkolarov, lhusarov, lformankov.*
+*This project has been created as part of the 42 curriculum by mjusta, rkravche, dkolarov, lhusarov, lformank.*
 
 <!--
 HOW TO FILL THIS README (issue #375, plan in its first comment)
@@ -185,7 +185,7 @@ If the form says the evaluation changed since it was loaded, reload it, review t
 | Roman | rkravche | @webxxcom | IT Architect, developer |
 | Diana | dkolarov | @dkolarova | Scrum Master, developer |
 | Lenka | lhusarov | @Lenka1234 | Developer |
-| Lada | lformankov | @lformank | Developer |
+| Lada | lformank | @lformank | Developer |
 
 - **Product Owner (Martin):** the product vision and priorities, the MVP scope, the user workflows and their acceptance criteria, and the product justification of each module.
 - **IT Architect (Roman):** the system architecture and technology choices, the data model, the API contract, authentication and authorization, the real-time design and security.
@@ -756,7 +756,7 @@ I also worked closely with Mjusta on code reviews, testing, and getting our chan
 
 - **Following the API contract.** Implementations had to match the agreed API specification, including permissions, validation, error responses, and status codes. I learned to compare my changes against the API plan and use tests to check that the expected behavior was preserved.
 
-### Lada (lformankov)
+### Lada (lformank)
 
 I joined the frontend work in M3 as Diana's review pair. Most of my work connects the React pages to the API: the notifications, the administration pages, and what every page shows while it loads, when it is empty and after an error. I also wrote the Student Council inbox API and a large part of the frontend tests. Of the modules, I built the frontend of the **Notification system** and the user and role management pages of the **Advanced permissions system**.
 
@@ -767,30 +767,25 @@ I joined the frontend work in M3 as Diana's review pair. Most of my work connect
   - live updates of the count and the list over the WebSocket, in every open tab
   - a sentence for every notification type in English, Czech and Spanish
   - links that open the right page in the right workspace
-
-  (#643, #644, #645, #686, #689, #693, #814)
-- **Notification links (backend):** an evaluation notification no longer links to a request the recipient can't open any more (#740).
-- **A clear error message (backend):** when a project is turned off while a student has the request form open, the student now reads "This project is not available any more." in their language, instead of DRF's `Invalid pk "4"` (#815).
-- **Student Council inbox (backend):** sending an anonymous message with its rate limit, plus the inbox list and the message detail for council members, with read/unread and the internal note (#626, #632). On the frontend, the message history page (#706).
-- **Administration (frontend):** the Admin user management pages (#782), role management on a person's profile (#709), and the evaluation exceptions page with overrides (#787).
-- **Loading, empty and error states** on every page (#615, #817, #818, #819), and the four confirmation popups rebuilt on the shared Dialog (#816).
+- **Notification links (backend):** an evaluation notification no longer links to a request the recipient can't open any more.
+- **A clear error message (backend):** when a project is turned off while a student has the request form open, the student now reads "This project is not available any more." in their language, instead of DRF's `Invalid pk "4"`.
+- **Student Council inbox (backend):** sending an anonymous message with its rate limit, plus the inbox list and the message detail for council members, with read/unread and the internal note. On the frontend, the message history page.
+- **Administration (frontend):** the Admin user management pages, role management on a person's profile, and the evaluation exceptions page with overrides.
+- **Loading, empty and error states** on every page, and the four confirmation popups rebuilt on the shared Dialog.
 - **Frontend tests:**
-  - tests fail on any console error or warning (#790)
-  - the form checks and the backend's field messages (#797)
-  - the shared components (#798)
-  - user flows for an evaluation and a council message (#799)
-  - the Home dashboards (#813)
+  - tests fail on any console error or warning
+  - the form checks and the backend's field messages
+  - the shared components
+  - user flows for an evaluation and a council message
+  - the Home dashboards
 
-**Challenges and how I solved them**
+**Challenges and what I learned**
 
-- **Building on a backend that was not merged yet.** The notification API was still in Martin's open pull request when I started the bell. I stacked my three PRs on his branch (count → center → read status) and merged them in order once his work reached `main`.
-- **Unread count in several tabs.** Marking a notification as read in one tab left the old count in the others. The backend sends a `notification.updated` event to all of the user's connections. Every tab then re-fetches the count from the API instead of trusting the event (api-plan §9).
-- **404s in the browser console.** The subject forbids console errors. But a notification could link to an evaluation that had since been picked by another Hitchhiker or had expired, and opening it gave a 404.
-  - Backend: the link of an evaluation notification is empty once the request is hidden from the recipient (R17).
-  - Frontend: a link switches to the workspace that can open it (Hitchhiker, Student Council) instead of showing "not available for your role".
-- **Two council members editing the same note.** The note carries a version number, and saving is a conditional update on that version. A save based on an old version gets 409 `edit_conflict` instead of overwriting the other person's text (schema §4.2).
-- **Console warnings that tests ignored.** `npm test` passed even when React logged an error. My first idea was a spy on `console.error`, but about 50 test files reset all mocks after each test, which would have wiped its calls before the check. So the test setup wraps the console methods directly, and any message fails the test.
-- **Pages jumping while loading.** Changing the page or a filter replaced the list with placeholders, and the button the user had just pressed disappeared along with the keyboard focus. Now the old rows stay, greyed out, until the new ones arrive.
+- *Working in one repository with the whole team.* Five people changed the same code at once, and my notification work needed Martin's backend before it was merged. I learned to stack branches: each one starts from the branch below, and after a squash merge the next pull request is retargeted to `main`.
+- *Live data in several tabs.* Marking a notification as read left the old count in the other tabs. Every tab now re-fetches it over REST on the `notification.updated` event. I learned React context and effects, and that a WebSocket event is only a signal.
+- *404s in the browser console.* Notifications linked to evaluations the user could no longer open. The backend now sends an empty link, and I learned Django querysets, serializers and the N+1 problem.
+- *Two members editing the same council note.* A conditional update on a version number returns 409 instead of overwriting the other person's text. I learned what a race condition is and why "read, change, `save()`" loses data.
+- *Tests that ignored console errors.* Mock resets in about 50 test files hid them, so the test setup now wraps the console methods. I learned how Vitest hooks and mocks work.
 
 ## Resources
 
