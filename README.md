@@ -693,6 +693,23 @@ Product Owner and backend developer. I worked on the product definition and impl
 
 ### Roman (rkravche)
 
+IT Architect and developer. I designed the architecture, wrote the API contract and the database schema the team built against, set up the infrastructure, CI and security, and reviewed the team's backend and frontend pull requests (41 merged pull requests of my own, 146 of the team's reviewed).
+
+- **Decisions**. The API contract (`docs/api-plan.md`: endpoints, response shapes, error codes, permissions, notifications and WebSocket events) and the database schema (`docs/database-schema.md`). Also `docs/decisions.md`, the roles matrix `docs/permissions.md`, `docs/security.md` and `AGENTS.md`, the rules every contributor and AI agent follows. Decisions included anonymous pending requests (R15), the Hitchhiker staying anonymous until the student confirms (R18), no file uploads (R19), empty filter values rejected (R20), and what happens to a request already running when a role changes (R21) and when an evaluation has started (R22).
+- **Infrastructure.** The Docker Compose stack, Nginx with TLS and a self-signed certificate, the Celery worker and beat, the development tools, migrations on start and the Django admin behind Nginx, `/health/` with the Celery heartbeat, and services that start only when their dependencies are ready, the production profile with Daphne and the built frontend, and a pinned dependency that kept Celery from starting on a fresh build.
+- **Security.** rate limits on login, registration and the whole API; JSON-only errors, a random secret key from `make env`, Secure cookies and security headers, written up in `docs/security.md`; random MySQL passwords and the database port on loopback only; the 42 OAuth credentials out of `.env.example`; no password registration with a 42 Prague email, which signs in through 42.
+- **Backend.** the models of `project`, the eligibility tables and `evaluation_request`, with the check constraints that keep a request's pick, cancellation and result consistent with its status; the seeded campus projects; editing your own profile, `PATCH /users/me/`; the `evaluation.created` notification opening the pick page; the Hitchhiker's anonymity in responses and notifications.
+- **Frontend.** the profile kept in one shared context, so the top bar and the language switcher update after a save; one `useDialog` hook instead of the focus code copied into eight dialogs.
+- **CI and code health.** CI checks made required and run once per pull request, a test database that can be created and the frontend test harness, and duplicated code and test fixtures removed.
+
+**Challenges and how I solved them.**
+
+- *A full-time job next to the project.* I could not always answer during the day, so I wrote decisions down instead of giving them only in meetings or chat. The contract, `docs/decisions.md` and `AGENTS.md` answer most questions without waiting for me, and the team kept building.
+- *Reviewing both the backend and the frontend.* That was a lot of pull requests. To keep up, the rules a review checks are written down (the contract and `AGENTS.md`), CI does the mechanical part (formatting, types, tests, the schema and a smoke test of the running stack), and Claude Code read each diff against the contract first. I checked what it found before posting it.
+- *Setting up a proper architecture.* Five people on one codebase drift apart without shared rules. I fixed one way to do each thing before the features were built: one API client, one error envelope, conditional updates for shared rows, WebSocket events that only point to REST data. `AGENTS.md` records them, so people and AI agents follow the same ones.
+- *Finding integration bugs.* Each side's tests passed while the two sides together still failed: a notification linking to a page the frontend did not have, pages asking for data the user could no longer see and logging errors in the console, text colours below the AA contrast. Before the defense I audited `main` with both test suites and a headless browser through every page in every role and language, watching the console, and turned what failed into issues and fixes.
+- *Consistent endpoints.* The same question must get the same answer everywhere: filters, errors and status codes. When an endpoint differed, I changed the contract first and the code after it, for example rejecting empty filter values everywhere (R20), defining when an evaluation has started (R22), and fixing the schema's operation IDs and the search errors.
+
 ### Diana (dkolarov)
 
 Scrum Master and frontend developer. I set up the frontend and built most of its pages, from the first login form to the final polish (119 merged pull requests).
