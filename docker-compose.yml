@@ -80,7 +80,7 @@ services:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
     ports:
-      # Loopback only: nginx (https://localhost) is the public entry point.
+      # Loopback only: nginx (https://localhost:4443) is the public entry point.
       - "127.0.0.1:5173:5173"
     depends_on:
       - backend
@@ -127,8 +127,10 @@ services:
     volumes:
       - nginx_certs:/etc/nginx/certs
     ports:
-      - "80:80"
-      - "443:443"
+      # Unprivileged host ports: rootless Docker (the school computers) cannot bind 80 and 443.
+      # nginx.conf redirects HTTP to 4443.
+      - "8080:80"
+      - "4443:443"
     depends_on:
       backend:
         condition: service_healthy

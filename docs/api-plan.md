@@ -184,7 +184,7 @@ New codes are added to this table before they are used.
 - Lists are paginated unless the endpoint says otherwise: `?page=1&page_size=20`. Default page size 20, maximum 100.
 - Paginated response:
   ```json
-  { "count": 57, "next": "https://localhost/api/v1/notifications/?page=2", "previous": null, "results": [ ... ] }
+  { "count": 57, "next": "https://localhost:4443/api/v1/notifications/?page=2", "previous": null, "results": [ ... ] }
   ```
 - Filters are query parameters named after the field (`?status=pending`). Multiple values are comma-separated (`?status=pending,awaiting_confirmation`). Unknown or empty filter values (`?status=`) give 400 `validation_error`, unless the endpoint says otherwise.
 - Sorting: `?ordering=field` ascending, `?ordering=-field` descending. Each endpoint lists its allowed fields and its default.

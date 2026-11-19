@@ -3,7 +3,7 @@
 #   scripts/smoke-test.sh          the development stack (`make up`)
 #   scripts/smoke-test.sh prod     the production profile (`make prod`)
 set -euo pipefail
-BASE=${BASE:-https://localhost}
+BASE=${BASE:-https://localhost:4443}
 
 # Waits until the URL answers and, when given, its body contains the text.
 wait_for() {

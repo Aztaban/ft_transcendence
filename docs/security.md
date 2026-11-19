@@ -4,7 +4,7 @@ What the application does to stay secure, and what it deliberately leaves out. W
 
 ## Transport
 
-- Nginx is the only public entry point: TLS 1.2/1.3 on 443, port 80 redirects to HTTPS. The self-signed development certificate is generated on first start. Traffic between containers is plain HTTP, which the subject allows.
+- Nginx is the only public entry point: TLS 1.2/1.3 on host port 4443, and port 8080 redirects to HTTPS. Both are unprivileged ports, because rootless Docker cannot bind 80 and 443. The self-signed development certificate is generated on first start. Traffic between containers is plain HTTP, which the subject allows.
 - Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a restrictive `Permissions-Policy`; `server_tokens` is off.
 - API views answer with JSON only; the exceptions are listed under Information exposure.
 
