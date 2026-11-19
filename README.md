@@ -816,11 +816,11 @@ Day-to-day questions were also answered on [Stack Overflow](https://stackoverflo
 
 Lada:
 
-- [React documentation](https://react.dev/learn): state, effects and context
+- React: [state](https://react.dev/learn/state-a-components-memory), [effects](https://react.dev/learn/synchronizing-with-effects) and [context](https://react.dev/learn/passing-data-deeply-with-context): the notification count and the pages' data loading
 - [React Router](https://reactrouter.com/): routes and navigation
 - [react-i18next](https://react.i18next.com/) and [i18next plurals and context](https://www.i18next.com/translation-function/plurals): the notification sentences
 - [Vitest](https://vitest.dev/guide/) and [Testing Library](https://testing-library.com/docs/react-testing-library/intro/): the frontend tests
-- [Django REST Framework](https://www.django-rest-framework.org/): permissions, throttling and serializers for the council inbox
+- Django REST Framework: [permissions](https://www.django-rest-framework.org/api-guide/permissions/) and [throttling](https://www.django-rest-framework.org/api-guide/throttling/): the council inbox
 - [Django: updating with `update()` and conditional expressions](https://docs.djangoproject.com/en/5.1/ref/models/querysets/#update): the conditional update of the council note
 - [MDN: WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket): live notifications
 - [WAI-ARIA Authoring Practices: Dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/): the confirmation popups
@@ -844,6 +844,7 @@ Roman:
 - **Diana:** I used Claude (Anthropic), through Claude Code in VS Code, as a coding assistant for my frontend work. From the issue and the API contract it drafted code, tests and pull request descriptions; it helped me review teammates' pull requests, find bugs, and run the accessibility and browser checks (axe-core scans, headless browser runs in Firefox and Edge).
 - **Lenka:** I used Cursor (mainly Grok). They checked work that had to match the written contract. They drafted and revised tests, helped isolate bugs, and compared endpoints with docs/api-plan.md and other project documentation. I reviewed each suggestion and accepted only changes that I understood, verified, and considered appropriate for the project.
 - **Roman:** I used Claude (Anthropic), through Claude Code in VS Code. It read teammates' backend and frontend pull requests against the contract before I reviewed them. I checked what it found and wrote the review comments myself. It ran audits of `main` before the defense (both test suites, and a headless browser through every page in every role and language with the console watched), which became issues and fixes. It helped word the contract documents from my decisions, and drafted code and tests in my pull requests; each pull request description says which parts. The architecture and the contract decisions are mine, and I reviewed every change and can explain it.
+- **Lada:** I used Claude (Anthropic), through Claude Code in VS Code, mostly as a tutor. Most of the technologies (React and Django) and issues were new to me, so it explained the concepts and the API contract and gave me step-by-step guides, and I wrote the code myself. Later it also wrote the tests, the code comments, and ran the formatting and type checks, showing me each change with the reason behind it. It helped me review teammates' pull requests with explanation of the topic. Everything was reviewed and understood before applying and merging.
 
 ## Known limitations
 
