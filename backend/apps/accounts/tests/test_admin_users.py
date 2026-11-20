@@ -409,10 +409,11 @@ def test_duplicate_email_is_a_409_including_database_race(admin_user_directory, 
         ("es", "Las cuentas eliminadas no se pueden editar."),
     ],
 )
-def test_deleted_user_cannot_be_edited(admin_user_directory, language, message):
+@pytest.mark.parametrize("data", [{"display_name": "Changed"}, {"language": "invalid"}])
+def test_deleted_user_cannot_be_edited(admin_user_directory, language, message, data):
     client, _, target = admin_user_directory
     User.objects.filter(pk=target.pk).update(status="deleted")
-    response = patch_user(client, target.pk, {"display_name": "Changed"}, language=language)
+    response = patch_user(client, target.pk, data, language=language)
     assert response.status_code == 409
     assert response.json() == {"error": {"code": "invalid_user_status", "message": message}}
     target.refresh_from_db()
@@ -470,7 +471,7 @@ def test_side_effect_failure_rolls_back_everything(
     user_event_sender,
     service,
 ):
-    from apps.accounts.views import admin_users
+    from apps.accounts.services import admin_users
 
     client, _, target = admin_user_directory
     original = getattr(admin_users, service)

@@ -210,9 +210,10 @@ def test_invalid_state_is_a_409_without_side_effects(
         ("es", "No puedes cambiar el estado de tu propia cuenta."),
     ],
 )
-def test_admin_cannot_change_own_status(admin_user_directory, action, language, message):
+@pytest.mark.parametrize("data", [{"reason": "Status change"}, {}])
+def test_admin_cannot_change_own_status(admin_user_directory, action, language, message, data):
     client, admin, _ = admin_user_directory
-    response = post_status(client, admin.pk, action, language=language)
+    response = post_status(client, admin.pk, action, data, language=language)
     assert response.status_code == 409
     assert response.json() == {"error": {"code": "cannot_modify_self", "message": message}}
     admin.refresh_from_db()
@@ -347,7 +348,7 @@ def test_failure_rolls_back_status_audit_sessions_and_events(
     action,
     service,
 ):
-    from apps.accounts.views import admin_users
+    from apps.accounts.services import admin_users
 
     client, _, target = admin_user_directory
     browser = make_session_client(target)
