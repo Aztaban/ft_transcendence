@@ -4,10 +4,37 @@ A 3–5 minute walkthrough of the Student Council for the evaluation: what to do
 
 ## Before you start
 
-- The stack is running (`make up`) and `https://localhost` is open.
-- **Two accounts:**
-  - **a student**: any account with only the `student` role (register one on `/register`);
-  - **an Admin who is also a Student Council member**: an account with the `admin` and `sc_member` roles. `admin` is given only in the Django admin (`/admin/` → Users → the user → Roles); `sc_member` can be given there too, or by an Admin on the person's profile.
+The demo starts from an empty database: no accounts and no messages, only the seeded roles and campus projects. Run these from the repository root.
+
+1. **Start from a clean database.** A fresh clone already has one: run `make up` and skip to step 2. On a machine that has run the project before, remove the old data first:
+
+   ```bash
+   docker compose down -v   # stops the stack and deletes its volumes: database, certificate, node_modules
+   make up                  # rebuilds; the backend applies the migrations (roles, projects)
+   ```
+
+   Wait until the backend is healthy (`docker compose ps`), then open `https://localhost` and accept the new self-signed certificate.
+
+2. **Create the Admin account** (in a second terminal, while the stack runs):
+
+   ```bash
+   docker compose exec backend python manage.py createsuperuser
+   ```
+
+   Answer the prompts, for example email `admin@example.com`, display name `Admin`, and a password. The account starts with the `student` role only: a Django superuser gets no application roles.
+
+3. **Give it the `admin` and `sc_member` roles** (use the email from step 2):
+
+   ```bash
+   docker compose exec backend python manage.py shell -c "from apps.accounts.models import Role, User; u = User.objects.get(email='admin@example.com'); u.roles.add(*Role.objects.filter(name__in=['admin', 'sc_member'])); print(sorted(u.roles.values_list('name', flat=True)))"
+   ```
+
+   It prints `['admin', 'sc_member', 'student']`. The same can be done by hand in the Django admin (`https://localhost/admin/` → Users → the user → Roles).
+
+4. **Create the student** in the app: open `https://localhost/register` and register, for example `student@example.com`. A new account has only the `student` role.
+
+Then set up the screen:
+
 - **Window 1 (normal):** log in as the student, Student workspace.
 - **Window 2 (private window):** log in as the Admin, switch to the **COUNCIL** workspace.
 - Put the two windows side by side, then share the screen.
