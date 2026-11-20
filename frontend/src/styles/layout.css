@@ -31,7 +31,15 @@
   display: flex;
   flex: none;
   align-items: center;
+  align-self: flex-start;
   margin: 0 0 54px 28px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+
+.sidebar__brand:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
 }
 
 .sidebar__brand-logo {

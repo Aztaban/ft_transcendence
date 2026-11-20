@@ -153,6 +153,29 @@ function Sidebar({ isOpen = false }: SidebarProps) {
     }
   }, [isRoleMenuOpen]);
 
+  // The open role menu closes by itself on a click or tap outside the switcher, and when the page
+  // changes.
+  const roleSwitcherRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isRoleMenuOpen) {
+      return;
+    }
+
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!roleSwitcherRef.current?.contains(event.target as Node)) {
+        setIsRoleMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, [isRoleMenuOpen]);
+
+  useEffect(() => {
+    setIsRoleMenuOpen(false);
+  }, [pathname]);
+
   // The role menu is a listbox (WAI-ARIA): arrow keys, Home and End move between the
   // workspaces, Escape closes it and returns to the button, Tab closes it and moves on.
   const handleRoleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -184,10 +207,10 @@ function Sidebar({ isOpen = false }: SidebarProps) {
       id="app-sidebar"
       className={["sidebar", isOpen ? "sidebar--open" : ""].filter(Boolean).join(" ")}
     >
-      <div className="sidebar__brand">
+      <Link className="sidebar__brand" to="/">
         <img className="sidebar__brand-logo" src={logo42} alt="42" />
         <span className="sidebar__brand-name">EVALS</span>
-      </div>
+      </Link>
 
       <div className="sidebar__middle">
         <nav ref={navRef} className="sidebar__nav" aria-label={t("nav.primary")}>
@@ -239,7 +262,7 @@ function Sidebar({ isOpen = false }: SidebarProps) {
           })}
         </nav>
 
-        <div className="sidebar__role">
+        <div ref={roleSwitcherRef} className="sidebar__role">
           <button
             ref={roleButtonRef}
             className="sidebar__role-selector"
