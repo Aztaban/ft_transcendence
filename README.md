@@ -1,14 +1,5 @@
 *This project has been created as part of the 42 curriculum by mjusta, rkravche, dkolarov, lhusarov, lformank.*
 
-<!--
-HOW TO FILL THIS README (issue #375, plan in its first comment)
-- Write ONLY in the sections marked with your name. Replace the TODO comment with your text.
-- Edit on GitHub: this branch (issue-58/375-readme) → README.md → ✏️, or locally, then commit:
-  docs: <your section> in the README (#375)
-- Deadline: 18.11 at 16:00 (our meeting and pre-evaluation). Written in English, honest, and every one of us must be able to explain it.
-- The subject's requirements for each section are quoted in its TODO.
--->
-
 # 42 Prague Evaluations
 
 ## Description
@@ -176,8 +167,6 @@ Evaluation results are entered manually by the team in **Django admin**, followi
 If the form says the evaluation changed since it was loaded, reload it, review the current values and enter the intended changes again. This prevents overwriting another team member's update. Corrections use the same form; changing an existing result does not send another first-result notification.
 
 ## Team Information
-
-<!-- Each member: check your own row and add a line if your responsibilities differ. -->
 
 | Member | 42 login | GitHub | Role |
 |---|---|---|---|
@@ -667,8 +656,6 @@ This is a module of choice (subject IV.10). The listed modules have no booking w
 
 ## Individual Contributions
 
-<!-- ✍️ EVERYONE writes their own subsection. Subject: a detailed breakdown of what each member contributed, the specific features, modules or components each implemented, and any challenges faced and how they were overcome. -->
-
 ### Martin (mjusta)
 
 Product Owner and backend developer. I worked on the product definition and implemented backend features for accounts, evaluations, real-time updates, notifications, search and administration, together with the other backend contributors.
@@ -791,9 +778,6 @@ I joined the frontend work in M3 as Diana's review pair. Most of my work connect
 
 ### References
 
-<!-- ✍️ EVERYONE adds the documentation, articles and tutorials they used. -->
-<!-- lhusarov: one shared list is enough for documentation the whole team used. Add a link under your name only when it is not already here. -->
-
 Documentation the project is built with:
 
 - [Python 3](https://docs.python.org/3/)
@@ -839,7 +823,6 @@ Roman:
 
 ### How AI was used
 
-<!-- ✍️ EVERYONE writes their own lines. Subject: how AI was used, for which tasks and which parts of the project. -->
 - **Martin** I used OpenAI Codex to draft tests and do an initial review of my backend changes, including the evaluation workflow, WebSocket updates, and notifications. I reviewed the test drafts and checked that they covered the expected behaviour in our API contract. I went through Codex’s review findings myself and decided which changes to make before submitting my pull requests for peer review.
 - **Diana:** I used Claude (Anthropic), through Claude Code in VS Code, as a coding assistant for my frontend work. From the issue and the API contract it drafted code, tests and pull request descriptions; it helped me review teammates' pull requests, find bugs, and run the accessibility and browser checks (axe-core scans, headless browser runs in Firefox and Edge).
 - **Lenka:** I used Cursor (mainly Grok). They checked work that had to match the written contract. They drafted and revised tests, helped isolate bugs, and compared endpoints with docs/api-plan.md and other project documentation. I reviewed each suggestion and accepted only changes that I understood, verified, and considered appropriate for the project.
@@ -847,8 +830,6 @@ Roman:
 - **Lada:** I used Claude (Anthropic), through Claude Code in VS Code, mostly as a tutor. Most of the technologies (React and Django) and issues were new to me, so it explained the concepts and the API contract and gave me step-by-step guides, and I wrote the code myself. Later it also wrote the tests, the code comments, and ran the formatting and type checks, showing me each change with the reason behind it. It helped me review teammates' pull requests with explanation of the topic. Everything was reviewed and understood before applying and merging.
 
 ## Known limitations
-
-<!-- Optional (the subject welcomes it). Anyone can add here. -->
 
 - **No file uploads.** There are no avatars or attachments; profiles show the person's initials ([R19](docs/api-plan.md#31-resolved)).
 - **No email.** There is no password reset or change, no email verification and no email notifications. A team member can set a new password in the Django admin.
