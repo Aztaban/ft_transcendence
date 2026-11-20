@@ -7,7 +7,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -29,6 +29,7 @@ from apps.evaluations.references import ProjectRefSerializer
 from apps.evaluations.serializers.eligibility import (
     EligibilityRequestCreateSerializer,
     EligibilityRequestPageSerializer,
+    EligibilityRequestQuerySerializer,
     EligibilityRequestReviewSerializer,
     EligibilityRequestSerializer,
     EligibilityRevokeSerializer,
@@ -54,34 +55,15 @@ def tutor_eligibility(request, user_id):
     return Response(ProjectRefSerializer(projects, many=True).data)
 
 
-_ELIGIBILITY_REQUEST_ORDERINGS = frozenset({"created_at", "-created_at"})
-
-_ELIGIBILITY_REQUEST_STATUSES = frozenset(TutorEligibilityRequest.Status.values)
-
-
 def _list_eligibility_requests(request):
     qs = visible_eligibility_requests(request.user)
 
-    status_param = request.query_params.get("status")
-    if status_param is not None:
-        statuses = [part.strip() for part in status_param.split(",") if part.strip()]
-        if not statuses:
-            raise ValidationError({"status": [_("This field may not be blank.")]})
-        unknown = sorted(
-            {value for value in statuses if value not in _ELIGIBILITY_REQUEST_STATUSES}
-        )
-        if unknown:
-            raise ValidationError(
-                {"status": [_("Unknown status: %(value)s.") % {"value": ", ".join(unknown)}]}
-            )
-        qs = qs.filter(status__in=statuses)
-
-    ordering = request.query_params.get("ordering", "created_at")
-    if ordering not in _ELIGIBILITY_REQUEST_ORDERINGS:
-        raise ValidationError(
-            {"ordering": [_("Ordering must be one of: created_at, -created_at.")]}
-        )
-    qs = qs.order_by(ordering)
+    query = EligibilityRequestQuerySerializer(data=dict(request.query_params.items()))
+    query.is_valid(raise_exception=True)
+    filters = query.validated_data
+    if "status" in filters:
+        qs = qs.filter(status__in=filters["status"])
+    qs = qs.order_by(filters["ordering"])
 
     paginator = APIPageNumberPagination()
     page = paginator.paginate_queryset(qs, request)

@@ -1,12 +1,10 @@
 """Student Council inbox endpoints."""
 
 from django.shortcuts import get_object_or_404
-from django.utils.translation import gettext_lazy as _
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
@@ -22,6 +20,7 @@ from .serializers import (
     SCMessageCreateSerializer,
     SCMessageDeleteSerializer,
     SCMessagePageSerializer,
+    SCMessageQuerySerializer,
     SCMessageRevealResponseSerializer,
     SCMessageRevealSerializer,
     SCMessageSerializer,
@@ -47,11 +46,10 @@ def _create_sc_message(request):
 def _list_sc_messages(request):
     """The council inbox: newest first, optionally only unread (api-plan §10.6)."""
     messages = SCMessage.objects.order_by("-created_at", "-pk")
-    unread = request.query_params.get("unread")
-    if unread == "true":
+    query = SCMessageQuerySerializer(data=dict(request.query_params.items()))
+    query.is_valid(raise_exception=True)
+    if query.validated_data.get("unread") == "true":
         messages = messages.filter(read_at__isnull=True)
-    elif unread is not None:
-        raise ValidationError({"unread": [_("Must be true.")]})
     paginator = APIPageNumberPagination()
     page = paginator.paginate_queryset(messages, request)
     serializer = SCMessageSerializer(page, many=True)

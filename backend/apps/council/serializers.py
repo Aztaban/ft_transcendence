@@ -91,3 +91,11 @@ class SCMessageRevealResponseSerializer(serializers.Serializer):
     """200 body of reveal-sender. ``sender`` is null when the account was deleted."""
 
     sender = SCMessageSenderSerializer(allow_null=True, read_only=True)
+
+
+class SCMessageQuerySerializer(serializers.Serializer):
+    """Council inbox filter: only the exact query value unread=true is accepted."""
+
+    unread = serializers.ChoiceField(
+        choices=("true",), required=False, error_messages={"invalid_choice": _("Must be true.")}
+    )
