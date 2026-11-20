@@ -329,13 +329,11 @@ describe("PersonProfilePage", () => {
     expect(getPublicUser).toHaveBeenCalledTimes(1);
   });
 
-  it("offers a new request to students", async () => {
+  it("offers no request button, also to students", async () => {
     renderPage();
     await findProfile();
 
-    expect(screen.getByRole("link", { name: /Create a request/ }).getAttribute("href")).toBe(
-      "/requests",
-    );
+    expect(screen.queryByRole("link", { name: /Create a request/ })).toBeNull();
   });
 
   it("offers no request and no evaluations outside the student workspace", async () => {

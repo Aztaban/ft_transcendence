@@ -357,6 +357,30 @@ describe("Sidebar role menu keyboard", () => {
     expect(document.activeElement).toBe(button);
   });
 
+  test("closes by itself on a click outside, and stays open on a click inside", () => {
+    openWithKeyboard();
+
+    fireEvent.pointerDown(screen.getByRole("listbox"));
+    expect(screen.getByRole("listbox")).toBeTruthy();
+
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  test("closes by itself when the page changes", () => {
+    openWithKeyboard();
+
+    fireEvent.click(screen.getByRole("link", { name: "History" }));
+
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  test("the 42 EVALS logo links to Home", () => {
+    renderSidebar("/history");
+
+    expect(screen.getByRole("link", { name: "42 EVALS" }).getAttribute("href")).toBe("/");
+  });
+
   // #374: a person's profile belongs to the Hitchhikers item.
   test("keeps Hitchhikers highlighted on a person's profile", () => {
     renderSidebar("/people/2");
