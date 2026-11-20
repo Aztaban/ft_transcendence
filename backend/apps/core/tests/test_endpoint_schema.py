@@ -463,7 +463,8 @@ def test_own_profile_requires_a_session_in_schema(schema):
 
 
 @pytest.mark.parametrize(
-    "path", ["evaluation-requests/", "tutor-eligibility-requests/", "admin/audit-log/"]
+    "path",
+    ["evaluation-requests/", "tutor-eligibility-requests/", "sc-messages/", "admin/audit-log/"],
 )
 def test_pagination_keys_are_required_even_when_links_are_null(schema, path):
     response = schema["paths"][f"/api/v1/{path}"]["get"]["responses"]["200"]
@@ -658,3 +659,40 @@ def test_council_moderation_schema_matches_the_contract(schema):
     sender = _component(schema, sender_schema["allOf"][0]["$ref"])
     assert set(sender["required"]) == {"id", "display_name", "email"}
     assert set(sender["properties"]) == {"id", "display_name", "email"}
+
+
+@pytest.mark.parametrize(
+    "path,page_name,description,item_reference",
+    [
+        (
+            "tutor-eligibility-requests/",
+            "EligibilityRequestPage",
+            "Paginated eligibility-request list (api-plan §5.7 wrapping §8.9).",
+            "#/components/schemas/EligibilityRequest",
+        ),
+        (
+            "sc-messages/",
+            "SCMessagePage",
+            "Paginated Student Council inbox (api-plan §5.7 wrapping §8.10).",
+            "#/components/schemas/SCMessage",
+        ),
+    ],
+)
+def test_function_list_page_components_preserve_their_schema(
+    schema, path, page_name, description, item_reference
+):
+    response = schema["paths"][f"/api/v1/{path}"]["get"]["responses"]["200"]
+    assert response["content"]["application/json"]["schema"] == {
+        "$ref": f"#/components/schemas/{page_name}"
+    }
+    assert schema["components"]["schemas"][page_name] == {
+        "type": "object",
+        "description": description,
+        "properties": {
+            "count": {"type": "integer"},
+            "next": {"type": "string", "nullable": True},
+            "previous": {"type": "string", "nullable": True},
+            "results": {"type": "array", "items": {"$ref": item_reference}},
+        },
+        "required": ["count", "next", "previous", "results"],
+    }

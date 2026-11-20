@@ -4,6 +4,8 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from apps.core.pagination import APIPageSerializer
+
 from .models import SCMessage
 
 
@@ -58,12 +60,9 @@ class SCMessageSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class SCMessagePageSerializer(serializers.Serializer):
+class SCMessagePageSerializer(APIPageSerializer):
     """Paginated Student Council inbox (api-plan §5.7 wrapping §8.10)."""
 
-    count = serializers.IntegerField()
-    next = serializers.CharField(allow_null=True)
-    previous = serializers.CharField(allow_null=True)
     results = SCMessageSerializer(many=True)
 
 
