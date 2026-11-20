@@ -391,14 +391,6 @@ function PersonProfilePage() {
             )}
 
             <nav className="person-profile__actions" aria-label={t("person.actionsAria")}>
-              {showsTogether && (
-                <Link
-                  className="person-profile__action person-profile__action--primary"
-                  to="/requests"
-                >
-                  {t("hitchhikers.createRequest")} <span aria-hidden="true">→</span>
-                </Link>
-              )}
               {isMe && (
                 <Link className="person-profile__action" to="/profile">
                   {t("person.editProfile")}
