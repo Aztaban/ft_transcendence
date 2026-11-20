@@ -2,7 +2,7 @@
 
 ## Before you start
 
-- `make up` running, `https://localhost` open.
+- `make up` running, `https://localhost:4443` open.
 - **Window 1 (normal):** Demo Student, `demo.student@example.com` / `Demo-2026!`, Student workspace.
 - **Window 2 (private, Ctrl+Shift+P):** your `dkolarova` account (Admin + Student Council), switch to the **COUNCIL** workspace.
 - Put the two windows side by side, then share the screen.

@@ -25,10 +25,10 @@ Fixed after the audit:
 
 ## Known differences (by design, not bugs)
 
-- **The self-signed certificate.** Each browser asks once to accept the certificate of `https://localhost`. The WebSocket (`wss://localhost/ws/`) uses the same exception, so open the page and accept it first, or live updates cannot connect.
+- **The self-signed certificate.** Each browser asks once to accept the certificate of `https://localhost:4443`. The WebSocket (`wss://localhost:4443/ws/`) uses the same exception, so open the page and accept it first, or live updates cannot connect.
 - **Native controls.** Dropdowns (`<select>`) keep each browser's own look. The page itself has no scrollbar in any browser (it still scrolls with the wheel, touch and keyboard); inner lists such as the sidebar keep a thin one, in the app's colours in Firefox through `scrollbar-width` and `scrollbar-color`.
 - **Network lines in the console.** A request the server refuses on purpose, such as a wrong password (`401 invalid_credentials`, api-plan §10.1), is logged by the browser itself as a network entry. Chrome and Edge show these in the Console by default; Firefox shows them only with the "XHR" / "Requests" filter on. They are not JavaScript errors, and the app shows the user a translated message for each.
-- **While the server restarts,** the browser logs each failed WebSocket attempt (Firefox: "can't establish a connection to the server at wss://localhost/ws/"). The app shows "Reconnecting…", tries again and shows "Back online"; these lines stop once it is back.
+- **While the server restarts,** the browser logs each failed WebSocket attempt (Firefox: "can't establish a connection to the server at wss://localhost:4443/ws/"). The app shows "Reconnecting…", tries again and shows "Back online"; these lines stop once it is back.
 - **Dates and times** are formatted by the browser (`Intl`). The values are the same everywhere; separators can differ slightly between browsers.
 - **Reduced motion** follows the operating system setting in all three browsers: the Home banner then shows a still image.
 

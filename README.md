@@ -39,7 +39,7 @@ Students stay anonymous to Hitchhikers until a Hitchhiker picks their request, a
 - A browser: Chrome, Firefox or Edge. For the optional command-line smoke test, install **Bash** and **curl**.
 - Internet access for the first build to download images and dependencies, and for signing in through the 42 intranet.
 
-Docker installs the application dependencies inside the containers: Python 3.12, Node.js 20, MySQL 8.4 and Redis 7. You do not need to install them on your host. The local setup uses ports **80, 443, 5173, 8000 and 3306**; stop any other services using those ports before starting it.
+Docker installs the application dependencies inside the containers: Python 3.12, Node.js 20, MySQL 8.4 and Redis 7. You do not need to install them on your host. The local setup uses ports **8080, 4443, 5173, 8000 and 3306**. Nginx is published on host ports **8080** (HTTP) and **4443** (HTTPS), so the stack starts without permission to bind ports 80 and 443. Stop any other services using these ports before starting it.
 
 ### Environment variables
 
@@ -66,7 +66,7 @@ This copies `.env.example` to `.env` and generates random values for `DJANGO_SEC
 | `VITE_API_BASE_URL` | Present in the example as `http://localhost:8000`, but currently unused by the frontend. The API client sends relative requests through the same HTTPS origin. |
 | `FT_OAUTH_CLIENT_ID` | UID of your 42 OAuth application. Replace `YOUR_42_APPLICATION_UID` to enable 42 sign-in. |
 | `FT_OAUTH_CLIENT_SECRET` | **Secret.** Secret of that 42 OAuth application. Replace `YOUR_42_APPLICATION_SECRET` to enable 42 sign-in. |
-| `FT_OAUTH_REDIRECT_URI` | OAuth callback URL. Locally use `https://localhost/api/v1/auth/42/callback/`, exactly matching the redirect URI registered for your 42 application. |
+| `FT_OAUTH_REDIRECT_URI` | OAuth callback URL. Locally use `https://localhost:4443/api/v1/auth/42/callback/`, exactly matching the redirect URI registered for your 42 application. |
 
 For 42 sign-in, create or configure an OAuth application in the 42 intranet, register the callback above, and copy its UID and secret into `.env`. Email-and-password registration and login can be used without configuring 42 OAuth.
 
@@ -93,7 +93,7 @@ If you already have an older `.env`, `make env` will leave it alone. Replace pla
 
    This runs `docker compose up --build` in the foreground. It also runs `make env` if `.env` is missing. On first startup, Docker downloads dependencies and initialises MySQL. The backend applies migrations automatically, including the seeded roles and campus projects. Wait for the backend to become healthy and nginx to start.
 
-4. Open **https://localhost**. Nginx generates a self-signed certificate on first startup; accept your browser's certificate warning for this local instance. Use this HTTPS address for the application and login: session and CSRF cookies require HTTPS, including in development.
+4. Open **https://localhost:4443**. Nginx generates a self-signed certificate on first startup; accept your browser's certificate warning for this local instance. Use this HTTPS address for the application and login: session and CSRF cookies require HTTPS, including in development. Plain HTTP on **http://localhost:8080** redirects to that address.
 
 5. Register an account with email and password, or sign in through 42 after configuring OAuth. A new account starts with the Student role. Team members manage additional roles and tutor eligibility through the appropriate workspaces or Django admin.
 
@@ -101,7 +101,7 @@ If you already have an older `.env`, `make env` will leave it alone. Replace pla
 
    ```bash
    docker compose ps
-   curl -k https://localhost/health/
+   curl -k https://localhost:4443/health/
    scripts/smoke-test.sh
    ```
 
@@ -117,7 +117,7 @@ The stack contains seven services:
 
 | Service | Local address | Purpose |
 | --- | --- | --- |
-| `nginx` | **https://localhost** | Application entry point; HTTP on port 80 redirects to HTTPS. |
+| `nginx` | **https://localhost:4443** | Application entry point. Host port 8080 is HTTP and redirects to HTTPS on port 4443. Inside the container Nginx still listens on 80 and 443. |
 | `frontend` | http://localhost:5173 | Vite development server with live reload. |
 | `backend` | http://localhost:8000 | Django development server with live reload; direct access is for debugging. |
 | `db` | `127.0.0.1:3306` | MySQL; host access is restricted to this machine. |
@@ -147,7 +147,7 @@ make prod
 
 `make prod` layers `docker-compose.prod.yml` over the base file. Django runs under Daphne with `DEBUG` disabled, applies migrations and collects static files on startup. The frontend container builds the static bundle and exits successfully; nginx then serves that bundle and Django's static assets. Source code is baked into the images instead of mounted for live reload.
 
-The application still opens at **https://localhost**. In another terminal, verify it with:
+The application still opens at **https://localhost:4443**. In another terminal, verify it with:
 
 ```bash
 scripts/smoke-test.sh prod
@@ -167,7 +167,7 @@ Evaluation results are entered manually by the team in **Django admin**, followi
 
    Follow the prompts for email, display name and password. Django admin access requires `is_staff` and the relevant Django permissions; this superuser has both. The application's `admin` role is separate: assigning it does not grant Django admin access, and creating a superuser does not assign that application role.
 
-2. Open **https://localhost/admin/** and sign in with the team account.
+2. Open **https://localhost:4443/admin/** and sign in with the team account.
 3. Open **Evaluations → Evaluation requests**. Use the status, result and project filters or search by the student's email, Hitchhiker's email or project name. Verify the request ID and participants before editing.
 4. Check that the request is **confirmed** and its **end time has passed**. The form rejects result entries otherwise. Lifecycle fields such as status and slot times are read-only here.
 5. Set **Result** to **Passed** (`passed`) or **Failed** (`failed`), enter the evaluation **Feedback**, and fill in **Completed at** with the actual completion date and time. Django admin uses **UTC**; convert local time before entering it. The application displays times in each user's local timezone.
@@ -299,7 +299,7 @@ The API contract is [docs/api-plan.md](docs/api-plan.md). It is the source of tr
 | WebSocket events | [§9](docs/api-plan.md#9-real-time-websocket) |
 | Every endpoint, by area | [§10](docs/api-plan.md#10-endpoints) |
 
-With the stack running, **https://localhost/api/schema/** returns the OpenAPI schema generated from the serializers, and **https://localhost/api/docs/** shows it in Swagger UI. CI validates the schema on every pull request. The schema lists fields and types; the contract adds what a schema cannot say: who may call an endpoint, when each error happens and which notifications and events follow.
+With the stack running, **https://localhost:4443/api/schema/** returns the OpenAPI schema generated from the serializers, and **https://localhost:4443/api/docs/** shows it in Swagger UI. CI validates the schema on every pull request. The schema lists fields and types; the contract adds what a schema cannot say: who may call an endpoint, when each error happens and which notifications and events follow.
 
 Reading any endpoint:
 
